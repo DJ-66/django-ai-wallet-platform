@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="glass-card" style="max-width:500px; margin:auto; text-align:center;">
+
+    <h2>Send Credits</h2>
+
+    <p>Send credits to:</p>
+    <h3>@{{ target_wallet.user.username }}</h3>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <input
+            type="number"
+            name="amount"
+            min="1"
+            placeholder="Amount"
+            required
+            style="width:90%; padding:5px 5px; margin:5px 5px;"
+        >
+
+        <button class="auth-link-button" type="submit">
+            Continue
+        </button>
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,8 @@
+Django>=5.2,<6.0
+gunicorn
+psycopg[binary]
+dj-database-url
+whitenoise
+pillow
+qrcode
+requests

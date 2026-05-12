@@ -1,0 +1,88 @@
+from datetime import timedelta
+from django.conf import settings
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from auctions.models import Auction
+
+if auction.winner and not auction.winner_email_sent:
+
+nano web/auctions/management/commands/process_auctions.py
+
+
+
+class Command(BaseCommand):
+    help = "Close expired auctions and relist ended auctions."
+
+    def handle(self, *args, **options):
+        now = timezone.now()
+
+        # Close expired live auctions
+        expired = Auction.objects.filter(
+            status="live",
+            ends_at__lte=now,
+        )
+
+        closed_count = 0
+
+        for auction in expired:
+            last_bid = auction.bids.order_by("-created_at").first()
+
+            auction.status = "ended"
+
+            if last_bid:
+                auction.winner = last_bid.user
+
+                auction.save(update_fields=["status", "winner"])
+
+                closed_count += 1
+
+        # Relist ended auctions after X days
+        relist_cutoff = now - timedelta(days=settings.AUCTION_RELIST_DAYS)
+
+        ended_ready = Auction.objects.filter(
+            status="ended",
+            ends_at__lte=relist_cutoff,
+        )
+
+        relisted_count = 0
+
+        for auction in ended_ready:
+            auction.bids.all().delete()
+            auction.winner = None
+            auction.winner_email_sent = False
+            auction.status = "live"
+            auction.current_price = auction.starting_price
+            auction.starts_at = now
+            auction.ends_at = now + timedelta(days=settings.AUCTION_DURATION_DAYS)
+
+            if hasattr(auction, "reminder_60_sent"):
+                auction.reminder_60_sent = False
+                auction.save(update_fields=[
+                    "winner",
+                    "winner_email_sent",
+                    "status",
+                    "current_price",
+                    "starts_at",
+                    "ends_at",
+                    "reminder_60_sent",
+                ])
+            else:
+                auction.save(update_fields=[
+                    "winner",
+                    "winner_email_sent",
+                    "status",
+                    "current_price",
+                    "starts_at",
+                    "ends_at",
+                ])
+
+            relisted_count += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Closed {closed_count} auctions. Relisted {relisted_count} auctions."
+            )
+        )

@@ -1,0 +1,27 @@
+<h2>Node Dashboard</h2>
+
+{% if error %}
+  <p>{{ error }}</p>
+{% else %}
+
+<p><strong>Node:</strong> {{ node.node_name }}</p>
+<p><strong>Role:</strong> {{ node.role }}</p>
+<p><strong>Commission Rate:</strong> {{ node.commission_rate }}</p>
+
+<h3>Total Earned: {{ total_earned }} credits</h3>
+
+<h3>Recent Commissions</h3>
+
+{% for tx in commissions %}
+  <div style="padding:10px; border-bottom:1px solid #eee;">
+    +{{ tx.amount }} credits
+    <br>
+    <small>{{ tx.created_at }}</small>
+    <br>
+    <small>{{ tx.reference }}</small>
+  </div>
+{% empty %}
+  <p>No commissions yet.</p>
+{% endfor %}
+
+{% endif %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-card">
+  <h1>Create Account</h1>
+  <p class="auth-subtitle">
+    Sign up, verify your email, and get 50 starter credits.
+  </p>
+
+  <form method="post" class="auth-form" id="signup-form">
+  {% csrf_token %}
+
+  {% for field in form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+      {{ field }}
+
+      {% if field.errors %}
+        <div class="field-errors">
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <button type="submit" class="auth-button">Create Account</button>
+</form>
+<div id="signup-loading" class="loading-overlay">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p>Creating your account...</p>
+    <small>Please wait while we send your activation email.</small>
+  </div>
+</div>
+  <p class="auth-small">
+    Already have an account?
+    <a href="{% url 'login' %}">Log in</a>
+  </p>
+</div>
+<script>
+  const signupForm = document.getElementById("signup-form");
+  const loadingOverlay = document.getElementById("signup-loading");
+
+  if (signupForm) {
+    signupForm.addEventListener("submit", function () {
+      loadingOverlay.style.display = "flex";
+    });
+  }
+</script>
+{% endblock %}

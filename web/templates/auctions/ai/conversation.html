@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=5">
+<button type="button" class="chat-drawer-btn" onclick="toggleChatDrawer()">
+  ☰ Chats
+</button>
+<div class="chat-drawer-overlay" onclick="toggleChatDrawer()"></div>
+<div class="ai-layout">
+
+  <aside class="ai-sidebar">
+  <button class="chat-drawer-close" onclick="toggleChatDrawer()">×</button>
+    <h3>Chats</h3>
+
+    <a class="new-chat-btn" href="{% url 'start_companion_chat' companion.slug %}">
+      + New Chat
+    </a>
+
+    {% for convo in conversations %}
+
+  <div class="chat-link {% if convo.id == conversation.id %}active{% endif %}">
+
+    <a href="{% url 'ai_conversation' convo.id %}">
+
+      {% if convo.is_pinned %}
+        📌
+      {% endif %}
+
+      {% if convo.title %}
+        {{ convo.title }}
+      {% else %}
+        {{ convo.companion.name }}
+      {% endif %}
+
+      <br><br>
+
+      <small>{{ convo.updated_at|date:"M d, H:i" }}</small>
+
+    </a>
+
+    <div style="margin-top:8px; display:flex; gap:8px;">
+
+      <a href="{% url 'toggle_pin_conversation' convo.id %}">
+        {% if convo.is_pinned %}
+          Unpin
+        {% else %}
+          Pin
+        {% endif %}
+      </a>
+
+      <a
+        href="{% url 'delete_conversation' convo.id %}"
+        onclick="return confirm('Delete this chat?');"
+        style="color:red;"
+      >
+        Delete
+      </a>
+
+    </div>
+
+  </div>
+
+{% empty %}
+  <p>No chats yet.</p>
+{% endfor %}
+  </aside>
+
+
+
+  <main class="ai-chat-wrap">
+    <div class="ai-chat-header">
+      <h2>{{ companion.name }}</h2>
+      <p>{{ companion.cost_per_message }} credits per message</p>
+    </div>
+
+    <div class="ai-chat-box" id="chatBox">
+      {% for msg in messages_list %}
+        <div class="chat-message {{ msg.role }}">
+          <strong>
+            {% if msg.role == "user" %}
+              You
+            {% else %}
+              {{ companion.name }}
+            {% endif %}
+          </strong>
+         
+          <p>{{ msg.content|linebreaksbr }}</p>
+        </div>
+      {% endfor %}
+        <div id="typingIndicator" class="typing-indicator" style="display:none;">
+          <span></span><span></span><span></span>
+          AI is typing...
+          </div>
+    </div>
+
+
+    <form method="post" class="ai-chat-form" id="aiChatForm">
+      {% csrf_token %}
+      <textarea name="message" id="messageInput" placeholder="Type your message..."></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </main>
+
+</div>
+
+<script>
+function decrementWalletCredits(amount = 1) {
+  const walletEl = document.getElementById("walletCredits");
+
+  if (!walletEl) return;
+
+  const currentText = walletEl.textContent;
+
+  const match = currentText.match(/(\d+(\.\d+)?)/);
+
+  if (!match) return;
+
+  const currentCredits = parseFloat(match[1]);
+
+  const newCredits = Math.max(0, currentCredits - amount);
+
+  walletEl.textContent = `💰 ${newCredits}`;
+}
+
+  const chatBox = document.getElementById("chatBox");
+  if (chatBox) {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  const form = document.getElementById("aiChatForm");
+  const input = document.getElementById("messageInput");
+  const typingIndicator = document.getElementById("typingIndicator");
+  const walletCredits = document.getElementById("walletCredits");
+
+  if (form && input && chatBox) {
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const message = input.value.trim();
+      if (!message) return;
+
+      const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]").value;
+
+      const userDiv = document.createElement("div");
+      userDiv.className = "chat-message user";
+      userDiv.innerHTML = `<strong>You</strong><p>${message}</p>`;
+      chatBox.appendChild(userDiv);
+
+      const aiDiv = document.createElement("div");
+      aiDiv.className = "chat-message assistant";
+      aiDiv.innerHTML = `<strong>{{ companion.name }}</strong><p></p>`;
+      chatBox.appendChild(aiDiv);
+
+      const aiText = aiDiv.querySelector("p");
+
+      input.value = "";
+      decrementWalletCredits(1);
+
+      if (typingIndicator) {
+        typingIndicator.style.display = "block";
+      }
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      const formData = new FormData();
+      formData.append("message", message);
+      formData.append("csrfmiddlewaretoken", csrfToken);
+
+      try {
+        const response = await fetch("{% url 'stream_ai_message' conversation.id %}", {
+          method: "POST",
+          body: formData,
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          const chunk = decoder.decode(value);
+          aiText.innerText += chunk;
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+      } catch (err) {
+        console.error(err);
+        decrementWalletCredits(-1);
+        aiText.innerText += "\n\n⚠️ Error getting AI response.";
+      } finally {
+        if (typingIndicator) {
+          typingIndicator.style.display = "none";
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    });
+  }
+</script>
+
+<script>
+  function toggleChatDrawer() {
+    const sidebar = document.querySelector(".ai-sidebar");
+    const overlay = document.querySelector(".chat-drawer-overlay");
+
+    if (sidebar) sidebar.classList.toggle("open");
+    if (overlay) overlay.classList.toggle("open");
+  }
+</script>
+{% endblock %}

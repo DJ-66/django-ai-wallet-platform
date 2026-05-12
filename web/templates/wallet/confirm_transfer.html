@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-page">
+  <div class="glass-card auth-card transfer-confirm-card">
+
+    <h2>Confirm Transfer</h2>
+
+    <p class="transfer-label">You are about to send</p>
+
+    <div class="transfer-amount">
+      {{ amount }} credits
+    </div>
+
+    <p class="transfer-label">to</p>
+
+    <h3 class="transfer-recipient">
+      @{{ target_wallet.user.username }}
+    </h3>
+
+    <form method="POST" class="transfer-confirm-form">
+      {% csrf_token %}
+      <input type="hidden" name="amount" value="{{ amount }}">
+      <input type="hidden" name="confirm" value="yes">
+
+      <button class="auth-link-button" type="submit">
+        Confirm Transfer
+      </button>
+    </form>
+<br>
+<br>
+<br>
+<hr>
+
+    <a href="javascript:history.back()" class="auth-link-button">
+      Cancel
+    </a>
+
+  </div>
+</div>
+
+{% endblock %}

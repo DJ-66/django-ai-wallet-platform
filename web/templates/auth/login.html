@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-card">
+  <h1>Welcome Back</h1>
+  <p class="auth-subtitle">
+    Log in to continue bidding and managing your credits.
+  </p>
+{% if request.GET.ref %}
+  <a href="{% url 'signup' %}?ref={{ request.GET.ref }}">Sign up</a>
+{% else %}
+  <a href="{% url 'signup' %}">Sign up</a>
+{% endif %}
+  <form method="post" class="auth-form">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+        {{ field }}
+
+        {% if field.errors %}
+          <div class="field-errors">{{ field.errors }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <button type="submit" class="auth-button">Log In</button>
+  </form>
+
+  <p class="auth-small">
+    Don’t have an account?
+    <a href="{% url 'signup' %}">Sign up</a>
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+<h1>AI Companions</h1>
+
+<a href="#">
+  Start New Chat
+</a>
+
+<ul>
+  {% for convo in conversations %}
+    <li>
+      <a href="{% url 'ai_chat' convo.id %}">
+        {{ convo.title }}
+      </a>
+    </li>
+  {% endfor %}
+</ul>

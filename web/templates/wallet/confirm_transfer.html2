@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="glass-card" style="max-width:500px; margin:auto; text-align:center;">
+
+    <h2>Confirm Transfer</h2>
+
+    <p>Send <strong>{{ amount }}</strong> credits to:</p>
+
+    <h3>@{{ target_wallet.user.username }}</h3>
+
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="amount" value="{{ amount }}">
+        <input type="hidden" name="confirm" value="yes">
+
+        <button class="btn-primary">Confirm</button>
+    </form>
+
+    <br>
+
+    <a href="javascript:history.back()" class="btn-secondary">Cancel</a>
+
+</div>
+
+{% endblock %}

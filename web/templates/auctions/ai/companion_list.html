@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>AI Companions</h1>
+
+<div>
+  {% for companion in companions %}
+    <div style="border:1px solid #ccc; padding:12px; margin-bottom:12px;">
+      <h3>{{ companion.name }}</h3>
+
+      {% if companion.is_deluxe %}
+        <p><strong>Deluxe</strong></p>
+      {% else %}
+        <p>Standard</p>
+      {% endif %}
+
+      <p>{{ companion.cost_per_message }} credits per message</p>
+
+      <a href="{% url 'start_companion_chat' companion.slug %}">
+        Start Chat
+      </a>
+    </div>
+  {% empty %}
+    <p>No companions available yet. Add one in Django admin.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="wallet-page-card">
+  <h2>My Wallet</h2>
+
+  <p><strong>Credits:</strong> {{ wallet.credits }}</p>
+
+  <hr>
+
+  <section class="wallet-section">
+    <h3>Invite Friends</h3>
+    <p>Earn +50 credits when someone signs up with your link and activates their account.</p>
+
+    <div class="wallet-qr">
+      <img src="/media/qr_codes/ref_{{ wallet.referral_code }}.png" alt="Referral QR">
+    </div>
+
+    <div class="wallet-link-box">
+      <input
+        type="text"
+        id="referralLink"
+        value="{{ request.get_host }}{% url 'signup' %}?ref={{ wallet.referral_code }}"
+        readonly>
+
+      <button type="button" onclick="copyReferral()" class="auth-link-button">
+        Copy
+      </button>
+    </div>
+  </section>
+
+  <hr>
+
+  <section class="wallet-section">
+    <h3>Receive Credits</h3>
+    <p>Share this wallet link so other activated users can send you credits.</p>
+
+    <div class="wallet-qr">
+      <img src="/media/qr_codes/{{ wallet.wallet_code }}.png" alt="Wallet QR">
+    </div>
+
+    <div class="wallet-link-box">
+      <input
+        type="text"
+        id="walletLink"
+        value="{{ request.get_host }}{% url 'pay_user_short' wallet.pay_code %}"
+        readonly>
+
+      <button type="button" onclick="copyLink()" class="auth-link-button">
+        Copy
+      </button>
+    </div>
+  </section>
+
+
+<div class="glass-card" style="margin-top:20px;">
+  <hr>
+  <h3>Recent Activity</h3>
+
+  {% for tx in transactions %}
+    <div class="wallet-activity-item">
+
+      {% if tx.transaction_type == "bonus" %}
+        <div class="activity-direction received">Received ←</div>
+        <div class="activity-type">🎁 Signup Bonus</div>
+        <div class="activity-amount positive">+{{ tx.amount }} credits</div>
+
+      {% elif tx.transaction_type == "commission" %}
+        <div class="activity-direction received">Received ←</div>
+        <div class="activity-type">💰 Referral Commission</div>
+        <div class="activity-amount positive">+{{ tx.amount }} credits</div>
+
+      {% elif tx.transaction_type == "game" %}
+        <div class="activity-direction sent">Spent →</div>
+        <div class="activity-type">🎯 Auction Bid</div>
+        <div class="activity-amount negative">-{{ tx.amount }} credits</div>
+        <div class="activity-reference">{{ tx.reference }}</div>
+
+      {% elif tx.transaction_type == "ai_message" %}
+        <div class="activity-direction sent">Spent →</div>
+        <div class="activity-type">🤖 AI Chat</div>
+        <div class="activity-amount negative">-{{ tx.amount }} credits</div>
+
+      {% elif tx.sender == wallet %}
+        <div class="activity-direction sent">Sent →</div>
+        <div class="activity-type">🔁 Transfer</div>
+        <div class="activity-amount negative">
+          -{{ tx.amount }} credits
+          {% if tx.receiver %}
+            to {{ tx.receiver.user.username }}
+          {% endif %}
+        </div>
+
+      {% elif tx.receiver == wallet %}
+        <div class="activity-direction received">Received ←</div>
+        <div class="activity-type">🔁 Transfer</div>
+        <div class="activity-amount positive">
+          +{{ tx.amount }} credits
+          {% if tx.sender %}
+            from {{ tx.sender.user.username }}
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <div class="activity-date">
+        {{ tx.created_at|date:"M d, H:i" }}
+      </div>
+
+    </div>
+
+    {% if not forloop.last %}
+      <hr class="wallet-divider">
+    {% endif %}
+
+  {% empty %}
+    <p>No transactions yet.</p>
+  {% endfor %}
+</div>
+
+
+<script>
+function copyText(inputId) {
+  const input = document.getElementById(inputId);
+  input.select();
+  input.setSelectionRange(0, 99999);
+  document.execCommand("copy");
+}
+
+function copyReferral() {
+  copyText("referralLink");
+}
+
+function copyLink() {
+  copyText("walletLink");
+}
+</script>
+
+{% endblock %}

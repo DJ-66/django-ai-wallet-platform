@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-card">
+  <h1>Check your email</h1>
+  <p>
+    We sent an activation link to <strong>{{ email }}</strong>.
+    Click that link to finish creating your account.
+  </p>
+
+  <p class="auth-small">
+    After activation, you’ll receive your signup credits automatically.
+  </p>
+
+  <a class="auth-link-button" href="{% url 'login' %}">Back to login</a>
+</div>
+{% endblock %}

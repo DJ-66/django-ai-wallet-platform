@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<!--###################### -->
+<h1>{{ auction.title }}</h1>
+
+<div class="auction-detail-panel">
+
+  <div class="auction-stats">
+    <p><strong>Status:</strong> {{ auction.status }}</p>
+    <p><strong>Current Price:</strong> {{ auction.current_price }}</p>
+    <p>
+      <strong>Time Remaining:</strong>
+      <span id="countdown" data-seconds="{{ seconds_remaining }}"></span>
+    </p>
+
+    {% if auction.status == "live" %}
+
+      <form method="post" action="{% url 'place_bid' auction.id %}">
+        {% csrf_token %}
+        <button id="bidButton" type="submit">Place Bid</button>
+      </form>
+
+      <br>
+
+      {% if is_high_bidder %}
+        <div class="high-bidder-badge">
+          🏆 High Bidder
+        </div>
+        <br>
+      {% endif %}
+
+      {% if user.is_authenticated %}
+        <form method="post"
+              action="{% url 'toggle_favorite_auction' auction.id %}">
+          {% csrf_token %}
+
+          <button type="submit" class="favorite-button">
+            {% if is_favorited %}
+              ❤️ Watching
+            {% else %}
+              🤍 Watch
+            {% endif %}
+          </button>
+        </form>
+      {% endif %}
+
+    {% endif %}
+  </div>
+
+<!--###################### -->   
+
+  </div>
+
+<div class="auction-gallery">
+
+  <div class="gallery-main" id="mainAuctionMedia">
+    {% if auction.image %}
+      <img src="{{ auction.image.url }}" alt="{{ auction.title }}">
+    {% else %}
+      <div class="image-placeholder">No image</div>
+    {% endif %}
+  </div>
+
+  <div class="gallery-thumbs">
+
+    {% if auction.image %}
+      <img class="gallery-thumb active"
+           src="{{ auction.image.url }}"
+           alt="Image 1"
+           onclick="showAuctionImage(this)">
+    {% endif %}
+
+    {% if auction.image_2 %}
+      <img class="gallery-thumb"
+           src="{{ auction.image_2.url }}"
+           alt="Image 2"
+           onclick="showAuctionImage(this)">
+    {% endif %}
+
+    {% if auction.video %}
+      <button class="gallery-thumb video-thumb"
+              type="button"
+              data-video-url="{{ auction.video.url }}"
+              onclick="showAuctionVideo(this)">
+        ▶ Video
+      </button>
+    {% endif %}
+
+  </div>
+
+</div>
+        
+  <div class="digital-item-info">
+    <h2>{{ auction.digital_item.title }}</h2>
+    <p>{{ auction.digital_item.description }}</p>
+  </div>
+
+</div>
+
+<script>
+function clearActiveThumbs() {
+  document.querySelectorAll(".gallery-thumb").forEach(el => {
+    el.classList.remove("active");
+  });
+}
+
+function fadeSwap(newHtml) {
+  const mainMedia = document.getElementById("mainAuctionMedia");
+  if (!mainMedia) return;
+
+  const oldVideo = mainMedia.querySelector("video");
+  if (oldVideo) {
+    oldVideo.pause();
+  }
+
+  mainMedia.classList.add("media-fading");
+
+  setTimeout(() => {
+    mainMedia.innerHTML = newHtml;
+    mainMedia.classList.remove("media-fading");
+  }, 150);
+}
+
+function showAuctionImage(thumb) {
+  if (!thumb || !thumb.src) return;
+
+  fadeSwap(`<img src="${thumb.src}" alt="Auction image">`);
+
+  clearActiveThumbs();
+  thumb.classList.add("active");
+  
+}
+
+function showAuctionVideo(button) {
+  const videoUrl = button.dataset.videoUrl;
+  if (!button || !videoUrl) return;
+
+  fadeSwap(`
+    <video autoplay muted playsinline controls>
+      <source src="${videoUrl}" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  `);
+
+  clearActiveThumbs();
+  button.classList.add("active");
+}
+
+function formatTime(seconds) {
+  if (seconds <= 0) return "0s";
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function updateDetailCountdown() {
+  const el = document.getElementById("countdown");
+  if (!el) return;
+
+  let seconds = parseInt(el.dataset.seconds, 10) || 0;
+  el.textContent = formatTime(seconds);
+
+  if (seconds <= 0) {
+    const bidButton = document.getElementById("bidButton");
+    if (bidButton) {
+      bidButton.disabled = true;
+      bidButton.textContent = "Auction Ended";
+    }
+    return;
+  }
+
+  el.dataset.seconds = seconds - 1;
+}
+
+updateDetailCountdown();
+setInterval(updateDetailCountdown, 1000);
+</script>
+
+
+{% endblock %}
+
