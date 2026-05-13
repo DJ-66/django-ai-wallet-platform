@@ -62,7 +62,7 @@ def place_bid(auction_id, user):
             subject=f"You were outbid on {auction.title}",
             message=(
                 f"You were just outbid on {auction.title}.\n\n"
-                f"Current price: {auction.current_price}\n"
+                f"Current price: {auction.current_price.quantize(Decimal('1'))} credits\n"
                 f"Go back and bid again:\n"
                 f"https://django.usdrick.com/auctions/{auction.id}/"
             ),

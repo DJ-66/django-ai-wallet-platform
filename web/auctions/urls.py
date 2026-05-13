@@ -41,4 +41,10 @@ urlpatterns = [
     name="toggle_favorite_auction",
 ),
 
+    path(
+    "auction/<int:auction_id>/buy-now/",
+    views.buy_now_auction,
+    name="buy_now_auction"
+),
+
 ]

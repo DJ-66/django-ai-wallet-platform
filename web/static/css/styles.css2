@@ -226,19 +226,9 @@ a.signup-btn {
 }
 
 .digital-item-info {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
-.digital-item-description {
   width: 95%;
-  max-width: 97%;
-  margin: 0 auto;
+  max-width: 95%;
+  margin-top: 20px;
   background: rgba(255, 255, 255, 0.42);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -251,9 +241,7 @@ a.signup-btn {
   box-sizing: border-box;
   overflow-wrap: break-word;
   word-break: break-word;
-
 }
-
 
 .digital-item-info h2 {
   margin-top: 0;

@@ -2,28 +2,43 @@
 
 {% block content %}
 
-
 <!--###################### -->
-<h1>{{ auction.title }}</h1>
+
 
 <div class="auction-detail-panel">
 
   <div class="auction-stats">
+    <h1>{{ auction.title }}</h1>
     <p><strong>Status:</strong> {{ auction.status }}</p>
-    <p><strong>Current Price:</strong> {{ auction.current_price }}</p>
-    <p>
-      <strong>Time Remaining:</strong>
+    <p><strong>Current Price:</strong> {{ auction.current_price|floatformat:0 }} credits</p>
+    <p><strong>Time Remaining:</strong>
       <span id="countdown" data-seconds="{{ seconds_remaining }}"></span>
     </p>
 
     {% if auction.status == "live" %}
 
-      <form method="post" action="{% url 'place_bid' auction.id %}">
-        {% csrf_token %}
-        <button id="bidButton" type="submit">Place Bid</button>
-      </form>
+      <div class="auction-action-row">
 
-      <br>
+  <form method="post" action="{% url 'place_bid' auction.id %}">
+    {% csrf_token %}
+
+    <button
+      id="bidButton"
+      type="submit"
+      class="auction-action-btn bid-action-btn"
+    >
+      👋 Bid Now!
+    </button>
+  </form>
+
+  <button
+    type="button"
+    class="auction-action-btn buy-now-action-btn"
+    onclick="openBuyNowModal()">
+    💰 Buy Now! — {{ buy_now_price|floatformat:0 }} credits
+  </button>
+      
+<br>
 
       {% if is_high_bidder %}
         <div class="high-bidder-badge">
@@ -37,7 +52,7 @@
               action="{% url 'toggle_favorite_auction' auction.id %}">
           {% csrf_token %}
 
-          <button type="submit" class="favorite-button">
+          <button type="submit" class="favorite-button {% if is_favorited %}favorited{% endif %}">
             {% if is_favorited %}
               ❤️ Watching
             {% else %}
@@ -45,8 +60,9 @@
             {% endif %}
           </button>
         </form>
+        
       {% endif %}
-
+	</div>
     {% endif %}
   </div>
 
@@ -90,13 +106,54 @@
     {% endif %}
 
   </div>
-
+<br><br>
 </div>
         
-  <div class="digital-item-info">
+  <div class="digital-item-description">
     <h2>{{ auction.digital_item.title }}</h2>
-    <p>{{ auction.digital_item.description }}</p>
+    <p>{{ auction.digital_item.description}}</p>
   </div>
+<br>
+<br>
+
+<div id="buyNowModal">
+
+  <div class="buy-now-card">
+
+    <h2>💰 Buy Now</h2>
+
+    <p>
+      Buy <strong>{{ auction.title }}</strong>
+      now for
+      <strong>{{ buy_now_price|floatformat:0 }} credits</strong>
+    </p>
+
+    <form method="post" action="{% url 'buy_now_auction' auction.id %}">
+      {% csrf_token %}
+
+      <div class="buy-now-modal-actions">
+
+        <button type="submit" class="buy-now-approve">
+          Approve
+        </button>
+
+        <button
+          type="button"
+          class="buy-now-cancel"
+          onclick="closeBuyNowModal()"
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
 
 </div>
 
@@ -181,6 +238,14 @@ updateDetailCountdown();
 setInterval(updateDetailCountdown, 1000);
 </script>
 
+<script>
+function openBuyNowModal() {
+  document.getElementById("buyNowModal").classList.add("show");
+}
 
+function closeBuyNowModal() {
+  document.getElementById("buyNowModal").classList.remove("show");
+}
+</script>
 {% endblock %}
 

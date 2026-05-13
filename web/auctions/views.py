@@ -2,7 +2,7 @@ import os
 import secrets
 
 import qrcode
-
+from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -92,9 +92,19 @@ def auction_detail(request, auction_id):
             messages.error(request, str(e))
 
     wallet = None
+    
+    buy_now_price = auction.current_price + Decimal("25.00")
+    
+    is_favorited = False
+
     if request.user.is_authenticated:
         wallet, created = BidWallet.objects.get_or_create(user=request.user)
-
+        
+        is_favorited = FavoriteAuction.objects.filter(
+           user=request.user,
+           auction=auction
+        ).exists()
+    
     seconds_remaining = max(
     0,
     int((auction.ends_at - timezone.now()).total_seconds())
@@ -105,6 +115,8 @@ def auction_detail(request, auction_id):
         "wallet": wallet,
         "seconds_remaining": seconds_remaining,
         "is_high_bidder": is_high_bidder,
+        "is_favorited": is_favorited,
+        "buy_now_price": buy_now_price,
     })
 
 def ensure_api_key(node):
@@ -443,3 +455,69 @@ def toggle_favorite_auction(request, auction_id):
         favorite.delete()
 
     return redirect(request.META.get("HTTP_REFERER", "auction_list"))
+
+
+@login_required
+def buy_now_auction(request, auction_id):
+    auction = get_object_or_404(Auction, id=auction_id)
+
+    if request.method != "POST":
+        return redirect("auction_detail", auction_id=auction.id)
+
+    wallet, created = BidWallet.objects.get_or_create(user=request.user)
+
+    current_price = auction.current_price
+    buy_now_price = current_price + Decimal("25.00")
+
+    if wallet.credits < buy_now_price:
+        messages.error(request, "Not enough credits to buy this item now.")
+        return redirect("auction_detail", auction_id=auction.id)
+
+    wallet.credits -= buy_now_price
+    wallet.save(update_fields=["credits"])
+
+    WalletTransaction.objects.create(
+        sender=wallet,
+        receiver=None,
+        amount=buy_now_price,
+        transaction_type="purchase",
+        reference=f"Buy Now purchase: {auction.title}"
+)
+
+    messages.success(
+        request,
+        f"You bought {auction.title} now for {buy_now_price} credits."
+    )
+    
+    try:
+        send_buy_now_email(auction, request.user, buy_now_price)
+        print("BUY NOW EMAIL SENT:", auction.id, auction.title, request.user.email)
+    
+    except Exception as e:
+        print("BUY NOW EMAIL FAILED:", auction.id, auction.title, str(e))
+
+    return redirect("auction_detail", auction_id=auction.id)
+
+def send_buy_now_email(auction, user, buy_now_price):
+    subject = f"Download for: {auction.title}"
+
+    context = {
+        "auction": auction,
+        "user": user,
+        "buy_now_price": buy_now_price,
+        "digital_item": auction.digital_item,
+        "delivery_url": auction.digital_item.delivery_url,
+    }
+
+    text_body = render_to_string("emails/buy_now_purchase.txt", context)
+    html_body = render_to_string("emails/buy_now_purchase.html", context)
+
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=None,
+        to=[user.email],
+    )
+
+    email.attach_alternative(html_body, "text/html")
+    email.send()

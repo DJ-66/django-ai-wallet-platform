@@ -8,7 +8,7 @@
 
     <h2>{{ auction.title }}</h2>
 
-    <p><strong>Final price:</strong> {{ auction.current_price }} credits</p>
+    <p><strong>Final price:</strong> {{ auction.current_price|floatformat:0 }} credits</p>
 
     {% if delivery_url %}
       <p>Your delivery URL:</p>

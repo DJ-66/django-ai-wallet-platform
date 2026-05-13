@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
-
+from decimal import Decimal
 from auctions.models import Auction
 
 
@@ -37,7 +37,7 @@ class Command(BaseCommand):
                     subject=f"Less than 60 minutes left: {auction.title}",
                     message=(
                         f"{auction.title} ends in less than 60 minutes.\n\n"
-                        f"Current price: {auction.current_price}\n"
+                        f"Current price: {auction.current_price.quantize(Decimal('1'))} credits\n"
                         f"Bid here:\n"
                         f"https://django.usdrick.com/auctions/{auction.id}/"
                     ),

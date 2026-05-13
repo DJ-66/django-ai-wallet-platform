@@ -7,7 +7,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 import secrets
-
+from decimal import Decimal
 
 class DigitalItem(models.Model):
     title = models.CharField(max_length=200)
@@ -33,8 +33,8 @@ class Auction(models.Model):
     image_2 = models.ImageField(upload_to="auction_images/", blank=True, null=True)
     starting_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     current_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    bid_increment = models.DecimalField(max_digits=10, decimal_places=2, default=0.01)
-
+    bid_increment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("1.00"))
+    starting_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("1.00"))
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")

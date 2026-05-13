@@ -1,0 +1,15 @@
+Thanks for your purchase!
+
+Hi {{ user.username }},
+
+You bought {{ auction.title }} for {{ buy_now_price|floatformat:0 }} credits.
+
+Your digital item:
+{{ digital_item.title }}
+
+{{ digital_item.description }}
+
+{% if digital_item.file %}
+Download:
+{{ delivery_url }}
+{% endif %}

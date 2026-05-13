@@ -1,0 +1,20 @@
+<h2>Thanks for your purchase!</h2>
+
+<p>Hi {{ user.username }},</p>
+
+<p>
+  You bought <strong>{{ auction.title }}</strong>
+  for <strong>{{ buy_now_price|floatformat:0 }} credits</strong>.
+</p>
+
+<h3>Your digital item</h3>
+
+<p><strong>{{ digital_item.title }}</strong></p>
+<p>{{ digital_item.description }}</p>
+
+{% if digital_item.file %}
+  <p>
+    Download your item here:
+    <a href="{{ delivery_url }}">Download</a>
+  </p>
+{% endif %}
