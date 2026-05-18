@@ -1,5 +1,6 @@
 from . import views
-from django.urls import path
+from django.conf.urls.i18n import i18n_patterns
+from django.urls import path, include
 from .views import bid_view, auction_detail, auction_list, signup_view, activate_view
 from .views import pay_user
 from .views import wallet_view
@@ -18,6 +19,7 @@ urlpatterns = [
     path("ai/", views_ai.companion_list, name="companion_list"),
     path("ai/start/<slug:slug>/", views_ai.start_companion_chat, name="start_companion_chat"),
     path("ai/chat/<int:conversation_id>/", views_ai.ai_conversation, name="ai_conversation"),
+    path("i18n/", include("django.conf.urls.i18n")),
     path(
     "ai/chat/<int:conversation_id>/delete/",
     views_ai.delete_conversation,
@@ -46,5 +48,7 @@ urlpatterns = [
     views.buy_now_auction,
     name="buy_now_auction"
 ),
+
+
 
 ]

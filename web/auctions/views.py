@@ -198,7 +198,7 @@ def signup_view(request):
 
 
 
-            ref_code = request.session.get("referral_code") or request.GET.get("ref")
+            ref_code = request.session.pop("referral_code", None) or request.GET.get("ref")
 
             if ref_code:
                 referrer_wallet = BidWallet.objects.filter(referral_code=ref_code).first()

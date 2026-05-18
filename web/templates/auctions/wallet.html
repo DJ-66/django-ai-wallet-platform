@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
 
 <div class="wallet-page-card">
-  <h2>My Wallet</h2>
+  <h2>{% trans "My Wallet" %}</h2>
 
-  <p><strong>Credits:</strong> {{ wallet.credits }}</p>
+  <p><strong>{% trans "Credits:" %}</strong> {{ wallet.credits }}</p>
 
   <hr>
 
   <section class="wallet-section">
-    <h3>Invite Friends</h3>
-    <p>Earn +50 credits when someone signs up with your link and activates their account.</p>
+    <h3>{% trans "Invite friends" %}</h3>
+    <p>{% trans "Earn +50 credits when someone signs up with your link and activates their account." %}</p>
 
     <div class="wallet-qr">
       <img src="/media/qr_codes/ref_{{ wallet.referral_code }}.png" alt="Referral QR">
@@ -25,7 +26,7 @@
         readonly>
 
       <button type="button" onclick="copyReferral()" class="auth-link-button">
-        Copy
+        {% trans "Copy" %}
       </button>
     </div>
   </section>
@@ -33,8 +34,8 @@
   <hr>
 
   <section class="wallet-section">
-    <h3>Receive Credits</h3>
-    <p>Share this wallet link so other activated users can send you credits.</p>
+    <h3>{% trans "Receive Credits" %}</h3>
+    <p>{% trans "Share this wallet link so other activated users can send you credits." %}</p>
 
     <div class="wallet-qr">
       <img src="/media/qr_codes/{{ wallet.wallet_code }}.png" alt="Wallet QR">
@@ -48,7 +49,7 @@
         readonly>
 
       <button type="button" onclick="copyLink()" class="auth-link-button">
-        Copy
+        {% trans "Copy" %}
       </button>
     </div>
   </section>
@@ -56,7 +57,7 @@
 
 <div class="glass-card" style="margin-top:20px;">
   <hr>
-  <h3>Recent Activity</h3>
+  <h3> {% trans "Recent Activity" %}</h3>
 
   {% for tx in transactions %}
     <div class="wallet-activity-item">

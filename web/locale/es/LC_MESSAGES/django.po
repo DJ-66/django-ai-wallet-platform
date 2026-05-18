@@ -1,0 +1,55 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-18 01:54-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
+"1 : 2;\n"
+#: templates/auctions/wallet.html:7
+msgid "My Wallet"
+msgstr "Mi Billetera"
+
+#: templates/auctions/wallet.html:9
+msgid "Credits:"
+msgstr "Créditos:"
+
+#: templates/auctions/wallet.html:14
+msgid "Invite friends"
+msgstr "Invita amigos"
+
+#: templates/auctions/wallet.html:15
+msgid ""
+"Earn +50 credits when someone signs up with your link and activates their "
+"account."
+msgstr ""
+"Gana +50 créditos cuando alguien se registra con tu enlace y activa su "
+"cuenta."
+
+#: templates/auctions/wallet.html:29 templates/auctions/wallet.html:52
+msgid "Copy"
+msgstr "Copiar"
+
+#: templates/auctions/wallet.html:37
+msgid "Receive Credits"
+msgstr "Recibir Créditos"
+
+#: templates/auctions/wallet.html:38
+msgid "Share this wallet link so other activated users can send you credits."
+msgstr "Comparte este enlace de billetera para que otros usuarios activados puedan enviarte créditos."
+
+#: templates/auctions/wallet.html:60
+msgid "Recent Activity"
+msgstr "Actividad Reciente"

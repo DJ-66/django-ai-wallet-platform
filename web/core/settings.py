@@ -50,17 +50,54 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    
+    "django.contrib.sites",
+
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+
+    # providers
+    "allauth.socialaccount.providers.google",
 ]
+
+SITE_ID = 2
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+        },
+    }
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -89,11 +126,22 @@ DATABASES = {
     )
 }
 
+USE_I18N = True
+
 LANGUAGE_CODE = "en-us"
+
+LANGUAGES = [
+    ("en", "English"),
+    ("es", "Español"),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
+
 
 TIME_ZONE = "America/Tijuana"
 
-USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
@@ -122,8 +170,8 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "webmaster@localhost")
 
 # Authentication redirects
 LOGIN_REDIRECT_URL = '/auctions/'
-LOGOUT_REDIRECT_URL = '/login/'
-LOGIN_URL = '/login/'  # optional but recommended
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_URL = '/accounts/login/'  # optional but recommended
 
 
 # AI Provider settings

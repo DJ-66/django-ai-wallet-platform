@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-icon">🌐</div>
+
+    <h1>Continue with Google</h1>
+    <p class="auth-subtitle">
+      You are about to sign in using your Google account.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="google-login-btn google-submit-btn">
+        <span class="google-icon">G</span>
+        Continue with Google
+      </button>
+    </form>
+
+    <p class="auth-footer-text">
+      <a href="{% url 'account_login' %}">Back to login</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+

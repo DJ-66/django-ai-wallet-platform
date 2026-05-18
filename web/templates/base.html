@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %}
 
 <!DOCTYPE html>
 <html>
@@ -7,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=34">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=39">
 
 </head>
 <body>
@@ -30,8 +31,25 @@
     <a href="{% url 'signup' %}" class="nav-signup">
     Sign-Up
   </a>
- 
+    
   {% endif %}
+    <form action="{% url 'set_language' %}" method="post" class="language-switcher">
+    {% csrf_token %}
+
+    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+
+    <select name="language" onchange="this.form.submit()">
+        {% get_current_language as CURRENT_LANGUAGE %}
+
+        <option value="en" {% if CURRENT_LANGUAGE == "en" %}selected{% endif %}>
+            🇺🇸 English
+        </option>
+
+        <option value="es" {% if CURRENT_LANGUAGE == "es" %}selected{% endif %}>
+            🇵🇾 Español
+        </option>
+    </select>
+</form>
 </nav>
 
 </header>
@@ -64,7 +82,7 @@
 
     {% if user.is_authenticated %}
 
-      <form method="post" action="{% url 'logout' %}">
+      <form method="post" action="{% url 'account_logout' %}">
         {% csrf_token %}
         <button type="submit" class="footer-logout">
           -->❌
@@ -73,7 +91,7 @@
 
     {% else %}
 
-      <a href="{% url 'login' %}" class="footer-login">
+      <a href="{% url 'account_login' %}" class="footer-login">
         🔐 Login
       </a>
 

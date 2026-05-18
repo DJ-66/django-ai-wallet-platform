@@ -27,8 +27,8 @@ def home(request):
 urlpatterns = [
     path("", home),
     path("admin/", admin.site.urls),
+    path("accounts/", include("allauth.urls")),
     path("auctions/", include("auctions.urls")),
-
     path('login/', auth_views.LoginView.as_view(
         template_name='auth/login.html'
     ), name='login'),
