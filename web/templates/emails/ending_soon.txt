@@ -1,0 +1,14 @@
+Auction ending soon.
+
+{{ auction.title }}
+
+Current price:
+{{ auction.current_price|floatformat:0 }} credits
+
+Less than 60 minutes remain.
+
+View auction:
+{{ auction_url }}
+
+© {% now "Y" %} USDRick.com
+

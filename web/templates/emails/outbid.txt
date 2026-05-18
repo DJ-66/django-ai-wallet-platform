@@ -1,0 +1,15 @@
+You were outbid.
+
+Hi {{ user.username }},
+
+Someone placed a higher bid on:
+
+{{ auction.title }}
+
+Current price:
+{{ auction.current_price|floatformat:0 }} credits
+
+Return to the auction and bid again:
+{{ auction_url }}
+
+© {% now "Y" %} USDRick.com

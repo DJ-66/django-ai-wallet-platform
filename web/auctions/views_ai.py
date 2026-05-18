@@ -8,6 +8,7 @@ from .ai_services.ai_wallet import charge_wallet_for_ai_message, refund_wallet_f
 from .ai_services.ai_providers import get_ai_provider
 from datetime import timedelta
 from django.utils import timezone
+from .ai_services.prompts import COMPANION_PROMPTS
 
 def cleanup_old_unpinned_chats(user, days=7):
     cutoff = timezone.now() - timedelta(days=days)
@@ -214,13 +215,24 @@ def stream_ai_message(request, conversation_id):
     ]
 
     provider = get_ai_provider(companion.provider)
+    base_prompt = COMPANION_PROMPTS.get(
+        companion.prompt_key,
+        COMPANION_PROMPTS["flirty_social"]
+)
+
+    system_prompt = f"""
+    {base_prompt}
+
+    Companion Details:
+    {companion.system_prompt}
+    """
 
     def event_stream():
         full_reply = ""
 
         try:
             for chunk in provider.stream_reply(
-                system_prompt=companion.system_prompt,
+                system_prompt=system_prompt,
                 history=history,
             ):
                 full_reply += chunk

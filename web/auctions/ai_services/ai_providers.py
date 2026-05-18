@@ -8,7 +8,7 @@ class DeepSeekLocalProvider:
             "messages": [{"role": "system", "content": system_prompt}] + history,
             "stream": False,
             "options": {
-                "num_predict": 120,
+                "num_predict": 512,
                 "temperature": 0.7,
             },
         }
@@ -16,7 +16,7 @@ class DeepSeekLocalProvider:
         response = requests.post(
             settings.OLLAMA_URL,
             json=payload,
-            timeout=120,
+            timeout=300,
         )
 
         response.raise_for_status()
@@ -32,7 +32,7 @@ class DeepSeekLocalProvider:
             "messages": [{"role": "system", "content": system_prompt}] + history,
             "stream": True,
             "options": {
-                "num_predict": 120,
+                "num_predict": 512,
                 "temperature": 0.7,
             },
         }
@@ -41,7 +41,7 @@ class DeepSeekLocalProvider:
             settings.OLLAMA_URL,
             json=payload,
             stream=True,
-            timeout=120,
+            timeout=300,
         )
 
         response.raise_for_status()

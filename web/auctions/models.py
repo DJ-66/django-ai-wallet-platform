@@ -236,7 +236,6 @@ class CreditPurchase(models.Model):
     def __str__(self):
         return f"{self.user} - {self.package} - ${self.amount_paid}"
 
-
 class AICompanion(models.Model):
     PROVIDER_CHOICES = [
         ("local_ollama", "Local Ollama"),
@@ -247,11 +246,18 @@ class AICompanion(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     provider = models.CharField(max_length=30, choices=PROVIDER_CHOICES, default="local_deepseek")
+
+    prompt_key = models.CharField(
+        max_length=50,
+        default="flirty_social",
+    )
+
     system_prompt = models.TextField()
     cost_per_message = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
     is_deluxe = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
 
     def __str__(self):
         return self.name

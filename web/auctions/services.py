@@ -6,6 +6,8 @@ from decimal import Decimal
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import Auction, Bid, BidWallet
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from .models import (
     BidWallet,
     CreditPurchase,
@@ -58,18 +60,27 @@ def place_bid(auction_id, user):
     auction.save(update_fields=["current_price", "ends_at"])
 
     if previous_bid and previous_bid.user != user and previous_bid.user.email:
-        send_mail(
+        
+
+        auction_url = f"https://django.usdrick.com/auctions/{auction.id}/"
+
+        context = {
+                "user": previous_bid.user,
+                "auction": auction,
+                "auction_url": auction_url,
+        }
+
+        text_body = render_to_string("emails/outbid.txt", context)
+        html_body = render_to_string("emails/outbid.html", context)
+
+        email = EmailMultiAlternatives(
             subject=f"You were outbid on {auction.title}",
-            message=(
-                f"You were just outbid on {auction.title}.\n\n"
-                f"Current price: {auction.current_price.quantize(Decimal('1'))} credits\n"
-                f"Go back and bid again:\n"
-                f"https://django.usdrick.com/auctions/{auction.id}/"
-            ),
+            body=text_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[previous_bid.user.email],
-            fail_silently=False,
+            to=[previous_bid.user.email],
         )
+        email.attach_alternative(html_body, "text/html")
+        email.send(fail_silently=False)
 
     return auction
 

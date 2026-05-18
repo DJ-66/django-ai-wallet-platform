@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=5">
+<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=10">
 <button type="button" class="chat-drawer-btn" onclick="toggleChatDrawer()">
   ☰ Chats
 </button>
@@ -84,9 +84,11 @@
             {% endif %}
           </strong>
          
-          <p>{{ msg.content|linebreaksbr }}</p>
-        </div>
-      {% endfor %}
+           <p>{{ msg.content|linebreaksbr }}</p>           
+
+            </div>
+           {% endfor %}
+
         <div id="typingIndicator" class="typing-indicator" style="display:none;">
           <span></span><span></span><span></span>
           AI is typing...
@@ -103,103 +105,190 @@
 
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+
 <script>
+marked.setOptions({
+  breaks: true,
+  gfm: true
+});
+</script>
+
+<script>
+console.log("AI chat JS loaded clean-v1");
+
+function addCopyButtons(scope = document) {
+  scope.querySelectorAll("pre").forEach(function(pre) {
+    if (pre.querySelector(".copy-code-btn")) return;
+
+    pre.style.position = "relative";
+
+    const button = document.createElement("button");
+    button.className = "copy-code-btn";
+    button.type = "button";
+    button.textContent = "Copy";
+
+    button.addEventListener("click", async function() {
+      const code = pre.querySelector("code");
+      const text = code ? code.innerText : pre.innerText;
+
+      await navigator.clipboard.writeText(text);
+
+      button.textContent = "Copied!";
+      setTimeout(() => {
+        button.textContent = "Copy";
+      }, 1200);
+    });
+
+    pre.appendChild(button);
+  });
+}
+
+function highlightCode(scope = document) {
+  if (!window.hljs) return;
+
+  scope.querySelectorAll("pre code").forEach(function(block) {
+    window.hljs.highlightElement(block);
+  });
+}
+
+function renderMarkdown(target, markdownText) {
+  target.innerHTML = DOMPurify.sanitize(
+    marked.parse(markdownText)
+  );
+
+  highlightCode(target);
+  addCopyButtons(target);
+}
+
 function decrementWalletCredits(amount = 1) {
   const walletEl = document.getElementById("walletCredits");
-
   if (!walletEl) return;
 
   const currentText = walletEl.textContent;
-
   const match = currentText.match(/(\d+(\.\d+)?)/);
-
   if (!match) return;
 
   const currentCredits = parseFloat(match[1]);
-
   const newCredits = Math.max(0, currentCredits - amount);
 
   walletEl.textContent = `💰 ${newCredits}`;
 }
 
-  const chatBox = document.getElementById("chatBox");
+const chatBox = document.getElementById("chatBox");
+const form = document.getElementById("aiChatForm");
+const input = document.getElementById("messageInput");
+const typingIndicator = document.getElementById("typingIndicator");
+
+function scrollChatToBottom() {
   if (chatBox) {
     chatBox.scrollTop = chatBox.scrollHeight;
   }
+}
 
-  const form = document.getElementById("aiChatForm");
-  const input = document.getElementById("messageInput");
-  const typingIndicator = document.getElementById("typingIndicator");
-  const walletCredits = document.getElementById("walletCredits");
+function autoResizeTextarea() {
+  if (!input) return;
 
-  if (form && input && chatBox) {
-    form.addEventListener("submit", async function (e) {
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 160) + "px";
+}
+
+if (chatBox) {
+  scrollChatToBottom();
+  highlightCode(document);
+  addCopyButtons(document);
+}
+
+if (form && input && chatBox) {
+  input.addEventListener("input", autoResizeTextarea);
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      form.requestSubmit();
+    }
+  });
 
-      const message = input.value.trim();
-      if (!message) return;
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
 
-      const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]").value;
+    const message = input.value.trim();
+    if (!message) return;
 
-      const userDiv = document.createElement("div");
-      userDiv.className = "chat-message user";
-      userDiv.innerHTML = `<strong>You</strong><p>${message}</p>`;
-      chatBox.appendChild(userDiv);
+    const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]").value;
 
-      const aiDiv = document.createElement("div");
-      aiDiv.className = "chat-message assistant";
-      aiDiv.innerHTML = `<strong>{{ companion.name }}</strong><p></p>`;
-      chatBox.appendChild(aiDiv);
+    const userDiv = document.createElement("div");
+    userDiv.className = "chat-message user";
+    userDiv.innerHTML = `<strong>You</strong><p></p>`;
+    userDiv.querySelector("p").textContent = message;
+    chatBox.appendChild(userDiv);
 
-      const aiText = aiDiv.querySelector("p");
+    const aiDiv = document.createElement("div");
+    aiDiv.className = "chat-message assistant";
+    aiDiv.innerHTML = `<strong>{{ companion.name }}</strong><div class="markdown-body"></div>`;
+    chatBox.appendChild(aiDiv);
 
-      input.value = "";
-      decrementWalletCredits(1);
+    const aiText = aiDiv.querySelector(".markdown-body");
+    let fullAiResponse = "";
 
+    const formData = new FormData();
+    formData.append("message", message);
+    formData.append("csrfmiddlewaretoken", csrfToken);
+
+    input.value = "";
+    autoResizeTextarea();
+    decrementWalletCredits(1);
+
+    if (typingIndicator) {
+      typingIndicator.style.display = "block";
+    }
+
+    scrollChatToBottom();
+
+    try {
+      const response = await fetch("{% url 'stream_ai_message' conversation.id %}", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        fullAiResponse += chunk;
+
+        renderMarkdown(aiText, fullAiResponse);
+        scrollChatToBottom();
+      }
+
+      renderMarkdown(aiText, fullAiResponse);
+    } catch (err) {
+      console.error(err);
+      decrementWalletCredits(-1);
+
+      fullAiResponse += "\n\n⚠️ Error getting AI response.";
+      renderMarkdown(aiText, fullAiResponse);
+    } finally {
       if (typingIndicator) {
-        typingIndicator.style.display = "block";
+        typingIndicator.style.display = "none";
       }
 
-      chatBox.scrollTop = chatBox.scrollHeight;
-
-      const formData = new FormData();
-      formData.append("message", message);
-      formData.append("csrfmiddlewaretoken", csrfToken);
-
-      try {
-        const response = await fetch("{% url 'stream_ai_message' conversation.id %}", {
-          method: "POST",
-          body: formData,
-        });
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { value, done } = await reader.read();
-
-          if (done) {
-            break;
-          }
-
-          const chunk = decoder.decode(value);
-          aiText.innerText += chunk;
-          chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-      } catch (err) {
-        console.error(err);
-        decrementWalletCredits(-1);
-        aiText.innerText += "\n\n⚠️ Error getting AI response.";
-      } finally {
-        if (typingIndicator) {
-          typingIndicator.style.display = "none";
-        }
-
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
-    });
-  }
+      scrollChatToBottom();
+    }
+  });
+}
 </script>
 
 <script>

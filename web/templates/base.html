@@ -82,6 +82,25 @@
   </div>
 
 </footer>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+marked.setOptions({
+  breaks: true,
+  gfm: true
+});
+
+document.querySelectorAll(".saved-markdown-message").forEach(function(el) {
+  const raw = el.dataset.raw || "";
+
+  el.innerHTML = DOMPurify.sanitize(
+    marked.parse(raw)
+  );
+});
+</script>
 </body>
 </html>
 
