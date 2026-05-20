@@ -2,7 +2,7 @@
 
 from django.db import transaction
 from django.core.exceptions import ValidationError
-
+from auctions.utils import get_system_wallet
 from auctions.models import BidWallet, WalletTransaction
 
 
@@ -15,12 +15,17 @@ def charge_wallet_for_ai_message(user, companion, conversation=None):
     if wallet.credits < cost:
         raise ValidationError("Insufficient credits.")
 
+    platform_wallet = get_system_wallet()
+
     wallet.credits -= cost
+    platform_wallet.credits += cost
+
     wallet.save(update_fields=["credits"])
+    platform_wallet.save(update_fields=["credits"])
 
     tx = WalletTransaction.objects.create(
         sender=wallet,
-        receiver=None,
+        receiver=platform_wallet,
         transaction_type="ai_message",
         amount=cost,  # Django will store as Decimal automatically
 

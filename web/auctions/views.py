@@ -1,7 +1,7 @@
 import os
 import secrets
-
 import qrcode
+import json
 from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
@@ -19,10 +19,22 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils import timezone
-from .models import FavoriteAuction
-from .forms import SignUpForm
-from .models import AICompanion, AIConversation, AIMessage, Auction, BidWallet, NodeProfile, WalletTransaction
+from .models import AICompanion, AIConversation, AIMessage, Auction, BidWallet, FavoriteAuction, NodeProfile, UserProfile, WalletTransaction
+from .forms import SignUpForm, UserProfileForm
 from .services import close_auction, place_bid
+from .forms import FeedPostForm
+from .models import FeedPost, PostComment
+from .models import PostLike
+from django.db.models import Q
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect
+from django.db import transaction
+from .models import FeedPost, PostUnlock, BidWallet, WalletTransaction
+from django.http import JsonResponse
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 
 def generate_referral_code():
@@ -125,6 +137,51 @@ def ensure_api_key(node):
         node.save(update_fields=["api_key"])
 
 @login_required
+def feed_home(request):
+    if request.method == "POST":
+        form = FeedPostForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.user = request.user
+
+            if post.is_paid:
+                post.is_public = True
+
+                if post.unlock_price < 1:
+                    post.unlock_price = 1
+            else:
+                post.unlock_price = 0
+
+            post.save()
+
+            return redirect("feed_home")
+    else:
+        form = FeedPostForm()
+
+    unlocked_post_ids = set(
+        PostUnlock.objects.filter(user=request.user)
+        .values_list("post_id", flat=True)
+    )
+
+    posts = FeedPost.objects.select_related(
+        "user",
+        "user__profile"
+    ).prefetch_related(
+        "unlocks"
+    ).filter(
+        Q(is_public=True) |
+        Q(user=request.user) |
+        Q(unlocks__user=request.user)
+    ).distinct().order_by("-created_at")
+
+    return render(request, "auctions/feed_home.html", {
+        "form": form,
+        "posts": posts,
+        "unlocked_post_ids": unlocked_post_ids,
+    })
+
+@login_required
 def bid_view(request, auction_id):
     auction = get_object_or_404(Auction, id=auction_id)
 
@@ -218,7 +275,7 @@ def signup_view(request):
     else:
         form = SignUpForm(request.POST)
 
-    return render(request, "auctions/signup.html", {"form": form})
+    return render(request, "account/signup.html", {"form": form})
 
 def activate_view(request, uidb64, token):
     try:
@@ -331,7 +388,11 @@ def activate_view(request, uidb64, token):
         if "referral_code" in request.session:
             del request.session["referral_code"]
 
-        login(request, user)
+        login(
+            request,
+            user,
+            backend="django.contrib.auth.backends.ModelBackend"
+        )
 
         messages.success(
             request,
@@ -347,6 +408,9 @@ def activate_view(request, uidb64, token):
 def pay_user(request, wallet_code):
     target_wallet = get_object_or_404(BidWallet, wallet_code=wallet_code)
     sender_wallet = get_object_or_404(BidWallet, user=request.user)
+
+    target_user = target_wallet.user
+    target_profile = getattr(target_user, "profile", None)
 
     if request.method == "POST":
         amount = int(request.POST.get("amount", 0))
@@ -385,13 +449,17 @@ def pay_user(request, wallet_code):
             transaction_type="transfer",
             reference=None,
         )
-
+        
+        
         messages.success(request, "✅ Transfer successful!")
 
         return redirect("wallet")
 
     return render(request, "wallet/pay.html", {
-        "target_wallet": target_wallet
+        "target_wallet": target_wallet,
+        "target_user": target_user,
+        "target_profile": target_profile,
+        
     })
 
 
@@ -521,3 +589,273 @@ def send_buy_now_email(auction, user, buy_now_price):
 
     email.attach_alternative(html_body, "text/html")
     email.send()
+
+@login_required
+def edit_profile(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        form = UserProfileForm(
+            request.POST,
+            request.FILES,
+            instance=profile
+        )
+
+        if form.is_valid():
+            form.save()
+            return redirect("public_profile", username=request.user.username)
+
+    else:
+        form = UserProfileForm(instance=profile)
+
+    return render(
+        request,
+        "auctions/edit_profile.html",
+        {
+            "form": form,
+            "profile": profile,
+        }
+    )
+
+def public_profile(request, username):
+    profile_user = get_object_or_404(User, username=username)
+    profile, _ = UserProfile.objects.get_or_create(user=profile_user)
+
+    profile_posts = FeedPost.objects.select_related(
+        "user",
+        "user__profile"
+    ).filter(
+        user=profile_user,
+        is_public=True,
+    ).order_by("-is_pinned", "-created_at")
+    
+    unlocked_post_ids = set(
+    PostUnlock.objects.filter(user=request.user)
+    .values_list("post_id", flat=True)
+)
+    return render(
+        request,
+        "auctions/public_profile.html",
+        {
+            "profile_user": profile_user,
+            "profile": profile,
+            "profile_posts": profile_posts,
+            "unlocked_post_ids": unlocked_post_ids,
+        }
+    )
+
+@login_required
+def toggle_post_like(request, post_id):
+    post = get_object_or_404(FeedPost, id=post_id)
+
+    like, created = PostLike.objects.get_or_create(
+        post=post,
+        user=request.user
+    )
+
+    if not created:
+        like.delete()
+        liked = False
+    else:
+        liked = True
+
+    like_count = post.likes.count()
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
+            "liked": liked,
+            "like_count": like_count,
+        })
+
+    return redirect(request.META.get("HTTP_REFERER", "feed_home"))
+
+
+@login_required
+@transaction.atomic
+def unlock_feed_post(request, post_id):
+    post = get_object_or_404(FeedPost, id=post_id)
+
+    if post.user == request.user:
+        messages.info(request, "You already own this post.")
+        return redirect("public_profile_root", username=post.user.username)
+
+    if not post.is_paid or post.unlock_price <= 0:
+        messages.info(request, "This post does not require unlocking.")
+        return redirect("public_profile_root", username=post.user.username)
+
+    existing_unlock = PostUnlock.objects.filter(
+        post=post,
+        user=request.user
+    ).first()
+
+    if existing_unlock:
+        messages.info(request, "You already unlocked this post.")
+        return redirect("public_profile_root", username=post.user.username)
+
+    buyer_wallet = BidWallet.objects.select_for_update().get(user=request.user)
+    creator_wallet = BidWallet.objects.select_for_update().get(user=post.user)
+
+    price = post.unlock_price
+
+    if buyer_wallet.credits < price:
+        messages.error(request, "You do not have enough credits to unlock this post.")
+        return redirect("public_profile_root", username=post.user.username)
+
+    buyer_wallet.credits -= price
+    creator_wallet.credits += price
+
+    buyer_wallet.save()
+    creator_wallet.save()
+
+    PostUnlock.objects.create(
+        post=post,
+        user=request.user,
+        price_paid=price
+    )
+
+    WalletTransaction.objects.create(
+        sender=buyer_wallet,
+        receiver=creator_wallet,
+        amount=price,
+        transaction_type="purchase",
+        reference=f"Unlocked post #{post.id}"
+    )
+
+    messages.success(request, f"Post unlocked for {price} credits.")
+
+    profile_url = reverse(
+        "public_profile_root",
+        kwargs={"username": post.user.username}
+    )
+
+    return redirect(f"{profile_url}#post-{post.id}")
+
+
+@login_required
+@transaction.atomic
+def quick_tip_user(request, wallet_code):
+    if request.method != "POST":
+        return JsonResponse({"success": False}, status=400)
+
+    target_wallet = get_object_or_404(
+        BidWallet,
+        wallet_code=wallet_code
+    )
+
+    sender_wallet = BidWallet.objects.select_for_update().get(
+        user=request.user
+    )
+
+    data = json.loads(request.body)
+
+    amount = int(data.get("amount", 1))
+    if amount < 1:
+        amount = 1
+
+    if amount > 1000:
+        amount = 1000
+
+    if sender_wallet == target_wallet:
+        return JsonResponse({
+            "success": False,
+            "error": "Cannot tip yourself."
+        })
+
+    if sender_wallet.credits < amount:
+        return JsonResponse({
+            "success": False,
+            "error": "Not enough credits."
+        })
+
+    sender_wallet.credits -= amount
+    target_wallet.credits += amount
+
+    sender_wallet.save(update_fields=["credits"])
+    target_wallet.save(update_fields=["credits"])
+
+    WalletTransaction.objects.create(
+        sender=sender_wallet,
+        receiver=target_wallet,
+        amount=amount,
+        transaction_type="transfer",
+        reference=f"Quick tip to @{target_wallet.user.username}"
+    )
+
+    return JsonResponse({
+        "success": True,
+        "new_balance": sender_wallet.credits,
+    })
+
+@login_required
+@require_POST
+def toggle_pin_post(request, post_id):
+    post = get_object_or_404(FeedPost, id=post_id, user=request.user)
+
+    post.is_pinned = not post.is_pinned
+    post.save(update_fields=["is_pinned"])
+
+    return redirect(request.META.get("HTTP_REFERER", "feed_home"))
+
+
+@login_required
+@require_POST
+def delete_feed_post(request, post_id):
+    post = get_object_or_404(FeedPost, id=post_id, user=request.user)
+    post.delete()
+
+    return redirect(request.META.get("HTTP_REFERER", "feed_home"))
+
+
+@login_required
+def add_post_comment(request, post_id):
+
+    post = get_object_or_404(FeedPost, id=post_id)
+
+    if request.method == "POST":
+
+        content = request.POST.get("content", "").strip()
+        parent_id = request.POST.get("parent_id")
+
+        parent = None
+
+        if parent_id:
+            parent = PostComment.objects.filter(
+                id=parent_id,
+                post=post
+            ).first()
+
+        if content:
+
+            comment = PostComment.objects.create(
+                post=post,
+                user=request.user,
+                parent=parent,
+                content=content,
+            )
+
+            # AJAX RESPONSE
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+
+                return JsonResponse({
+                    "success": True,
+                    "comment_id": comment.id,
+                    "parent_id": parent.id if parent else None,
+                    "username": request.user.username,
+                    "content": comment.content,
+                })
+
+    # AJAX FAIL RESPONSE
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+
+        return JsonResponse({
+            "success": False,
+            "error": "Comment failed."
+        }, status=400)
+
+    # NORMAL FALLBACK
+    return redirect(
+        request.META.get("HTTP_REFERER", "feed_home")
+    )
+
+
+

@@ -19,6 +19,7 @@ from django.http import HttpResponse
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from auctions.views import activate_view
+from auctions import views as auction_views
 
 
 def home(request):
@@ -29,6 +30,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("auctions/", include("auctions.urls")),
+    path("u/<str:username>/", auction_views.public_profile, name="public_profile_root"),
     path('login/', auth_views.LoginView.as_view(
         template_name='auth/login.html'
     ), name='login'),

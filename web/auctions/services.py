@@ -8,6 +8,7 @@ from django.conf import settings
 from .models import Auction, Bid, BidWallet
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from .utils import get_system_wallet
 from .models import (
     BidWallet,
     CreditPurchase,
@@ -33,8 +34,13 @@ def place_bid(auction_id, user):
     if wallet.credits <= 0:
         raise ValidationError("No credits remaining.")
 
+    platform_wallet = get_system_wallet()
+
     wallet.credits -= 1
+    platform_wallet.credits += 1
+
     wallet.save(update_fields=["credits"])
+    platform_wallet.save(update_fields=["credits"])
 
     new_price = auction.current_price + auction.bid_increment
 
@@ -46,11 +52,11 @@ def place_bid(auction_id, user):
 
     WalletTransaction.objects.create(
         sender=wallet,
-        receiver=None,
+        receiver=platform_wallet,
         amount=1,
         transaction_type="game",
         reference=f"Bid on auction #{auction.id}: {auction.title}",
-    )
+)
 
     auction.current_price = new_price
 

@@ -20,6 +20,12 @@ urlpatterns = [
     path("ai/start/<slug:slug>/", views_ai.start_companion_chat, name="start_companion_chat"),
     path("ai/chat/<int:conversation_id>/", views_ai.ai_conversation, name="ai_conversation"),
     path("i18n/", include("django.conf.urls.i18n")),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path("u/<str:username>/", views.public_profile, name="public_profile"),
+    path("feed/", views.feed_home, name="feed_home"),
+    path("feed/post/<int:post_id>/pin/", views.toggle_pin_post, name="toggle_pin_post"),
+    path("feed/post/<int:post_id>/delete/", views.delete_feed_post, name="delete_feed_post"),
+    path("feed/post/<int:post_id>/comment/", views.add_post_comment, name="add_post_comment"),
     path(
     "ai/chat/<int:conversation_id>/delete/",
     views_ai.delete_conversation,
@@ -49,6 +55,22 @@ urlpatterns = [
     name="buy_now_auction"
 ),
 
+path(
+    "feed/like/<int:post_id>/",
+    views.toggle_post_like,
+    name="toggle_post_like"
+),
 
+path(
+    "feed/unlock/<int:post_id>/",
+    views.unlock_feed_post,
+    name="unlock_feed_post"
+),
+
+path(
+    "feed/quick-tip/<str:wallet_code>/",
+    views.quick_tip_user,
+    name="quick_tip_user",
+),
 
 ]

@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+
+<div class="feed-page">
+
+    <div class="feed-layout">
+
+        <div class="feed-compose-card">
+            <h2>{% trans "Community Feed" %}</h2>
+
+            <form method="post" enctype="multipart/form-data" class="feed-form">
+            {% csrf_token %}
+
+            {{ form.content }}
+
+            <br><br>
+
+            {{ form.image }}
+
+           
+
+            <label class="feed-private-toggle">
+            {{ form.is_public }}
+            {% trans "Public Post" %}
+            </label>
+
+           <label class="feed-private-toggle">
+    {{ form.is_paid }}
+    {% trans "Paid / Locked Post (NSFW)" %}
+</label>
+
+<br><br>
+
+<label class="feed-unlock-price-label">
+    {% trans "Unlock Price" %}
+</label>
+
+{{ form.unlock_price }}
+
+            <button type="submit" class="auth-primary-btn">
+            {% trans "Post" %}
+            </button>
+
+            <br>
+
+            </form>
+            <br>
+        </div>
+
+        {% for post in posts %}
+            <div class="feed-post-card" id="post-{{ post.id }}">
+
+       <div class="feed-post-header">
+    {% if post.user.profile.avatar %}
+        <a href="{% url 'public_profile_root' post.user.username %}">
+            <img src="{{ post.user.profile.avatar.url }}" class="feed-avatar">
+        </a>
+    {% else %}
+        <a href="{% url 'public_profile_root' post.user.username %}">
+            <div class="feed-avatar-fallback">
+                {{ post.user.username|first|upper }}
+            </div>
+        </a>
+    {% endif %}
+
+    <div>
+        <a href="{% url 'public_profile_root' post.user.username %}" class="feed-user-name">
+            {{ post.user.profile.display_name|default:post.user.username }}
+        </a>
+
+        <p class="feed-username">
+            {% trans "Created by" %}: @{{ post.user.username }}
+            · {{ post.created_at|timesince }} {% trans "ago" %}
+        </p>
+
+        {% if not post.is_public %}
+            <p class="feed-private-badge">
+                🔒 {% trans "Private" %}
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+{% if post.is_paid and post.user != request.user %}
+
+    <p class="feed-content">
+        {{ post.content|linebreaksbr }}
+    </p>
+
+    {% if post.id in unlocked_post_ids %}
+
+        {% if post.image %}
+            <img src="{{ post.image.url }}" class="feed-image">
+        {% endif %}
+
+    {% else %}
+
+        <div class="locked-post-card">
+
+            <p class="locked-post-title">
+                🔒 {% trans "Premium content locked" %}
+            </p>
+
+            <p class="locked-post-price">
+                {% trans "Unlock media for" %}
+                {{ post.unlock_price }}
+                {% trans "credits" %}
+            </p>
+
+            <form method="post" action="{% url 'unlock_feed_post' post.id %}">
+                {% csrf_token %}
+
+                <button type="submit" class="auth-primary-btn">
+                    {% trans "Unlock Post" %}
+                </button>
+            </form>
+
+        </div>
+
+    {% endif %}
+
+{% else %}
+
+    <p class="feed-content">
+        {{ post.content|linebreaksbr }}
+    </p>
+
+    {% if post.image %}
+        <img src="{{ post.image.url }}" class="feed-image">
+    {% endif %}
+
+{% endif %}
+            
+                     
+                       
+    <div class="feed-post-actions">
+
+    <button
+    type="button"
+    class="feed-like-btn ajax-like-btn"
+    data-url="{% url 'toggle_post_like' post.id %}"
+    data-post-id="{{ post.id }}">
+    ❤️ <span id="like-count-{{ post.id }}">{{ post.likes.count }}</span>
+    </button>
+
+    
+     
+    {% if request.user.is_authenticated and request.user != post.user %}
+       <div class="feed-tip-group">
+
+    <button
+        type="button"
+        class="feed-tip-link ajax-tip-btn"
+        data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
+        data-amount="1"
+    >
+        💰 Tip 1
+    </button>
+
+    <button
+        type="button"
+        class="feed-tip-link ajax-tip-btn"
+        data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
+        data-amount="5"
+    >
+         💰 Tip 5
+    </button>
+
+    <button
+        type="button"
+        class="feed-tip-link ajax-tip-btn"
+        data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
+        data-amount="10"
+    >
+        💰 Tip 10
+    </button>
+
+</div>
+    {% endif %}
+
+</div>          
+<br>
+<button
+    type="button"
+    class="feed-like-btn share-post-btn"
+    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
+>
+    🔗 Share
+</button>
+<div class="post-comments-section">
+
+    {% for comment in post.comments.all %}
+        {% if not comment.parent %}
+
+            <div class="post-comment">
+
+                <strong>@{{ comment.user.username }}</strong>
+
+                <p>{{ comment.content|linebreaksbr }}</p>
+
+                {% for reply in comment.replies.all %}
+                    <div class="post-reply">
+                        <strong>@{{ reply.user.username }}</strong>
+                        <p>{{ reply.content|linebreaksbr }}</p>
+                    </div>
+                {% endfor %}
+
+                {% if request.user.is_authenticated %}
+                    <form
+                        method="post"
+                        action="{% url 'add_post_comment' post.id %}"
+                        class="post-comment-form"
+                    >
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <input type="text" name="content" placeholder="{% trans 'Reply...' %}" required>
+                        <button type="submit">↩️</button>
+                    </form>
+                {% endif %}
+
+            </div>
+
+        {% endif %}
+    {% endfor %}
+
+    
+     
+
+    {% if request.user.is_authenticated %}
+        <form
+            method="post"
+            action="{% url 'add_post_comment' post.id %}"
+            class="post-comment-form"
+        >
+            {% csrf_token %}
+            <input type="text" name="content" placeholder="{% trans 'Write a comment...' %}" required>
+            <button type="submit">{% trans "Comment" %}</button>
+        </form>
+    {% endif %}
+
+</div>
+
+
+   
+            </div>
+        {% empty %}
+            <div class="feed-post-card">
+                <p>{% trans "No posts yet. Be the first to post." %}</p>
+            </div>
+        {% endfor %}
+
+    </div>
+
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".ajax-like-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+            const url = button.dataset.url;
+            const postId = button.dataset.postId;
+
+            fetch(url, {
+                method: "GET",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const countSpan = document.getElementById(`like-count-${postId}`);
+                if (countSpan) {
+                    countSpan.textContent = data.like_count;
+                }
+            })
+            .catch(error => console.error("Like error:", error));
+        });
+    });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    document.querySelectorAll(".ajax-tip-btn").forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            const url = button.dataset.url;
+            const amount = button.dataset.amount;
+
+            fetch(url, {
+                method: "POST",
+
+                body: JSON.stringify({
+                    amount: amount
+                }),
+
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCookie("csrftoken"),
+                    "Content-Type": "application/json",
+                }
+            })
+
+
+
+            .then(response => response.json())
+            .then(data => {
+
+                if (data.success) {
+
+                    button.innerHTML = "✅ Tipped";
+
+                    setTimeout(() => {
+                        button.innerHTML = "💰 Thanks";
+                    }, 1500);
+
+                } else {
+                    alert(data.error || "Tip failed.");
+                }
+
+            })
+            .catch(error => {
+                console.error("Tip error:", error);
+            });
+
+        });
+
+    });
+
+});
+
+
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+
+        const cookies = document.cookie.split(";");
+
+        for (let i = 0; i < cookies.length; i++) {
+
+            const cookie = cookies[i].trim();
+
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".post-comment-form").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const input = form.querySelector('input[name="content"]');
+            const parentInput = form.querySelector('input[name="parent_id"]');
+            const content = input.value.trim();
+
+            if (!content) return;
+
+            fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCookie("csrftoken"),
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Comment failed.");
+                    return;
+                }
+
+                const commentHtml = `
+                    <div class="${data.parent_id ? "post-reply" : "post-comment"}">
+                        <strong>@${data.username}</strong>
+                        <p>${data.content}</p>
+                    </div>
+                `;
+
+                if (data.parent_id) {
+                    form.insertAdjacentHTML("beforebegin", commentHtml);
+                } else {
+                    form.insertAdjacentHTML("beforebegin", commentHtml);
+                }
+
+                input.value = "";
+            })
+            .catch(error => {
+                console.error("Comment error:", error);
+            });
+        });
+    });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".share-post-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+            const url = button.dataset.url;
+
+            navigator.clipboard.writeText(url).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = "✅ Copied";
+
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                }, 1500);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,31 +1,54 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
 
-<div class="glass-card" style="max-width:500px; margin:auto; text-align:center;">
+<div class="auth-page">
+    <div class="auth-card pay-card">
 
-    <h2>Send Credits</h2>
+        <div class="auth-icon">💸</div>
 
-    <p>Send credits to:</p>
-    <h3>@{{ target_wallet.user.username }}</h3>
+        <h2>{% trans "Send Credits" %}</h2>
 
-    <form method="POST">
-        {% csrf_token %}
+        <div class="transfer-recipient-card">
 
-        <input
-            type="number"
-            name="amount"
-            min="1"
-            placeholder="Amount"
-            required
-            style="width:90%; padding:5px 5px; margin:5px 5px;"
-        >
+            {% if target_profile and target_profile.avatar %}
+                <img src="{{ target_profile.avatar.url }}" class="transfer-recipient-avatar">
+            {% else %}
+                <div class="transfer-recipient-avatar-fallback">
+                    {{ target_user.username|first|upper }}
+                </div>
+            {% endif %}
 
-        <button class="auth-link-button" type="submit">
-            Continue
-        </button>
-    </form>
+            <div class="transfer-recipient-info">
+                <h3>
+                    {% if target_profile and target_profile.display_name %}
+                        {{ target_profile.display_name }}
+                    {% elif target_user.get_full_name %}
+                        {{ target_user.get_full_name }}
+                    {% else %}
+                        {{ target_user.username }}
+                    {% endif %}
+                </h3>
 
+                <p>@{{ target_user.username }}</p>
+
+                <small>Wallet: {{ target_wallet.wallet_code }}</small>
+            </div>
+
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            
+            <input type="number" name="amount" min="1" required placeholder="Enter amount">
+            <button type="submit" class="auth-primary-btn">
+                {% trans "Send Credits" %}
+            </button>
+        </form>
+
+    </div>
 </div>
 
 {% endblock %}

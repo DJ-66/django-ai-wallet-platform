@@ -1,12 +1,11 @@
 import uuid
+import secrets
 from datetime import timedelta
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-import uuid
 from django.db import models
 from django.contrib.auth.models import User
-import secrets
 from decimal import Decimal
 
 class DigitalItem(models.Model):
@@ -315,3 +314,112 @@ class FavoriteAuction(models.Model):
 
     class Meta:
         unique_together = ("user", "auction")
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
+
+    display_name = models.CharField(max_length=80, blank=True)
+    bio = models.TextField(blank=True)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+
+    location = models.CharField(max_length=120, blank=True)
+    website = models.URLField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.display_name or self.user.username
+
+
+class FeedPost(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    content = models.TextField(max_length=2000)
+
+    image = models.ImageField(
+        upload_to="feed/",
+        blank=True,
+        null=True
+    )
+    
+    is_pinned = models.BooleanField(default=False)
+
+    is_public = models.BooleanField(default=True)
+
+    # 🔒 Paid / locked posts
+    is_paid = models.BooleanField(default=False)
+
+    unlock_price = models.PositiveIntegerField(
+        default=0
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.content[:40]}"
+
+class PostUnlock(models.Model):
+    post = models.ForeignKey(
+        FeedPost,
+        on_delete=models.CASCADE,
+        related_name="unlocks"
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    price_paid = models.PositiveIntegerField()
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("post", "user")
+
+    def __str__(self):
+        return f"{self.user.username} unlocked post {self.post_id}"
+
+class PostLike(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    post = models.ForeignKey(
+        FeedPost,
+        on_delete=models.CASCADE,
+        related_name="likes"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "post")
+
+    def __str__(self):
+        return f"{self.user.username} likes {self.post.id}"
+
+class PostComment(models.Model):
+    post = models.ForeignKey(
+        FeedPost,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="replies"
+    )
+    content = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Comment by {self.user.username} on post {self.post_id}"
+
