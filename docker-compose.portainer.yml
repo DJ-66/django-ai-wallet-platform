@@ -27,9 +27,8 @@ services:
       gunicorn core.wsgi:application --workers 4 --bind 0.0.0.0:8000 --timeout=300 --graceful-timeout 300
       "
     volumes:
-      - ./web:/app
       - staticfiles:/app/staticfiles
-      - ./web/media:/app/media
+      - mediafiles:/ap/media
     restart: always
 
   nginx:
@@ -41,7 +40,7 @@ services:
       - "8095:80"
     volumes:
       - staticfiles:/app/staticfiles:ro
-      - ./web/media:/app/media
+      - mediafiles:/app/media:ro
     restart: always
     networks:
       - default
@@ -55,14 +54,14 @@ services:
         condition: service_healthy
     command: sh /app/run_auction_tasks.sh
     volumes:
-      - ./web:/app
       - staticfiles:/app/staticfiles
-      - ./web/media:/app/media
+      - mediafiles:/app/media
     restart: always
 
 volumes:
   django_pgdata:
   staticfiles:
+  mediafiles:
 
 networks:
   fanz-net:
