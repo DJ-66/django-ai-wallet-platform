@@ -30,6 +30,17 @@ services:
       - staticfiles:/app/staticfiles
       - mediafiles:/ap/media
     restart: always
+  
+  environment:
+    DATABASE_URL: ${DATABASE_URL}
+    SECRET_KEY: ${SECRET_KEY}
+    DEBUG: ${DEBUG}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+    POSTGRES_DB: ${POSTGRES_DB}
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    AUCTION_RELIST_DAYS: ${AUCTION_RELIST_DAYS}
+    AUCTION_DURATION_DAYS: ${AUCTION_DURATION_DAYS}
 
   nginx:
     build:
@@ -57,6 +68,17 @@ services:
       - staticfiles:/app/staticfiles
       - mediafiles:/app/media
     restart: always
+
+  environment:
+    DATABASE_URL: ${DATABASE_URL}
+    SECRET_KEY: ${SECRET_KEY}
+    DEBUG: ${DEBUG}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+    POSTGRES_DB: ${POSTGRES_DB}
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    AUCTION_RELIST_DAYS: ${AUCTION_RELIST_DAYS}
+    AUCTION_DURATION_DAYS: ${AUCTION_DURATION_DAYS}
 
 volumes:
   django_pgdata:
