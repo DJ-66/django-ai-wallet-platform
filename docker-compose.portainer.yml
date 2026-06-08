@@ -78,6 +78,8 @@ services:
 
 volumes:
   django_pgdata:
+    external: true
+    name: django-monolith_django_pgdata
   staticfiles:
   mediafiles:
 
