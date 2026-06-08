@@ -139,8 +139,8 @@ LOCALE_PATHS = [
     BASE_DIR / "locale",
 ]
 
+TIME_ZONE = "America/Asuncion"
 
-TIME_ZONE = "America/Tijuana"
 
 USE_TZ = True
 
