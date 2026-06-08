@@ -33,13 +33,13 @@ services:
     restart: always
 
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
     depends_on:
       - web
     ports:
       - "8095:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - staticfiles:/app/staticfiles:ro
       - ./web/media:/app/media
     restart: always
