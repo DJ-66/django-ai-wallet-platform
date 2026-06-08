@@ -67,3 +67,4 @@ volumes:
 networks:
   fanz-net:
     external: true
+    name: fanz-net
