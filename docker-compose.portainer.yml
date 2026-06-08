@@ -53,7 +53,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: /app/run_auction_tasks.sh
+    command: sh /app/run_auction_tasks.sh
     volumes:
       - ./web:/app
       - staticfiles:/app/staticfiles
