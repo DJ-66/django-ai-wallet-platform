@@ -26,9 +26,7 @@ services:
       python manage.py migrate &&
       python manage.py collectstatic --noinput &&
       gunicorn core.wsgi:application --workers 4 --bind 0.0.0.0:8000 --timeout=300 --graceful-timeout 300
-
-       "
-
+      "
     volumes:
       - ./web:/app
       - staticfiles:/app/staticfiles
@@ -46,6 +44,9 @@ services:
       - staticfiles:/app/staticfiles:ro
       - ./web/media:/app/media
     restart: always
+    networks:
+      - default
+      - fanz-net
 
   auction_worker:
     build: .
@@ -64,3 +65,7 @@ services:
 volumes:
   django_pgdata:
   staticfiles:
+
+networks:
+  fanz-net:
+    external: true
