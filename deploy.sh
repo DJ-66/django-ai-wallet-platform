@@ -9,8 +9,15 @@ sudo usermod -aG docker umbrel
 
 cd ~/stacks/django-monolith
 
-echo "Pulling latest code..."
-git pull
+echo "Checking git status..."
+git status --short
+
+if [ -z "$(git status --short)" ]; then
+  echo "Working tree clean. Pulling latest code..."
+  git pull
+else
+  echo "Working tree has local changes. Skipping git pull."
+fi
 
 echo "Deploying..."
 sudo docker compose up -d --build
