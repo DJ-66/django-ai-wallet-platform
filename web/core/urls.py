@@ -26,7 +26,29 @@ def legacy_user_profile_redirect(request, username):
     return redirect("public_profile_root", username=username, permanent=True)
 
 def home(request):
-    return HttpResponse("Django is running on Umbrel + Gunicorn")
+    return HttpResponse("""
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fanz.to</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#0f1020;color:white;">
+  <h1 style="font-size:48px;margin-bottom:10px;">Fanz.to</h1>
+  <h2 style="font-weight:400;margin-bottom:20px;">Creator Economy + AI Companions</h2>
+  <p style="font-size:28px;line-height:1.4;margin-bottom:36px;">
+    Create.<br>
+    Connect.<br>
+    Monetize.
+  </p>
+  <p>
+    <a href="/auctions/feed/" style="display:inline-block;margin:8px;padding:14px 22px;background:#6c5ce7;color:white;text-decoration:none;border-radius:10px;">Explore Feed</a>
+    <a href="/auctions/signup/" style="display:inline-block;margin:8px;padding:14px 22px;background:#00b894;color:white;text-decoration:none;border-radius:10px;">Sign Up</a>
+    <a href="/accounts/login/" style="display:inline-block;margin:8px;padding:14px 22px;background:#2d3436;color:white;text-decoration:none;border-radius:10px;">Login</a>
+  </p>
+</body>
+</html>
+""")
 
 urlpatterns = [
     path("", home),
