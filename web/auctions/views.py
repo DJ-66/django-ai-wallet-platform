@@ -628,11 +628,15 @@ def public_profile(request, username):
         user=profile_user,
         is_public=True,
     ).order_by("-is_pinned", "-created_at")
-    
-    unlocked_post_ids = set(
-    PostUnlock.objects.filter(user=request.user)
-    .values_list("post_id", flat=True)
-)
+
+    if request.user.is_authenticated:
+        unlocked_post_ids = set(
+            PostUnlock.objects.filter(user=request.user)
+            .values_list("post_id", flat=True)
+        )
+    else:
+        unlocked_post_ids = set()
+
     return render(
         request,
         "auctions/public_profile.html",

@@ -31,9 +31,10 @@ ALLOWED_HOSTS = os.getenv(
 ).split(",")
 
 # Needed for Django admin/login behind Cloudflare + Nginx + HTTPS
-CSRF_TRUSTED_ORIGINS = [
-    "https://django.usdrick.com",
-]
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://django.usdrick.com"
+).split(",")
 
 # Tell Django to trust HTTPS info passed by Nginx/Cloudflare
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

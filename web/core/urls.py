@@ -30,7 +30,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("auctions/", include("auctions.urls")),
-    path("u/<str:username>/", auction_views.public_profile, name="public_profile_root"),
+    path("u/<str:username>/", auction_views.public_profile, name="public_profile_root_old"),
     path('login/', auth_views.LoginView.as_view(
         template_name='auth/login.html'
     ), name='login'),
@@ -42,7 +42,7 @@ urlpatterns = [
     # ✅ ADD THIS
     path("activate/<uidb64>/<token>/", activate_view, name="activate"),
     path("ai/", include("auctions.ai_urls")),
-
+    path("<str:username>/", auction_views.public_profile, name="public_profile_root"),
 
 ]
 
