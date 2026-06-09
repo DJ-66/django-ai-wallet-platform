@@ -20,7 +20,10 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from auctions.views import activate_view
 from auctions import views as auction_views
+from django.shortcuts import redirect
 
+def legacy_user_profile_redirect(request, username):
+    return redirect("public_profile_root", username=username, permanent=True)
 
 def home(request):
     return HttpResponse("Django is running on Umbrel + Gunicorn")
@@ -30,7 +33,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("auctions/", include("auctions.urls")),
-    path("u/<str:username>/", auction_views.public_profile, name="public_profile_root_old"),
+    path("u/<str:username>/", legacy_user_profile_redirect, name="legacy_public_profile"),
     path('login/', auth_views.LoginView.as_view(
         template_name='auth/login.html'
     ), name='login'),
