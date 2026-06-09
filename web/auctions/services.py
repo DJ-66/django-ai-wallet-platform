@@ -68,7 +68,7 @@ def place_bid(auction_id, user):
     if previous_bid and previous_bid.user != user and previous_bid.user.email:
         
 
-        auction_url = f"https://django.usdrick.com/auctions/{auction.id}/"
+        auction_url = f"https://fanz.to/auctions/{auction.id}/"
 
         context = {
                 "user": previous_bid.user,

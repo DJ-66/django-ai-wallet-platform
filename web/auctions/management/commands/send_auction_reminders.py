@@ -46,7 +46,7 @@ class Command(BaseCommand):
             })
 
             if emails:
-                auction_url = f"https://django.usdrick.com/auctions/{auction.id}/"
+                auction_url = f"https://fanz.to/auctions/{auction.id}/"
 
                 context = {
                     "auction": auction,

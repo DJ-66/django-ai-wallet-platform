@@ -25,7 +25,7 @@ def send_winner_email(auction):
             "user": auction.winner,
             "auction": auction,
             "delivery_url": delivery_url,
-            "site_url": "https://django.usdrick.com",
+            "site_url": "https://fanz.to",
         },
     )
 

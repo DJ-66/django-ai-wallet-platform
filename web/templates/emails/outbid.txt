@@ -12,4 +12,4 @@ Current price:
 Return to the auction and bid again:
 {{ auction_url }}
 
-© {% now "Y" %} USDRick.com
+© {% now "Y" %} Fanz.to

@@ -22,4 +22,4 @@ Download your item:
 Your delivery details will be sent soon.
 {% endif %}
 
-© {% now "Y" %} USDRick.com
+© {% now "Y" %} Fanz.to

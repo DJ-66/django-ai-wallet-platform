@@ -10,5 +10,5 @@ Less than 60 minutes remain.
 View auction:
 {{ auction_url }}
 
-© {% now "Y" %} USDRick.com
+© {% now "Y" %} Fanz.to
 

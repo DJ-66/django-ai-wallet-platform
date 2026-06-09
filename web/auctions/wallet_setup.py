@@ -85,7 +85,7 @@ def provision_user_wallet(user, referral_code=None):
     if not os.path.exists(qr_path):
 
         payment_url = (
-            f"https://django.usdrick.com/auctions/pay/"
+            f"https://fanz.to/auctions/pay/"
             f"{wallet.pay_code}/"
         )
 
@@ -105,7 +105,7 @@ def provision_user_wallet(user, referral_code=None):
     if not os.path.exists(ref_qr_path):
 
         referral_url = (
-            "https://django.usdrick.com/auctions/signup/"
+            "https://fanz.to/auctions/signup/"
             f"?ref={wallet.referral_code}"
         )
 

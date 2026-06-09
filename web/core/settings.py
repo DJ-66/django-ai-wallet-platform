@@ -27,13 +27,13 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
-    "django.usdrick.com,192.168.1.151,localhost,127.0.0.1"
+    "fanz.to,www.fanz.to,django.usdrick.com,192.168.100.109,localhost,127.0.0.1"
 ).split(",")
 
 # Needed for Django admin/login behind Cloudflare + Nginx + HTTPS
 CSRF_TRUSTED_ORIGINS = os.getenv(
     "CSRF_TRUSTED_ORIGINS",
-    "https://django.usdrick.com"
+    "https://fanz.to"
 ).split(",")
 
 # Tell Django to trust HTTPS info passed by Nginx/Cloudflare
@@ -176,7 +176,7 @@ LOGIN_URL = '/accounts/login/'  # optional but recommended
 
 
 # AI Provider settings
-OLLAMA_URL = "http://192.168.1.151:11434/api/chat"
+OLLAMA_URL = "http://192.168.100.109:11434/api/chat"
 OLLAMA_MODEL = "gemma3:latest"
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", default="")
