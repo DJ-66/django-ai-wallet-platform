@@ -34,12 +34,12 @@ def home(request):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#0f1020;color:white;">
-  <h1 style="font-size:48px;margin-bottom:10px;">Fanz.to</h1>
-  <h2 style="font-weight:400;margin-bottom:20px;">Creator Economy + AI Companions</h2>
+  <h1 style="font-size:80px;margin-bottom:10px;">Fanz.to</h1>
+  <h2 style="font-weight:400;margin-bottom:20px;">Creator Economy ✦ AI Friends ✦ Penny Auctions</h2>
   <p style="font-size:28px;line-height:1.4;margin-bottom:36px;">
-    Create.<br>
-    Connect.<br>
-    Monetize.
+   🤔💭 Create.<br>
+   𐦂𖨆𐀪𖠋 Connect.<br>
+   💰❤️ Monetize!
   </p>
   <p>
     <a href="/auctions/feed/" style="display:inline-block;margin:8px;padding:14px 22px;background:#6c5ce7;color:white;text-decoration:none;border-radius:10px;">Explore Feed</a>
