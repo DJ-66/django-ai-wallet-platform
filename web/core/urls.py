@@ -32,9 +32,27 @@ def home(request):
 <head>
   <title>Fanz.to</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
+</svg>">
+<style>
+.hero-logo {
+    text-align: center;
+}
+
+.hero-emoji {
+    display: block;
+    font-size: 4rem;
+    margin-bottom: 10px;
+}
+</style>
 </head>
 <body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#0f1020;color:white;">
-  <h1 style="font-size:80px;margin-bottom:10px;">Fanz.to</h1>
+<div class="hero-logo">
+    <span class="hero-emoji">🤩</span>
+
+</div> 
+ <h1 style="font-size:80px;margin-bottom:10px;">Fanz.to</h1>
   <h2 style="font-weight:400;margin-bottom:20px;">Creator Economy ✦ AI Friends ✦ Penny Auctions</h2>
   <p style="font-size:28px;line-height:1.4;margin-bottom:36px;">
    🤔💭 Create.<br>

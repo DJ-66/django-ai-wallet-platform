@@ -21,3 +21,9 @@ staticfiles/
 
 # Python venv
 venv/
+
+# Database backups
+*.sql
+*.sql.gz
+backup-*.sql
+backup-*.sql.gz
