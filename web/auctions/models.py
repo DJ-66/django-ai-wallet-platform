@@ -315,7 +315,6 @@ class FavoriteAuction(models.Model):
     class Meta:
         unique_together = ("user", "auction")
 
-
 class UserProfile(models.Model):
     user = models.OneToOneField(
         User,
@@ -325,7 +324,18 @@ class UserProfile(models.Model):
 
     display_name = models.CharField(max_length=80, blank=True)
     bio = models.TextField(blank=True)
-    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+
+    avatar = models.ImageField(
+        upload_to="avatars/",
+        blank=True,
+        null=True
+    )
+
+    banner = models.ImageField(
+        upload_to="profile_banners/",
+        blank=True,
+        null=True
+    )
 
     location = models.CharField(max_length=120, blank=True)
     website = models.URLField(blank=True)

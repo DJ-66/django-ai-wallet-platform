@@ -6,7 +6,14 @@
 
 <div class="feed-page">
 <div class="feed-layout">
-    <div class="profile-public-card">
+
+{% if profile.banner %}
+<div class="profile-banner">
+    <img src="{{ profile.banner.url }}" alt="Banner">
+</div>
+{% endif %}
+
+<div class="profile-public-card">
 
         {% if profile.avatar %}
             <img src="{{ profile.avatar.url }}" class="profile-avatar">

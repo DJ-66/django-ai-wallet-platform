@@ -45,6 +45,7 @@ class UserProfileForm(forms.ModelForm):
             "display_name",
             "bio",
             "avatar",
+            "banner",
             "location",
             "website",
         ]

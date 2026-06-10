@@ -1,19 +1,4 @@
-"""
-URL configuration for core project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import path, include
@@ -70,30 +55,53 @@ def home(request):
 }}
 
 .lang-pills {{
-    margin: 18px 0 24px;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 1000;
 }}
 
 .lang-pill {{
     display: inline-block;
-    padding: 8px 14px;
-    margin: 0 4px;
+    padding: 6px 10px;
+    margin: 0 2px;
     border-radius: 999px;
     background: rgba(255,255,255,.12);
     color: white;
     text-decoration: none;
     font-weight: 600;
+    font-size: 0.85rem;
 }}
 
 .lang-pill:hover {{
     background: rgba(255,255,255,.22);
 }}
 
+.flag-svg {{
+    display: inline-block;
+    width: 18px;
+    height: 12px;
+    margin-right: 6px;
+    border-radius: 3px;
+    background-size: cover;
+    background-position: center;
+    vertical-align: -1px;
+}}
+
+.flag-us {{
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7410 3900'%3E%3Crect width='7410' height='3900' fill='%23b22234'/%3E%3Cpath d='M0 450h7410v300H0zm0 600h7410v300H0zm0 600h7410v300H0zm0 600h7410v300H0zm0 600h7410v300H0zm0 600h7410v300H0' fill='%23fff'/%3E%3Crect width='2964' height='2100' fill='%233c3b6e'/%3E%3C/svg%3E");
+}}
+
+.flag-py {{
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 3'%3E%3Cpath fill='%23d52b1e' d='M0 0h5v1H0z'/%3E%3Cpath fill='%23fff' d='M0 1h5v1H0z'/%3E%3Cpath fill='%2300338e' d='M0 2h5v1H0z'/%3E%3C/svg%3E");
+}}
+
 </style>
 </head>
 <body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#0f1020;color:white;">
   <div class="lang-pills">
-    <a href="/?lang=en" class="lang-pills">🇺🇸 EN</a>
-    <a href="/?lang=es" class="lang-pills">🇵🇾 ES</a>
+    <a href="/?lang=en" class="lang-pill"><span class="flag-svg flag-us"></span> EN</a>
+    <a href="/?lang=es" class="lang-pill"><span class="flag-svg flag-py"></span> ES</a>
   </div>
 
   <div class="hero-logo">
