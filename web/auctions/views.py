@@ -453,7 +453,7 @@ def pay_user(request, wallet_code):
         
         messages.success(request, "✅ Transfer successful!")
 
-        return redirect("wallet")
+        return redirect("public_profile_root", username=target_user.username)
 
     return render(request, "wallet/pay.html", {
         "target_wallet": target_wallet,
