@@ -69,28 +69,31 @@ def home(request):
     margin-bottom: 10px;
 }}
 
-.lang-links {{
-    position: absolute;
-    top: 14px;
-    right: 14px;
+.lang-pills {{
+    margin: 18px 0 24px;
 }}
 
-.lang-links a {{
+.lang-pill {{
     display: inline-block;
-    margin-left: 6px;
-    padding: 6px 10px;
-    background: rgba(255,255,255,0.12);
+    padding: 8px 14px;
+    margin: 0 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.12);
     color: white;
     text-decoration: none;
-    border-radius: 999px;
-    font-size: 14px;
+    font-weight: 600;
 }}
+
+.lang-pill:hover {{
+    background: rgba(255,255,255,.22);
+}}
+
 </style>
 </head>
 <body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#0f1020;color:white;">
-  <div class="lang-links">
-    <a href="/?lang=en">🇺🇸 EN</a>
-    <a href="/?lang=es">🇵🇾 ES</a>
+  <div class="lang-pills">
+    <a href="/?lang=en" class="lang-pills">🇺🇸 EN</a>
+    <a href="/?lang=es" class="lang-pills">🇵🇾 ES</a>
   </div>
 
   <div class="hero-logo">
