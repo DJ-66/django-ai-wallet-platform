@@ -22,7 +22,7 @@
       <input
         type="text"
         id="referralLink"
-        value="{{ request.get_host }}{% url 'signup' %}?ref={{ wallet.referral_code }}"
+        value="https://fanz.to{% url 'signup' %}?ref={{ wallet.referral_code }}"
         readonly>
 
       <button type="button" onclick="copyReferral()" class="auth-link-button">
@@ -45,7 +45,7 @@
       <input
         type="text"
         id="walletLink"
-        value="{{ request.get_host }}{% url 'pay_user_short' wallet.pay_code %}"
+        value="https://fanz.to{% url 'pay_user_short' wallet.pay_code %}"
         readonly>
 
       <button type="button" onclick="copyLink()" class="auth-link-button">
