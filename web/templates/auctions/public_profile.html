@@ -30,11 +30,32 @@
         <p class="profile-username">
             @{{ profile_user.username }}
         </p>
+        <div class="profile-stats">
+        <div class="profile-stat">
+        📝 {{ profile_posts.count }}
+        </div>
+
+        <div class="profile-stat">
+        🔓 {{ premium_post_count }}
+        </div>
+
+        <div class="profile-stat">
+        ❤️ {{ total_likes }}
+        </div>
+        </div>
         {% if request.user.is_authenticated and request.user != profile_user %}
         <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}" class="auth-primary-btn profile-tip-btn">
         💰 {% trans "Send Credits" %}
         </a>
         {% endif %}
+        <br> 
+        <button
+        type="button"
+        class="auth-primary-btn profile-share-btn"
+        data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' profile_user.username %}">
+       🔗 {% trans "Share Profile" %}
+       </button>
+
         {% if profile.bio %}
             <p class="profile-bio">
                 {{ profile.bio }}
@@ -64,23 +85,32 @@
 </div>
 
 <div class="profile-feed-section">
-    <h3>{% trans "Posts" %}</h3>
 
     {% for post in profile_posts %}
-     <div class="feed-post-card" id="post-{{ post.id }}">
+        {% if post.is_pinned %}
+            <div class="featured-post-card">
+                <div class="featured-post-header">
+                   <h2> ⭐ Featured Post </h2>
+                </div>
 
-    {% if post.is_pinned %}
-        <p class="feed-private-badge">
-            📌 {% trans "Pinned" %}
-        </p>
-    {% endif %}
+                <div class="featured-post-body">
+                    {{ post.content|linebreaks }}
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% for post in profile_posts %}
+        <div class="feed-post-card" id="post-{{ post.id }}">
 
       
         {% if post.is_paid and request.user != post.user %}
 
+    {% if not post.is_pinned %}
     <p class="feed-content">
         {{ post.content|linebreaksbr }}
     </p>
+    {% endif %}    
 
     {% if post.id in unlocked_post_ids %}
 
@@ -116,9 +146,11 @@
 
 {% else %}
 
+    {% if not post.is_pinned %}
     <p class="feed-content">
         {{ post.content|linebreaksbr }}
     </p>
+    {% endif %}
 
     {% if post.image %}
         <img src="{{ post.image.url }}" class="feed-image">
@@ -457,6 +489,27 @@ document.addEventListener("DOMContentLoaded", function () {
                     button.innerHTML = originalText;
                 }, 1500);
             });
+        });
+    });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const shareBtn = document.querySelector(".profile-share-btn");
+
+    if (!shareBtn) return;
+
+    shareBtn.addEventListener("click", function () {
+        const url = shareBtn.dataset.url;
+        const originalText = shareBtn.innerHTML;
+
+        navigator.clipboard.writeText(url).then(() => {
+            shareBtn.innerHTML = "✅ Copied";
+
+            setTimeout(() => {
+                shareBtn.innerHTML = originalText;
+            }, 1500);
         });
     });
 });

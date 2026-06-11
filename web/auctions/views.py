@@ -629,6 +629,10 @@ def public_profile(request, username):
         is_public=True,
     ).order_by("-is_pinned", "-created_at")
 
+    premium_post_count = profile_posts.filter(is_paid=True).count()
+
+    total_likes = sum(post.likes.count() for post in profile_posts)
+
     if request.user.is_authenticated:
         unlocked_post_ids = set(
             PostUnlock.objects.filter(user=request.user)
@@ -645,12 +649,15 @@ def public_profile(request, username):
             "profile": profile,
             "profile_posts": profile_posts,
             "unlocked_post_ids": unlocked_post_ids,
+            "premium_post_count": premium_post_count,
+            "total_likes": total_likes,
         }
     )
 
 @login_required
 def toggle_post_like(request, post_id):
     post = get_object_or_404(FeedPost, id=post_id)
+
 
     like, created = PostLike.objects.get_or_create(
         post=post,
