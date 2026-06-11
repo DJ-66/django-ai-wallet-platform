@@ -1708,7 +1708,7 @@ img {
     max-width: 520px;
     background: white;
     border-radius: 24px;
-    padding: 36px 28px;
+    padding: 24px 28px 36px;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
     text-align: center;
     box-sizing: border-box;
@@ -1716,16 +1716,16 @@ img {
 }
 
 .profile-avatar {
-    width: 128px;
-    height: 128px;
+    width: 140px;
+    height: 140px;
     border-radius: 999px;
     object-fit: cover;
-    margin-bottom: 18px;
+    margin-bottom: 6px;
 }
 
 .profile-avatar-fallback {
-    width: 128px;
-    height: 128px;
+    width: 140px;
+    height: 140px;
     border-radius: 999px;
     margin: 0 auto 18px;
     display: flex;
@@ -1786,13 +1786,21 @@ img {
     }
 
     .profile-public-card h1 {
-        font-size: 1.6rem;
+        margin: 0 0 2px;
+        font-size: 2rem;
+        color: #111827;
     }
+
+    .profile-username {
+        margin: 0 0 18px;
+        color: #6b7280;
+        font-weight: 600;
+}
 
     .profile-avatar,
     .profile-avatar-fallback {
-        width: 104px;
-        height: 104px;
+        width: 140px;
+        height: 140px;
     }
 }
 
@@ -1832,7 +1840,11 @@ img {
     z-index: 2;
 }
 
-.profile-avatar {
-    position: relative;
-    top: -40px;
+.profile-avatar,
+.profile-avatar-fallback {
+    display: block;
+    margin: -90px auto 10px;
+    border: 6px solid #e5d0ff;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    0 0 12px rgba(229,208,255,0.35);
 }
