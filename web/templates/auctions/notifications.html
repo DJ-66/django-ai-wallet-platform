@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<a href="{{ next_url }}" class="back-link">
+    ← Back
+</a>
+
+<br>
+
+<h1>🔔 Notifications</h1>
+
+{% if notifications %}
+    <div class="notifications-panel">
+        {% for notification in notifications %}
+            <div class="notification-item">
+                <span>{{ notification.message }}</span>
+
+                <form method="post"
+                      action="{% url 'delete_notification' notification.id %}"
+                      class="notification-delete-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    <button type="submit" class="notification-x-btn">❌</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No notifications yet.</p>
+{% endif %}
+
+{% endblock %}

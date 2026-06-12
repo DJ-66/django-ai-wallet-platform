@@ -8,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=72">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=80">
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
 </svg>">
@@ -29,6 +29,9 @@
     <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link" > 💰 {{ wallet.credits }}</a>
     
   {% endif %}
+    <a href="{% url 'notifications' %}?next={{ request.get_full_path|urlencode }}" class="nav-link">
+    🔔 {{ unread_notification_count }}
+    </a>
     <form action="{% url 'set_language' %}" method="post" class="language-switcher">
     {% csrf_token %}
 

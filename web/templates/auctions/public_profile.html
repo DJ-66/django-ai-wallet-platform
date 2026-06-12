@@ -5,37 +5,20 @@
 {% block content %}
 
 
+<div class="feed-page">
+<div class="feed-layout">
 
-{% if request.user.is_authenticated and recent_notifications %}
 
-<div class="notifications-panel">
+<div class="feed-page">
+<div class="feed-layout">
+<div class="feed-page">
+<div class="feed-layout">
 
-    <h3>🔔 Notifications</h3>
-
-    {% for notification in recent_notifications %}
-        <div class="notification-item">
-            {{ notification.message }}
-        </div>
-    {% endfor %}
-
+<div class="profile-banner {% if not profile.banner %}profile-banner-fallback{% endif %}">
+    {% if profile.banner %}
+        <img src="{{ profile.banner.url }}" alt="Banner">
+    {% endif %}
 </div>
-
-{% endif %}
-
-<div class="feed-page">
-<div class="feed-layout">
-
-
-<div class="feed-page">
-<div class="feed-layout">
-<div class="feed-page">
-<div class="feed-layout">
-
-{% if profile.banner %}
-<div class="profile-banner">
-    <img src="{{ profile.banner.url }}" alt="Banner">
-</div>
-{% endif %}
 
 <div class="profile-public-card">
 

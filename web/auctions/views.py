@@ -36,6 +36,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from .models import Fan, Notification
+from .models import Notification
 
 def generate_referral_code():
     return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:10]
@@ -928,6 +929,7 @@ def toggle_fan(request, username):
         Notification.objects.create(
             user=creator,
             actor=request.user,
+            notification_type=Notification.FAN,
             message=f"⭐ {request.user.username} became a fan of you."
     )
     else:
@@ -935,3 +937,42 @@ def toggle_fan(request, username):
         messages.success(request, f"You are no longer a fan of {creator.username}.")
 
     return redirect("public_profile", username=username)
+
+
+@login_required
+def notifications_page(request):
+
+    next_url = request.GET.get("next", "/")
+
+    notifications = Notification.objects.filter(
+        user=request.user
+    )[:50]
+
+    return render(
+        request,
+        "auctions/notifications.html",
+        {
+            "notifications": notifications,
+            "next_url": next_url,
+        }
+    )
+
+
+@login_required
+def delete_notification(request, notification_id):
+    notification = get_object_or_404(
+        Notification,
+        id=notification_id,
+        user=request.user
+    )
+
+    if request.method == "POST":
+        notification.delete()
+
+    next_url = request.POST.get("next", "/")
+
+    return redirect(
+        f"{reverse('notifications')}?next={next_url}"
+)
+
+

@@ -469,6 +469,19 @@ class Fan(models.Model):
 
 
 class Notification(models.Model):
+
+    FAN = "fan"
+    TIP = "tip"
+    UNLOCK = "unlock"
+    AUCTION = "auction"
+
+    TYPE_CHOICES = [
+        (FAN, "Fan"),
+        (TIP, "Tip"),
+        (UNLOCK, "Unlock"),
+        (AUCTION, "Auction"),
+    ]
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -481,6 +494,11 @@ class Notification(models.Model):
         blank=True,
         related_name="notification_actions"
     )
+    notification_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=FAN,
+    )
     message = models.CharField(max_length=255)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -490,3 +508,5 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.user.username}: {self.message}"
+
+

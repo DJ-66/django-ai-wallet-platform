@@ -1,4 +1,5 @@
 from .models import BidWallet
+from .models import Notification
 
 
 def wallet_context(request):
@@ -13,4 +14,20 @@ def wallet_context(request):
 
     return {
         "wallet": None
+    }
+
+
+def notifications(request):
+    if not request.user.is_authenticated:
+        return {
+            "unread_notification_count": 0,
+        }
+
+    unread_count = Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).count()
+
+    return {
+        "unread_notification_count": unread_count,
     }
