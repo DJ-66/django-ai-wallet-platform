@@ -48,4 +48,12 @@ class UserProfileForm(forms.ModelForm):
             "banner",
             "location",
             "website",
-        ]
+            "youtube",
+            "instagram",
+            "x_url",
+            "tiktok",
+            "telegram",
+]
+
+
+

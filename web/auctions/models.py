@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal
+from django.contrib.auth.models import User
 
 class DigitalItem(models.Model):
     title = models.CharField(max_length=200)
@@ -337,9 +338,21 @@ class UserProfile(models.Model):
         null=True
     )
 
+    
     location = models.CharField(max_length=120, blank=True)
-    website = models.URLField(blank=True)
 
+    website = models.URLField(blank=True)
+    youtube = models.URLField(blank=True)
+    instagram = models.URLField(blank=True)
+    x_url = models.URLField(blank=True)
+    tiktok = models.URLField(blank=True)
+    telegram = models.URLField(blank=True)
+
+    fan_count = models.PositiveIntegerField(default=0)
+
+    is_verified = models.BooleanField(default=False)
+    is_official = models.BooleanField(default=False)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -433,3 +446,23 @@ class PostComment(models.Model):
     def __str__(self):
         return f"Comment by {self.user.username} on post {self.post_id}"
 
+
+class Fan(models.Model):
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="fans"
+    )
+    fan = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="fanning"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("creator", "fan")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.fan.username} is a fan of {self.creator.username}"

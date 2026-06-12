@@ -25,7 +25,13 @@
 
         <h1>
             {{ profile.display_name|default:profile_user.username }}
-        </h1>
+
+            {% if profile.is_official %}
+         <span title="Official creator">💎</span>
+            {% elif profile.is_verified %}
+        <span title="Verified profile">✔️</span>
+            {% endif %}
+</h1>
 
         <p class="profile-username">
             @{{ profile_user.username }}
@@ -42,7 +48,26 @@
         <div class="profile-stat">
         ❤️ {{ total_likes }}
         </div>
+        <div class="profile-stat">
+        ⭐ {{ fan_count }}
         </div>
+        
+        </div>
+        {% if request.user.is_authenticated and request.user != profile_user %}
+        <a href="{% url 'toggle_fan' profile_user.username %}"
+        class="auth-primary-btn profile-tip-btn">
+
+        {% if is_fan %}
+            ⭐ Unfan
+        {% else %}
+            ⭐ Become a Fan
+        {% endif %}
+
+        </a>
+        {% endif %}
+        
+        <br> 
+        
         {% if request.user.is_authenticated and request.user != profile_user %}
         <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}" class="auth-primary-btn profile-tip-btn">
         💰 {% trans "Send Credits" %}
@@ -71,10 +96,32 @@
         {% if profile.website %}
             <p class="profile-meta">
                 🔗 <a href="{{ profile.website }}" target="_blank" rel="noopener">
-                    {{ profile.website }}
+                    {{ profile.website|cut:"https://"|cut:"http://"|cut:"www." }}
                 </a>
             </p>
         {% endif %}
+        
+        <div class="profile-social-links">
+    {% if profile.youtube %}
+        <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
+    {% endif %}
+
+    {% if profile.instagram %}
+        <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
+    {% endif %}
+
+    {% if profile.x_url %}
+        <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏 X</a>
+    {% endif %}
+
+    {% if profile.tiktok %}
+        <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
+    {% endif %}
+
+    {% if profile.telegram %}
+        <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
+    {% endif %}
+</div>
 
         {% if request.user == profile_user %}
             <a href="{% url 'edit_profile' %}" class="auth-primary-btn profile-edit-btn">

@@ -35,7 +35,7 @@ from .models import FeedPost, PostUnlock, BidWallet, WalletTransaction
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-
+from .models import Fan
 
 def generate_referral_code():
     return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:10]
@@ -632,6 +632,17 @@ def public_profile(request, username):
     premium_post_count = profile_posts.filter(is_paid=True).count()
 
     total_likes = sum(post.likes.count() for post in profile_posts)
+    fan_count = Fan.objects.filter(
+    creator=profile_user
+    ).count()
+
+    is_fan = False
+
+    if request.user.is_authenticated:
+        is_fan = Fan.objects.filter(
+            creator=profile_user,
+            fan=request.user
+        ).exists()
 
     if request.user.is_authenticated:
         unlocked_post_ids = set(
@@ -870,3 +881,23 @@ def add_post_comment(request, post_id):
 
 
 
+@login_required
+def toggle_fan(request, username):
+    creator = get_object_or_404(User, username=username)
+
+    if creator == request.user:
+        messages.warning(request, "You cannot become a fan of yourself.")
+        return redirect("public_profile", username=username)
+
+    fan_obj, created = Fan.objects.get_or_create(
+        creator=creator,
+        fan=request.user
+    )
+
+    if created:
+        messages.success(request, f"⭐ You are now a fan of {creator.username}!")
+    else:
+        fan_obj.delete()
+        messages.success(request, f"You are no longer a fan of {creator.username}.")
+
+    return redirect("public_profile", username=username)

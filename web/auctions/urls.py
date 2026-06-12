@@ -21,6 +21,7 @@ urlpatterns = [
     path("ai/chat/<int:conversation_id>/", views_ai.ai_conversation, name="ai_conversation"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path("<str:username>/fan/", views.toggle_fan, name="toggle_fan"),
     path("u/<str:username>/", views.public_profile, name="public_profile"),
     path("feed/", views.feed_home, name="feed_home"),
     path("feed/post/<int:post_id>/pin/", views.toggle_pin_post, name="toggle_pin_post"),

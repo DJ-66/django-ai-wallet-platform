@@ -1884,4 +1884,36 @@ img {
     color: #f59e0b;
     margin-bottom: 10px;
 }
+
+.profile-social-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.profile-social-links a {
+    background: #f3e8ff;
+    color: #111827;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+}
+
+.verified-badge,
+.official-badge {
+    position: relative;
+    top: -2px;
+    margin-left: 6px;
+
+.verified-badge {
+    color: #2563eb;
+}
+
+.official-badge {
+    color: #8b5cf6;
+}
 /* end_css */
