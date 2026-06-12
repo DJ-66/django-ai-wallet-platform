@@ -29,9 +29,20 @@
             {% if profile.is_official %}
          <span title="Official creator">💎</span>
             {% elif profile.is_verified %}
-        <span title="Verified profile">✔️</span>
+         <span class="verified-badge" title="Verified profile">
+         <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="#39ff14"
+            xmlns="http://www.w3.org/2000/svg">
+
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/>
+
+            </svg>
+            </span>
             {% endif %}
-</h1>
+        </h1>
 
         <p class="profile-username">
             @{{ profile_user.username }}
@@ -47,9 +58,10 @@
 
         <div class="profile-stat">
         ❤️ {{ total_likes }}
+
         </div>
         <div class="profile-stat">
-        ⭐ {{ fan_count }}
+        ⭐ {{ fan_count_display }} Fanz
         </div>
         
         </div>

@@ -1916,4 +1916,28 @@ img {
 .official-badge {
     color: #8b5cf6;
 }
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    filter:
+        drop-shadow(0 0 4px #39ff14)
+        drop-shadow(0 0 8px #39ff14)
+        drop-shadow(0 0 16px #39ff14);
+}
+
+.notifications-panel {
+    margin: 15px 0;
+}
+
+.notification-item {
+    background: #1f2937;
+    border-left: 4px solid #39ff14;
+    color: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+}
+
 /* end_css */

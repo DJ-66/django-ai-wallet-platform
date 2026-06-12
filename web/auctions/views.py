@@ -35,7 +35,7 @@ from .models import FeedPost, PostUnlock, BidWallet, WalletTransaction
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from .models import Fan
+from .models import Fan, Notification
 
 def generate_referral_code():
     return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:10]
@@ -454,12 +454,20 @@ def pay_user(request, wallet_code):
         messages.success(request, "✅ Transfer successful!")
 
         return redirect("public_profile_root", username=target_user.username)
+        
+        recent_notifications = []
+
+        if request.user.is_authenticated:
+            recent_notifications = Notification.objects.filter(
+                user=request.user,
+                is_read=False
+            )[:5]
 
     return render(request, "wallet/pay.html", {
         "target_wallet": target_wallet,
         "target_user": target_user,
         "target_profile": target_profile,
-        
+        "recent_notifications": recent_notifications,
     })
 
 
@@ -636,6 +644,15 @@ def public_profile(request, username):
     creator=profile_user
     ).count()
 
+    if fan_count >= 1_000_000_000:
+        fan_count_display = f"{fan_count / 1_000_000_000:.1f}B".rstrip("0").rstrip(".")
+    elif fan_count >= 1_000_000:
+        fan_count_display = f"{fan_count / 1_000_000:.1f}M".rstrip("0").rstrip(".")
+    elif fan_count >= 1_000:
+        fan_count_display = f"{fan_count / 1_000:.1f}K".rstrip("0").rstrip(".")
+    else:
+        fan_count_display = str(fan_count)
+
     is_fan = False
 
     if request.user.is_authenticated:
@@ -662,6 +679,9 @@ def public_profile(request, username):
             "unlocked_post_ids": unlocked_post_ids,
             "premium_post_count": premium_post_count,
             "total_likes": total_likes,
+            "fan_count": fan_count,
+            "fan_count_display": fan_count_display,
+            "is_fan": is_fan,
         }
     )
 
@@ -896,6 +916,12 @@ def toggle_fan(request, username):
 
     if created:
         messages.success(request, f"⭐ You are now a fan of {creator.username}!")
+     
+        Notification.objects.create(
+            user=creator,
+            actor=request.user,
+            message=f"⭐ {request.user.username} became a fan of you."
+    )
     else:
         fan_obj.delete()
         messages.success(request, f"You are no longer a fan of {creator.username}.")
