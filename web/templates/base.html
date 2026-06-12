@@ -64,19 +64,11 @@
             </div>
         {% endfor %}
         
-        {% if request.user.is_authenticated and recent_notifications %}
-        <div class="notifications-panel">
-
-        {% for notification in recent_notifications %}
-        <div class="notification-item">
-            {{ notification.message }}
-        </div>
-        {% endfor %}
-
+        
 </div>
 {% endif %}
     </div>
-  {% endif %}
+ 
   {% block content %}
 
   {% endblock %}

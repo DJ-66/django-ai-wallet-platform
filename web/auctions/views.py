@@ -467,7 +467,7 @@ def pay_user(request, wallet_code):
         "target_wallet": target_wallet,
         "target_user": target_user,
         "target_profile": target_profile,
-        "recent_notifications": recent_notifications,
+        
     })
 
 
@@ -654,6 +654,13 @@ def public_profile(request, username):
         fan_count_display = str(fan_count)
 
     is_fan = False
+    recent_notifications = []
+
+    if request.user.is_authenticated:
+        recent_notifications = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        )[:5]
 
     if request.user.is_authenticated:
         is_fan = Fan.objects.filter(
@@ -682,6 +689,7 @@ def public_profile(request, username):
             "fan_count": fan_count,
             "fan_count_display": fan_count_display,
             "is_fan": is_fan,
+            "recent_notifications": recent_notifications,
         }
     )
 
