@@ -5,8 +5,12 @@
 {% block content %}
 
 
+
 {% if request.user.is_authenticated and recent_notifications %}
+
 <div class="notifications-panel">
+
+    <h3>🔔 Notifications</h3>
 
     {% for notification in recent_notifications %}
         <div class="notification-item">
@@ -15,7 +19,12 @@
     {% endfor %}
 
 </div>
+
 {% endif %}
+
+<div class="feed-page">
+<div class="feed-layout">
+
 
 <div class="feed-page">
 <div class="feed-layout">
