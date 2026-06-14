@@ -65,13 +65,39 @@
 
         <div class="profile-stat">
         ❤️ {{ total_likes }}
-
-        </div>
+       </div>
+  
         <div class="profile-stat">
         ⭐ {{ fan_count_display }} Fanz
         </div>
-        
         </div>
+
+                
+        <br>
+        {% if show_creator_earnings %}
+        <div class="creator-earnings-card">
+
+        <div class="earning-row">
+        <span>💸 Tips</span>
+        <strong>{{ tip_earnings|floatformat:0 }}</strong>
+        </div>
+
+        <div class="earning-row">
+        <span>🔓 Unlocks</span>
+        <strong>{{ unlock_earnings|floatformat:0 }}</strong>
+        </div>
+
+        <hr>
+
+        <div class="earning-row total">
+        <span>💰 Total</span>
+        <strong>{{ total_creator_earnings|floatformat:0 }}</strong>
+        </div>
+        </div>
+        <br>
+        {% endif %}       
+   
+        
         {% if request.user.is_authenticated and request.user != profile_user %}
         <a href="{% url 'toggle_fan' profile_user.username %}"
         class="auth-primary-btn profile-tip-btn">

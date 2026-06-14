@@ -1998,4 +1998,40 @@ img {
 .notification-x-btn:hover {
     color: #ef4444;
 }
+
+.creator-earnings-card {
+    margin: 12px auto;
+    padding: 12px 16px;
+
+    max-width: 240px;
+
+    background: rgba(139,92,246,.08);
+    border: 1px solid rgba(139,92,246,.25);
+    border-radius: 12px;
+
+    text-align: center;
+}
+
+.creator-earnings-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+}
+
+.creator-earnings-card hr {
+    margin: 10px 0;
+    opacity: .3;
+}
+
+.earning-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 6px 6px;
+}
+
+.earning-row.total {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 6px;
+}
+
 /* end_css */

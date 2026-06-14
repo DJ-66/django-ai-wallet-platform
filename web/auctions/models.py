@@ -97,12 +97,14 @@ class BidWallet(models.Model):
 class WalletTransaction(models.Model):
     TRANSACTION_TYPES = [
         ("transfer", "Transfer"),
+        ("tip", "Tip"),
+        ("unlock", "Premium Unlock"),
         ("purchase", "Purchase"),
         ("commission", "Commission"),
         ("bonus", "Bonus"),
         ("game", "Game"),
         ("ai_message", "AI Message"),
-    ]
+]
 
     sender = models.ForeignKey(
         "BidWallet",

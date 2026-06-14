@@ -36,6 +36,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from .models import Fan, Notification
 from .models import Notification
+from django.db.models import Sum
+
 
 def generate_referral_code():
     return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:10]
@@ -446,7 +448,7 @@ def pay_user(request, wallet_code):
             sender=sender_wallet,
             receiver=target_wallet,
             amount=amount,
-            transaction_type="transfer",
+            transaction_type="tip",
             reference=None,
         )
         
@@ -659,7 +661,27 @@ def public_profile(request, username):
     else:
         fan_count_display = str(fan_count)
 
+    creator_wallet = getattr(profile_user, "bidwallet", None)
+
+    tip_earnings = 0
+    unlock_earnings = 0
+    total_creator_earnings = 0
+
+    if creator_wallet:
+        tip_earnings = WalletTransaction.objects.filter(
+            receiver=creator_wallet,
+            transaction_type="tip"
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
+        unlock_earnings = WalletTransaction.objects.filter(
+            receiver=creator_wallet,
+            transaction_type="unlock"
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
+        total_creator_earnings = tip_earnings + unlock_earnings
+
     is_fan = False
+
     recent_notifications = []
 
     if request.user.is_authenticated:
@@ -682,6 +704,11 @@ def public_profile(request, username):
     else:
         unlocked_post_ids = set()
 
+    show_creator_earnings = (
+        request.user.is_authenticated
+        and request.user == profile_user
+        )
+
     return render(
         request,
         "auctions/public_profile.html",
@@ -694,6 +721,10 @@ def public_profile(request, username):
             "total_likes": total_likes,
             "fan_count": fan_count,
             "fan_count_display": fan_count_display,
+            "tip_earnings": tip_earnings,
+            "unlock_earnings": unlock_earnings,
+            "total_creator_earnings": total_creator_earnings,
+            "show_creator_earnings": show_creator_earnings,
             "is_fan": is_fan,
             "recent_notifications": recent_notifications,
         }
@@ -777,7 +808,7 @@ def unlock_feed_post(request, post_id):
         sender=buyer_wallet,
         receiver=creator_wallet,
         amount=price,
-        transaction_type="purchase",
+        transaction_type="unlock",
         reference=f"Unlocked post #{post.id}"
     )
 
@@ -844,7 +875,7 @@ def quick_tip_user(request, wallet_code):
         sender=sender_wallet,
         receiver=target_wallet,
         amount=amount,
-        transaction_type="transfer",
+        transaction_type="tip",
         reference=f"Quick tip to @{target_wallet.user.username}"
     )
     
