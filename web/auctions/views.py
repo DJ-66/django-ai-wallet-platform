@@ -1,4 +1,3 @@
-import os
 import secrets
 import qrcode
 import json
@@ -451,6 +450,12 @@ def pay_user(request, wallet_code):
             reference=None,
         )
         
+        Notification.objects.create(
+            user=target_wallet.user,
+            actor=request.user,
+            notification_type=Notification.TIP,
+            message=f"💰 {request.user.username} sent you {amount} credits."
+)
         
         messages.success(request, "✅ Transfer successful!")
 
@@ -698,7 +703,6 @@ def public_profile(request, username):
 def toggle_post_like(request, post_id):
     post = get_object_or_404(FeedPost, id=post_id)
 
-
     like, created = PostLike.objects.get_or_create(
         post=post,
         user=request.user
@@ -710,6 +714,14 @@ def toggle_post_like(request, post_id):
     else:
         liked = True
 
+        if post.user != request.user:
+            Notification.objects.create(
+                user=post.user,
+                actor=request.user,
+                notification_type=Notification.LIKE,
+                message=f"❤️ {request.user.username} liked your post."
+            )
+
     like_count = post.likes.count()
 
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -719,7 +731,6 @@ def toggle_post_like(request, post_id):
         })
 
     return redirect(request.META.get("HTTP_REFERER", "feed_home"))
-
 
 @login_required
 @transaction.atomic
@@ -734,35 +745,33 @@ def unlock_feed_post(request, post_id):
         messages.info(request, "This post does not require unlocking.")
         return redirect("public_profile_root", username=post.user.username)
 
-    existing_unlock = PostUnlock.objects.filter(
-        post=post,
-        user=request.user
-    ).first()
-
-    if existing_unlock:
-        messages.info(request, "You already unlocked this post.")
-        return redirect("public_profile_root", username=post.user.username)
-
     buyer_wallet = BidWallet.objects.select_for_update().get(user=request.user)
     creator_wallet = BidWallet.objects.select_for_update().get(user=post.user)
 
     price = post.unlock_price
 
+    unlock, unlock_created = PostUnlock.objects.get_or_create(
+        post=post,
+        user=request.user,
+        defaults={
+            "price_paid": price
+        }
+    )
+
+    if not unlock_created:
+        messages.info(request, "You already unlocked this post.")
+        return redirect("public_profile_root", username=post.user.username)
+
     if buyer_wallet.credits < price:
+        unlock.delete()
         messages.error(request, "You do not have enough credits to unlock this post.")
         return redirect("public_profile_root", username=post.user.username)
 
     buyer_wallet.credits -= price
     creator_wallet.credits += price
 
-    buyer_wallet.save()
-    creator_wallet.save()
-
-    PostUnlock.objects.create(
-        post=post,
-        user=request.user,
-        price_paid=price
-    )
+    buyer_wallet.save(update_fields=["credits"])
+    creator_wallet.save(update_fields=["credits"])
 
     WalletTransaction.objects.create(
         sender=buyer_wallet,
@@ -770,6 +779,13 @@ def unlock_feed_post(request, post_id):
         amount=price,
         transaction_type="purchase",
         reference=f"Unlocked post #{post.id}"
+    )
+
+    Notification.objects.create(
+        user=post.user,
+        actor=request.user,
+        notification_type=Notification.UNLOCK,
+        message=f"🔓 {request.user.username} unlocked your premium post for {price} credits."
     )
 
     messages.success(request, f"Post unlocked for {price} credits.")
@@ -831,7 +847,14 @@ def quick_tip_user(request, wallet_code):
         transaction_type="transfer",
         reference=f"Quick tip to @{target_wallet.user.username}"
     )
-
+    
+    Notification.objects.create(
+        user=target_wallet.user,
+        actor=request.user,
+        notification_type=Notification.TIP,
+        message=f"💰 {request.user.username} tipped you {amount} credits."
+)
+    
     return JsonResponse({
         "success": True,
         "new_balance": sender_wallet.credits,
@@ -882,6 +905,13 @@ def add_post_comment(request, post_id):
                 user=request.user,
                 parent=parent,
                 content=content,
+            )
+
+            Notification.objects.create(
+                user=post.user,
+                actor=request.user,
+                notification_type="comment",
+                message=f"💬 {request.user.username} commented on your post."
             )
 
             # AJAX RESPONSE

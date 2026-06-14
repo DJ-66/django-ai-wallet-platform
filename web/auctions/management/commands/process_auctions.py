@@ -6,8 +6,7 @@ from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
-from auctions.models import Auction, FavoriteAuction
-
+from auctions.models import Auction, FavoriteAuction, Bid, Notification
 
 
 def send_winner_email(auction):
@@ -63,6 +62,12 @@ class Command(BaseCommand):
                 auction.winner = last_bid.user
 
             auction.save(update_fields=["status", "winner"])
+            Notification.objects.create(
+                user=auction.winner,
+                actor=None,
+                notification_type=Notification.AUCTION,
+                message=f"🏆 You won the auction: {auction.title}!"
+            )
 
             if auction.winner and not auction.winner_email_sent:
                 print(
@@ -73,6 +78,13 @@ class Command(BaseCommand):
 
                 try:
                     send_winner_email(auction)
+                    
+                    Notification.objects.create(
+                        user=auction.winner,
+                        actor=None,
+                        notification_type=Notification.AUCTION,
+                        message=f"🏆 You won the auction: {auction.title}!"
+                    )
 
                     auction.winner_email_sent = True
                     auction.save(update_fields=["winner_email_sent"])

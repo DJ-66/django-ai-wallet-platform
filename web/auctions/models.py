@@ -474,12 +474,16 @@ class Notification(models.Model):
     TIP = "tip"
     UNLOCK = "unlock"
     AUCTION = "auction"
+    LIKE = "like"
+    COMMENT = "comment"
 
     TYPE_CHOICES = [
         (FAN, "Fan"),
         (TIP, "Tip"),
         (UNLOCK, "Unlock"),
         (AUCTION, "Auction"),
+        (LIKE, "Like"),
+        (COMMENT, "Comment"),
     ]
 
     user = models.ForeignKey(

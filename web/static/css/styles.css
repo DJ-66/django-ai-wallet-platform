@@ -275,8 +275,8 @@ h1 {
 }
 
 .feed-post-card:target {
-    outline: 3px solid rgba(255, 193, 7, 0.8);
-    box-shadow: 0 0 0 6px rgba(255, 193, 7, 0.18);
+    outline: 3px solid #8b5cf6;
+    box-shadow: 0 0 0 6px #8b5cf6;
 }
 
 .inline-post-action-form {
@@ -1895,7 +1895,7 @@ img {
 
 .featured-post-header {
     font-weight: 700;
-    color: #f59e0b;
+    color: #8b5cf6;
     margin-bottom: 10px;
 }
 
