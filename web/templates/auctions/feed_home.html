@@ -201,18 +201,26 @@
 
                 <p>{{ comment.content|linebreaksbr }}</p>
 
-                {% for reply in comment.replies.all %}
-                    <div class="post-reply">
-                        <strong>@{{ reply.user.username }}</strong>
-                        <p>{{ reply.content|linebreaksbr }}</p>
-                    </div>
-                {% endfor %}
+
+                 {% if comment.replies.count %}
+                 <details class="reply-thread">
+                 <summary>↳ Read {{ comment.replies.count }} replies</summary>
+
+                 {% for reply in comment.replies.all %}
+                 <div class="post-reply">
+                 <strong>@{{ reply.user.username }}</strong>
+                <p>{{ reply.content|linebreaksbr }}</p>
+               </div>
+              {% endfor %}
+              </details>
+              {% endif %}
+                
 
                 {% if request.user.is_authenticated %}
                     <form
                         method="post"
                         action="{% url 'add_post_comment' post.id %}"
-                        class="post-comment-form"
+                        class="post-comment-form reply-comment-form"
                     >
                         {% csrf_token %}
                         <input type="hidden" name="parent_id" value="{{ comment.id }}">

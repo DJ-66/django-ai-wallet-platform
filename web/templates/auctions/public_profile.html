@@ -118,6 +118,7 @@
         💰 {% trans "Send Credits" %}
         </a>
         {% endif %}
+
         <br> 
         <button
         type="button"
@@ -311,7 +312,39 @@
     {% endif %}
 
 </div>
-            <div class="post-comments-section">
+
+<br>
+
+<button
+    type="button"
+    class="feed-like-btn share-post-btn"
+    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
+>
+    🔗 Share
+</button>
+
+<div class="post-comments-section">
+
+    {% if request.user.is_authenticated %}
+        <form
+            method="post"
+            action="{% url 'add_post_comment' post.id %}"
+            class="post-comment-form main-comment-form"
+        >
+            {% csrf_token %}
+
+            <input
+                type="text"
+                name="content"
+                placeholder="{% trans 'Write a comment...' %}"
+                required
+            >
+
+            <button type="submit">
+                {% trans "Comment" %}
+            </button>
+        </form>
+    {% endif %}
 
     {% for comment in post.comments.all %}
         {% if not comment.parent %}
@@ -326,9 +359,12 @@
                     {{ comment.content|linebreaksbr }}
                 </p>
 
+                {% if comment.replies.all %}
+                <details class="reply-thread">
+                <summary>↳ Read {{ comment.replies.count }} replies</summary>
+
                 {% for reply in comment.replies.all %}
                     <div class="post-reply">
-
                         <strong>
                             @{{ reply.user.username }}
                         </strong>
@@ -336,15 +372,17 @@
                         <p>
                             {{ reply.content|linebreaksbr }}
                         </p>
-
                     </div>
                 {% endfor %}
+
+                 </details>
+                 {% endif %}
 
                 {% if request.user.is_authenticated %}
                     <form
                         method="post"
                         action="{% url 'add_post_comment' post.id %}"
-                        class="post-comment-form"
+                        class="post-comment-form reply-comment-form"
                     >
                         {% csrf_token %}
 
@@ -364,7 +402,6 @@
                         <button type="submit">
                             ↩️
                         </button>
-
                     </form>
                 {% endif %}
 
@@ -372,37 +409,10 @@
 
         {% endif %}
     {% endfor %}
+   
+</div>
 
-     <button
-    type="button"
-    class="feed-like-btn share-post-btn"
-    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
->
-    🔗 Share
-</button>
-
-    {% if request.user.is_authenticated %}
-        <form
-            method="post"
-            action="{% url 'add_post_comment' post.id %}"
-            class="post-comment-form"
-        >
-            {% csrf_token %}
-
-            <input
-                type="text"
-                name="content"
-                placeholder="{% trans 'Write a comment...' %}"
-                required
-            >
-
-            <button type="submit">
-                {% trans "Comment" %}
-            </button>
-
-        </form>
-    {% endif %}
-
+    
 </div>
                 
         </div>

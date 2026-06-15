@@ -2034,4 +2034,66 @@ img {
     margin: 0 6px;
 }
 
+.post-comments-section {
+    margin-top: 10px;
+}
+
+.main-comment-form {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 18px;
+}
+
+.reply-comment-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    margin-left: 20px;
+}
+
+.post-comment {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(139,92,246,.25);
+    border-radius: 10px;
+    background: rgba(255,255,255,.35);
+}
+
+.post-reply {
+    margin-top: 8px;
+    margin-left: 20px;
+    padding: 8px 10px;
+    border-left: 3px solid rgba(139,92,246,.35);
+    background: rgba(139,92,246,.06);
+}
+
+
+.reply-thread {
+    margin-top: 10px;
+    margin-left: 18px;
+}
+
+.reply-thread summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #6d28d9;
+    margin-bottom: 8px;
+}
+
+.post-reply {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-left: 3px solid rgba(139,92,246,.45);
+    background: rgba(139,92,246,.08);
+}
+
+.main-comment-form {
+    margin: 12px 0 18px;
+}
+
+.reply-comment-form {
+    margin-top: 8px;
+    margin-left: 20px;
+}
+
 /* end_css */
