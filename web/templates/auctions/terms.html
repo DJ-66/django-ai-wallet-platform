@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card profile-card">
+        <h2>{% trans "Terms of Service" %}</h2>
+
+        <p>
+            Fanz.to credits are platform-use credits only. Credits are not cash,
+            have no cash value, and are not redeemable from Fanz.to for money.
+        </p>
+
+        <p>
+            User-to-user payments or credit transfers are independent transactions
+            between users. Fanz.to is not a party to those transactions and does
+            not guarantee, insure, reverse, or refund payments made outside the platform.
+        </p>
+
+        <p>
+            By editing your profile, uploading content, using credits, or interacting
+            with the platform, you agree to the current Fanz.to Terms of Service.
+        </p>
+    </div>
+</div>
+{% endblock %}

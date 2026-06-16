@@ -161,28 +161,6 @@ def feed_home(request):
     else:
         form = FeedPostForm()
 
-    unlocked_post_ids = set(
-        PostUnlock.objects.filter(user=request.user)
-        .values_list("post_id", flat=True)
-    )
-
-    posts = FeedPost.objects.select_related(
-        "user",
-        "user__profile"
-    ).prefetch_related(
-        "unlocks"
-    ).filter(
-        Q(is_public=True) |
-        Q(user=request.user) |
-        Q(unlocks__user=request.user)
-    ).distinct().order_by("-created_at")
-
-    return render(request, "auctions/feed_home.html", {
-        "form": form,
-        "posts": posts,
-        "unlocked_post_ids": unlocked_post_ids,
-    })
-
 @login_required
 def bid_view(request, auction_id):
     auction = get_object_or_404(Auction, id=auction_id)
@@ -617,9 +595,19 @@ def edit_profile(request):
             instance=profile
         )
 
+        if not request.POST.get("tos_accepted"):
+            messages.error(
+                request,
+                "You must agree to our Terms of Service if you want to proceed."
+            )
+            return redirect("edit_profile")
+
         if form.is_valid():
             form.save()
-            return redirect("public_profile", username=request.user.username)
+            return redirect(
+                "public_profile",
+                username=request.user.username
+            )
 
     else:
         form = UserProfileForm(instance=profile)
@@ -632,6 +620,7 @@ def edit_profile(request):
             "profile": profile,
         }
     )
+
 
 def public_profile(request, username):
     profile_user = get_object_or_404(User, username=username)
@@ -1037,3 +1026,5 @@ def delete_notification(request, notification_id):
 )
 
 
+def terms_view(request):
+    return render(request, "auctions/terms.html")

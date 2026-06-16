@@ -23,16 +23,16 @@ h1 {
 .lang-btn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 
-    padding: 6px 9px;
+    padding: 4px 9px;
     border-radius: 999px;
     border: 1px solid #d1d5db;
 
     background: white;
     color: #111827;
 
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 700;
 
     cursor: pointer;
@@ -58,6 +58,19 @@ h1 {
 .flag-py {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 3'%3E%3Cpath fill='%23d52b1e' d='M0 0h5v1H0z'/%3E%3Cpath fill='%23fff' d='M0 1h5v1H0z'/%3E%3Cpath fill='%2300338e' d='M0 2h5v1H0z'/%3E%3C/svg%3E");
 }
+
+.lang-btn {
+    padding: 4px 7px;
+    font-size: 0.72rem;
+    gap: 4px;
+}
+
+.flag-svg {
+    width: 15px;
+    height: 10px;
+}
+
+
 .feed-compose-card {
     width: 100%;
     max-width: 720px;
@@ -961,6 +974,30 @@ a.signup-btn {
 
 .tx-row.received {
     color: #4CAF50;
+}
+
+
+/* =========================
+   Edit-Profile Page
+========================= */
+
+.tos-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.tos-check a {
+    color: #6d4aff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.tos-check a:hover {
+    text-decoration: underline;
 }
 
 
@@ -2095,5 +2132,27 @@ img {
     margin-top: 8px;
     margin-left: 20px;
 }
+
+@media (max-width: 520px) {
+    .language-switcher {
+        flex-direction: column;
+        gap: 3px;
+        align-items: flex-end;
+    }
+
+    .lang-btn {
+        padding: 3px 6px;
+        font-size: 0.68rem;
+        line-height: 1;
+    }
+
+    .flag-svg {
+        width: 13px;
+        height: 9px;
+    }
+}
+
+The duplicate form is t
+
 
 /* end_css */

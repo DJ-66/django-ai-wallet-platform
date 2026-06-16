@@ -24,6 +24,8 @@ urlpatterns = [
     path("<str:username>/fan/", views.toggle_fan, name="toggle_fan"),
     path("notifications/", views.notifications_page, name="notifications"),
     
+    path("terms/", views.terms_view, name="terms"),
+
     path(
     "notifications/<int:notification_id>/delete/",
     views.delete_notification,

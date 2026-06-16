@@ -13,6 +13,12 @@
         <form method="post" enctype="multipart/form-data" class="auth-form">
             {% csrf_token %}
             {{ form.as_p }}
+              
+            <label class="tos-check">
+            <input type="checkbox" name="tos_accepted" required>
+            I have read and agree to the
+            <a href="{% url 'terms' %}" target="_blank">Terms of Service</a>.
+            </label>
 
             <button type="submit" class="auth-primary-btn">
                 {% trans "Save Profile" %}
