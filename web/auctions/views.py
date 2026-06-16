@@ -161,6 +161,30 @@ def feed_home(request):
     else:
         form = FeedPostForm()
 
+        posts = FeedPost.objects.filter(is_public=True).order_by(
+        "-is_pinned",
+        "-created_at"
+    )
+
+    if request.user.is_authenticated:
+        unlocked_post_ids = PostUnlock.objects.filter(
+            user=request.user
+        ).values_list("post_id", flat=True)
+
+        recent_notifications = Notification.objects.filter(
+            user=request.user
+        ).order_by("-created_at")[:5]
+    else:
+        unlocked_post_ids = []
+        recent_notifications = []
+
+    return render(request, "auctions/feed_home.html", {
+        "form": form,
+        "posts": posts,
+        "unlocked_post_ids": unlocked_post_ids,
+        "recent_notifications": recent_notifications,
+    })
+
 @login_required
 def bid_view(request, auction_id):
     auction = get_object_or_404(Auction, id=auction_id)
