@@ -171,6 +171,9 @@ h1 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 2px 2px;
+    border-radius: 5px;
+    font-size: 12px;
 }
 
 .feed-like-btn,

@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import UserProfile
 from .models import FeedPost
-
+from django.utils.translation import gettext_lazy as _
 
 class FeedPostForm(forms.ModelForm):
     class Meta:
@@ -55,7 +55,22 @@ class UserProfileForm(forms.ModelForm):
             "x_url",
             "tiktok",
             "telegram",
-]
+        ]
 
+        labels = {
+            "display_name": _("Display name"),
+            "bio": _("Bio"),
+            "avatar": _("Avatar"),
+            "banner": _("Banner"),
+            "bank_qr_image": _("Payment QR Code"),
+            "bank_payment_notes": _("Payment instructions"),
+            "location": _("Location"),
+            "website": _("Website"),
 
-
+            # brand names stay as-is
+            "youtube": "YouTube",
+            "instagram": "Instagram",
+            "x_url": "X.com",
+            "tiktok": "TikTok",
+            "telegram": "Telegram",
+}

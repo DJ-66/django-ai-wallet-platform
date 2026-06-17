@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-18 01:54-0700\n"
+"POT-Creation-Date: 2026-06-17 08:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,6 +18,258 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
+
+#: auctions/forms.py:61
+msgid "Display name"
+msgstr "Nombre para mostrar"
+
+#: auctions/forms.py:62
+msgid "Bio"
+msgstr "Bio"
+
+#: auctions/forms.py:63
+msgid "Avatar"
+msgstr "Avatar"
+
+#: auctions/forms.py:64
+msgid "Banner"
+msgstr "Bandera"
+
+#: auctions/forms.py:65
+#, fuzzy
+#| msgid "View Payment QR"
+msgid "Payment QR Code"
+msgstr "Ver código QR de pago"
+
+#: auctions/forms.py:66
+msgid "Payment instructions"
+msgstr "Instrucciones de pago"
+
+#: auctions/forms.py:67
+msgid "Location"
+msgstr "Ubicación"
+
+#: auctions/forms.py:68
+msgid "Website"
+msgstr "Sitio web"
+
+#: templates/account/password_reset_from_key.html:10
+msgid "Set New Password"
+msgstr "Establecer nueva contraseña"
+
+#: templates/account/password_reset_from_key.html:13
+msgid "Choose a new password for your account."
+msgstr "Elige una nueva contraseña para tu cuenta."
+
+#: templates/account/password_reset_from_key.html:18
+msgid "This password reset link is invalid or has already been used."
+msgstr ""
+"Este enlace para restablecer la contraseña no es válido o ya se ha utilizado."
+
+#: templates/account/password_reset_from_key.html:22
+msgid "Request New Link"
+msgstr "Solicitar nuevo enlace"
+
+#: templates/account/password_reset_from_key.html:30
+msgid "Update Password"
+msgstr "Actualizar contraseña"
+
+#: templates/account/password_reset_from_key_done.html:10
+msgid "Password Updated"
+msgstr "Contraseña actualizada"
+
+#: templates/account/password_reset_from_key_done.html:13
+msgid "Your password has been changed successfully."
+msgstr "Su contraseña se ha cambiado correctamente."
+
+#: templates/account/password_reset_from_key_done.html:17
+msgid "Sign In"
+msgstr "Iniciar sesión"
+
+#: templates/auctions/edit_profile.html:11
+#: templates/auctions/public_profile.html:245
+msgid "Edit Profile"
+msgstr "Editar perfil"
+
+#: templates/auctions/edit_profile.html:20
+msgid "I accept"
+msgstr "Acepto"
+
+#: templates/auctions/edit_profile.html:21 templates/auctions/terms.html:7
+msgid "Terms of Service"
+msgstr "Términos del servicio"
+
+#: templates/auctions/edit_profile.html:26
+msgid "Save Profile"
+msgstr "Guardar perfil"
+
+#: templates/auctions/feed_home.html:12
+msgid "Community Feed"
+msgstr "Feed de la comunidad"
+
+#: templates/auctions/feed_home.html:27
+msgid "Public Post"
+msgstr "Publicación pública"
+
+#: templates/auctions/feed_home.html:32
+msgid "Paid / Locked Post (NSFW)"
+msgstr "Publicación de pago / bloqueada (NSFW)"
+
+#: templates/auctions/feed_home.html:38
+msgid "Unlock Price"
+msgstr "Desbloquear precio"
+
+#: templates/auctions/feed_home.html:44
+msgid "Post"
+msgstr "Correo"
+
+#: templates/auctions/feed_home.html:75
+msgid "Created by"
+msgstr "Creado por"
+
+#: templates/auctions/feed_home.html:76
+msgid "ago"
+msgstr "atrás"
+
+#: templates/auctions/feed_home.html:81
+msgid "Private"
+msgstr "Privado"
+
+#: templates/auctions/feed_home.html:104
+#: templates/auctions/public_profile.html:290
+msgid "Premium content locked"
+msgstr "Privado"
+
+#: templates/auctions/feed_home.html:108
+#: templates/auctions/public_profile.html:294
+msgid "Unlock media for"
+msgstr "Desbloquear contenido multimedia para"
+
+#: templates/auctions/feed_home.html:110
+#: templates/auctions/public_profile.html:296
+msgid "credits"
+msgstr "Créditos:"
+
+#: templates/auctions/feed_home.html:117
+#: templates/auctions/public_profile.html:303
+msgid "Unlock Post"
+msgstr "Desbloquear publicación"
+
+#: templates/auctions/feed_home.html:227
+#: templates/auctions/public_profile.html:469
+msgid "Reply..."
+msgstr "Responder..."
+
+#: templates/auctions/feed_home.html:247
+#: templates/auctions/public_profile.html:410
+msgid "Write a comment..."
+msgstr "Escribe un comentario..."
+
+#: templates/auctions/feed_home.html:248
+#: templates/auctions/public_profile.html:415
+msgid "Comment"
+msgstr "Comentario"
+
+#: templates/auctions/feed_home.html:259
+msgid "No posts yet. Be the first to post."
+msgstr "Aún no hay publicaciones. Sé el primero en publicar."
+
+#: templates/auctions/public_profile.html:59
+msgid "Credit Seller"
+msgstr "Vendedor de créditos"
+
+#: templates/auctions/public_profile.html:87
+msgid "Tips"
+msgstr "Consejos"
+
+#: templates/auctions/public_profile.html:92
+msgid "Unlocks"
+msgstr "Desbloquea"
+
+#: templates/auctions/public_profile.html:99
+msgid "Total"
+msgstr "Total"
+
+#: templates/auctions/public_profile.html:112
+msgid "Unfan"
+msgstr "Dejar de seguir"
+
+#: templates/auctions/public_profile.html:114
+msgid "Become a Fan"
+msgstr "Hazte fan"
+
+#: templates/auctions/public_profile.html:124 templates/wallet/pay.html:11
+#: templates/wallet/pay.html:47
+msgid "Send Credits"
+msgstr "Enviar créditos"
+
+#: templates/auctions/public_profile.html:131
+msgid "Buy Credits From Creator"
+msgstr "Comprar créditos al creador"
+
+#: templates/auctions/public_profile.html:134
+msgid ""
+"\n"
+"        Payments are handled directly between users. Fanz.to does not "
+"process,\n"
+"        guarantee, or reverse creator payment transactions.\n"
+"        "
+msgstr ""
+"\n"
+"Los pagos se gestionan directamente entre usuarios. Fanz.to no procesa, \n"
+"garantiza ni revierte transacciones de pago entre usuarios.    "
+
+#: templates/auctions/public_profile.html:142
+msgid "View Payment QR"
+msgstr "Ver código QR de pago"
+
+#: templates/auctions/public_profile.html:146
+msgid "Seller"
+msgstr "Vendedor"
+
+#: templates/auctions/public_profile.html:160
+msgid "Contact Seller"
+msgstr "Contactar al vendedor"
+
+#: templates/auctions/public_profile.html:198
+msgid "Share Profile"
+msgstr "Compartir perfil"
+
+#: templates/auctions/public_profile.html:257
+msgid "Featured Post"
+msgstr "Publicación destacada"
+
+#: templates/auctions/public_profile.html:330
+msgid "Unpin"
+msgstr "Desprender"
+
+#: templates/auctions/public_profile.html:332
+msgid "Pin"
+msgstr "Alfiler"
+
+#: templates/auctions/public_profile.html:340
+msgid "Delete"
+msgstr "Borrar"
+
+#: templates/auctions/public_profile.html:361
+#: templates/auctions/public_profile.html:370
+#: templates/auctions/public_profile.html:379
+msgid "Tip"
+msgstr "Consejo"
+
+#: templates/auctions/public_profile.html:394
+msgid "Share"
+msgstr "Compartir"
+
+#: templates/auctions/public_profile.html:411
+#: templates/auctions/public_profile.html:470
+msgid "required"
+msgstr "requerido"
+
+#: templates/auctions/public_profile.html:492
+msgid "No public posts yet."
+msgstr "Aún no hay publicaciones públicas."
+
 #: templates/auctions/wallet.html:7
 msgid "My Wallet"
 msgstr "Mi Billetera"
@@ -48,7 +300,9 @@ msgstr "Recibir Créditos"
 
 #: templates/auctions/wallet.html:38
 msgid "Share this wallet link so other activated users can send you credits."
-msgstr "Comparte este enlace de billetera para que otros usuarios activados puedan enviarte créditos."
+msgstr ""
+"Comparte este enlace de billetera para que otros usuarios activados puedan "
+"enviarte créditos."
 
 #: templates/auctions/wallet.html:60
 msgid "Recent Activity"

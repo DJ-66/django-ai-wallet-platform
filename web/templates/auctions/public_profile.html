@@ -154,32 +154,34 @@
                     {{ profile.bank_payment_notes|linebreaksbr }}
                 </div>
             {% endif %}
-            {% if profile.x_url or profile.telegram %}
-<div class="seller-contact-links">
+
+     {% if profile.x_url or profile.telegram %}
+     <div class="seller-contact-links">
     <h4>📩 {% trans "Contact Seller" %}</h4>
 
     {% if profile.telegram %}
         <a href="{{ profile.telegram }}"
            target="_blank"
-           rel="noopener noreferrer"
-           class="seller-contact-btn">
-            Telegram
-        </a>
+           rel="noopener noreferrer">Telegram</a>
+    {% endif %}
+
+    {% if profile.telegram and profile.x_url %}
+        <span class="contact-separator"> | </span>
     {% endif %}
 
     {% if profile.x_url %}
         <a href="{{ profile.x_url }}"
            target="_blank"
-           rel="noopener noreferrer"
-           class="seller-contact-btn">
-            X.com
-        </a>
+           rel="noopener noreferrer">X.com</a>
     {% endif %}
-</div>
-{% endif %}
-        </div>
+    </div>
+    {% endif %}
+            
+
+
+    </div>
     </details>
-</div>
+    </div>
 
 {% endif %}
         
