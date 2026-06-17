@@ -2174,13 +2174,13 @@ img {
 .payment-qr-card {
     background: #f8f3ff;
     border-radius: 18px;
-    padding: 20px;
-    margin: 20px 0;
+    padding: 10px;
+    margin: 10px 0;
     text-align: center;
 }
 
 .payment-qr-image {
-    max-width: 280px;
+    max-width: 200px;
     width: 100%;
     height: auto;
 }
@@ -2251,6 +2251,92 @@ img {
     outline: none;
 }
 
+.buy-credits-card {
+  background: #f8f3ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 18px;
+  padding: 10px;
+  margin: 10px 0;
+  text-align: center;
+}
 
+.buy-credits-card h3 {
+  margin: 8px 0 10px;
+}
+
+.buy-credits-warning {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
+.buy-credits-details {
+  margin-top: 18px;
+}
+
+.buy-credits-btn {
+  cursor: pointer;
+  display: inline-block;
+  background: #7c3aed;
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.buy-credits-btn::-webkit-details-marker {
+  display: none;
+}
+
+.buy-credits-panel {
+  margin-top: 18px;
+}
+
+.payment-qr-image {
+  max-width: 180px;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  margin: 10px auto;
+  display: block;
+}
+
+.payment-notes {
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 10px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.seller-contact-links {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.seller-contact-links h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.seller-contact-btn {
+  display: inline-block;
+  background: #111827;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  margin: 4px;
+}
+
+.seller-contact-btn:hover {
+  opacity: 0.9;
+}
 
 /* end_css */

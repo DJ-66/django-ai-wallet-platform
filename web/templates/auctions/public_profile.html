@@ -56,7 +56,7 @@
         </p>
         {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
         <span class="seller-badge">
-       💰 Credit Seller
+       💰  {% trans "Credit Seller" %}
        </span>
        {% endif %}
 
@@ -84,19 +84,19 @@
         <div class="creator-earnings-card">
 
         <div class="earning-row">
-        <span>💸 Tips</span>
+        <span>💸 {% trans "Tips" %}</span>
         <strong>{{ tip_earnings|floatformat:0 }}</strong>
         </div>
 
         <div class="earning-row">
-        <span>🔓 Unlocks</span>
+        <span>🔓 {% trans "Unlocks" %}</span>
         <strong>{{ unlock_earnings|floatformat:0 }}</strong>
         </div>
 
         <hr>
 
         <div class="earning-row total">
-        <span>💰 Total</span>
+        <span>💰 {% trans "Total" %}</span>
         <strong>{{ total_creator_earnings|floatformat:0 }}</strong>
         </div>
         </div>
@@ -109,9 +109,9 @@
         class="auth-primary-btn profile-tip-btn">
 
         {% if is_fan %}
-            ⭐ Unfan
+            ⭐ {% trans "Unfan" %}
         {% else %}
-            ⭐ Become a Fan
+            ⭐ {% trans "Become a Fan" %}
         {% endif %}
 
         </a>
@@ -125,21 +125,63 @@
         </a>
         {% endif %}
 
-        <br> 
-
         {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
-        <div class="payment-qr-card">
-        <h3>💳 Buy Credits From Creator</h3>
 
-        <img src="{{ profile.bank_qr_image.url }}"
-        alt="Payment QR Code"
-        class="payment-qr-image">
+<div class="buy-credits-card">
+    <h3>💳 {% trans "Buy Credits From Creator" %}</h3>
 
-        {% if profile.bank_payment_notes %}
-        <p>{{ profile.bank_payment_notes|linebreaksbr }}</p>
-        {% endif %}
+    <p class="buy-credits-warning">
+        {% blocktrans %}
+        Payments are handled directly between users. Fanz.to does not process,
+        guarantee, or reverse creator payment transactions.
+        {% endblocktrans %}
+    </p>
+
+    <details class="buy-credits-details">
+        <summary class="buy-credits-btn">
+            {% trans "View Payment QR" %}
+        </summary>
+
+        <div class="buy-credits-panel">
+            <p><strong>{% trans "Seller" %}:</strong> @{{ profile_user.username }}</p>
+
+            <img src="{{ profile.bank_qr_image.url }}"
+                 alt="Payment QR Code"
+                 class="payment-qr-image">
+
+            {% if profile.bank_payment_notes %}
+                <div class="payment-notes">
+                    {{ profile.bank_payment_notes|linebreaksbr }}
+                </div>
+            {% endif %}
+            {% if profile.x_url or profile.telegram %}
+<div class="seller-contact-links">
+    <h4>📩 {% trans "Contact Seller" %}</h4>
+
+    {% if profile.telegram %}
+        <a href="{{ profile.telegram }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="seller-contact-btn">
+            Telegram
+        </a>
+    {% endif %}
+
+    {% if profile.x_url %}
+        <a href="{{ profile.x_url }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="seller-contact-btn">
+            X.com
+        </a>
+    {% endif %}
+</div>
+{% endif %}
         </div>
-        {% endif %}
+    </details>
+</div>
+
+{% endif %}
         
         <br> 
 
@@ -180,7 +222,7 @@
     {% endif %}
 
     {% if profile.x_url %}
-        <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏 X</a>
+        <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
     {% endif %}
 
     {% if profile.tiktok %}
@@ -206,7 +248,7 @@
         {% if post.is_pinned %}
             <div class="featured-post-card">
                 <div class="featured-post-header">
-                   <h2> ⭐ Featured Post </h2>
+                   <h2> ⭐ {% trans "Featured Post" %} </h2>
                 </div>
 
                 <div class="featured-post-body">
@@ -310,7 +352,7 @@
         data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
         data-amount="1"
     >
-        💰 Tip 1
+        💰 {% trans "Tip" %} 1
     </button>
 
     <button
@@ -319,7 +361,7 @@
         data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
         data-amount="5"
     >
-        💰 Tip 5
+        💰 {% trans "Tip" %} 5
     </button>
 
     <button
@@ -328,7 +370,7 @@
         data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
         data-amount="10"
     >
-        💰 Tip 10
+        💰 {% trans "Tip" %}  10
     </button>
 
 </div>
@@ -343,7 +385,7 @@
     class="feed-like-btn share-post-btn"
     data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
 >
-    🔗 Share
+    🔗 {% trans "Share" %}
 </button>
 
 <div class="post-comments-section">
@@ -360,7 +402,7 @@
                 type="text"
                 name="content"
                 placeholder="{% trans 'Write a comment...' %}"
-                required
+                {% trans "required" %}
             >
 
             <button type="submit">
@@ -419,7 +461,7 @@
                             type="text"
                             name="content"
                             placeholder="{% trans 'Reply...' %}"
-                            required
+                            {% trans "required" %}
                         >
 
                         <button type="submit">
