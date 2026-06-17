@@ -622,7 +622,7 @@ def edit_profile(request):
         if not request.POST.get("tos_accepted"):
             messages.error(
                 request,
-                "You must agree to our Terms of Service if you want to proceed."
+                "You must accept TOS to update profile."
             )
             return redirect("edit_profile")
 
@@ -728,6 +728,7 @@ def public_profile(request, username):
         {
             "profile_user": profile_user,
             "profile": profile,
+            "creator_wallet": creator_wallet,
             "profile_posts": profile_posts,
             "unlocked_post_ids": unlocked_post_ids,
             "premium_post_count": premium_post_count,

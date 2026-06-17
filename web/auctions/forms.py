@@ -46,6 +46,8 @@ class UserProfileForm(forms.ModelForm):
             "bio",
             "avatar",
             "banner",
+            "bank_qr_image",
+            "bank_payment_notes",
             "location",
             "website",
             "youtube",

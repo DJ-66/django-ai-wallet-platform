@@ -54,6 +54,12 @@
         <p class="profile-username">
             @{{ profile_user.username }}
         </p>
+        {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
+        <span class="seller-badge">
+       💰 Credit Seller
+       </span>
+       {% endif %}
+
         <div class="profile-stats">
         <div class="profile-stat">
         📝 {{ profile_posts.count }}
@@ -120,6 +126,23 @@
         {% endif %}
 
         <br> 
+
+        {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
+        <div class="payment-qr-card">
+        <h3>💳 Buy Credits From Creator</h3>
+
+        <img src="{{ profile.bank_qr_image.url }}"
+        alt="Payment QR Code"
+        class="payment-qr-image">
+
+        {% if profile.bank_payment_notes %}
+        <p>{{ profile.bank_payment_notes|linebreaksbr }}</p>
+        {% endif %}
+        </div>
+        {% endif %}
+        
+        <br> 
+
         <button
         type="button"
         class="auth-primary-btn profile-share-btn"

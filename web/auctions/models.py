@@ -340,6 +340,16 @@ class UserProfile(models.Model):
         null=True
     )
 
+
+    bank_qr_image = models.ImageField(
+        upload_to="payment_qr/",
+        blank=True,
+        null=True
+    )
+
+    bank_payment_notes = models.TextField(
+        blank=True
+    )
     
     location = models.CharField(max_length=120, blank=True)
 

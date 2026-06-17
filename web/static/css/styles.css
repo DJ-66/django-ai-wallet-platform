@@ -1646,6 +1646,25 @@ img {
   outline: none;
 }
 
+/* Don't style checkboxes like text inputs */
+.auth-form input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Django ClearableFileInput labels */
+.auth-form label[for$="-clear_id"] {
+  display: inline;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
 .auth-form input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
@@ -2152,7 +2171,86 @@ img {
     }
 }
 
-The duplicate form is t
+.payment-qr-card {
+    background: #f8f3ff;
+    border-radius: 18px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.payment-qr-image {
+    max-width: 280px;
+    width: 100%;
+    height: auto;
+}
+
+
+/* Edit profile checkbox cleanup */
+.auth-form input[type="checkbox"],
+.tos-check input[type="checkbox"] {
+    width: auto;
+    margin: 0 6px 0 0;
+    accent-color: #6c4df6;
+    box-shadow: none;
+}
+
+.auth-form input[type="checkbox"]:focus,
+.auth-form input[type="checkbox"]:focus-visible,
+.tos-check input[type="checkbox"]:focus,
+.tos-check input[type="checkbox"]:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.tos-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+}
+
+.tos-check:focus-within {
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+/* Keep file upload sections vertical */
+.auth-form p {
+    display: block;
+}
+
+.auth-form input[type="file"] {
+    width: 100%;
+    margin-top: 8px;
+}
+
+
+.auth-form input[type="checkbox"],
+.tos-check input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: #6c4df6;
+}
+
+.auth-form input[type="checkbox"]:focus,
+.tos-check input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.auth-form p:has(input[type="checkbox"]):focus-within {
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.auth-form input[type="checkbox"]:focus-visible {
+    outline: none;
+}
+
 
 
 /* end_css */
