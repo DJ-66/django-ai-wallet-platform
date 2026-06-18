@@ -8,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=119">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=133">
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
 </svg>">
@@ -18,19 +18,21 @@
 <header class="site-header">
 
   <nav>
-     <a href="{% url 'feed_home' %}" class="nav-link">🤔💭 Feed</a>
+     <a href="{% url 'feed_home' %}" class="nav-link nav-icon-link"><span class="nav-emoji">🤔💭</span> Feed</a>
      
-     <a href="/auctions/" class="nav-link">
-        🎁 Penny Auctions
-     </a>
-     <a href="/ai/" class="nav-link">🤖 AI</a>    
-  {% if user.is_authenticated %}
+     <a href="/auctions/" class="nav-link nav-icon-link"><span class="nav-emoji">🎁</span> Penny Auctions</a>
+     <a href="/ai/" class="nav-link nav-icon-link"><span class="nav-emoji">🤖</span> AI</a>    
+     {% if user.is_authenticated %}
     
-    <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link" > 💰 {{ wallet.credits }}</a>
+    <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link nav-icon-link"><span class="nav-emoji">💰</span> {{ wallet.credits }}</a>
+    {% endif %}
+
+    {% if user.is_authenticated %} 
+    <a href="{% url 'inbox' %}" class="nav-link nav-icon-link"><span class="nav-emoji">📩</span> DM</a>
+    {% endif %}
     
-  {% endif %}
-    <a href="{% url 'notifications' %}?next={{ request.get_full_path|urlencode }}" class="nav-link">
-    🔔 {{ unread_notification_count }}
+     <a href="{% url 'notifications' %}?next={{ request.get_full_path|urlencode }}" class="nav-link nav-icon-link">
+     <span class="nav-emoji">🔔</span> {{ unread_notification_count }}
     </a>
     <form action="{% url 'set_language' %}" method="post" class="language-switcher">
     {% csrf_token %}

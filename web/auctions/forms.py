@@ -1,8 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import UserProfile
-from .models import FeedPost
 from django.utils.translation import gettext_lazy as _
+from .models import FeedPost, UserProfile, DirectMessage
 
 class FeedPostForm(forms.ModelForm):
     class Meta:
@@ -74,3 +73,14 @@ class UserProfileForm(forms.ModelForm):
             "tiktok": "TikTok",
             "telegram": "Telegram",
 }
+
+class DirectMessageForm(forms.ModelForm):
+    class Meta:
+        model = DirectMessage
+        fields = ["body"]
+        widgets = {
+            "body": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Write a message...",
+            })
+        }

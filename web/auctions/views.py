@@ -21,7 +21,7 @@ from django.utils import timezone
 from .models import AICompanion, AIConversation, AIMessage, Auction, BidWallet, FavoriteAuction, NodeProfile, UserProfile, WalletTransaction
 from .forms import SignUpForm, UserProfileForm
 from .services import close_auction, place_bid
-from .forms import FeedPostForm
+from .forms import FeedPostForm, DirectMessageForm 
 from .models import FeedPost, PostComment
 from .models import PostLike
 from django.db.models import Q
@@ -34,8 +34,7 @@ from .models import FeedPost, PostUnlock, BidWallet, WalletTransaction
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from .models import Fan, Notification
-from .models import Notification
+from .models import Fan, Notification, Conversation, DirectMessage
 from django.db.models import Sum
 
 
@@ -1053,3 +1052,96 @@ def delete_notification(request, notification_id):
 
 def terms_view(request):
     return render(request, "auctions/terms.html")
+
+
+@login_required
+def inbox(request):
+    conversations = (
+        Conversation.objects
+        .filter(participants=request.user)
+        .prefetch_related("participants", "messages")
+        .order_by("-last_message_at")
+    )
+
+    return render(request, "auctions/inbox.html", {
+        "conversations": conversations,
+    })
+
+
+@login_required
+def conversation_detail(request, conversation_id):
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    DirectMessage.objects.filter(
+        conversation=conversation,
+        is_read=False
+    ).exclude(sender=request.user).update(is_read=True)
+
+    if request.method == "POST":
+        form = DirectMessageForm(request.POST)
+
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.conversation = conversation
+            message.sender = request.user
+            message.save()
+
+            conversation.last_message_at = timezone.now()
+            conversation.save(update_fields=["last_message_at"])
+
+            recipient = conversation.participants.exclude(id=request.user.id).first()
+
+            if recipient:
+                Notification.objects.create(
+                    user=recipient,
+                    actor=request.user,
+                    notification_type=Notification.MESSAGE,
+                    message=f"📩 @{request.user.username} sent you a message"
+                )
+
+            return redirect("conversation_detail", conversation_id=conversation.id)
+    else:
+        form = DirectMessageForm()
+
+    return render(request, "auctions/conversation_detail.html", {
+        "conversation": conversation,
+        "direct_messages": conversation.messages.select_related("sender"),
+        "form": form,
+    })
+
+
+@login_required
+def start_conversation(request, username):
+    other_user = get_object_or_404(User, username=username)
+
+    if other_user == request.user:
+        messages.error(request, "You cannot message yourself.")
+        return redirect("public_profile", username=username)
+
+    conversation = (
+        Conversation.objects
+        .filter(participants=request.user)
+        .filter(participants=other_user)
+        .first()
+    )
+
+    if not conversation:
+        conversation = Conversation.objects.create()
+        conversation.participants.add(request.user, other_user)
+
+    initial_message = request.GET.get(
+        "message",
+        "Hi, I would like to buy credits."
+    )
+
+    form = DirectMessageForm(initial={"body": initial_message})
+
+    return render(request, "auctions/conversation_detail.html", {
+        "conversation": conversation,
+        "direct_messages": conversation.messages.select_related("sender"),
+        "form": form,
+    })

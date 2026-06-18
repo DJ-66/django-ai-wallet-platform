@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="dm-page">
+    <h1>📩  DMs</h1>
+
+    <div class="dm-subtitle">
+        {% trans "Conversation with" %}
+        {% for participant in conversation.participants.all %}
+            {% if participant != request.user %}
+                <strong>@{{ participant.username }}</strong>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="dm-thread">
+        {% for message in direct_messages %}
+            <div class="dm-card {% if message.sender == request.user %}dm-own{% else %}dm-other{% endif %}">
+                <div class="dm-sender">@{{ message.sender.username }}</div>
+
+                <div class="dm-body">
+                    {{ message.body|linebreaksbr }}
+                </div>
+
+                <div class="dm-time">
+                    {{ message.created_at|date:"M d, Y H:i" }}
+                </div>
+            </div>
+        {% empty %}
+            <p class="dm-empty">{% trans "No messages yet." %}</p>
+        {% endfor %}
+    </div>
+
+    <form method="post"
+          action="{% url 'conversation_detail' conversation.id %}"
+          class="dm-form">
+        {% csrf_token %}
+        {{ form.body }}
+
+        <button type="submit" class="dm-send-btn">
+            📩 {% trans "Send" %}
+        </button>
+    </form>
+
+    <p class="dm-back-link">
+        <a href="{% url 'inbox' %}">← {% trans "Back to Inbox" %}</a>
+    </p>
+<br>
+<br>
+</div>
+{% endblock %}

@@ -159,23 +159,33 @@
      <div class="seller-contact-links">
     <h4>📩 {% trans "Contact Seller" %}</h4>
 
-    {% if profile.telegram %}
-        <a href="{{ profile.telegram }}"
-           target="_blank"
-           rel="noopener noreferrer">Telegram</a>
-    {% endif %}
+    <a href="{% url 'start_conversation' profile_user.username %}?message=Hi%2C%20I%20would%20like%20to%20buy%20credits."
+       class="auth-primary-btn">
+        📩 {% trans "Message Creator" %}
+    </a>
 
-    {% if profile.telegram and profile.x_url %}
-        <span class="contact-separator"> | </span>
-    {% endif %}
+    {% if profile.telegram or profile.x_url %}
+        <br><br>
 
-    {% if profile.x_url %}
-        <a href="{{ profile.x_url }}"
-           target="_blank"
-           rel="noopener noreferrer">X.com</a>
+        {% if profile.telegram %}
+            <a href="{{ profile.telegram }}"
+               target="_blank"
+               rel="noopener noreferrer">Telegram</a>
+        {% endif %}
+
+        {% if profile.telegram and profile.x_url %}
+            <span class="contact-separator"> | </span>
+        {% endif %}
+
+        {% if profile.x_url %}
+            <a href="{{ profile.x_url }}"
+               target="_blank"
+               rel="noopener noreferrer">X.com</a>
+        {% endif %}
     {% endif %}
-    </div>
-    {% endif %}
+</div> 
+
+   {% endif %}
             
 
 

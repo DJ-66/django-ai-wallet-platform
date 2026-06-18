@@ -23,7 +23,10 @@ urlpatterns = [
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path("<str:username>/fan/", views.toggle_fan, name="toggle_fan"),
     path("notifications/", views.notifications_page, name="notifications"),
-    
+    path("inbox/", views.inbox, name="inbox"),
+    path("messages/<int:conversation_id>/", views.conversation_detail, name="conversation_detail"),
+    path("u/<str:username>/message/", views.start_conversation, name="start_conversation"),
+
     path("terms/", views.terms_view, name="terms"),
 
     path(
