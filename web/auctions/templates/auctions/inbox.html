@@ -8,7 +8,8 @@
     {% if conversations %}
         <div class="inbox-list">
             {% for conversation in conversations %}
-                <a class="inbox-card" href="{% url 'conversation_detail' conversation.id %}">
+                <div class="inbox-card">
+                <a class="inbox-card-link" href="{% url 'conversation_detail' conversation.id %}">
                     <div class="inbox-user">
                         {% for participant in conversation.participants.all %}
                             {% if participant != request.user %}
@@ -33,7 +34,17 @@
                             </div>
                         {% endif %}
                     {% endwith %}
-                </a>
+                    </a>
+
+                   <form method="post"
+                   action="{% url 'delete_dm_conversation' conversation.id %}"
+                   class="inbox-delete-form"
+                   onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
+                  {% csrf_token %}
+                  <button type="submit" class="inbox-delete-btn">🗑</button>
+                  </form>
+                  </div>
+               
             {% endfor %}
         </div>
     {% else %}

@@ -43,6 +43,16 @@
         </button>
     </form>
 
+      <form method="post"
+      action="{% url 'delete_dm_conversation' conversation.id %}"
+      class="dm-delete-form"
+      onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
+      {% csrf_token %}
+      <button type="submit" class="dm-delete-btn">
+        🗑 {% trans "Delete Conversation" %}
+      </button>
+      </form>
+
     <p class="dm-back-link">
         <a href="{% url 'inbox' %}">← {% trans "Back to Inbox" %}</a>
     </p>

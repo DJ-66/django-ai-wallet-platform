@@ -384,7 +384,6 @@ def activate_view(request, uidb64, token):
             img = qrcode.make(referral_url)
 
             os.makedirs(os.path.dirname(ref_qr_path), exist_ok=True)
-
             img.save(ref_qr_path)
 
         # Cleanup session
@@ -404,7 +403,7 @@ def activate_view(request, uidb64, token):
 
         return redirect("auction_list")
 
-    return render(request, "activation_invalid.html")
+    return render(request,"activation_invalid.html")
 
 
 @login_required
@@ -491,9 +490,8 @@ def node_dashboard(request):
     try:
         node = NodeProfile.objects.get(user=request.user)
     except NodeProfile.DoesNotExist:
-        return render(request, "auctions/node_dashboard.html", {
-            "error": "You are not a node."
-        })
+        return render(request, "auctions/node_dashboard.html", {"error": "You are not a node."})
+
 
     node_wallet, _ = BidWallet.objects.get_or_create(user=request.user)
 
@@ -1145,3 +1143,20 @@ def start_conversation(request, username):
         "direct_messages": conversation.messages.select_related("sender"),
         "form": form,
     })
+
+@login_required
+@require_POST
+def delete_conversation(request, conversation_id):
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    conversation.participants.remove(request.user)
+
+    if conversation.participants.count() == 0:
+        conversation.delete()
+
+    messages.success(request, "Conversation removed from your inbox.")
+    return redirect("inbox")

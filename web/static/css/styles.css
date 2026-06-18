@@ -2583,4 +2583,45 @@ img {
   }
 }
 
+.inbox-card {
+  position: relative;
+}
+
+.inbox-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding-right: 46px;
+}
+
+.inbox-delete-form {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.inbox-delete-btn,
+.dm-delete-btn {
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 70, 110, 0.16);
+  color: #ff2d63;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.inbox-delete-btn {
+  width: 34px;
+  height: 34px;
+}
+
+.dm-delete-form {
+  margin-top: 1rem;
+}
+
+.dm-delete-btn {
+  padding: 10px 14px;
+}
+
+
 /* end_css */
