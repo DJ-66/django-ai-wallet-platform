@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-17 08:01+0000\n"
+"POT-Creation-Date: 2026-06-19 01:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,39 +19,87 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
 
-#: auctions/forms.py:61
+#: auctions/forms.py:20
+msgid "Post title..."
+msgstr "Título de la publicación..."
+
+#: auctions/forms.py:26
+msgid "What's happening?"
+msgstr "lo que está sucediendo"
+
+#: auctions/forms.py:69
 msgid "Display name"
 msgstr "Nombre para mostrar"
 
-#: auctions/forms.py:62
+#: auctions/forms.py:70
 msgid "Bio"
 msgstr "Bio"
 
-#: auctions/forms.py:63
+#: auctions/forms.py:71
 msgid "Avatar"
 msgstr "Avatar"
 
-#: auctions/forms.py:64
+#: auctions/forms.py:72
 msgid "Banner"
 msgstr "Bandera"
 
-#: auctions/forms.py:65
+#: auctions/forms.py:73
 #, fuzzy
 #| msgid "View Payment QR"
 msgid "Payment QR Code"
 msgstr "Ver código QR de pago"
 
-#: auctions/forms.py:66
+#: auctions/forms.py:74
 msgid "Payment instructions"
 msgstr "Instrucciones de pago"
 
-#: auctions/forms.py:67
+#: auctions/forms.py:75
 msgid "Location"
 msgstr "Ubicación"
 
-#: auctions/forms.py:68
+#: auctions/forms.py:76
 msgid "Website"
 msgstr "Sitio web"
+
+#: auctions/templates/auctions/conversation_detail.html:9
+msgid "Conversation with"
+msgstr "conversación con"
+
+#: auctions/templates/auctions/conversation_detail.html:31
+#: auctions/templates/auctions/inbox.html:33
+msgid "No messages yet."
+msgstr "Aún no hay mensajes."
+
+#: auctions/templates/auctions/conversation_detail.html:42
+msgid "Send"
+msgstr "Enviar"
+
+#: auctions/templates/auctions/conversation_detail.html:49
+#: auctions/templates/auctions/inbox.html:42
+msgid "Remove this conversation from your inbox?"
+msgstr "¿Eliminar esta conversación de tu bandeja de entrada?"
+
+#: auctions/templates/auctions/conversation_detail.html:52
+msgid "Delete Conversation"
+msgstr "Eliminar conversación"
+
+#: auctions/templates/auctions/conversation_detail.html:57
+msgid "Back to Inbox"
+msgstr "Volver a la bandeja de entrada"
+
+#: auctions/templates/auctions/inbox.html:6
+msgid "Inbox"
+msgstr "Bandeja de entrada"
+
+#: auctions/templates/auctions/inbox.html:28
+msgid "messages"
+msgstr "mensajes"
+
+#: auctions/templates/auctions/inbox.html:52
+#, fuzzy
+#| msgid "No public posts yet."
+msgid "No conversations yet."
+msgstr "Aún no hay publicaciones públicas."
 
 #: templates/account/password_reset_from_key.html:10
 msgid "Set New Password"
@@ -87,7 +135,7 @@ msgid "Sign In"
 msgstr "Iniciar sesión"
 
 #: templates/auctions/edit_profile.html:11
-#: templates/auctions/public_profile.html:245
+#: templates/auctions/public_profile.html:249
 msgid "Edit Profile"
 msgstr "Editar perfil"
 
@@ -107,166 +155,180 @@ msgstr "Guardar perfil"
 msgid "Community Feed"
 msgstr "Feed de la comunidad"
 
-#: templates/auctions/feed_home.html:27
+#: templates/auctions/feed_home.html:24
+msgid "Choose Image"
+msgstr "Elige Imagen"
+
+#: templates/auctions/feed_home.html:35
 msgid "Public Post"
 msgstr "Publicación pública"
 
-#: templates/auctions/feed_home.html:32
+#: templates/auctions/feed_home.html:40
 msgid "Paid / Locked Post (NSFW)"
 msgstr "Publicación de pago / bloqueada (NSFW)"
 
-#: templates/auctions/feed_home.html:38
+#: templates/auctions/feed_home.html:46
 msgid "Unlock Price"
 msgstr "Desbloquear precio"
 
-#: templates/auctions/feed_home.html:44
+#: templates/auctions/feed_home.html:52
 msgid "Post"
 msgstr "Correo"
 
-#: templates/auctions/feed_home.html:75
+#: templates/auctions/feed_home.html:83
 msgid "Created by"
 msgstr "Creado por"
 
-#: templates/auctions/feed_home.html:76
+#: templates/auctions/feed_home.html:84
 msgid "ago"
 msgstr "atrás"
 
-#: templates/auctions/feed_home.html:81
+#: templates/auctions/feed_home.html:89
 msgid "Private"
 msgstr "Privado"
 
-#: templates/auctions/feed_home.html:104
-#: templates/auctions/public_profile.html:290
+#: templates/auctions/feed_home.html:116
+#: templates/auctions/public_profile.html:303
 msgid "Premium content locked"
 msgstr "Privado"
 
-#: templates/auctions/feed_home.html:108
-#: templates/auctions/public_profile.html:294
+#: templates/auctions/feed_home.html:120
+#: templates/auctions/public_profile.html:307
 msgid "Unlock media for"
 msgstr "Desbloquear contenido multimedia para"
 
-#: templates/auctions/feed_home.html:110
-#: templates/auctions/public_profile.html:296
+#: templates/auctions/feed_home.html:122
+#: templates/auctions/public_profile.html:309
 msgid "credits"
 msgstr "Créditos:"
 
-#: templates/auctions/feed_home.html:117
-#: templates/auctions/public_profile.html:303
+#: templates/auctions/feed_home.html:129
+#: templates/auctions/public_profile.html:316
 msgid "Unlock Post"
 msgstr "Desbloquear publicación"
 
-#: templates/auctions/feed_home.html:227
-#: templates/auctions/public_profile.html:469
+#: templates/auctions/feed_home.html:243
+#: templates/auctions/public_profile.html:478
 msgid "Reply..."
 msgstr "Responder..."
 
-#: templates/auctions/feed_home.html:247
-#: templates/auctions/public_profile.html:410
+#: templates/auctions/feed_home.html:263
+#: templates/auctions/public_profile.html:423
 msgid "Write a comment..."
 msgstr "Escribe un comentario..."
 
-#: templates/auctions/feed_home.html:248
-#: templates/auctions/public_profile.html:415
+#: templates/auctions/feed_home.html:264
+#: templates/auctions/public_profile.html:427
 msgid "Comment"
 msgstr "Comentario"
 
-#: templates/auctions/feed_home.html:259
+#: templates/auctions/feed_home.html:275
 msgid "No posts yet. Be the first to post."
 msgstr "Aún no hay publicaciones. Sé el primero en publicar."
 
-#: templates/auctions/public_profile.html:59
+#: templates/auctions/public_profile.html:51
 msgid "Credit Seller"
 msgstr "Vendedor de créditos"
 
-#: templates/auctions/public_profile.html:87
+#: templates/auctions/public_profile.html:77
 msgid "Tips"
 msgstr "Consejos"
 
-#: templates/auctions/public_profile.html:92
+#: templates/auctions/public_profile.html:82
 msgid "Unlocks"
 msgstr "Desbloquea"
 
-#: templates/auctions/public_profile.html:99
+#: templates/auctions/public_profile.html:89
 msgid "Total"
 msgstr "Total"
 
-#: templates/auctions/public_profile.html:112
+#: templates/auctions/public_profile.html:125
 msgid "Unfan"
 msgstr "Dejar de seguir"
 
-#: templates/auctions/public_profile.html:114
+#: templates/auctions/public_profile.html:127
 msgid "Become a Fan"
 msgstr "Hazte fan"
 
-#: templates/auctions/public_profile.html:124 templates/wallet/pay.html:11
+#: templates/auctions/public_profile.html:157 templates/wallet/pay.html:11
 #: templates/wallet/pay.html:47
 msgid "Send Credits"
 msgstr "Enviar créditos"
 
-#: templates/auctions/public_profile.html:131
+#: templates/auctions/public_profile.html:165
 msgid "Buy Credits From Creator"
 msgstr "Comprar créditos al creador"
 
-#: templates/auctions/public_profile.html:134
+#: templates/auctions/public_profile.html:168
+#, fuzzy
+#| msgid ""
+#| "\n"
+#| "        Payments are handled directly between users. Fanz.to does not "
+#| "process,\n"
+#| "        guarantee, or reverse creator payment transactions.\n"
+#| "        "
 msgid ""
 "\n"
-"        Payments are handled directly between users. Fanz.to does not "
-"process,\n"
-"        guarantee, or reverse creator payment transactions.\n"
-"        "
+"                    Payments are handled directly between users. Fanz.to "
+"does not process,\n"
+"                    guarantee, or reverse creator payment transactions.\n"
+"                    "
 msgstr ""
 "\n"
 "Los pagos se gestionan directamente entre usuarios. Fanz.to no procesa, \n"
 "garantiza ni revierte transacciones de pago entre usuarios.    "
 
-#: templates/auctions/public_profile.html:142
+#: templates/auctions/public_profile.html:176
 msgid "View Payment QR"
 msgstr "Ver código QR de pago"
 
-#: templates/auctions/public_profile.html:146
+#: templates/auctions/public_profile.html:181
 msgid "Seller"
 msgstr "Vendedor"
 
-#: templates/auctions/public_profile.html:160
-msgid "Contact Seller"
-msgstr "Contactar al vendedor"
+#: templates/auctions/public_profile.html:201
+#, fuzzy
+#| msgid "Seller"
+msgid "DM Seller"
+msgstr "Vendedor DM"
 
-#: templates/auctions/public_profile.html:198
+#: templates/auctions/public_profile.html:207
+#, fuzzy
+#| msgid "Contact Seller"
+msgid "Log in to DM Seller"
+msgstr "Inicie sesión en DM Vendedor"
+
+#: templates/auctions/public_profile.html:244
 msgid "Share Profile"
 msgstr "Compartir perfil"
 
-#: templates/auctions/public_profile.html:257
+#: templates/auctions/public_profile.html:261
 msgid "Featured Post"
 msgstr "Publicación destacada"
 
-#: templates/auctions/public_profile.html:330
+#: templates/auctions/public_profile.html:348
 msgid "Unpin"
 msgstr "Desprender"
 
-#: templates/auctions/public_profile.html:332
+#: templates/auctions/public_profile.html:350
 msgid "Pin"
 msgstr "Alfiler"
 
-#: templates/auctions/public_profile.html:340
+#: templates/auctions/public_profile.html:358
 msgid "Delete"
 msgstr "Borrar"
 
-#: templates/auctions/public_profile.html:361
-#: templates/auctions/public_profile.html:370
 #: templates/auctions/public_profile.html:379
+#: templates/auctions/public_profile.html:387
+#: templates/auctions/public_profile.html:395
 msgid "Tip"
 msgstr "Consejo"
 
-#: templates/auctions/public_profile.html:394
+#: templates/auctions/public_profile.html:408
 msgid "Share"
 msgstr "Compartir"
 
-#: templates/auctions/public_profile.html:411
-#: templates/auctions/public_profile.html:470
-msgid "required"
-msgstr "requerido"
-
-#: templates/auctions/public_profile.html:492
+#: templates/auctions/public_profile.html:496
 msgid "No public posts yet."
 msgstr "Aún no hay publicaciones públicas."
 

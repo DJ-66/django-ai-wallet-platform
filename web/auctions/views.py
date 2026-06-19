@@ -36,6 +36,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from .models import Fan, Notification, Conversation, DirectMessage
 from django.db.models import Sum
+from django.db.models import Case, When, Value, IntegerField
 
 
 def generate_referral_code():
@@ -145,6 +146,8 @@ def feed_home(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.user = request.user
+            post.title = post.title.strip()
+            post.content = post.content.strip()
 
             if post.is_paid:
                 post.is_public = True
@@ -160,9 +163,24 @@ def feed_home(request):
     else:
         form = FeedPostForm()
 
-        posts = FeedPost.objects.filter(is_public=True).order_by(
-        "-is_pinned",
-        "-created_at"
+    posts = (
+        FeedPost.objects
+        .filter(is_public=True)
+        .annotate(
+            community_pin_rank=Case(
+                When(
+                    is_pinned=True,
+                    user__is_staff=True,
+                    then=Value(1)
+                ),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by(
+            "-community_pin_rank",
+            "-created_at"
+        )
     )
 
     if request.user.is_authenticated:
@@ -903,12 +921,21 @@ def quick_tip_user(request, wallet_code):
     })
 
 @login_required
-@require_POST
 def toggle_pin_post(request, post_id):
     post = get_object_or_404(FeedPost, id=post_id, user=request.user)
 
-    post.is_pinned = not post.is_pinned
-    post.save(update_fields=["is_pinned"])
+    if request.method == "POST":
+        if post.is_pinned:
+            post.is_pinned = False
+            post.save()
+        else:
+            FeedPost.objects.filter(
+                user=request.user,
+                is_pinned=True
+            ).update(is_pinned=False)
+
+            post.is_pinned = True
+            post.save()
 
     return redirect(request.META.get("HTTP_REFERER", "feed_home"))
 

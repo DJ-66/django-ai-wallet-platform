@@ -33,15 +33,18 @@
     </div>
 
     <form method="post"
-          action="{% url 'conversation_detail' conversation.id %}"
-          class="dm-form">
-        {% csrf_token %}
-        {{ form.body }}
+      action="{% url 'conversation_detail' conversation.id %}"
+      class="dm-form">
+    {% csrf_token %}
 
+    {{ form.body }}
+
+    <div class="dm-form-actions">
         <button type="submit" class="dm-send-btn">
             📩 {% trans "Send" %}
         </button>
-    </form>
+    </div>
+</form>
 
       <form method="post"
       action="{% url 'delete_dm_conversation' conversation.id %}"
@@ -59,4 +62,5 @@
 <br>
 <br>
 </div>
+
 {% endblock %}

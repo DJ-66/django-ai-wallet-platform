@@ -8,43 +8,51 @@
     {% if conversations %}
         <div class="inbox-list">
             {% for conversation in conversations %}
-                <div class="inbox-card">
-                <a class="inbox-card-link" href="{% url 'conversation_detail' conversation.id %}">
-                    <div class="inbox-user">
-                        {% for participant in conversation.participants.all %}
-                            {% if participant != request.user %}
-                                @{{ participant.username }}
-                            {% endif %}
-                        {% endfor %}
-                    </div>
 
-                    {% with last_message=conversation.messages.last %}
-                        {% if last_message %}
-                            <div class="inbox-preview">
-                                {{ last_message.body|truncatechars:90 }}
-                            </div>
+<div class="inbox-card">
 
-                            <div class="inbox-meta">
-                                {{ conversation.messages.count }} {% trans "messages" %}
-                                · {{ last_message.created_at|date:"M d, Y H:i" }}
-                            </div>
-                        {% else %}
-                            <div class="inbox-preview">
-                                {% trans "No messages yet." %}
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                    </a>
+    {% with last_message=conversation.messages.last %}
 
-                   <form method="post"
-                   action="{% url 'delete_dm_conversation' conversation.id %}"
-                   class="inbox-delete-form"
-                   onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
-                  {% csrf_token %}
-                  <button type="submit" class="inbox-delete-btn">🗑</button>
-                  </form>
-                  </div>
-               
+        <div class="inbox-user">
+            {% for participant in conversation.participants.all %}
+                {% if participant != request.user %}
+                    @{{ participant.username }}
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if last_message %}
+            <div class="inbox-preview copyable-message-text">
+                {{ last_message.body|truncatechars:90 }}
+            </div>
+
+            <div class="inbox-meta">
+                {{ conversation.messages.count }} {% trans "messages" %}
+                · {{ last_message.created_at|date:"M d, Y H:i" }}
+            </div>
+        {% else %}
+            <div class="inbox-preview">
+                {% trans "No messages yet." %}
+            </div>
+        {% endif %}
+
+        <a class="inbox-open-btn"
+           href="{% url 'conversation_detail' conversation.id %}">
+            📩 {% trans "Open" %}
+        </a>
+
+    {% endwith %}
+
+    <form method="post"
+          action="{% url 'delete_dm_conversation' conversation.id %}"
+          class="inbox-delete-form"
+          onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
+        {% csrf_token %}
+        <button type="submit" class="inbox-delete-btn">🗑</button>
+    </form>
+
+</div>
+                
             {% endfor %}
         </div>
     {% else %}
@@ -53,4 +61,6 @@
         </div>
     {% endif %}
 </div>
+
+
 {% endblock %}

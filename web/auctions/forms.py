@@ -7,6 +7,7 @@ class FeedPostForm(forms.ModelForm):
     class Meta:
         model = FeedPost
         fields = [
+            "title",
             "content",
             "image",
             "is_public",
@@ -15,11 +16,18 @@ class FeedPostForm(forms.ModelForm):
         ]
 
         widgets = {
+            "title": forms.TextInput(attrs={
+                "placeholder": _("Post title..."),
+                "class": "feed-post-title-input",
+            }),
+
             "content": forms.Textarea(attrs={
                 "rows": 4,
-                "placeholder": "What's happening?",
+                "placeholder": _("What's happening?"),
             }),
         }
+
+
 class SignUpForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
     password_confirm = forms.CharField(widget=forms.PasswordInput)
@@ -56,6 +64,7 @@ class UserProfileForm(forms.ModelForm):
             "telegram",
         ]
 
+
         labels = {
             "display_name": _("Display name"),
             "bio": _("Bio"),
@@ -78,9 +87,14 @@ class DirectMessageForm(forms.ModelForm):
     class Meta:
         model = DirectMessage
         fields = ["body"]
+
         widgets = {
             "body": forms.Textarea(attrs={
                 "rows": 3,
-                "placeholder": "Write a message...",
-            })
+                "placeholder": _("Write a message..."),
+                "class": "dm-message-input",
+                "autocomplete": "on",
+                "autocapitalize": "sentences",
+                "spellcheck": "true",
+            }),
         }

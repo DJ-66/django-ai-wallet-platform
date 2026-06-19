@@ -274,10 +274,6 @@ h1 {
     margin: 0 auto 20px auto;
 }
 
-.feed-content {
-    white-space: pre-wrap;
-    word-break: break-word;
-}
 
 .feed-post-card:target {
     outline: 3px solid #8b5cf6;
@@ -1812,8 +1808,8 @@ img {
 }
 
 .profile-bio {
-    margin-top: 22px;
-    line-height: 1.6;
+    margin-top: 11px;
+    line-height: 1.2;
     color: #374151;
     white-space: pre-line;
 }
@@ -2299,9 +2295,9 @@ img {
   background: #fff;
   border-radius: 14px;
   padding: 10px;
-  margin-top: 10px;
+  margin-top: 16px;
   color: #374151;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
 }
 
@@ -2343,50 +2339,6 @@ img {
     text-decoration: underline;
 }
 
-/* Mobile nav compact mode */
-@media (max-width: 480px) {
-  nav {
-    gap: 8px;
-    padding: 8px 10px;
-    justify-content: space-between;
-  }
-
-  nav a,
-  nav button,
-  nav form {
-    font-size: 0.9rem;
-  }
-
-  nav a {
-    line-height: 1.25;
-  }
-
-  .language-switcher {
-    transform: scale(0.88);
-    transform-origin: right center;
-  }
-}
-
-.nav-icon-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    text-align: center;
-    text-decoration: none;
-}
-
-.nav-emoji {
-    font-size: 1.35em;
-    line-height: 1;
-    vertical-align: middle;
-}
-
-.nav-label {
-    font-size: 0.72rem;
-    line-height: 1;
-}
 
 /* =========================
    DIRECT MESSAGES
@@ -2412,7 +2364,11 @@ img {
 
 .dm-card {
   width: 82%;
-  padding: 14px 16px;
+  font-size: .90rem;
+  line-height: 1.4;
+  padding: 7px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   border: 1px solid rgba(120, 80, 220, 0.18);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.28);
@@ -2421,26 +2377,32 @@ img {
 
 .dm-own {
   align-self: flex-end;
+  padding: 7px;
   background: rgba(94, 67, 225, 0.14);
 }
 
 .dm-other {
   align-self: flex-start;
+  padding: 7px;
 }
 
 .dm-sender {
   font-weight: 800;
+  padding: 2px 10px;
   margin-bottom: 8px;
 }
 
 .dm-body {
-  font-size: 1rem;
+  font-size: .90rem;
   line-height: 1.4;
+  margin-top: 10px;
   margin-bottom: 10px;
+  padding: 7px;
 }
 
 .dm-time {
   font-size: 0.78rem;
+  padding: 7px;
   opacity: 0.7;
 }
 
@@ -2464,7 +2426,7 @@ img {
   padding: 14px 18px;
   border: 1px solid rgba(120, 80, 220, 0.25);
   background: rgba(255,255,255,0.9);
-  font-size: 1rem;
+  font-size: .90rem;
 }
 
 .dm-send-btn {
@@ -2556,7 +2518,7 @@ img {
 }
 
 .inbox-preview {
-  font-size: 1rem;
+  font-size: .90rem;
   line-height: 1.35;
   margin-bottom: 8px;
 }
@@ -2577,6 +2539,16 @@ img {
   .inbox-page {
     padding: 0.75rem;
   }
+
+.payment-notes {
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 12px;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.5;
+}
 
   .inbox-card {
     padding: 14px 16px;
@@ -2623,5 +2595,194 @@ img {
   padding: 10px 14px;
 }
 
+.seller-badge {
+    font-size: 26px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.seller-label {
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+
+.feed-post-title {
+    text-align: left !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem;
+    line-height: 1.25;
+    margin: 0 0 2px 0 !important;
+    padding: 0 !important;
+}
+
+.feed-content::first-line {
+    text-indent: 0 !important;
+}
+
+.feed-content {
+    white-space: normal !important;
+    word-break: break-word;
+
+    text-align: left !important;
+    font-weight: 400;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    text-indent: 0 !important;
+}
+
+
+.feed-post-title-input {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+
+    border: 1px solid #d8c8f5;
+    border-radius: 12px;
+
+    background: #fff;
+
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    box-sizing: border-box;
+}
+
+.upload-image-btn {
+    display: inline-block;
+
+    padding: 10px 14px;
+
+    background: #f3ebff;
+
+    border: 1px solid #d8c8f5;
+    border-radius: 12px;
+
+    cursor: pointer;
+
+    font-weight: 600;
+}
+
+.upload-image-btn:hover {
+    background: #ece0ff;
+}
+
+#id_image {
+    display: none;
+}
+
+#selected-file-name {
+    margin-left: 8px;
+    font-size: 0.9rem;
+}
+
+.dm-message-input {
+    width: 100%;
+    min-height: 72px;
+    resize: vertical;
+
+    -webkit-user-select: text !important;
+    user-select: text !important;
+
+    -webkit-touch-callout: default !important;
+    touch-action: manipulation;
+
+    caret-color: auto;
+}
+
+.dm-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Mobile nav compact mode */
+@media (max-width: 480px) {
+  nav {
+    gap: 8px;
+    padding: 8px 10px;
+    justify-content: space-between;
+  }
+
+  nav a,
+  nav button,
+  nav form {
+    font-size: 0.9rem;
+  }
+
+  nav a {
+    line-height: 1.25;
+  }
+
+  .language-switcher {
+    transform: scale(0.88);
+    transform-origin: right center;
+  }
+}
+
+.nav-icon-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.nav-emoji {
+    font-size: 1.35em;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.nav-label {
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.payment-notes {
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 11px;
+  color: #374151;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.dm-body {
+  font-size: .80rem;
+  line-height: 1.4;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 7px;
+}
+
+.inbox-preview {
+  font-size: .80rem;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.inbox-meta {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.copyable-message-text {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+    cursor: text;
+}
+
+.inbox-open-btn {
+    display: inline-block;
+    margin-top: 8px;
+}
 
 /* end_css */

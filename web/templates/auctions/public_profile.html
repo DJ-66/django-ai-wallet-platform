@@ -4,23 +4,16 @@
 
 {% block content %}
 
-
 <div class="feed-page">
 <div class="feed-layout">
 
+    <div class="profile-banner {% if not profile.banner %}profile-banner-fallback{% endif %}">
+        {% if profile.banner %}
+            <img src="{{ profile.banner.url }}" alt="Banner">
+        {% endif %}
+    </div>
 
-<div class="feed-page">
-<div class="feed-layout">
-<div class="feed-page">
-<div class="feed-layout">
-
-<div class="profile-banner {% if not profile.banner %}profile-banner-fallback{% endif %}">
-    {% if profile.banner %}
-        <img src="{{ profile.banner.url }}" alt="Banner">
-    {% endif %}
-</div>
-
-<div class="profile-public-card">
+    <div class="profile-public-card">
 
         {% if profile.avatar %}
             <img src="{{ profile.avatar.url }}" class="profile-avatar">
@@ -34,217 +27,222 @@
             {{ profile.display_name|default:profile_user.username }}
 
             {% if profile.is_official %}
-         <span title="Official creator">💎</span>
+                <span title="Official creator">💎</span>
             {% elif profile.is_verified %}
-         <span class="verified-badge" title="Verified profile">
-         <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="#39ff14"
-            xmlns="http://www.w3.org/2000/svg">
-
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/>
-
-            </svg>
-            </span>
+                <span class="verified-badge" title="Verified profile">
+                    <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="#39ff14"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </span>
             {% endif %}
         </h1>
 
         <p class="profile-username">
             @{{ profile_user.username }}
         </p>
+
         {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
-        <span class="seller-badge">
-       💰  {% trans "Credit Seller" %}
-       </span>
-       {% endif %}
+            <span class="seller-badge seller-label">
+                💰 {% trans "Credit Seller" %}
+            </span>
+        {% endif %}
 
         <div class="profile-stats">
-        <div class="profile-stat">
-        📝 {{ profile_posts.count }}
+            <div class="profile-stat">
+                📝 {{ profile_posts.count }}
+            </div>
+
+            <div class="profile-stat">
+                🔓 {{ premium_post_count }}
+            </div>
+
+            <div class="profile-stat">
+                ❤️ {{ total_likes }}
+            </div>
+
+            <div class="profile-stat">
+                ⭐ {{ fan_count_display }} Fanz
+            </div>
         </div>
 
-        <div class="profile-stat">
-        🔓 {{ premium_post_count }}
-        </div>
-
-        <div class="profile-stat">
-        ❤️ {{ total_likes }}
-       </div>
-  
-        <div class="profile-stat">
-        ⭐ {{ fan_count_display }} Fanz
-        </div>
-        </div>
-
-                
-        <br>
         {% if show_creator_earnings %}
-        <div class="creator-earnings-card">
+            <div class="creator-earnings-card">
 
-        <div class="earning-row">
-        <span>💸 {% trans "Tips" %}</span>
-        <strong>{{ tip_earnings|floatformat:0 }}</strong>
-        </div>
+                <div class="earning-row">
+                    <span>💸 {% trans "Tips" %}</span>
+                    <strong>{{ tip_earnings|floatformat:0 }}</strong>
+                </div>
 
-        <div class="earning-row">
-        <span>🔓 {% trans "Unlocks" %}</span>
-        <strong>{{ unlock_earnings|floatformat:0 }}</strong>
-        </div>
+                <div class="earning-row">
+                    <span>🔓 {% trans "Unlocks" %}</span>
+                    <strong>{{ unlock_earnings|floatformat:0 }}</strong>
+                </div>
 
-        <hr>
+                <hr>
 
-        <div class="earning-row total">
-        <span>💰 {% trans "Total" %}</span>
-        <strong>{{ total_creator_earnings|floatformat:0 }}</strong>
-        </div>
-        </div>
-        <br>
-        {% endif %}       
-   
-        
+                <div class="earning-row total">
+                    <span>💰 {% trans "Total" %}</span>
+                    <strong>{{ total_creator_earnings|floatformat:0 }}</strong>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if request.user == profile_user %}
+            {% if profile.bio or profile.location or profile.website %}
+                <div class="profile-about-block">
+                    {% if profile.bio %}
+                        <p class="profile-bio">
+                            {{ profile.bio|linebreaksbr }}
+                        </p>
+                    {% endif %}
+
+                    {% if profile.location %}
+                        <p class="profile-meta">
+                            📍 {{ profile.location }}
+                        </p>
+                    {% endif %}
+
+                    {% if profile.website %}
+                        <p class="profile-meta">
+                            🔗 <a href="{{ profile.website }}" target="_blank" rel="noopener">
+                                {{ profile.website|cut:"https://"|cut:"http://"|cut:"www." }}
+                            </a>
+                        </p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+
         {% if request.user.is_authenticated and request.user != profile_user %}
-        <a href="{% url 'toggle_fan' profile_user.username %}"
-        class="auth-primary-btn profile-tip-btn">
+            <a href="{% url 'toggle_fan' profile_user.username %}"
+               class="auth-primary-btn profile-tip-btn">
+                {% if is_fan %}
+                    ⭐ {% trans "Unfan" %}
+                {% else %}
+                    ⭐ {% trans "Become a Fan" %}
+                {% endif %}
+            </a>
 
-        {% if is_fan %}
-            ⭐ {% trans "Unfan" %}
-        {% else %}
-            ⭐ {% trans "Become a Fan" %}
-        {% endif %}
+            {% if profile.bio or profile.location or profile.website %}
+                <div class="profile-about-block">
+                    {% if profile.bio %}
+                        <p class="profile-bio">
+                            {{ profile.bio|linebreaksbr }}
+                        </p>
+                    {% endif %}
 
-        </a>
-        {% endif %}
-        
-        <br> 
-        
-        {% if request.user.is_authenticated and request.user != profile_user %}
-        <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}" class="auth-primary-btn profile-tip-btn">
-        💰 {% trans "Send Credits" %}
-        </a>
-        {% endif %}
+                    {% if profile.location %}
+                        <p class="profile-meta">
+                            📍 {{ profile.location }}
+                        </p>
+                    {% endif %}
 
-        {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
-
-<div class="buy-credits-card">
-    <h3>💳 {% trans "Buy Credits From Creator" %}</h3>
-
-    <p class="buy-credits-warning">
-        {% blocktrans %}
-        Payments are handled directly between users. Fanz.to does not process,
-        guarantee, or reverse creator payment transactions.
-        {% endblocktrans %}
-    </p>
-
-    <details class="buy-credits-details">
-        <summary class="buy-credits-btn">
-            {% trans "View Payment QR" %}
-        </summary>
-
-        <div class="buy-credits-panel">
-            <p><strong>{% trans "Seller" %}:</strong> @{{ profile_user.username }}</p>
-
-            <img src="{{ profile.bank_qr_image.url }}"
-                 alt="Payment QR Code"
-                 class="payment-qr-image">
-
-            {% if profile.bank_payment_notes %}
-                <div class="payment-notes">
-                    {{ profile.bank_payment_notes|linebreaksbr }}
+                    {% if profile.website %}
+                        <p class="profile-meta">
+                            🔗 <a href="{{ profile.website }}" target="_blank" rel="noopener">
+                                {{ profile.website|cut:"https://"|cut:"http://"|cut:"www." }}
+                            </a>
+                        </p>
+                    {% endif %}
                 </div>
             {% endif %}
 
-     {% if profile.x_url or profile.telegram %}
-     <div class="seller-contact-links">
-    <h4>📩 {% trans "Contact Seller" %}</h4>
+            <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
+               class="auth-primary-btn profile-tip-btn">
+                💰 {% trans "Send Credits" %}
+            </a>
+            <br>
+        {% endif %}
 
+
+        {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
+            <div class="buy-credits-card">
+                <h3>💳 {% trans "Buy Credits From Creator" %}</h3>
+
+                <p class="buy-credits-warning">
+                    {% blocktrans %}
+                    Payments are handled directly between users. Fanz.to does not process,
+                    guarantee, or reverse creator payment transactions.
+                    {% endblocktrans %}
+                </p>
+
+                <details class="buy-credits-details">
+                    <summary class="buy-credits-btn">
+                        {% trans "View Payment QR" %}
+                    </summary>
+
+                    <div class="buy-credits-panel">
+                        <p>
+                            <strong>{% trans "Seller" %}:</strong>
+                            @{{ profile_user.username }}
+                        </p>
+
+                        <img src="{{ profile.bank_qr_image.url }}"
+                             alt="Payment QR Code"
+                             class="payment-qr-image">
+
+                        {% if profile.bank_payment_notes %}
+                            <div class="payment-notes">
+                                {{ profile.bank_payment_notes|linebreaksbr }}
+                            </div>
+                        {% endif %}
+
+                        <div class="seller-contact-links">             
+                        <br>
+
+{% if request.user.is_authenticated and request.user != profile_user %}
     <a href="{% url 'start_conversation' profile_user.username %}?message=Hi%2C%20I%20would%20like%20to%20buy%20credits."
        class="auth-primary-btn">
-        📩 {% trans "Message Creator" %}
+        📩 {% trans "DM Seller" %}
     </a>
 
-    {% if profile.telegram or profile.x_url %}
-        <br><br>
-
-        {% if profile.telegram %}
-            <a href="{{ profile.telegram }}"
-               target="_blank"
-               rel="noopener noreferrer">Telegram</a>
-        {% endif %}
-
-        {% if profile.telegram and profile.x_url %}
-            <span class="contact-separator"> | </span>
-        {% endif %}
-
-        {% if profile.x_url %}
-            <a href="{{ profile.x_url }}"
-               target="_blank"
-               rel="noopener noreferrer">X.com</a>
-        {% endif %}
-    {% endif %}
-</div> 
-
-   {% endif %}
-            
-
-
-    </div>
-    </details>
-    </div>
-
+{% elif not request.user.is_authenticated %}
+    <a href="{% url 'account_login' %}"
+       class="auth-primary-btn">
+        📩 {% trans "Log in to DM Seller" %}
+    </a>
 {% endif %}
-        
-        <br> 
 
-        <button
-        type="button"
-        class="auth-primary-btn profile-share-btn"
-        data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' profile_user.username %}">
-       🔗 {% trans "Share Profile" %}
-       </button>
 
-        {% if profile.bio %}
-            <p class="profile-bio">
-                {{ profile.bio }}
-            </p>
+                        </div>
+                    </div>
+                </details>
+            </div>
         {% endif %}
 
-        {% if profile.location %}
-            <p class="profile-meta">
-                📍 {{ profile.location }}
-            </p>
-        {% endif %}
-
-        {% if profile.website %}
-            <p class="profile-meta">
-                🔗 <a href="{{ profile.website }}" target="_blank" rel="noopener">
-                    {{ profile.website|cut:"https://"|cut:"http://"|cut:"www." }}
-                </a>
-            </p>
-        {% endif %}
-        
         <div class="profile-social-links">
-    {% if profile.youtube %}
-        <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
-    {% endif %}
+            {% if profile.youtube %}
+                <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
+            {% endif %}
 
-    {% if profile.instagram %}
-        <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
-    {% endif %}
+            {% if profile.instagram %}
+                <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
+            {% endif %}
 
-    {% if profile.x_url %}
-        <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
-    {% endif %}
+            {% if profile.x_url %}
+                <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
+            {% endif %}
 
-    {% if profile.tiktok %}
-        <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
-    {% endif %}
+            {% if profile.tiktok %}
+                <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
+            {% endif %}
 
-    {% if profile.telegram %}
-        <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
-    {% endif %}
-</div>
+            {% if profile.telegram %}
+                <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
+            {% endif %}
+        </div>
+<br>
+        <button
+            type="button"
+            class="auth-primary-btn profile-share-btn"
+            data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' profile_user.username %}">
+            🔗 {% trans "Share Profile" %}
+        </button>
 
         {% if request.user == profile_user %}
             <a href="{% url 'edit_profile' %}" class="auth-primary-btn profile-edit-btn">
@@ -252,252 +250,254 @@
             </a>
         {% endif %}
 
-</div>
+    </div>
 
-<div class="profile-feed-section">
+    <div class="profile-feed-section">
 
-    {% for post in profile_posts %}
-        {% if post.is_pinned %}
-            <div class="featured-post-card">
-                <div class="featured-post-header">
-                   <h2> ⭐ {% trans "Featured Post" %} </h2>
-                </div>
-
-                <div class="featured-post-body">
-                    {{ post.content|linebreaks }}
-                </div>
-            </div>
-        {% endif %}
-    {% endfor %}
-
-    {% for post in profile_posts %}
-        <div class="feed-post-card" id="post-{{ post.id }}">
-
-      
-        {% if post.is_paid and request.user != post.user %}
-
-    {% if not post.is_pinned %}
-    <p class="feed-content">
-        {{ post.content|linebreaksbr }}
-    </p>
-    {% endif %}    
-
-    {% if post.id in unlocked_post_ids %}
-
-        {% if post.image %}
-            <img src="{{ post.image.url }}" class="feed-image">
-        {% endif %}
-
-    {% else %}
-
-        <div class="locked-post-card">
-
-            <p class="locked-post-title">
-                🔒 {% trans "Premium content locked" %}
-            </p>
-
-            <p class="locked-post-price">
-                {% trans "Unlock media for" %}
-                {{ post.unlock_price }}
-                {% trans "credits" %}
-            </p>
-
-            <form method="post" action="{% url 'unlock_feed_post' post.id %}">
-                {% csrf_token %}
-
-                <button type="submit" class="auth-primary-btn">
-                    {% trans "Unlock Post" %}
-                </button>
-            </form>
-
-        </div>
-
-    {% endif %}
-
-{% else %}
-
-    {% if not post.is_pinned %}
-    <p class="feed-content">
-        {{ post.content|linebreaksbr }}
-    </p>
-    {% endif %}
-
-    {% if post.image %}
-        <img src="{{ post.image.url }}" class="feed-image">
-    {% endif %}
-
-{% endif %}
-             <div class="feed-post-actions">
-              {% if request.user == post.user %}
-    <form method="post" action="{% url 'toggle_pin_post' post.id %}" class="inline-post-action-form">
-        {% csrf_token %}
-        <button type="submit" class="feed-like-btn">
+        {% for post in profile_posts %}
             {% if post.is_pinned %}
-                📌 {% trans "Unpin" %}
-            {% else %}
-                📌 {% trans "Pin" %}
-            {% endif %}
-        </button>
-    </form>
-
-    <form method="post" action="{% url 'delete_feed_post' post.id %}" class="inline-post-action-form">
-        {% csrf_token %}
-        <button type="submit" class="feed-like-btn" onclick="return confirm('Delete this post?');">
-            🗑️ {% trans "Delete" %}
-        </button>
-    </form>
-{% endif %}
-             <button
-             type="button"
-             class="feed-like-btn ajax-like-btn"
-             data-url="{% url 'toggle_post_like' post.id %}"
-             data-post-id="{{ post.id }}">
-    ❤️ <span id="like-count-{{ post.id }}">{{ post.likes.count }}</span>
-             </button>
-
-           {% if request.user.is_authenticated and request.user != post.user %}
-<div class="feed-tip-group">
-
-    <button
-        type="button"
-        class="feed-tip-link ajax-tip-btn"
-        data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
-        data-amount="1"
-    >
-        💰 {% trans "Tip" %} 1
-    </button>
-
-    <button
-        type="button"
-        class="feed-tip-link ajax-tip-btn"
-        data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
-        data-amount="5"
-    >
-        💰 {% trans "Tip" %} 5
-    </button>
-
-    <button
-        type="button"
-        class="feed-tip-link ajax-tip-btn"
-        data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
-        data-amount="10"
-    >
-        💰 {% trans "Tip" %}  10
-    </button>
-
-</div>
-    {% endif %}
-
-</div>
-
-<br>
-
-<button
-    type="button"
-    class="feed-like-btn share-post-btn"
-    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
->
-    🔗 {% trans "Share" %}
-</button>
-
-<div class="post-comments-section">
-
-    {% if request.user.is_authenticated %}
-        <form
-            method="post"
-            action="{% url 'add_post_comment' post.id %}"
-            class="post-comment-form main-comment-form"
-        >
-            {% csrf_token %}
-
-            <input
-                type="text"
-                name="content"
-                placeholder="{% trans 'Write a comment...' %}"
-                {% trans "required" %}
-            >
-
-            <button type="submit">
-                {% trans "Comment" %}
-            </button>
-        </form>
-    {% endif %}
-
-    {% for comment in post.comments.all %}
-        {% if not comment.parent %}
-
-            <div class="post-comment">
-
-                <strong>
-                    @{{ comment.user.username }}
-                </strong>
-
-                <p>
-                    {{ comment.content|linebreaksbr }}
-                </p>
-
-                {% if comment.replies.all %}
-                <details class="reply-thread">
-                <summary>↳ Read {{ comment.replies.count }} replies</summary>
-
-                {% for reply in comment.replies.all %}
-                    <div class="post-reply">
-                        <strong>
-                            @{{ reply.user.username }}
-                        </strong>
-
-                        <p>
-                            {{ reply.content|linebreaksbr }}
-                        </p>
+                <div class="featured-post-card">
+                    <div class="featured-post-header">
+                        <h2>⭐ {% trans "Featured Post" %}</h2>
                     </div>
-                {% endfor %}
 
-                 </details>
-                 {% endif %}
+                    <div class="featured-post-body">
+                    {% if post.title %}
+                    <h3 class="feed-post-title">
+                    {{ post.title }}
+                    </h3>
+                   {% endif %}
 
-                {% if request.user.is_authenticated %}
-                    <form
-                        method="post"
-                        action="{% url 'add_post_comment' post.id %}"
-                        class="post-comment-form reply-comment-form"
-                    >
-                        {% csrf_token %}
+    <div class="feed-content">{{ post.content|linebreaksbr }}</div>
+</div>
+                </div>
+            {% endif %}
+        {% endfor %}
 
-                        <input
-                            type="hidden"
-                            name="parent_id"
-                            value="{{ comment.id }}"
-                        >
+        {% for post in profile_posts %}
+            <div class="feed-post-card" id="post-{{ post.id }}">
 
-                        <input
-                            type="text"
-                            name="content"
-                            placeholder="{% trans 'Reply...' %}"
-                            {% trans "required" %}
-                        >
+                {% if post.is_paid and request.user != post.user %}
 
-                        <button type="submit">
-                            ↩️
-                        </button>
-                    </form>
+                    {% if not post.is_pinned %}
+    {% if post.title %}
+        <h3 class="feed-post-title">
+            {{ post.title }}
+        </h3>
+    {% endif %}
+
+    <div class="feed-content"> {{ post.content|linebreaksbr }} </div>
+{% endif %}
+
+                    {% if post.id in unlocked_post_ids %}
+
+                        {% if post.image %}
+                            <img src="{{ post.image.url }}" class="feed-image">
+                        {% endif %}
+
+                    {% else %}
+
+                        <div class="locked-post-card">
+
+                            <p class="locked-post-title">
+                                🔒 {% trans "Premium content locked" %}
+                            </p>
+
+                            <p class="locked-post-price">
+                                {% trans "Unlock media for" %}
+                                {{ post.unlock_price }}
+                                {% trans "credits" %}
+                            </p>
+
+                            <form method="post" action="{% url 'unlock_feed_post' post.id %}">
+                                {% csrf_token %}
+
+                                <button type="submit" class="auth-primary-btn">
+                                    {% trans "Unlock Post" %}
+                                </button>
+                            </form>
+
+                        </div>
+
+                    {% endif %}
+
+                {% else %}
+
+                    {% if not post.is_pinned %}
+    {% if post.title %}
+        <h3 class="feed-post-title">
+            {{ post.title }}
+        </h3>
+    {% endif %}
+
+    <div class="feed-content"> {{ post.content|linebreaksbr }} </div>
+{% endif %}
+
+                    {% if post.image %}
+                        <img src="{{ post.image.url }}" class="feed-image">
+                    {% endif %}
+
                 {% endif %}
 
+                <div class="feed-post-actions">
+                    {% if request.user == post.user %}
+                        <form method="post" action="{% url 'toggle_pin_post' post.id %}" class="inline-post-action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="feed-like-btn">
+                                {% if post.is_pinned %}
+                                    📌 {% trans "Unpin" %}
+                                {% else %}
+                                    📌 {% trans "Pin" %}
+                                {% endif %}
+                            </button>
+                        </form>
+
+                        <form method="post" action="{% url 'delete_feed_post' post.id %}" class="inline-post-action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="feed-like-btn" onclick="return confirm('Delete this post?');">
+                                🗑️ {% trans "Delete" %}
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <button
+                        type="button"
+                        class="feed-like-btn ajax-like-btn"
+                        data-url="{% url 'toggle_post_like' post.id %}"
+                        data-post-id="{{ post.id }}">
+                        ❤️ <span id="like-count-{{ post.id }}">{{ post.likes.count }}</span>
+                    </button>
+
+                    {% if request.user.is_authenticated and request.user != post.user %}
+                        <div class="feed-tip-group">
+
+                            <button
+                                type="button"
+                                class="feed-tip-link ajax-tip-btn"
+                                data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
+                                data-amount="1">
+                                💰 {% trans "Tip" %} 1
+                            </button>
+
+                            <button
+                                type="button"
+                                class="feed-tip-link ajax-tip-btn"
+                                data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
+                                data-amount="5">
+                                💰 {% trans "Tip" %} 5
+                            </button>
+
+                            <button
+                                type="button"
+                                class="feed-tip-link ajax-tip-btn"
+                                data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
+                                data-amount="10">
+                                💰 {% trans "Tip" %} 10
+                            </button>
+
+                        </div>
+                    {% endif %}
+                </div>
+
+                <br>
+
+                <button
+                    type="button"
+                    class="feed-like-btn share-post-btn"
+                    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}">
+                    🔗 {% trans "Share" %}
+                </button>
+
+                <div class="post-comments-section">
+
+                    {% if request.user.is_authenticated %}
+                        <form
+                            method="post"
+                            action="{% url 'add_post_comment' post.id %}"
+                            class="post-comment-form main-comment-form">
+                            {% csrf_token %}
+
+                            <input
+                                type="text"
+                                name="content"
+                                placeholder="{% trans 'Write a comment...' %}"
+                                required>
+
+                            <button type="submit">
+                                {% trans "Comment" %}
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    {% for comment in post.comments.all %}
+                        {% if not comment.parent %}
+
+                            <div class="post-comment">
+
+                                <strong>
+                                    @{{ comment.user.username }}
+                                </strong>
+
+                                <p>
+                                    {{ comment.content|linebreaksbr }}
+                                </p>
+
+                                {% if comment.replies.all %}
+                                    <details class="reply-thread">
+                                        <summary>↳ Read {{ comment.replies.count }} replies</summary>
+
+                                        {% for reply in comment.replies.all %}
+                                            <div class="post-reply">
+                                                <strong>
+                                                    @{{ reply.user.username }}
+                                                </strong>
+
+                                                <p>
+                                                    {{ reply.content|linebreaksbr }}
+                                                </p>
+                                            </div>
+                                        {% endfor %}
+                                    </details>
+                                {% endif %}
+
+                                {% if request.user.is_authenticated %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'add_post_comment' post.id %}"
+                                        class="post-comment-form reply-comment-form">
+                                        {% csrf_token %}
+
+                                        <input
+                                            type="hidden"
+                                            name="parent_id"
+                                            value="{{ comment.id }}">
+
+                                        <input
+                                            type="text"
+                                            name="content"
+                                            placeholder="{% trans 'Reply...' %}"
+                                            required>
+
+                                        <button type="submit">
+                                            ↩️
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                            </div>
+
+                        {% endif %}
+                    {% endfor %}
+
+                </div>
+
             </div>
+        {% empty %}
+            <p>{% trans "No public posts yet." %}</p>
+        {% endfor %}
 
-        {% endif %}
-    {% endfor %}
-   
-</div>
+    </div>
 
-    
-</div>
-                
-        </div>
-        </div>
-    {% empty %}
-        <p>{% trans "No public posts yet." %}</p>
-    {% endfor %}
-</div>
 </div>
 </div>
 
@@ -536,21 +536,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const url = button.dataset.url;
             const amount = button.dataset.amount;
-            
 
-                fetch(url, {
-                    method: "POST",
+            fetch(url, {
+                method: "POST",
 
-                    body: JSON.stringify({
-                        amount: amount
-                    }),
+                body: JSON.stringify({
+                    amount: amount
+                }),
 
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest",
-                        "X-CSRFToken": getCookie("csrftoken"),
-                        "Content-Type": "application/json",
-                    }
-                 })
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCookie("csrftoken"),
+                    "Content-Type": "application/json",
+                }
+            })
             .then(response => response.json())
             .then(data => {
 
@@ -576,7 +575,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
-
 
 function getCookie(name) {
     let cookieValue = null;
@@ -611,7 +609,6 @@ document.addEventListener("DOMContentLoaded", function () {
             event.preventDefault();
 
             const input = form.querySelector('input[name="content"]');
-            const parentInput = form.querySelector('input[name="parent_id"]');
             const content = input.value.trim();
 
             if (!content) return;
@@ -638,12 +635,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 `;
 
-                if (data.parent_id) {
-                    form.insertAdjacentHTML("beforebegin", commentHtml);
-                } else {
-                    form.insertAdjacentHTML("beforebegin", commentHtml);
-                }
-
+                form.insertAdjacentHTML("beforebegin", commentHtml);
                 input.value = "";
             })
             .catch(error => {
@@ -693,4 +685,5 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
 {% endblock %}

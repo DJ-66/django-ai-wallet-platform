@@ -377,6 +377,12 @@ class UserProfile(models.Model):
 class FeedPost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    title = models.CharField(
+        max_length=120,
+        blank=True,
+        default=""
+    )
+
     content = models.TextField(max_length=2000)
 
     image = models.ImageField(

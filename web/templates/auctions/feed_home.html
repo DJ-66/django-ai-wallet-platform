@@ -13,12 +13,20 @@
 
             <form method="post" enctype="multipart/form-data" class="feed-form">
             {% csrf_token %}
-
+            
+            {{ form.title }}
+            
             {{ form.content }}
 
-            <br><br>
+            <br>
+
+            <label for="id_image" class="upload-image-btn">
+            🖼️ {% trans "Choose Image" %}
+            </label>
 
             {{ form.image }}
+
+            <span id="selected-file-name"></span>
 
            
 
@@ -86,9 +94,13 @@
 
 {% if post.is_paid and post.user != request.user %}
 
-    <p class="feed-content">
-        {{ post.content|linebreaksbr }}
-    </p>
+    {% if post.title %}
+    <h3 class="feed-post-title">
+        {{ post.title }}
+    </h3>
+{% endif %}
+
+<div class="feed-content"> {{ post.content|linebreaksbr }} </div>
 
     {% if post.id in unlocked_post_ids %}
 
@@ -124,9 +136,13 @@
 
 {% else %}
 
-    <p class="feed-content">
-        {{ post.content|linebreaksbr }}
-    </p>
+    {% if post.title %}
+    <h3 class="feed-post-title">
+        {{ post.title }}
+    </h3>
+{% endif %}
+
+<div class="feed-content"> {{ post.content|linebreaksbr }} </div>
 
     {% if post.image %}
         <img src="{{ post.image.url }}" class="feed-image">
@@ -436,4 +452,22 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const input = document.getElementById("id_image");
+    const filename = document.getElementById("selected-file-name");
+
+    if (input) {
+        input.addEventListener("change", function () {
+            filename.textContent =
+                input.files.length
+                    ? input.files[0].name
+                    : "";
+        });
+    }
+
+});
+</script>
+
 {% endblock %}
