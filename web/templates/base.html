@@ -1,5 +1,6 @@
 {% load static %}
 {% load i18n %}
+{% load auction_extras %}
 
 <!DOCTYPE html>
 <html>
@@ -24,11 +25,19 @@
      <a href="/ai/" class="nav-link nav-icon-link"><span class="nav-emoji">🤖</span> AI</a>    
      {% if user.is_authenticated %}
     
-    <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link nav-icon-link"><span class="nav-emoji">💰</span> {{ wallet.credits }}</a>
+    <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link nav-icon-link"><span class="nav-emoji">💰
+    </span> {{ wallet.credits|compact_number }}</a>
     {% endif %}
 
     {% if user.is_authenticated %} 
-    <a href="{% url 'inbox' %}" class="nav-link nav-icon-link"><span class="nav-emoji">📩</span> DM</a>
+    <a href="{% url 'inbox' %}" class="nav-link nav-icon-link">
+    <span class="nav-emoji">📩</span>
+    {% if unread_dm_count %}
+        {{ unread_dm_count }}
+    {% else %}
+        DM
+    {% endif %}
+</a>
     {% endif %}
     
      <a href="{% url 'notifications' %}?next={{ request.get_full_path|urlencode }}" class="nav-link nav-icon-link">
