@@ -22,10 +22,21 @@
                 <div class="dm-body">
                     {{ message.body|linebreaksbr }}
                 </div>
-
                 <div class="dm-time">
-                    {{ message.created_at|date:"M d, Y H:i" }}
-                </div>
+    {{ message.created_at|date:"M d, Y H:i" }}
+
+
+    {% if message.sender == request.user %}
+    
+    {% if message.is_read %}
+        <span class="dm-read">✓ {% trans "(Read)" %}</span>
+    {% else %}
+        <span class="dm-sent">○ {% trans "(Sent)" %}</span>
+    {% endif %}
+{% endif %}
+
+
+</div>
             </div>
         {% empty %}
             <p class="dm-empty">{% trans "No messages yet." %}</p>

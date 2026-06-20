@@ -2454,6 +2454,20 @@ img {
   text-decoration: none;
 }
 
+.dm-read {
+    font-size: 1.20rem;
+    font-weight: 800;
+    color: #22c55e;
+    
+}
+
+.dm-sent {
+    font-size: 1.20rem;
+    font-weight: 800;
+    color: #ef4444;
+    
+}
+
 @media (max-width: 520px) {
   .dm-page {
    padding: 0.75rem;
@@ -2784,5 +2798,8 @@ img {
     display: inline-block;
     margin-top: 8px;
 }
+
+
+
 
 /* end_css */
