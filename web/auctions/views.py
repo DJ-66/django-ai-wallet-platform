@@ -1,3 +1,4 @@
+import random
 import secrets
 import qrcode
 import json
@@ -37,6 +38,69 @@ from django.views.decorators.http import require_POST
 from .models import Fan, Notification, Conversation, DirectMessage
 from django.db.models import Sum
 from django.db.models import Case, When, Value, IntegerField
+
+def send_auto_thank_you_dm(sender, recipient, event_type):
+    if not sender or not recipient:
+        return
+
+    if sender == recipient:
+        return
+
+    username = recipient.username
+
+    message_bank = {
+        "like": [
+            f"Thanks for the ❤️ @{username}! I really appreciate it.",
+            f"That means a lot @{username}. Thanks for liking my post!",
+            f"You're awesome @{username}! Thanks for the support ❤️",
+        ],
+        "tip": [
+            f"Thanks for the tip @{username}! I really appreciate the support.",
+            f"You're the best @{username}! Thank you for the credits 💰",
+            f"Much appreciated @{username}! Your support means a lot.",
+        ],
+        "unlock": [
+            f"Thanks for unlocking my post @{username}! Hope you enjoy it 🔓",
+            f"I appreciate the support @{username}. Enjoy the content!",
+            f"You're awesome @{username}! Thanks for unlocking my premium post.",
+        ],
+        "fan": [
+            f"Thanks for becoming a fan @{username}! Glad to have you here ⭐",
+            f"Welcome @{username}! I really appreciate the follow.",
+            f"You're awesome @{username}! Thanks for becoming a fan.",
+        ],
+    }
+
+    body = random.choice(message_bank.get(event_type, [
+        f"Thanks @{username}! I really appreciate the support."
+    ]))
+
+    conversation = Conversation.objects.filter(
+        participants=sender
+    ).filter(
+        participants=recipient
+    ).first()
+
+    if not conversation:
+        conversation = Conversation.objects.create()
+        conversation.participants.add(sender, recipient)
+
+    DirectMessage.objects.create(
+        conversation=conversation,
+        sender=sender,
+        body=body,
+        is_read=False,
+    )
+
+    conversation.last_message_at = timezone.now()
+    conversation.save(update_fields=["last_message_at"])
+
+    Notification.objects.create(
+        user=recipient,
+        actor=sender,
+        notification_type=Notification.MESSAGE,
+        message=f"📩 @{sender.username} sent you a message"
+    )
 
 
 def generate_referral_code():
@@ -782,6 +846,12 @@ def toggle_post_like(request, post_id):
                 message=f"❤️ {request.user.username} liked your post."
             )
 
+            send_auto_thank_you_dm(
+                sender=post.user,
+                recipient=request.user,
+                event_type="like"
+            )
+
     like_count = post.likes.count()
 
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -846,6 +916,12 @@ def unlock_feed_post(request, post_id):
         actor=request.user,
         notification_type=Notification.UNLOCK,
         message=f"🔓 {request.user.username} unlocked your premium post for {price} credits."
+    )
+
+    send_auto_thank_you_dm(
+        sender=post.user,
+        recipient=request.user,
+        event_type="unlock"
     )
 
     messages.success(request, f"Post unlocked for {price} credits.")
@@ -913,7 +989,13 @@ def quick_tip_user(request, wallet_code):
         actor=request.user,
         notification_type=Notification.TIP,
         message=f"💰 {request.user.username} tipped you {amount} credits."
-)
+    )
+    
+    send_auto_thank_you_dm(
+        sender=target_wallet.user,
+        recipient=request.user,
+        event_type="tip"
+    )
     
     return JsonResponse({
         "success": True,
@@ -1030,7 +1112,14 @@ def toggle_fan(request, username):
             actor=request.user,
             notification_type=Notification.FAN,
             message=f"⭐ {request.user.username} became a fan of you."
-    )
+        )
+
+        send_auto_thank_you_dm(
+            sender=creator,
+            recipient=request.user,
+            event_type="fan"
+        )
+
     else:
         fan_obj.delete()
         messages.success(request, f"You are no longer a fan of {creator.username}.")

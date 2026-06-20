@@ -2468,6 +2468,32 @@ img {
     
 }
 
+.dm-nav-link {
+    position: relative;
+}
+
+.dm-icon-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.dm-nav-badge {
+    position: absolute;
+    top: -9px;
+    right: -13px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 0 0 2px #f3d8ff;
+}
+
 @media (max-width: 520px) {
   .dm-page {
    padding: 0.75rem;
