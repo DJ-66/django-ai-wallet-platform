@@ -2,6 +2,7 @@ import random
 import secrets
 import qrcode
 import json
+from .utils import get_system_wallet
 from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
@@ -897,25 +898,47 @@ def unlock_feed_post(request, post_id):
         messages.error(request, "You do not have enough credits to unlock this post.")
         return redirect("public_profile_root", username=post.user.username)
 
+    platform_fee = 0
+
+    if price > 5:
+        platform_fee = price // 5
+
+    creator_amount = price - platform_fee
+
     buyer_wallet.credits -= price
-    creator_wallet.credits += price
+    creator_wallet.credits += creator_amount
 
     buyer_wallet.save(update_fields=["credits"])
     creator_wallet.save(update_fields=["credits"])
 
+    if platform_fee > 0:
+        platform_wallet = get_system_wallet()
+
+        platform_wallet.credits += platform_fee
+        platform_wallet.save(update_fields=["credits"])
+
     WalletTransaction.objects.create(
         sender=buyer_wallet,
         receiver=creator_wallet,
-        amount=price,
+        amount=creator_amount,
         transaction_type="unlock",
         reference=f"Unlocked post #{post.id}"
+    )
+
+    if platform_fee > 0:
+        WalletTransaction.objects.create(
+            sender=buyer_wallet,
+            receiver=platform_wallet,
+            amount=platform_fee,
+            transaction_type="unlock_fee",
+            reference=f"Platform fee for unlock #{post.id}"
     )
 
     Notification.objects.create(
         user=post.user,
         actor=request.user,
         notification_type=Notification.UNLOCK,
-        message=f"🔓 {request.user.username} unlocked your premium post for {price} credits."
+        message=f"🔓 {request.user.username} unlocked your premium post for {price} credits. You earned {creator_amount} credits."
     )
 
     send_auto_thank_you_dm(
@@ -970,8 +993,23 @@ def quick_tip_user(request, wallet_code):
             "error": "Not enough credits."
         })
 
+    platform_fee = 0
+
+    if amount == 5:
+        platform_fee = 1
+    elif amount == 10:
+        platform_fee = 2
+
+    creator_amount = amount - platform_fee
+
+    if creator_amount < 1:
+        return JsonResponse({
+            "success": False,
+            "error": "Invalid tip amount."
+        }, status=400)
+
     sender_wallet.credits -= amount
-    target_wallet.credits += amount
+    target_wallet.credits += creator_amount
 
     sender_wallet.save(update_fields=["credits"])
     target_wallet.save(update_fields=["credits"])
@@ -979,16 +1017,29 @@ def quick_tip_user(request, wallet_code):
     WalletTransaction.objects.create(
         sender=sender_wallet,
         receiver=target_wallet,
-        amount=amount,
+        amount=creator_amount,
         transaction_type="tip",
         reference=f"Quick tip to @{target_wallet.user.username}"
+    )
+
+    if platform_fee > 0:
+        platform_wallet = get_system_wallet()
+        platform_wallet.credits += platform_fee
+        platform_wallet.save(update_fields=["credits"])
+
+        WalletTransaction.objects.create(
+            sender=sender_wallet,
+            receiver=platform_wallet,
+            amount=platform_fee,
+            transaction_type="tip_fee",
+            reference=f"Platform fee from tip to @{target_wallet.user.username}"
     )
     
     Notification.objects.create(
         user=target_wallet.user,
         actor=request.user,
         notification_type=Notification.TIP,
-        message=f"💰 {request.user.username} tipped you {amount} credits."
+        message=f"💰 {request.user.username} tipped you {creator_amount} credits."
     )
     
     send_auto_thank_you_dm(

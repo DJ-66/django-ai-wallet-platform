@@ -2834,4 +2834,16 @@ img {
 }
 
 
+.profile-avatar-link {
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.profile-avatar-link:hover .profile-avatar,
+.profile-avatar-link:hover .profile-avatar-fallback {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.35);
+}
+
 /* end_css */

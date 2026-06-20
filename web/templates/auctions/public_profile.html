@@ -46,11 +46,7 @@
             @{{ profile_user.username }}
         </p>
 
-        {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
-            <span class="seller-badge seller-label">
-                💰 {% trans "Credit Seller" %}
-            </span>
-        {% endif %}
+        
 
         {% if profile.is_ai_creator %}
         <span class="seller-badge ai-creator-badge">
@@ -132,8 +128,16 @@
                 {% else %}
                     ⭐ {% trans "Become a Fan" %}
                 {% endif %}
-            </a>
 
+            </a>
+            <br>
+
+            <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
+               class="auth-primary-btn profile-tip-btn">
+                💰 {% trans "Send Credits" %}
+            </a>
+            
+            
             {% if profile.bio or profile.location or profile.website %}
                 <div class="profile-about-block">
                     {% if profile.bio %}
@@ -157,18 +161,41 @@
                     {% endif %}
                 </div>
             {% endif %}
-
-            <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
-               class="auth-primary-btn profile-tip-btn">
-                💰 {% trans "Send Credits" %}
-            </a>
-            <br>
-        {% endif %}
+            {% endif %}
 
 
-        {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
-            <div class="buy-credits-card">
-                <h3>💳 {% trans "Buy Credits From Creator" %}</h3>
+
+        <div class="profile-social-links">
+            {% if profile.youtube %}
+                <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
+            {% endif %}
+
+            {% if profile.instagram %}
+                <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
+            {% endif %}
+
+            {% if profile.x_url %}
+                <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
+            {% endif %}
+
+            {% if profile.tiktok %}
+                <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
+            {% endif %}
+
+            {% if profile.telegram %}
+                <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
+            {% endif %}
+        </div>
+<br>
+
+ {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
+
+                <div class="buy-credits-card">
+
+                 <span class="seller-badge seller-label">
+                💰 {% trans "Credit Seller" %}</span>
+
+                <h3>{% trans "Buy Credits From Creator" %}</h3>
 
                 <p class="buy-credits-warning">
                     {% blocktrans %}
@@ -198,51 +225,30 @@
                             </div>
                         {% endif %}
 
-                        <div class="seller-contact-links">             
+                        <div class="seller-contact-links">
                         <br>
 
-{% if request.user.is_authenticated and request.user != profile_user %}
-    <a href="{% url 'start_conversation' profile_user.username %}?message=Hi%2C%20I%20would%20like%20to%20buy%20credits."
+{% if request.user.is_authenticated %}
+
+    <a href="{% url 'start_conversation' profile_user.username %}?message=Hi%2C%20I%20would%20like%20to%20buy%20cred"
        class="auth-primary-btn">
         📩 {% trans "DM Seller" %}
     </a>
 
 {% elif not request.user.is_authenticated %}
     <a href="{% url 'account_login' %}"
-       class="auth-primary-btn">
-        📩 {% trans "Log in to DM Seller" %}
+       class="buy-credits-btn">
+        📩 {% trans "auth-primary-btn" %}
     </a>
 {% endif %}
-
 
                         </div>
                     </div>
                 </details>
             </div>
         {% endif %}
-
-        <div class="profile-social-links">
-            {% if profile.youtube %}
-                <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
-            {% endif %}
-
-            {% if profile.instagram %}
-                <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
-            {% endif %}
-
-            {% if profile.x_url %}
-                <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
-            {% endif %}
-
-            {% if profile.tiktok %}
-                <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
-            {% endif %}
-
-            {% if profile.telegram %}
-                <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
-            {% endif %}
-        </div>
 <br>
+
         <button
             type="button"
             class="auth-primary-btn profile-share-btn"

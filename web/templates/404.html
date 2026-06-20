@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="auth-card" style="text-align:center; max-width:640px; margin:40px auto;">
+    <h1>404</h1>
+    <h2>{% trans "Page not found" %}</h2>
+
+    <p>
+        {% trans "The page you are looking for does not exist, may have moved, or the link may be incorrect." %}
+    </p>
+
+    <a href="{% url 'feed_home' %}" class="auth-primary-btn">
+        🎁 {% trans "Go to Feed" %}
+    </a>
+
+    <br><br>
+
+    <a href="/" class="auth-secondary-btn">
+        🏠 {% trans "Back Home" %}
+    </a>
+</div>
+{% endblock %}
