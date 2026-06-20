@@ -327,12 +327,15 @@ class UserProfile(models.Model):
 
     display_name = models.CharField(max_length=80, blank=True)
     bio = models.TextField(blank=True)
+    is_ai_creator = models.BooleanField(default=False)
 
     avatar = models.ImageField(
         upload_to="avatars/",
         blank=True,
         null=True
     )
+
+
 
     banner = models.ImageField(
         upload_to="profile_banners/",
@@ -365,6 +368,8 @@ class UserProfile(models.Model):
     is_verified = models.BooleanField(default=False)
     is_official = models.BooleanField(default=False)
     
+    is_ai_creator = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

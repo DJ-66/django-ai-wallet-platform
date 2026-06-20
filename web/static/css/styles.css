@@ -2825,7 +2825,13 @@ img {
     margin-top: 8px;
 }
 
-
+.ai-creator-badge {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #ffffff;
+    font-weight: 800;
+}
 
 
 /* end_css */

@@ -52,6 +52,12 @@
             </span>
         {% endif %}
 
+        {% if profile.is_ai_creator %}
+        <span class="seller-badge ai-creator-badge">
+        🤖 {% trans "AI Creator" %}
+        </span>
+        {% endif %}
+
         <div class="profile-stats">
             <div class="profile-stat">
                 📝 {{ profile_posts.count }}
