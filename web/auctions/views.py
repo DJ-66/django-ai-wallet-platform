@@ -50,24 +50,24 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
 
     message_bank = {
         "like": [
-            f"Thanks for the ❤️ @{username}! I really appreciate it.",
+            f"Thanks for the ❤️ @{username}! I rlove all my Fanz",
             f"That means a lot @{username}. Thanks for liking my post!",
             f"You're awesome @{username}! Thanks for the support ❤️",
         ],
         "tip": [
             f"Thanks for the tip @{username}! I really appreciate the support.",
             f"You're the best @{username}! Thank you for the credits 💰",
-            f"Much appreciated @{username}! Your support means a lot.",
+            f"Much appreciated @{username}! My Fanz support means a lot.",
         ],
         "unlock": [
             f"Thanks for unlocking my post @{username}! Hope you enjoy it 🔓",
             f"I appreciate the support @{username}. Enjoy the content!",
-            f"You're awesome @{username}! Thanks for unlocking my premium post.",
+            f"You Rock @{username}! Thanks for unlocking my premium post.",
         ],
         "fan": [
-            f"Thanks for becoming a fan @{username}! Glad to have you here ⭐",
-            f"Welcome @{username}! I really appreciate the follow.",
-            f"You're awesome @{username}! Thanks for becoming a fan.",
+            f"I love all my Fanz @{username}! Glad to have you here ⭐",
+            f"Welcome @{username}! You're in my circle of Fanz.",
+            f"You're awesome @{username}! Thanks for being one of my Fanz.",
         ],
     }
 
@@ -1162,7 +1162,7 @@ def toggle_fan(request, username):
     creator = get_object_or_404(User, username=username)
 
     if creator == request.user:
-        messages.warning(request, "You cannot become a fan of yourself.")
+        messages.warning(request, "You cannot become a Fan of yourself.")
         return redirect("public_profile", username=username)
 
     fan_obj, created = Fan.objects.get_or_create(
@@ -1171,7 +1171,7 @@ def toggle_fan(request, username):
     )
 
     if created:
-        messages.success(request, f"⭐ You are now a fan of {creator.username}!")
+        messages.success(request, f"⭐ You are in {creator.username}'s Circle of Fanz!")
     
         touch_ai_creator_memory(
             creator=creator,
@@ -1184,7 +1184,7 @@ def toggle_fan(request, username):
             user=creator,
             actor=request.user,
             notification_type=Notification.FAN,
-            message=f"⭐ {request.user.username} became a fan of you."
+            message=f"⭐ {request.user.username} has become one of your Fanz!"
         )
 
         send_auto_thank_you_dm(
@@ -1195,7 +1195,7 @@ def toggle_fan(request, username):
 
     else:
         fan_obj.delete()
-        messages.success(request, f"You are no longer a fan of {creator.username}.")
+        messages.success(request, f"You are no longer one of {creator.username}'s Fanz.")
 
     return redirect("public_profile", username=username)
 

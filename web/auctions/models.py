@@ -333,6 +333,33 @@ class AICreatorMemory(models.Model):
     def __str__(self):
         return f"{self.fan.username} → {self.creator.username}"
 
+    @property
+    def relationship_score(self):
+        score = 0
+        score += self.total_tips * 3
+        score += self.total_unlocks * 5
+        score += self.conversation_count
+
+        if self.fan_status:
+            score += 10
+
+        return score
+
+    @property
+    def relationship_tier(self):
+        score = self.relationship_score
+
+        if score >= 100:
+            return "Super Fan"
+        if score >= 50:
+            return "VIP"
+        if score >= 25:
+            return "Supporter"
+        if score >= 10:
+            return "Fan"
+
+        return "Visitor"
+
 
 class FavoriteAuction(models.Model):
     user = models.ForeignKey(
