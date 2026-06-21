@@ -230,7 +230,7 @@
 
 {% if request.user.is_authenticated %}
 
-    <a href="{% url 'start_conversation' profile_user.username %}?message=Hi%2C%20I%20would%20like%20to%20buy%20cred"
+    <a href="{% url 'start_conversation' profile_user.username %}"
        class="auth-primary-btn">
         📩 {% trans "DM Seller" %}
     </a>

@@ -1328,9 +1328,9 @@ def start_conversation(request, username):
         conversation.participants.add(request.user, other_user)
 
     initial_message = request.GET.get(
-        "message",
-        "Hi, I would like to buy credits."
-    )
+    "message",
+    "Hi 👋 I found your FANZ profile and wanted to connect."
+)
 
     form = DirectMessageForm(initial={"body": initial_message})
 
