@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import DigitalItem, Auction, Bid, BidWallet
-from .models import NodeProfile
+from .models import NodeProfile, AICreatorMemory
 from .models import AICompanion, AIConversation, AIMessage
 
 
@@ -81,3 +81,21 @@ class AIConversationAdmin(admin.ModelAdmin):
 class AIMessageAdmin(admin.ModelAdmin):
     list_display = ("conversation", "role", "credits_charged", "provider_used", "created_at")
     list_filter = ("role", "provider_used", "created_at")
+
+
+@admin.register(AICreatorMemory)
+class AICreatorMemoryAdmin(admin.ModelAdmin):
+    list_display = (
+        "creator",
+        "fan",
+        "fan_status",
+        "total_tips",
+        "total_unlocks",
+        "total_tip_credits",
+        "total_unlock_credits",
+        "conversation_count",
+        "last_contact_date",
+    )
+    list_filter = ("fan_status", "last_contact_date")
+    search_fields = ("creator__username", "fan__username")
+    readonly_fields = ("first_contact_date", "last_contact_date")

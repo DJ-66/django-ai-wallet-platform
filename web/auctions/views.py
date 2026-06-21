@@ -20,25 +20,24 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils import timezone
-from .models import AICompanion, AIConversation, AIMessage, Auction, BidWallet, FavoriteAuction, NodeProfile, UserProfile, WalletTransaction
+from .models import AICompanion, AIConversation, AIMessage, Auction, FavoriteAuction
+from .models import FeedPost, PostComment, PostLike, FeedPost, PostUnlock, BidWallet, WalletTransaction
+from .models import Fan, Notification, Conversation, DirectMessage, UserProfile, NodeProfile
 from .forms import SignUpForm, UserProfileForm
 from .services import close_auction, place_bid
-from .forms import FeedPostForm, DirectMessageForm 
-from .models import FeedPost, PostComment
-from .models import PostLike
-from django.db.models import Q
+from .forms import FeedPostForm, DirectMessageForm
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
-from .models import FeedPost, PostUnlock, BidWallet, WalletTransaction
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from .models import Fan, Notification, Conversation, DirectMessage
-from django.db.models import Sum
 from django.db.models import Case, When, Value, IntegerField
+from .ai_memory import touch_ai_creator_memory
+
+
 
 def send_auto_thank_you_dm(sender, recipient, event_type):
     if not sender or not recipient:
@@ -535,6 +534,7 @@ def pay_user(request, wallet_code):
             reference=None,
         )
         
+        
         Notification.objects.create(
             user=target_wallet.user,
             actor=request.user,
@@ -934,6 +934,14 @@ def unlock_feed_post(request, post_id):
             reference=f"Platform fee for unlock #{post.id}"
     )
 
+    touch_ai_creator_memory(
+        creator=post.user,
+        fan=request.user,
+        event_type="unlock",
+        credits=price,
+    )
+
+
     Notification.objects.create(
         user=post.user,
         actor=request.user,
@@ -1034,6 +1042,13 @@ def quick_tip_user(request, wallet_code):
             transaction_type="tip_fee",
             reference=f"Platform fee from tip to @{target_wallet.user.username}"
     )
+
+    touch_ai_creator_memory(
+        creator=target_wallet.user,
+        fan=request.user,
+        event_type="tip",
+        credits=amount,
+    )
     
     Notification.objects.create(
         user=target_wallet.user,
@@ -1119,7 +1134,7 @@ def add_post_comment(request, post_id):
             # AJAX RESPONSE
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
 
-                return JsonResponse({
+               return JsonResponse({
                     "success": True,
                     "comment_id": comment.id,
                     "parent_id": parent.id if parent else None,
@@ -1157,7 +1172,14 @@ def toggle_fan(request, username):
 
     if created:
         messages.success(request, f"⭐ You are now a fan of {creator.username}!")
-     
+    
+        touch_ai_creator_memory(
+            creator=creator,
+            fan=request.user,
+            event_type="fan",
+            
+        )    
+
         Notification.objects.create(
             user=creator,
             actor=request.user,
@@ -1259,6 +1281,13 @@ def conversation_detail(request, conversation_id):
             conversation.save(update_fields=["last_message_at"])
 
             recipient = conversation.participants.exclude(id=request.user.id).first()
+    
+            if recipient:
+                touch_ai_creator_memory(
+                creator=recipient,
+                fan=request.user,
+                event_type="dm",
+            )
 
             if recipient:
                 Notification.objects.create(

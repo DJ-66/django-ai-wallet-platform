@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal
-from django.contrib.auth.models import User
+
 
 class DigitalItem(models.Model):
     title = models.CharField(max_length=200)
@@ -300,6 +300,38 @@ class AIMessage(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:40]}"
+
+
+class AICreatorMemory(models.Model):
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="ai_creator_memories"
+    )
+    fan = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="ai_fan_memories"
+    )
+
+    fan_status = models.BooleanField(default=False)
+
+    total_tips = models.PositiveIntegerField(default=0)
+    total_unlocks = models.PositiveIntegerField(default=0)
+    total_tip_credits = models.PositiveIntegerField(default=0)
+    total_unlock_credits = models.PositiveIntegerField(default=0)
+
+    first_contact_date = models.DateTimeField(auto_now_add=True)
+    last_contact_date = models.DateTimeField(auto_now=True)
+
+    conversation_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("creator", "fan")
+        ordering = ["-last_contact_date"]
+
+    def __str__(self):
+        return f"{self.fan.username} → {self.creator.username}"
 
 
 class FavoriteAuction(models.Model):
