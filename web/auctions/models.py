@@ -245,6 +245,14 @@ class AICompanion(models.Model):
         ("openai", "OpenAI Deluxe"),
     ]
 
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ai_companions",
+        null=True,
+        blank=True,
+    )
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     provider = models.CharField(max_length=30, choices=PROVIDER_CHOICES, default="local_deepseek")

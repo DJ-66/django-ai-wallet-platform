@@ -9,6 +9,8 @@ from .ai_services.ai_providers import get_ai_provider
 from datetime import timedelta
 from django.utils import timezone
 from .ai_services.prompts import COMPANION_PROMPTS
+from .ai_context import build_fan_context
+from django.contrib.auth.models import User
 
 def cleanup_old_unpinned_chats(user, days=7):
     cutoff = timezone.now() - timedelta(days=days)
@@ -97,11 +99,35 @@ def ai_conversation(request, conversation_id):
 
         provider = get_ai_provider(companion.provider)
 
+        base_prompt = COMPANION_PROMPTS.get(
+            companion.prompt_key,
+            COMPANION_PROMPTS["flirty_social"]
+        )
+        
+        fan_context = build_fan_context(
+            creator=companion.creator,
+            fan=request.user,
+        )
+
+        system_prompt = f"""
+        {base_prompt}
+
+        Companion Details:
+        {companion.system_prompt}
+
+        Fan Relationship Context:
+        {fan_context}
+
+        Use the fan relationship context naturally.
+        Do not mention scores, tiers, or internal data unless it feels natural.
+        """
+
         try:
             ai_reply = provider.generate_reply(
-                system_prompt=companion.system_prompt,
+                system_prompt=system_prompt,
                 history=history,
-            )
+        )
+
         except Exception as e:
             refund_wallet_for_ai_message(request.user, companion)
             messages.error(request, f"AI error. Credits refunded. Details: {e}")
@@ -218,13 +244,25 @@ def stream_ai_message(request, conversation_id):
     base_prompt = COMPANION_PROMPTS.get(
         companion.prompt_key,
         COMPANION_PROMPTS["flirty_social"]
-)
+    )
+    
+    fan_context = build_fan_context(
+        creator=companion.creator,
+        fan=request.user,
+    )
 
+    
     system_prompt = f"""
     {base_prompt}
 
     Companion Details:
     {companion.system_prompt}
+
+    Fan Relationship Context:
+    {fan_context}
+
+    Use the fan relationship context naturally.
+    Do not mention scores, tiers, or internal data unless it feels natural.
     """
 
     def event_stream():

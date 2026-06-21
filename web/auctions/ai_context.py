@@ -2,6 +2,8 @@ from .models import AICreatorMemory
 
 
 def build_fan_context(creator, fan):
+    if not creator or not fan:
+        return "Relationship Tier: Visitor\nRelationship Score: 0\nNo linked creator relationship yet."
 
     memory = (
         AICreatorMemory.objects
@@ -13,7 +15,7 @@ def build_fan_context(creator, fan):
     )
 
     if not memory:
-        return "First time visitor."
+        return "Relationship Tier: Visitor\nRelationship Score: 0\nFirst-time visitor."
 
     return f"""
 Relationship Tier: {memory.relationship_tier}
