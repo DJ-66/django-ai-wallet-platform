@@ -11,6 +11,8 @@ from django.utils import timezone
 from .ai_services.prompts import COMPANION_PROMPTS
 from .ai_context import build_fan_context
 from django.contrib.auth.models import User
+from .ai_context import build_fan_context, build_relationship_response_style
+
 
 def cleanup_old_unpinned_chats(user, days=7):
     cutoff = timezone.now() - timedelta(days=days)
@@ -109,6 +111,11 @@ def ai_conversation(request, conversation_id):
             fan=request.user,
         )
 
+        relationship_style = build_relationship_response_style(
+            creator=companion.creator,
+            fan=request.user,
+        )
+
         system_prompt = f"""
         {base_prompt}
 
@@ -120,7 +127,11 @@ def ai_conversation(request, conversation_id):
 
         Use the fan relationship context naturally.
         Do not mention scores, tiers, or internal data unless it feels natural.
+        
+        Relationship-Aware Response Style:
+        {relationship_style}
         """
+
 
         try:
             ai_reply = provider.generate_reply(
@@ -251,7 +262,12 @@ def stream_ai_message(request, conversation_id):
         fan=request.user,
     )
 
-    
+    relationship_style = build_relationship_response_style(
+        creator=companion.creator,
+        fan=request.user,
+    )
+
+
     system_prompt = f"""
     {base_prompt}
 
@@ -263,8 +279,11 @@ def stream_ai_message(request, conversation_id):
 
     Use the fan relationship context naturally.
     Do not mention scores, tiers, or internal data unless it feels natural.
+    
+    Relationship-Aware Response Style:
+    {relationship_style}
     """
-
+    
     def event_stream():
         full_reply = ""
 

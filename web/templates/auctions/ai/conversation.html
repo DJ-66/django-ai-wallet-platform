@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=10">
+<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=12">
 <button type="button" class="chat-drawer-btn" onclick="toggleChatDrawer()">
   ☰ Chats
 </button>
@@ -68,10 +68,30 @@
 
 
   <main class="ai-chat-wrap">
-    <div class="ai-chat-header">
-      <h2>{{ companion.name }}</h2>
-      <p>{{ companion.cost_per_message }} credits per message</p>
+    <div class="ai-chat-header ai-companion-sticky-header">
+
+  {% if companion.creator.profile.banner %}
+    <div class="ai-companion-banner">
+      <img src="{{ companion.creator.profile.banner.url }}" alt="{{ companion.name }} banner">
     </div>
+  {% endif %}
+
+  <div class="ai-companion-card">
+    {% if companion.creator.profile.avatar %}
+      <img
+        class="ai-companion-avatar"
+        src="{{ companion.creator.profile.avatar.url }}"
+        alt="{{ companion.name }}"
+      >
+    {% endif %}
+
+    <div>
+      <h2>{{ companion.name }}</h2>
+      <p>{{ companion.cost_per_message }} credit per message</p>
+    </div>
+  </div>
+
+</div>
 
     <div class="ai-chat-box" id="chatBox">
       {% for msg in messages_list %}
