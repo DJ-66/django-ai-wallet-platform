@@ -1,27 +1,74 @@
 {% extends "base.html" %}
+{% load static %}
+
 
 {% block content %}
-<h1>AI Companions</h1>
+<link rel="stylesheet"
+      href="{% static 'css/ai-chat.css' %}?v=18">
 
-<div>
-  {% for companion in companions %}
-    <div style="border:1px solid #ccc; padding:12px; margin-bottom:12px;">
-      <h3>{{ companion.name }}</h3>
 
-      {% if companion.is_deluxe %}
-        <p><strong>Deluxe</strong></p>
-      {% else %}
-        <p>Standard</p>
-      {% endif %}
 
-      <p>{{ companion.cost_per_message }} credits per message</p>
+<h1>🤖 AI Friends</h1>
 
-      <a href="{% url 'start_companion_chat' companion.slug %}">
-        Start Chat
-      </a>
+<div class="ai-companion-grid">
+
+{% for companion in companions %}
+
+
+<div class="ai-companion-card-list">
+
+  {% if companion.creator.profile.banner %}
+    <div class="ai-companion-list-banner">
+      <img
+        src="{{ companion.creator.profile.banner.url }}"
+        alt="{{ companion.name }}"
+      >
     </div>
-  {% empty %}
-    <p>No companions available yet. Add one in Django admin.</p>
-  {% endfor %}
+  {% endif %}
+
+  <div class="ai-companion-list-content">
+
+    {% if companion.creator.profile.avatar %}
+      <img
+        class="ai-companion-list-avatar"
+        src="{{ companion.creator.profile.avatar.url }}"
+        alt="{{ companion.name }}"
+      >
+    {% endif %}
+
+    <h3>{{ companion.name }}</h3>
+
+    {% if companion.is_deluxe %}
+      <p class="ai-companion-badge">✨ Deluxe Creator</p>
+    {% else %}
+      <p class="ai-companion-badge">🤖 AI Creator</p>
+    {% endif %}
+
+    <p>
+      💰 {{ companion.cost_per_message }}
+      credit{{ companion.cost_per_message|pluralize }}
+      per message
+    </p>
+
+    <a
+      href="{% url 'start_companion_chat' companion.slug %}"
+      class="auth-primary-btn"
+    >
+      💬 Start Chat
+    </a>
+
+  </div>
+
 </div>
+
+
+{% empty %}
+
+<p>No AI creators available yet.</p>
+
+{% endfor %}
+
+</div>
+
 {% endblock %}
+

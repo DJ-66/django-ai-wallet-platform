@@ -455,4 +455,100 @@
   }
 }
 
+
+.ai-companion-card-list {
+background: rgba(255,255,255,0.55);
+border-radius: 18px;
+overflow: hidden;
+margin-bottom: 20px;
+box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.ai-companion-list-banner {
+height: 180px;
+overflow: hidden;
+}
+
+.ai-companion-list-banner img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+
+.ai-companion-list-content {
+padding: 18px;
+text-align: center;
+}
+
+.ai-companion-list-avatar {
+width: 110px;
+height: 110px;
+border-radius: 50%;
+object-fit: cover;
+border: 5px solid #e5d0ff;
+margin-top: -70px;
+box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+.ai-companion-badge {
+opacity: 0.8;
+margin: 8px 0;
+}
+
+.ai-companion-list-content .auth-primary-btn {
+display: inline-block;
+margin-top: 12px;
+}
+
+
+.ai-companion-card-list {
+background: rgba(255,255,255,0.55);
+border-radius: 18px;
+overflow: hidden;
+margin-bottom: 20px;
+box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.ai-companion-list-banner {
+height: 160px;
+overflow: hidden;
+position: relative;
+}
+
+.ai-companion-list-banner img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+
+.ai-companion-list-content {
+position: relative;
+padding: 50px 18px 18px;
+text-align: center;
+}
+
+.ai-companion-list-avatar {
+width: 90px;
+height: 90px;
+border-radius: 50%;
+object-fit: cover;
+border: 5px solid #e5d0ff;
+box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+
+position: absolute;
+top: -45px;
+left: 24px;
+}
+
+.ai-companion-list-content h3 {
+margin-top: 0;
+}
+
+.ai-companion-badge {
+opacity: 0.8;
+margin: 8px 0;
+}
+
+
+
 /* end_css */
