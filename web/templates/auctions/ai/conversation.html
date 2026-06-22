@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=12">
+<link rel="stylesheet" href="{% static 'css/ai-chat.css' %}?v=15">
 <button type="button" class="chat-drawer-btn" onclick="toggleChatDrawer()">
   ☰ Chats
 </button>
@@ -109,13 +109,14 @@
             </div>
            {% endfor %}
 
-        <div id="typingIndicator" class="typing-indicator" style="display:none;">
-          <span></span><span></span><span></span>
-          AI is typing...
-          </div>
+       
     </div>
 
-
+     <div id="typingIndicator" class="typing-indicator" style="display:none;">
+          <span></span><span></span><span></span>
+          {{ companion.name }} is typing...
+          </div>
+    
     <form method="post" class="ai-chat-form" id="aiChatForm">
       {% csrf_token %}
       <textarea name="message" id="messageInput" placeholder="Type your message..."></textarea>
@@ -246,13 +247,10 @@ if (form && input && chatBox) {
     userDiv.querySelector("p").textContent = message;
     chatBox.appendChild(userDiv);
 
-    const aiDiv = document.createElement("div");
-    aiDiv.className = "chat-message assistant";
-    aiDiv.innerHTML = `<strong>{{ companion.name }}</strong><div class="markdown-body"></div>`;
-    chatBox.appendChild(aiDiv);
-
-    const aiText = aiDiv.querySelector(".markdown-body");
+    let aiDiv = null;
+    let aiText = null;
     let fullAiResponse = "";
+    let hasStartedAiReply = false;
 
     const formData = new FormData();
     formData.append("message", message);
@@ -287,13 +285,34 @@ if (form && input && chatBox) {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        fullAiResponse += chunk;
 
-        renderMarkdown(aiText, fullAiResponse);
-        scrollChatToBottom();
+        if (!hasStartedAiReply) {
+          hasStartedAiReply = true;
+
+        if (typingIndicator) {
+          typingIndicator.style.display = "none";
+        }
+
+        aiDiv = document.createElement("div");
+        aiDiv.className = "chat-message assistant";
+        aiDiv.innerHTML = `<strong>{{ companion.name }}</strong><div class="markdown-body"></div>`;
+        chatBox.appendChild(aiDiv);
+
+        aiText = aiDiv.querySelector(".markdown-body");
       }
 
-      renderMarkdown(aiText, fullAiResponse);
+      fullAiResponse += chunk;
+
+      if (aiText) {
+        renderMarkdown(aiText, fullAiResponse);
+      }
+
+      scrollChatToBottom();
+      }
+
+      if (aiText) {
+        renderMarkdown(aiText, fullAiResponse);
+}
     } catch (err) {
       console.error(err);
       decrementWalletCredits(-1);
