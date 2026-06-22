@@ -124,12 +124,37 @@ def ai_conversation(request, conversation_id):
 
         Fan Relationship Context:
         {fan_context}
+        
+        Language Rule:
+        Detect the language of the fan's latest message.
+
+        You MUST reply entirely in that same language.
+
+        If the fan's latest message is Spanish, reply entirely in Spanish.
+
+        Do not switch back to English.
+
+        Do not mix languages unless the fan mixes languages first.
+
+        If the fan writes Spanglish, natural Spanglish is allowed.
 
         Use the fan relationship context naturally.
         Do not mention scores, tiers, or internal data unless it feels natural.
         
         Relationship-Aware Response Style:
         {relationship_style}
+
+        Language Behavior:
+
+        Reply in the same language the fan uses.
+
+        If the fan writes in Spanish, respond naturally in Spanish.
+
+        If the fan writes in English, respond in English.
+
+        If the fan mixes English and Spanish, you may respond in Spanglish naturally.
+
+        Do not translate unless asked.
         """
 
 
