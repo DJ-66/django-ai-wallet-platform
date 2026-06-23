@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import DigitalItem, Auction, Bid, BidWallet
 from .models import NodeProfile, AICreatorMemory
-from .models import AICompanion, AIConversation, AIMessage
+from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
 
 
 @admin.register(DigitalItem)
@@ -99,3 +99,26 @@ class AICreatorMemoryAdmin(admin.ModelAdmin):
     list_filter = ("fan_status", "last_contact_date")
     search_fields = ("creator__username", "fan__username")
     readonly_fields = ("first_contact_date", "last_contact_date")
+
+
+@admin.register(AIFanMemoryNote)
+class AIFanMemoryNoteAdmin(admin.ModelAdmin):
+    list_display = (
+        "creator",
+        "fan",
+        "note",
+        "source",
+        "is_active",
+        "updated_at",
+    )
+    list_filter = (
+        "creator",
+        "fan",
+        "source",
+        "is_active",
+    )
+    search_fields = (
+        "creator__username",
+        "fan__username",
+        "note",
+    )

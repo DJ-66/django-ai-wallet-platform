@@ -125,3 +125,23 @@ Do not mention scores, tiers, or internal relationship data.
 
 Do not claim memories that do not exist.
 """
+
+
+def build_fan_memory_notes(creator, fan, limit=8):
+    from .models import AIFanMemoryNote
+
+    notes = AIFanMemoryNote.objects.filter(
+        creator=creator,
+        fan=fan,
+        is_active=True,
+    ).order_by("-updated_at")[:limit]
+
+    if not notes:
+        return "No saved fan memory notes yet."
+
+    lines = ["Saved Fan Memory Notes:"]
+
+    for note in notes:
+        lines.append(f"- {note.note}")
+
+    return "\n".join(lines)

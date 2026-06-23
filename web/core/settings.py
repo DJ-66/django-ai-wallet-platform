@@ -177,7 +177,8 @@ LOGIN_URL = '/accounts/login/'  # optional but recommended
 
 
 # AI Provider settings
-OLLAMA_URL = "http://192.168.100.109:11434/api/chat"
+#OLLAMA_URL = "http://192.168.100.109:11434/api/chat"
+OLLAMA_URL = "http://172.17.0.1:11434/api/chat"
 OLLAMA_MODEL = "gemma3:latest"
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", default="")

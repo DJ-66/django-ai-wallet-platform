@@ -368,6 +368,38 @@ class AICreatorMemory(models.Model):
 
         return "Visitor"
 
+class AIFanMemoryNote(models.Model):
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ai_fan_memory_notes_created",
+    )
+
+    fan = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ai_fan_memory_notes",
+    )
+
+    note = models.CharField(max_length=255)
+
+    source = models.CharField(
+        max_length=50,
+        blank=True,
+        default="manual",
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.creator} remembers {self.fan}: {self.note}"
+
 
 class FavoriteAuction(models.Model):
     user = models.ForeignKey(
