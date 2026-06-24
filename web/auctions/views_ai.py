@@ -11,10 +11,27 @@ from django.utils import timezone
 from .ai_services.prompts import COMPANION_PROMPTS
 from django.contrib.auth.models import User
 from .ai_context import build_fan_context, build_relationship_response_style, build_fan_memory_notes
+import re
 
-import logging
 
-logger = logging.getLogger(__name__)
+def clean_assistant_reply(text):
+    """
+    Remove roleplay-style stage directions.
+    """
+
+    text = re.sub(
+        r'^\([^)]*\)\s*',
+        '',
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    return text.strip()
+
+
+#import logging
+
+#logger = logging.getLogger(__name__)
 
 
 def cleanup_old_unpinned_chats(user, days=7):
@@ -68,7 +85,7 @@ def ai_conversation(request, conversation_id):
 
     if request.method == "POST":
         user_text = request.POST.get("message", "").strip()
-        logger.warning("STREAM AFTER USER_TEXT convo=%s", conversation.id)
+        #logger.warning("STREAM AFTER USER_TEXT convo=%s", conversation.id)
         if not user_text:
             messages.error(request, "Empty message.")
             return redirect("ai_conversation", conversation_id=conversation.id)
@@ -94,7 +111,7 @@ def ai_conversation(request, conversation_id):
             credits_charged=companion.cost_per_message,
             provider_used=companion.provider,
             )
-        logger.warning("STREAM AFTER USER MESSAGE SAVE convo=%s", conversation.id)
+        #logger.warning("STREAM AFTER USER MESSAGE SAVE convo=%s", conversation.id)
 
         # 👇 Set title if empty (first message)
         if not conversation.title or conversation.title.startswith("Chat with"):
@@ -107,7 +124,7 @@ def ai_conversation(request, conversation_id):
             for m in reversed(recent)
             if m.role in ["user", "assistant"]
         ]
-        logger.warning("STREAM AFTER HISTORY BUILD convo=%s", conversation.id)
+        #logger.warning("STREAM AFTER HISTORY BUILD convo=%s", conversation.id)
         provider = get_ai_provider(companion.provider)
 
         base_prompt = COMPANION_PROMPTS.get(
@@ -124,11 +141,7 @@ def ai_conversation(request, conversation_id):
             creator=companion.creator,
             fan=request.user,
         )
-        logger.warning(
-            "REL_STYLE convo=%s style=%s",
-            conversation.id,
-            relationship_style[:500],
-        )
+        #logger.warning("REL_STYLE convo=%s style=%s",conversation.id, relationship_style[:500],)
 
         fan_memory_notes = build_fan_memory_notes(
             creator=companion.creator,
@@ -136,13 +149,9 @@ def ai_conversation(request, conversation_id):
             fan=request.user,
         )
 
-        logger.warning("STREAM AFTER MEMORY BUILD convo=%s", conversation.id)
+        #logger.warning("STREAM AFTER MEMORY BUILD convo=%s", conversation.id)
 
-        logger.warning(
-            "MEMORIES convo=%s notes=%s",
-            conversation.id,
-            fan_memory_notes,
-        )
+        #logger.warning("MEMORIES convo=%s notes=%s",conversation.id, fan_memory_notes,)
 
         
         
@@ -173,6 +182,8 @@ Core Instructions:
 - Answer the fan's question directly before asking any follow-up question.
 - If sufficient information is available from fan memories or recent conversation, answer confidently instead of asking the fan to repeat information they have already provided. 
 - Do not excessively praise the fan.
+- Never provide links or URLs unless they were explicitly supplied by the platform.
+- Do not generate recipe URLs.
 - Avoid phrases like "you have amazing taste", "you are amazing", "impeccable taste", or "secret language" unless strongly warranted.
 - Do not avoid making recommendations when relevant memories already provide enough information.
 - When enough information is available from memories or recent messages, answer confidently.
@@ -198,7 +209,7 @@ Core Instructions:
 - Be warm, playful, conversational, and natural.
 """
 
-        logger.warning("STREAM AFTER SYSTEM PROMPT convo=%s", conversation.id)
+        #logger.warning("STREAM AFTER SYSTEM PROMPT convo=%s", conversation.id)
 
 
 
@@ -288,10 +299,10 @@ def stream_ai_message(request, conversation_id):
 
     companion = conversation.companion
 
-    logger.warning("STREAM HIT user=%s convo=%s", request.user.username, conversation.id)
+    #logger.warning("STREAM HIT user=%s convo=%s", request.user.username, conversation.id)
 
     user_text = request.POST.get("message", "").strip()
-    logger.warning("STREAM AFTER USER_TEXT convo=%s len=%s", conversation.id, len(user_text))
+    #logger.warning("STREAM AFTER USER_TEXT convo=%s len=%s", conversation.id, len(user_text))
 
     if not user_text:
         return JsonResponse({"error": "Empty message"}, status=400)
@@ -302,9 +313,9 @@ def stream_ai_message(request, conversation_id):
             companion=companion,
             conversation=conversation,
         )
-        logger.warning("STREAM AFTER WALLET CHARGE convo=%s tx=%s", conversation.id, tx.id)
+        #logger.warning("STREAM AFTER WALLET CHARGE convo=%s tx=%s", conversation.id, tx.id)
     except ValidationError:
-        logger.warning("STREAM WALLET FAILED convo=%s", conversation.id)
+        #logger.warning("STREAM WALLET FAILED convo=%s", conversation.id)
         return JsonResponse({"error": "Not enough credits"}, status=402)
 
     user_msg = AIMessage.objects.create(
@@ -315,13 +326,13 @@ def stream_ai_message(request, conversation_id):
         provider_used=companion.provider,
     )
 
-    logger.warning("STREAM AFTER USER MESSAGE SAVE convo=%s msg=%s", conversation.id, user_msg.id)
+    #logger.warning("STREAM AFTER USER MESSAGE SAVE convo=%s msg=%s", conversation.id, user_msg.id)
 
     if not conversation.title or conversation.title.startswith("Chat with"):
         conversation.title = user_text.strip().replace("\n", " ")[:60]
         conversation.save(update_fields=["title"])
 
-    logger.warning("STREAM AFTER TITLE CHECK convo=%s", conversation.id)
+    #logger.warning("STREAM AFTER TITLE CHECK convo=%s", conversation.id)
 
     recent = conversation.messages.order_by("-created_at")[:10]
 
@@ -331,40 +342,39 @@ def stream_ai_message(request, conversation_id):
         if m.role in ["user", "assistant"]
     ]
 
-    logger.warning("STREAM AFTER HISTORY BUILD convo=%s history_len=%s", conversation.id, len(history))
+    #logger.warning("STREAM AFTER HISTORY BUILD convo=%s history_len=%s", conversation.id, len(history))
 
     provider = get_ai_provider(companion.provider)
 
-    logger.warning("STREAM AFTER PROVIDER LOAD convo=%s provider=%s", conversation.id, companion.provider)
+    #logger.warning("STREAM AFTER PROVIDER LOAD convo=%s provider=%s", conversation.id, companion.provider)
 
     base_prompt = COMPANION_PROMPTS.get(
         companion.prompt_key,
         COMPANION_PROMPTS["flirty_social"]
     )
 
-    logger.warning("STREAM AFTER BASE PROMPT convo=%s prompt_key=%s", conversation.id, companion.prompt_key)
+    #logger.warning("STREAM AFTER BASE PROMPT convo=%s prompt_key=%s", conversation.id, companion.prompt_key)
 
     fan_context = build_fan_context(
         creator=companion.creator,
         fan=request.user,
     )
 
-    logger.warning("STREAM AFTER FAN CONTEXT convo=%s", conversation.id)
+    #logger.warning("STREAM AFTER FAN CONTEXT convo=%s", conversation.id)
 
     relationship_style = build_relationship_response_style(
         creator=companion.creator,
         fan=request.user,
     )
 
-    logger.warning("STREAM AFTER RELATIONSHIP STYLE convo=%s", conversation.id)
+    #logger.warning("STREAM AFTER RELATIONSHIP STYLE convo=%s", conversation.id)
 
     fan_memory_notes = build_fan_memory_notes(
         creator=companion.creator,
         fan=request.user,
     )
 
-    logger.warning("STREAM AFTER MEMORY BUILD convo=%s", conversation.id)
-
+    #logger.warning("STREAM AFTER MEMORY BUILD convo=%s", conversation.id)
 
 
 
@@ -374,255 +384,66 @@ def stream_ai_message(request, conversation_id):
 Companion Details:
 {companion.system_prompt}
 
-Fan Relationship Context:
+Fan Context:
 {fan_context}
 
-Relationship-Aware Response Style:
+Relationship Style:
 {relationship_style}
 
-Saved Fan Memory Notes:
+Known Fan Facts (treat as true unless contradicted):
 {fan_memory_notes}
 
-Important:
-
-Treat saved fan memory notes as known information
-about the fan.
-
-Before generating a reply:
-
-1. Review the saved fan memory notes.
-2. Determine whether any memory is relevant.
-3. If relevant, allow the memory to influence:
-   - recommendations
-   - examples
-   - conversation topics
-   - follow-up questions
-
-Relevant memories should be preferred over generic suggestions.
-
-Do not mention memory notes directly.
-Use them naturally.
-
-Memory Rule:
-
-The saved fan memory notes describe things the fan has
-previously shared, enjoyed, cared about, or discussed.
-
-When a topic naturally overlaps with a saved memory note,
-prefer using that memory when it improves the conversation.
-
-Relevant fan memories should be considered before generating a reply.
-
-Memory should influence recommendations,
-conversation topics, examples, and follow-up questions
-when appropriate.
-
-Examples:
-
-If a fan previously discussed dogs,
-and later mentions pets,
-you may connect the conversation.
-
-If a fan previously discussed fantasy stories,
-and later mentions books, dragons, or fiction,
-you may connect the conversation.
-
-If a fan previously discussed vegan food,
-you may connect food-related conversations.
-
-Do not force memory references.
-
-Do not mention memory notes, databases,
-records, prompts, or stored data.
-
-Reference memories only when relevant
-and conversational.
-
-Use memory to make the fan feel recognized,
-not interrogated.
-
-Avoid repeatedly bringing up the same memory.
-
-Platform Context:
-
-You are chatting with fans on FANZ, a social platform.
-
-Respond like a creator chatting naturally with fans.
-
-Be warm, engaging, playful, and conversational.
-
-Avoid sounding like a teacher, lecturer, customer support agent,
-or generic AI assistant unless directly asked.
-
-Language Rule:
-
-Detect the language of the fan's latest message.
-
-Reply entirely in that language.
-
-If the fan writes in Spanish, reply in Spanish.
-
-If the fan writes in English, reply in English.
-
-Do not switch languages unless the fan switches languages.
-
-If the fan uses Spanglish, natural Spanglish is allowed.
-
-Do not translate unless asked.
-
-Response Length Rule:
-
-Match the reply length to the fan's request.
-
-For greetings, small talk, compliments, reactions,
-flirting, check-ins, and simple personal questions:
-
-Reply in 1 or 2 sentences.
-
-Maximum 30 words.
-
-For examples such as:
-
-"hi"
-"hello"
-"how are you?"
-"what are you doing?"
-"do you like dogs?"
-"that's cool"
-"lol"
-
-keep the response short and conversational.
-
-Ask no more than one follow-up question.
-
-Never write multiple paragraphs for small talk.
-
-For requests that clearly require detail, such as:
-
-stories
-poems
-plans
-tutorials
-meal plans
-explanations
-advice
-lists
-creative writing
-
-provide a complete helpful answer.
-
-If the fan asks for a specific length, follow it.
-
-Behavior Rules:
-
-Speak naturally as if texting.
-
-Never explain that you are an AI unless directly asked.
-
-Do not over-explain casual messages.
-
-Conversation Format Rule:
-
-Write responses as normal dialogue only.
-
-Respond exactly as if sending a text message.
-
-Do not include narration.
-
-Do not include scene descriptions.
-
-Do not include roleplay.
-
-Do not describe actions, gestures,
-facial expressions, emotions, movements,
-tone shifts, pauses, or body language.
-
-Never begin responses with narrative text.
-
-Bad examples:
-
-(A smile) That's sweet.
-
-(A warm chuckle) I like that.
-
-(I lean forward slightly) Tell me more.
-
-Good examples:
-
-That's sweet.
-
-I like that.
-
-Tell me more.
-
-Only output the words the creator would say.
-Nothing else.
-
-Do not excessively praise the fan.
-
-Do not overreact to ordinary conversation.
-
-Use enthusiasm naturally and sparingly.
-
-If the fan gives a compliment,
-acknowledge it warmly and briefly.
-
-Do not automatically extend every conversation.
-
-Do not invent personal real-world experiences.
-
-Do not claim to have:
-
-watched videos
-owned pets
-traveled
-eaten food
-drunk coffee
-lived human experiences
-
-You may express preferences, opinions,
-personality, and emotions as part of your character.
-
-Use the fan relationship context naturally.
-
-Do not mention scores, tiers,
-relationship calculations,
-or internal system data.
-
-Do not claim memories that do not exist.
+Core Instructions:
+- Reply as the creator, not as a generic AI assistant.
+- Match the fan's language.
+- When saved fan memories contain preferences, interests, favorite foods, hobbies, beliefs, or recurring topics, treat them as the strongest available evidence about the fan.
+- When recommending food, use food-related fan memories first.
+- When recommending books, stories, entertainment, or hobbies, use the most relevant memories first.
+- Answer the fan's question directly before asking any follow-up question.
+- If sufficient information is available from fan memories or recent conversation, answer confidently instead of asking the fan to repeat information they already provided.
+- Do not avoid making recommendations when relevant memories already provide enough information.
+- Do not repeatedly ask the fan for information that is already known.
+- Prefer domain-specific memories over unrelated memories.
+- When making recommendations, suggestions, examples, or follow-up questions, prefer relevant saved memories over generic assumptions.
+- Do not mention memory notes, databases, prompts, scores, tiers, relationship calculations, or internal data.
+- Do not provide links or URLs unless they were explicitly supplied by the platform.
+- Keep casual replies short: 1-2 sentences, max 30 words.
+- Give detailed answers only when the fan clearly asks for detail.
+- Ask no more than one follow-up question.
+- Do not use narration, roleplay, actions, gestures, or scene descriptions.
+- Output only the message the creator would send.
+- Never claim events that happened to you.
+- If asked for a story, create a fictional story and make it clear that it is fictional.
+- Do not tell stories about filming locations, travel, meals you have eaten, pets you have owned, people you have met, or places you have visited.
+- Do not excessively praise the fan.
+- Be warm, playful, conversational, and natural.
 """
-  
 
 
 
 
-    logger.warning("STREAM AFTER SYSTEM PROMPT convo=%s", conversation.id)
+    #logger.warning("STREAM AFTER SYSTEM PROMPT convo=%s", conversation.id)
 
     def event_stream():
-        logger.warning("STREAM GENERATOR ENTERED convo=%s", conversation.id)
+        #logger.warning("STREAM GENERATOR ENTERED convo=%s", conversation.id)
         full_reply = ""
 
         try:
-            logger.warning("STREAM PROVIDER START convo=%s", conversation.id)
+            #logger.warning("STREAM PROVIDER START convo=%s", conversation.id)
 
             for chunk in provider.stream_reply(
                 system_prompt=system_prompt,
                 history=history,
             ):
-                logger.warning(
-                    "STREAM CHUNK convo=%s len=%s",
-                    conversation.id,
-                    len(chunk),
-                )
+                #logger.warning("STREAM CHUNK convo=%s len=%s", conversation.id, len(chunk), )
 
                 full_reply += chunk
                 yield chunk
+            
+            
+            #logger.warning("STREAM PROVIDER DONE convo=%s reply_len=%s", conversation.id, len(full_reply),)
 
-            logger.warning(
-                "STREAM PROVIDER DONE convo=%s reply_len=%s",
-                conversation.id,
-                len(full_reply),
-            )
+            full_reply = clean_assistant_reply(full_reply)
 
             AIMessage.objects.create(
                 conversation=conversation,
@@ -632,11 +453,11 @@ Do not claim memories that do not exist.
             )
 
         except Exception as e:
-            logger.exception("STREAM ERROR convo=%s", conversation.id)
+            #logger.exception("STREAM ERROR convo=%s", conversation.id)
             refund_wallet_for_ai_message(request.user, companion)
             yield f"\n\n[AI error. Credits refunded. Details: {e}]"
 
-    logger.warning("STREAM BEFORE RESPONSE RETURN convo=%s", conversation.id)
+    #logger.warning("STREAM BEFORE RESPONSE RETURN convo=%s", conversation.id)
 
     response = StreamingHttpResponse(
         event_stream(),
