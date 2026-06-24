@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import DigitalItem, Auction, Bid, BidWallet
-from .models import NodeProfile, AICreatorMemory
+from .models import NodeProfile, AICreatorMemory, UserProfile
 from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
 
 
@@ -121,4 +121,21 @@ class AIFanMemoryNoteAdmin(admin.ModelAdmin):
         "creator__username",
         "fan__username",
         "note",
+    )
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "display_name",
+        "is_ai_creator",
+        "is_ai_influencer",
+    )
+    list_filter = (
+        "is_ai_creator",
+        "is_ai_influencer",
+    )
+    search_fields = (
+        "user__username",
+        "display_name",
     )

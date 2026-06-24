@@ -50,7 +50,7 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
 
     message_bank = {
         "like": [
-            f"Thanks for the ❤️ @{username}! I rlove all my Fanz",
+            f"Thanks for the ❤️ @{username}! I rove all my Fanz",
             f"That means a lot @{username}. Thanks for liking my post!",
             f"You're awesome @{username}! Thanks for the support ❤️",
         ],
@@ -741,9 +741,12 @@ def public_profile(request, username):
     premium_post_count = profile_posts.filter(is_paid=True).count()
 
     total_likes = sum(post.likes.count() for post in profile_posts)
-    fan_count = Fan.objects.filter(
-    creator=profile_user
+
+    real_fan_count = Fan.objects.filter(
+        creator=profile_user
     ).count()
+
+    fan_count = profile.fan_count + real_fan_count
 
     if fan_count >= 1_000_000_000:
         fan_count_display = f"{fan_count / 1_000_000_000:.1f}B".rstrip("0").rstrip(".")

@@ -434,7 +434,7 @@ class UserProfile(models.Model):
         null=True
     )
 
-
+    is_ai_influencer = models.BooleanField(default=False)
 
     banner = models.ImageField(
         upload_to="profile_banners/",
