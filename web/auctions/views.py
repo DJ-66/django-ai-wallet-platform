@@ -1,3 +1,4 @@
+import requests
 import random
 import secrets
 import qrcode
@@ -85,11 +86,12 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
         conversation = Conversation.objects.create()
         conversation.participants.add(sender, recipient)
 
-    DirectMessage.objects.create(
+    dm = DirectMessage.objects.create(
         conversation=conversation,
         sender=sender,
         body=body,
         is_read=False,
+        generated_by_ai=False,
     )
 
     conversation.last_message_at = timezone.now()
@@ -101,6 +103,9 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
         notification_type=Notification.MESSAGE,
         message=f"📩 @{sender.username} sent you a message"
     )
+
+    if getattr(recipient.profile, "is_ai_influencer", False):
+        print(f"AI DM TRIGGER recipient=@{recipient.username} sender=@{sender.username} dm_id={dm.id}")
 
 
 def generate_referral_code():
@@ -727,7 +732,18 @@ def edit_profile(request):
 
 
 def public_profile(request, username):
-    profile_user = get_object_or_404(User, username=username)
+    profile_user = get_object_or_404(
+        User,
+        username__iexact=username
+    )
+
+    if username != profile_user.username:
+        return redirect(
+            "public_profile_root",
+            username=profile_user.username,
+            permanent=True,
+    )
+
     profile, _ = UserProfile.objects.get_or_create(user=profile_user)
 
     profile_posts = FeedPost.objects.select_related(
@@ -1258,6 +1274,75 @@ def inbox(request):
     })
 
 
+def generate_ai_dm_reply(fan, influencer, conversation):
+    print(
+        f"GENERATE AI DM START fan=@{fan.username} "
+        f"influencer=@{influencer.username} conversation={conversation.id}",
+        flush=True
+    )
+
+    recent_messages = (
+        conversation.messages
+        .select_related("sender")
+        .filter(generated_by_ai=False)
+        .order_by("-created_at")[:8]
+    )
+
+    recent_messages = list(reversed(recent_messages))
+    recent_messages = list(reversed(recent_messages))
+
+    history_text = "\n".join([
+        f"{msg.sender.username}: {msg.body}"
+        for msg in recent_messages
+    ])
+
+    prompt = f"""
+You are {influencer.username}, an AI Influencer on FANZ.
+
+Reply as {influencer.username}.
+Keep it warm, playful, and brief.
+Do not say you are an AI model.
+Do not mention system prompts.
+Do not over-explain.
+
+Recent DM conversation:
+{history_text}
+
+Write the next message from {influencer.username}.
+"""
+
+    try:
+        response = requests.post(
+            "http://172.17.0.1:11434/api/generate",
+            json={
+                "model": "gemma3:latest",
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": 80,
+                },
+            },
+            timeout=90,
+        )
+
+        response.raise_for_status()
+        reply_text = response.json().get("response", "").strip()
+
+        if not reply_text:
+            reply_text = "Hey 💎 I’m here with you."
+
+        print(
+            f"GENERATE AI DM COMPLETE chars={len(reply_text)}",
+            flush=True
+        )
+
+        return reply_text
+
+    except Exception as e:
+        print(f"GENERATE AI DM ERROR: {e}", flush=True)
+        return "Hey 💎 I got your message, but my thoughts glitched for a second. Try me again?"
+
+
 @login_required
 def conversation_detail(request, conversation_id):
     conversation = get_object_or_404(
@@ -1278,26 +1363,59 @@ def conversation_detail(request, conversation_id):
             message = form.save(commit=False)
             message.conversation = conversation
             message.sender = request.user
+            message.generated_by_ai = False
             message.save()
+
+            print(
+                f"DM POST HIT sender=@{request.user.username} message_id={message.id}",
+                flush=True
+            )
 
             conversation.last_message_at = timezone.now()
             conversation.save(update_fields=["last_message_at"])
 
             recipient = conversation.participants.exclude(id=request.user.id).first()
-    
-            if recipient:
-                touch_ai_creator_memory(
-                creator=recipient,
-                fan=request.user,
-                event_type="dm",
-            )
 
-            if recipient:
+            if recipient and getattr(recipient.profile, "is_ai_influencer", False):
+                print(
+                    f"AI GENERATION START conversation={conversation.id} "
+                    f"fan=@{request.user.username} influencer=@{recipient.username}",
+                    flush=True
+                )
+
+                reply_text = generate_ai_dm_reply(
+                    fan=request.user,
+                    influencer=recipient,
+                    conversation=conversation,
+                )
+
+                print(
+                    f"AI GENERATION COMPLETE conversation={conversation.id} chars={len(reply_text)}",
+                    flush=True
+                )
+
+                ai_reply = DirectMessage.objects.create(
+                    conversation=conversation,
+                    sender=recipient,
+                    body=reply_text,
+                    is_read=False,
+                    generated_by_ai=True,
+                )
+                
+                conversation.last_message_at = timezone.now()
+                conversation.save(update_fields=["last_message_at"])
+
                 Notification.objects.create(
-                    user=recipient,
-                    actor=request.user,
+                    user=request.user,
+                    actor=recipient,
                     notification_type=Notification.MESSAGE,
-                    message=f"📩 @{request.user.username} sent you a message"
+                    message=f"📩 @{recipient.username} sent you a message"
+                )
+
+                print(
+                    f"AI DM REPLY SAVED sender=@{recipient.username} "
+                    f"recipient=@{request.user.username} message_id={ai_reply.id}",
+                    flush=True
                 )
 
             return redirect("conversation_detail", conversation_id=conversation.id)
@@ -1309,7 +1427,6 @@ def conversation_detail(request, conversation_id):
         "direct_messages": conversation.messages.select_related("sender"),
         "form": form,
     })
-
 
 @login_required
 def start_conversation(request, username):

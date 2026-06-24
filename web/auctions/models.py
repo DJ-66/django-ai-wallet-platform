@@ -436,6 +436,7 @@ class UserProfile(models.Model):
 
     is_ai_influencer = models.BooleanField(default=False)
 
+    
     banner = models.ImageField(
         upload_to="profile_banners/",
         blank=True,
@@ -476,6 +477,7 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.display_name or self.user.username
+
 
 
 class FeedPost(models.Model):
@@ -669,6 +671,7 @@ class DirectMessage(models.Model):
     body = models.TextField(max_length=2000)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+    generated_by_ai = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["created_at"]

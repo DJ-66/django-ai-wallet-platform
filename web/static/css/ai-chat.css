@@ -217,7 +217,7 @@
 .markdown-body h1,
 .markdown-body h2,
 .markdown-body h3 {
-  margin: 12px 0 8px;
+  margin: 6px 0 8px;
   line-height: 1.2;
 }
 
@@ -491,8 +491,12 @@ box-shadow: 0 4px 14px rgba(0,0,0,0.15);
 }
 
 .ai-companion-badge {
-opacity: 0.8;
 margin: 8px 0;
+background: linear-gradient(135deg, #7c3aed, #2563eb);
+padding: 5px 9px;
+border-radius: 999px;
+color: #ffffff;
+font-weight: 800;
 }
 
 .ai-companion-list-content .auth-primary-btn {
@@ -542,6 +546,12 @@ left: 24px;
 
 .ai-companion-list-content h3 {
 margin-top: 0;
+}
+
+.ai-companion-list-content h2 {
+    margin: 0 0 10px 0;
+    font-size: 2rem;
+    line-height: 1;
 }
 
 .ai-companion-badge {

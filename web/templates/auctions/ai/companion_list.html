@@ -4,7 +4,7 @@
 
 {% block content %}
 <link rel="stylesheet"
-      href="{% static 'css/ai-chat.css' %}?v=18">
+      href="{% static 'css/ai-chat.css' %}?v=21">
 
 
 
@@ -36,26 +36,24 @@
       >
     {% endif %}
 
-    <h3>{{ companion.name }}</h3>
+    <h2>{{ companion.name }}</h2>
 
     {% if companion.is_deluxe %}
       <p class="ai-companion-badge">✨ Deluxe Creator</p>
     {% else %}
-      <p class="ai-companion-badge">🤖 AI Influencer</p>
+      <div class="auth-primary-btn">🤖 AI Influencer</div>
     {% endif %}
 
-    <p>
+    <a
+  href="/{{ companion.creator.username }}/"
+  class="auth-primary-btn"
+> ❤️ Visit Profile </a>
+
+   <p>
       💰 {{ companion.cost_per_message }}
       credit{{ companion.cost_per_message|pluralize }}
       per message
     </p>
-
-    <a
-      href="{% url 'start_companion_chat' companion.slug %}"
-      class="auth-primary-btn"
-    >
-      💬 Start Chat
-    </a>
 
   </div>
 

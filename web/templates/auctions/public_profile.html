@@ -131,6 +131,13 @@
 
             </a>
             <br>
+         {% if request.user.is_authenticated %}
+         <a href="{% url 'start_conversation' profile_user.username %}"
+         class="auth-primary-btn">
+        💌 Message {{ profile_user.username }}
+        </a>
+        {% endif %}
+        <br>
 
             <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
                class="auth-primary-btn profile-tip-btn">
