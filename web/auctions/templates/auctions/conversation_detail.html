@@ -3,15 +3,17 @@
 
 {% block content %}
 <div class="dm-page">
-    <h1>📩  DMs</h1>
+    <div class="dm-header">
+        <h1>📩 DMs</h1>
 
-    <div class="dm-subtitle">
-        {% trans "Conversation with" %}
-        {% for participant in conversation.participants.all %}
-            {% if participant != request.user %}
-                <strong>@{{ participant.username }}</strong>
-            {% endif %}
-        {% endfor %}
+        <div class="dm-subtitle">
+            {% trans "Conversation with" %}
+            {% for participant in conversation.participants.all %}
+                {% if participant != request.user %}
+                    <strong>@{{ participant.username }}</strong>
+                {% endif %}
+            {% endfor %}
+        </div>
     </div>
 
     <div class="dm-thread">
@@ -22,56 +24,91 @@
                 <div class="dm-body">
                     {{ message.body|linebreaksbr }}
                 </div>
+
                 <div class="dm-time">
-    {{ message.created_at|date:"M d, Y H:i" }}
+                    {{ message.created_at|date:"M d, Y H:i" }}
 
-
-    {% if message.sender == request.user %}
-    
-    {% if message.is_read %}
-        <span class="dm-read">✓ {% trans "(Read)" %}</span>
-    {% else %}
-        <span class="dm-sent">○ {% trans "(Sent)" %}</span>
-    {% endif %}
-{% endif %}
-
-
-</div>
+                    {% if message.sender == request.user %}
+                        {% if message.is_read %}
+                            <span class="dm-read">✓ {% trans "(Read)" %}</span>
+                        {% else %}
+                            <span class="dm-sent">○ {% trans "(Sent)" %}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
             </div>
         {% empty %}
             <p class="dm-empty">{% trans "No messages yet." %}</p>
         {% endfor %}
     </div>
 
-    <form method="post"
-      action="{% url 'conversation_detail' conversation.id %}"
-      class="dm-form">
-    {% csrf_token %}
+    <div class="dm-footer">
+        <form method="post"
+              action="{% url 'conversation_detail' conversation.id %}"
+              class="dm-form">
+            {% csrf_token %}
 
-    {{ form.body }}
+            {{ form.body }}
 
-    <div class="dm-form-actions">
-        <button type="submit" class="dm-send-btn">
-            📩 {% trans "Send" %}
-        </button>
+            <div class="dm-form-actions">
+                <button type="submit" class="dm-send-btn">
+                    📩 {% trans "Send" %}
+                </button>
+            </div>
+        </form>
+
+        <div class="dm-footer-links">
+            <form method="post"
+                  action="{% url 'delete_dm_conversation' conversation.id %}"
+                  class="dm-delete-form"
+                  onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
+                {% csrf_token %}
+                <button type="submit" class="dm-delete-btn">
+                    🗑 {% trans "Delete Conversation" %}
+                </button>
+            </form>
+
+            <p class="dm-back-link">
+                <a href="{% url 'inbox' %}">← {% trans "Back to Inbox" %}</a>
+            </p>
+            
+        </div>
     </div>
-</form>
-
-      <form method="post"
-      action="{% url 'delete_dm_conversation' conversation.id %}"
-      class="dm-delete-form"
-      onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
-      {% csrf_token %}
-      <button type="submit" class="dm-delete-btn">
-        🗑 {% trans "Delete Conversation" %}
-      </button>
-      </form>
-
-    <p class="dm-back-link">
-        <a href="{% url 'inbox' %}">← {% trans "Back to Inbox" %}</a>
-    </p>
-<br>
-<br>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const thread = document.querySelector(".dm-thread");
+    const form = document.querySelector("form.dm-form");
+    const textarea = document.querySelector("textarea.dm-message-input");
+    const btn = document.querySelector("button.dm-send-btn");
+
+    if (thread) {
+        thread.scrollTop = thread.scrollHeight;
+    }
+
+    if (!form || !textarea || !btn) return;
+
+    function markSending() {
+        btn.disabled = true;
+        btn.innerText = "📨 Sending...";
+    }
+
+    textarea.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+
+            if (textarea.value.trim() === "") return;
+
+            markSending();
+            form.submit();
+        }
+    });
+
+    form.addEventListener("submit", function () {
+        markSending();
+    });
+});
+</script>
 
 {% endblock %}

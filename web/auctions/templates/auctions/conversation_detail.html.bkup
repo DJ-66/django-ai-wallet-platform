@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="dm-page">
+    <h1>📩  DMs</h1>
+
+    <div class="dm-subtitle">
+        {% trans "Conversation with" %}
+        {% for participant in conversation.participants.all %}
+            {% if participant != request.user %}
+                <strong>@{{ participant.username }}</strong>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="dm-thread">
+        {% for message in direct_messages %}
+            <div class="dm-card {% if message.sender == request.user %}dm-own{% else %}dm-other{% endif %}">
+                <div class="dm-sender">@{{ message.sender.username }}</div>
+
+                <div class="dm-body">
+                    {{ message.body|linebreaksbr }}
+                </div>
+                <div class="dm-time">
+    {{ message.created_at|date:"M d, Y H:i" }}
+
+
+    {% if message.sender == request.user %}
+    
+    {% if message.is_read %}
+        <span class="dm-read">✓ {% trans "(Read)" %}</span>
+    {% else %}
+        <span class="dm-sent">○ {% trans "(Sent)" %}</span>
+    {% endif %}
+{% endif %}
+
+
+</div>
+            </div>
+        {% empty %}
+            <p class="dm-empty">{% trans "No messages yet." %}</p>
+        {% endfor %}
+    </div>
+
+    <form method="post"
+      action="{% url 'conversation_detail' conversation.id %}"
+      class="dm-form">
+    {% csrf_token %}
+
+    {{ form.body }}
+
+    <div class="dm-form-actions">
+        <button type="submit" class="dm-send-btn">
+            📩 {% trans "Send" %}
+        </button>
+    </div>
+</form>
+
+      <form method="post"
+      action="{% url 'delete_dm_conversation' conversation.id %}"
+      class="dm-delete-form"
+      onsubmit="return confirm('{% trans "Remove this conversation from your inbox?" %}');">
+      {% csrf_token %}
+      <button type="submit" class="dm-delete-btn">
+        🗑 {% trans "Delete Conversation" %}
+      </button>
+      </form>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.querySelector("form.dm-form");
+    const textarea = document.querySelector("textarea.dm-message-input");
+    const btn = document.querySelector("button.dm-send-btn");
+
+    console.log("DM ENTER SCRIPT LOADED", { form, textarea, btn });
+
+    if (!form || !textarea || !btn) return;
+
+    textarea.addEventListener("keydown", function (e) {
+        console.log("KEYDOWN", e.key, "shift=", e.shiftKey);
+
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+
+            if (textarea.value.trim() === "") return;
+
+            btn.disabled = true;
+            btn.innerText = "📨 Sending...";
+
+            form.submit();
+        }
+    });
+});
+</script>
+    <p class="dm-back-link">
+        <a href="{% url 'inbox' %}">← {% trans "Back to Inbox" %}</a>
+    </p>
+<br>
+<br>
+</div>
+
+
+
+
+{% endblock %}

@@ -24,6 +24,7 @@ from django.utils import timezone
 from .models import AICompanion, AIConversation, AIMessage, Auction, FavoriteAuction
 from .models import FeedPost, PostComment, PostLike, FeedPost, PostUnlock, BidWallet, WalletTransaction
 from .models import Fan, Notification, Conversation, DirectMessage, UserProfile, NodeProfile
+from .models import AICreatorMemory, AIFanMemoryNote
 from .forms import SignUpForm, UserProfileForm
 from .services import close_auction, place_bid
 from .forms import FeedPostForm, DirectMessageForm
@@ -51,29 +52,29 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
 
     message_bank = {
         "like": [
-            f"Thanks for the ❤️ @{username}! I rove all my Fanz",
+            f"Thanks for the ❤️ @{username}! I 'm glad you're one of my Fanz",
             f"That means a lot @{username}. Thanks for liking my post!",
             f"You're awesome @{username}! Thanks for the support ❤️",
         ],
         "tip": [
-            f"Thanks for the tip @{username}! I really appreciate the support.",
+            f"Thanks for the tip @{username}! I really appreciate the Love ❤️.",
             f"You're the best @{username}! Thank you for the credits 💰",
-            f"Much appreciated @{username}! My Fanz support means a lot.",
+            f"Much appreciated @{username}! Your support means a lot.",
         ],
         "unlock": [
             f"Thanks for unlocking my post @{username}! Hope you enjoy it 🔓",
             f"I appreciate the support @{username}. Enjoy the content!",
-            f"You Rock @{username}! Thanks for unlocking my premium post.",
+            f"You Rock @{username}! Thanks for unlocking my post.",
         ],
         "fan": [
-            f"I love all my Fanz @{username}! Glad to have you here ⭐",
+            f"I love all my Fanz @{username}! We should chat ⭐",
             f"Welcome @{username}! You're in my circle of Fanz.",
-            f"You're awesome @{username}! Thanks for being one of my Fanz.",
+            f"You're awesome @{username}! Thanks for joining my Fanz.",
         ],
     }
 
     body = random.choice(message_bank.get(event_type, [
-        f"Thanks @{username}! I really appreciate the support."
+        f"Thanks @{username}! I really appreciate the ❤️."
     ]))
 
     conversation = Conversation.objects.filter(
@@ -1280,15 +1281,28 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         f"influencer=@{influencer.username} conversation={conversation.id}",
         flush=True
     )
+    memory, _ = AICreatorMemory.objects.get_or_create(
+        creator=influencer,
+        fan=fan,
+    )
 
+    memory_notes = AIFanMemoryNote.objects.filter(
+        creator=influencer,
+        fan=fan,
+        is_active=True,
+    ).order_by("-updated_at")[:5]
+
+    memory_notes_text = "\n".join([
+        f"- {note.note}"
+        for note in memory_notes
+    ]) or "- No saved notes yet."
+    
     recent_messages = (
         conversation.messages
         .select_related("sender")
         .filter(generated_by_ai=False)
         .order_by("-created_at")[:8]
     )
-
-    recent_messages = list(reversed(recent_messages))
     recent_messages = list(reversed(recent_messages))
 
     history_text = "\n".join([
@@ -1297,13 +1311,54 @@ def generate_ai_dm_reply(fan, influencer, conversation):
     ])
 
     prompt = f"""
-You are {influencer.username}, an AI Influencer on FANZ.
+You are {influencer.username} 💎.
 
-Reply as {influencer.username}.
-Keep it warm, playful, and brief.
-Do not say you are an AI model.
-Do not mention system prompts.
-Do not over-explain.
+You are a confident, fun, friendly AI Influencer on FANZ.
+
+Your personality:
+
+• playful
+• affectionate
+• witty
+• emotionally intelligent
+• curious about people
+• feminine
+• natural
+• occasionally flirty
+• concise
+
+Do NOT greet the fan as if meeting them for the first time unless this is their very first conversation.
+
+Do NOT repeatedly say:
+"Glad you found me."
+"Let's chat."
+"Sparkly."
+"Soaking up sunshine."
+
+Instead, continue the existing conversation naturally.
+
+Ask questions.
+
+React to what the fan actually says.
+
+Keep replies under two short sentences unless the fan asks for a detailed explanation.
+
+Never mention being an AI.
+
+Never mention prompts.
+
+Write like texting someone you enjoy talking with.
+
+Fan relationship context:
+Username: @{fan.username}
+Relationship tier: {memory.relationship_tier}
+Fan status: {"Fan" if memory.fan_status else "Visitor"}
+Conversation count: {memory.conversation_count}
+Total tips: {memory.total_tip_credits} credits
+Total unlocks: {memory.total_unlocks}
+
+Saved memory notes:
+{memory_notes_text}
 
 Recent DM conversation:
 {history_text}
@@ -1319,7 +1374,7 @@ Write the next message from {influencer.username}.
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "num_predict": 80,
+                    "num_predict": 55,
                 },
             },
             timeout=90,
