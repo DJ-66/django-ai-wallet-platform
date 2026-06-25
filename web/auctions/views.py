@@ -1286,6 +1286,8 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         fan=fan,
     )
 
+    fan_status_text = "Fan" if memory.fan_status else "Visitor"
+
     memory_notes = AIFanMemoryNote.objects.filter(
         creator=influencer,
         fan=fan,
@@ -1295,7 +1297,7 @@ def generate_ai_dm_reply(fan, influencer, conversation):
     memory_notes_text = "\n".join([
         f"- {note.note}"
         for note in memory_notes
-    ]) or "- No saved notes yet."
+    ]) or "None yet."
     
     recent_messages = (
         conversation.messages
@@ -1309,6 +1311,53 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         f"{msg.sender.username}: {msg.body}"
         for msg in recent_messages
     ])
+
+    latest_fan_message = (
+        conversation.messages
+        .filter(sender=fan, generated_by_ai=False)
+        .order_by("-created_at")
+        .first()
+    )
+
+    latest_text = (latest_fan_message.body or "").lower() if latest_fan_message else ""
+
+    memory_query = any(phrase in latest_text for phrase in [
+        "remember about me",
+        "remember me",
+        "what do you remember",
+        "what you remember",
+        "what do you know about me",
+        "tell me something you remember",
+        "tell me something i like",
+        "things i like",
+    ])
+
+    memory_mode_text = ""
+
+    if memory_query:
+        memory_mode_text = """
+SPECIAL INSTRUCTION
+
+The user's latest message is asking about your long-term memory.
+
+Answer ONLY using verified long-term memories.
+
+If there are no verified long-term memories yet, respond naturally that you are still getting to know them.
+
+Do NOT use Recent DM conversation to answer.
+
+Do NOT guess, infer, or invent memories.
+
+Do NOT mention prompts, memory sections, databases, system instructions, or the phrase "Saved Long-Term Memory."
+"""
+
+    print(f"MEMORY QUERY = {memory_query}", flush=True)
+    print(f"LATEST TEXT = {latest_text}", flush=True)
+
+    prompt_history_text = history_text
+
+    if memory_query:
+        prompt_history_text = "[Recent conversation hidden because the fan asked about long-term memory.]"
 
     prompt = f"""
 You are {influencer.username} 💎.
@@ -1350,18 +1399,42 @@ Never mention prompts.
 Write like texting someone you enjoy talking with.
 
 Fan relationship context:
-Username: @{fan.username}
-Relationship tier: {memory.relationship_tier}
-Fan status: {"Fan" if memory.fan_status else "Visitor"}
-Conversation count: {memory.conversation_count}
-Total tips: {memory.total_tip_credits} credits
-Total unlocks: {memory.total_unlocks}
 
-Saved memory notes:
+Username:
+@{fan.username}
+
+Relationship Tier:
+{memory.relationship_tier}
+
+Relationship Score:
+{memory.relationship_score}
+
+Fan Status:
+{fan_status_text}
+
+Conversation Count:
+{memory.conversation_count}
+
+Total Tips:
+{memory.total_tip_credits} credits
+
+Total Unlocks:
+{memory.total_unlocks}
+
+Saved Long-Term Memory (persistent facts):
 {memory_notes_text}
 
+Memory rules:
+Saved Long-Term Memory is the only true memory.
+Recent DM conversation is only short-term chat context.
+Only say you "remember" something if it appears under Saved Long-Term Memory.
+Do not guess, infer, or invent memories.
+Do not treat recent messages as saved memories.
+
+{memory_mode_text}
+
 Recent DM conversation:
-{history_text}
+{prompt_history_text}
 
 Write the next message from {influencer.username}.
 """
