@@ -1275,12 +1275,163 @@ def inbox(request):
     })
 
 
-def generate_ai_dm_reply(fan, influencer, conversation):
+def extract_ai_memory_notes(fan, influencer, conversation, ai_reply):
     print(
-        f"GENERATE AI DM START fan=@{fan.username} "
+        f"MEMORY EXTRACTION START fan=@{fan.username} "
         f"influencer=@{influencer.username} conversation={conversation.id}",
         flush=True
     )
+
+    recent_messages = (
+        conversation.messages
+        .select_related("sender")
+        .order_by("-created_at")[:8]
+    )
+    recent_messages = list(reversed(recent_messages))
+
+    conversation_text = "\n".join([
+        f"{msg.sender.username}: {msg.body}"
+        for msg in recent_messages
+    ])
+
+    latest_fan_message = (
+        conversation.messages
+        .filter(sender=fan, generated_by_ai=False)
+        .order_by("-created_at")
+        .first()
+    )
+
+    latest_fan_text = latest_fan_message.body if latest_fan_message else ""
+
+    memory_prompt = f"""
+You are a memory extraction system.
+
+Extract only durable facts about the fan that would still be useful months from now.
+Pay special attention to the Latest fan message.
+Only extract facts clearly stated in the Latest fan message.
+Use Conversation context only to understand references.
+Do not extract facts from older messages.
+
+Do NOT extract:
+- greetings
+- jokes
+- temporary moods
+- one-time events
+- questions
+- compliments
+- things about the AI influencer
+- things the fan did not clearly say about themselves
+
+Return ONLY valid JSON.
+
+Format:
+[
+  "Likes fish tacos",
+  "Lives in Paraguay"
+]
+
+If there is nothing worth remembering, return:
+[]
+
+Latest fan message:
+{latest_fan_text}
+
+Conversation context:
+{conversation_text}
+
+AI reply:
+{ai_reply}
+"""
+
+    #print("MEMORY EXTRACTION PROMPT BUILT", flush=True)
+
+    try:
+        response = requests.post(
+            "http://172.17.0.1:11434/api/generate",
+            json={
+                "model": "gemma3:latest",
+                "prompt": memory_prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": 80,
+                },
+            },
+            timeout=45,
+        )
+
+        response.raise_for_status()
+
+        raw_memory_text = response.json().get("response", "").strip()
+        
+        cleaned_memory_text = raw_memory_text
+
+        if cleaned_memory_text.startswith("```"):
+            cleaned_memory_text = cleaned_memory_text.replace("```json", "")
+            cleaned_memory_text = cleaned_memory_text.replace("```", "")
+            cleaned_memory_text = cleaned_memory_text.strip()
+
+        try:
+            extracted_notes = json.loads(cleaned_memory_text)
+
+            if not isinstance(extracted_notes, list):
+                extracted_notes = []
+
+        except Exception as parse_error:
+            print(
+                f"MEMORY EXTRACTION JSON PARSE ERROR: {parse_error}",
+                flush=True
+            )
+            extracted_notes = []
+
+        #print(f"MEMORY EXTRACTION PARSED: {extracted_notes}", flush=True)
+        
+        #print(f"MEMORY EXTRACTION RAW: {raw_memory_text}", flush=True)
+
+        saved_count = 0
+        skipped_count = 0
+
+        for note_text in extracted_notes:
+            note_text = str(note_text).strip()
+
+            if not note_text:
+                continue
+
+            exists = AIFanMemoryNote.objects.filter(
+                creator=influencer,
+                fan=fan,
+                note__iexact=note_text,
+                is_active=True,
+            ).exists()
+
+            if exists:
+                skipped_count += 1
+                continue
+
+            AIFanMemoryNote.objects.create(
+                creator=influencer,
+                fan=fan,
+                note=note_text,
+                source="auto",
+                is_active=True,
+            )
+
+            saved_count += 1
+
+        print(
+            f"MEMORY EXTRACTION SAVED saved={saved_count} skipped={skipped_count}",
+            flush=True
+        )
+
+    except Exception as e:
+        print(f"MEMORY EXTRACTION ERROR: {e}", flush=True)
+
+
+def generate_ai_dm_reply(fan, influencer, conversation):
+    #print(
+        #f"GENERATE AI DM START fan=@{fan.username} "
+        #f"influencer=@{influencer.username} conversation={conversation.id}",
+        #flush=True
+    #)
     memory, _ = AICreatorMemory.objects.get_or_create(
         creator=influencer,
         fan=fan,
@@ -1351,8 +1502,8 @@ Do NOT guess, infer, or invent memories.
 Do NOT mention prompts, memory sections, databases, system instructions, or the phrase "Saved Long-Term Memory."
 """
 
-    print(f"MEMORY QUERY = {memory_query}", flush=True)
-    print(f"LATEST TEXT = {latest_text}", flush=True)
+    #print(f"MEMORY QUERY = {memory_query}", flush=True)
+    #print(f"LATEST TEXT = {latest_text}", flush=True)
 
     prompt_history_text = history_text
 
@@ -1384,7 +1535,7 @@ Do NOT repeatedly say:
 "Sparkly."
 "Soaking up sunshine."
 
-Instead, continue the existing conversation naturally.
+Instedef generate_ai_dm_reply(fan, influencer, conversation)def generate_ai_dm_reply(fan, influencer, conversation)ad, continue the existing conversation naturally.
 
 Ask questions.
 
@@ -1459,10 +1610,22 @@ Write the next message from {influencer.username}.
         if not reply_text:
             reply_text = "Hey 💎 I’m here with you."
 
-        print(
-            f"GENERATE AI DM COMPLETE chars={len(reply_text)}",
-            flush=True
-        )
+        #print(
+            #f"GENERATE AI DM COMPLETE chars={len(reply_text)}",
+            #flush=True
+        #)
+        try:
+            extract_ai_memory_notes(
+                fan=fan,
+                influencer=influencer,
+                conversation=conversation,
+                ai_reply=reply_text,
+            )
+        except Exception as memory_error:
+            print(
+                f"MEMORY EXTRACTION ERROR: {memory_error}",
+                flush=True
+            )
 
         return reply_text
 
@@ -1502,7 +1665,24 @@ def conversation_detail(request, conversation_id):
             conversation.last_message_at = timezone.now()
             conversation.save(update_fields=["last_message_at"])
 
-            recipient = conversation.participants.exclude(id=request.user.id).first()
+            recipient = (
+                conversation.messages
+                .exclude(sender=request.user)
+                .order_by("-created_at")
+                .values_list("sender", flat=True)
+                .first()
+            )
+
+            if recipient:
+                recipient = User.objects.get(id=recipient)
+
+            print(
+                f"AI CHECK recipient={recipient} "
+                f"username=@{getattr(recipient, 'username', None)} "
+                f"profile={getattr(recipient, 'profile', None)} "
+                f"is_ai={getattr(getattr(recipient, 'profile', None), 'is_ai_influencer', None)}",
+                flush=True
+            )
 
             if recipient and getattr(recipient.profile, "is_ai_influencer", False):
                 print(
