@@ -68,23 +68,23 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
     message_bank = {
         "like": [
             f"Thanks for the ❤️ @{username}! I 'm glad you're one of my Fanz",
-            f"That means a lot @{username}. Thanks for liking my post!",
+            f"That means a lot @{username}. Thanks for liking my post! ⭐",
             f"You're awesome @{username}! Thanks for the support ❤️",
         ],
         "tip": [
             f"Thanks for the tip @{username}! I really appreciate the Love ❤️.",
             f"You're the best @{username}! Thank you for the credits 💰",
-            f"Much appreciated @{username}! Your support means a lot.",
+            f"Much appreciated @{username}! Your support means a lot. 👍",
         ],
         "unlock": [
             f"Thanks for unlocking my post @{username}! Hope you enjoy it 🔓",
-            f"I appreciate the support @{username}. Enjoy the content!",
-            f"You Rock @{username}! Thanks for unlocking my post.",
+            f"I appreciate the support @{username}. Enjoy the content! 💎",
+            f"You Rock @{username}! Thanks for unlocking my post. 😎",
         ],
         "fan": [
             f"I love all my Fanz @{username}! We should chat ⭐",
-            f"Welcome @{username}! You're in my circle of Fanz.",
-            f"You're awesome @{username}! Thanks for joining my Fanz.",
+            f"Welcome @{username}! You're in my circle of Fanz. 🤩",
+            f"You're awesome @{username}! Thanks for joining my Fanz. 😆",
         ],
     }
 
@@ -117,11 +117,55 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
         user=recipient,
         actor=sender,
         notification_type=Notification.MESSAGE,
-        message=f"📩 @{sender.username} sent you a message"
+        message=get_sender_reward_notification_title(
+        sender=sender,
+        recipient=recipient,
+        event_type=event_type,
+    )
     )
 
     if getattr(recipient.profile, "is_ai_influencer", False):
         ai_log("AI_DM_TRIGGER", recipient=f"@{recipient.username}", sender=f"@{sender.username}", message_id=dm.id)
+
+def get_sender_reward_notification_title(sender, recipient, event_type):
+    creator_username = sender.username
+    fan_username = recipient.username
+
+    title_bank = {
+        "like": [
+            f"@{creator_username}: Thanks for the ❤️, @{fan_username}",
+            f"@{creator_username}: You made my day, @{fan_username} ✨",
+            f"@{creator_username}: Love seeing you like my posts ❤️",
+            f"@{creator_username}: Keep the love coming, @{fan_username} 🤩",
+        ],
+
+        "tip": [
+            f"@{creator_username}: Thanks for the credits, @{fan_username} ❤️",
+            f"@{creator_username}: You’re amazing, @{fan_username} 💎 We should Chat",
+            f"@{creator_username}: Your support means a lot 💰",
+            f"@{creator_username}: That was sweet of you, @{fan_username} 🧁",
+        ],
+
+        "unlock": [
+            f"@{creator_username}: Thanks for unlocking my post 🔓",
+            f"@{creator_username}: Hope you enjoy it, @{fan_username}",
+            f"@{creator_username}: You picked a good one 😉",
+            f"@{creator_username}: Enjoy the exclusive content 🔥",
+        ],
+
+        "fan": [
+            f"@{creator_username}: Welcome to my Fanz ⭐",
+            f"@{creator_username}: Glad you're here, @{fan_username} 😎",
+            f"@{creator_username}: Thanks for joining my Fanz ❤️",
+        ],
+    }
+
+    return random.choice(
+        title_bank.get(
+            event_type,
+            [f"@{creator_username}: Thanks @{fan_username} 💜"]
+        )
+    )
 
 
 
