@@ -632,11 +632,13 @@ class Notification(models.Model):
         default=FAN,
     )
     message = models.CharField(max_length=255)
+    count = models.PositiveIntegerField(default=1)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at", "-created_at"]
 
     def __str__(self):
         return f"Notification for {self.user.username}: {self.message}"
@@ -678,3 +680,6 @@ class DirectMessage(models.Model):
 
     def __str__(self):
         return f"Message from {self.sender.username} in conversation {self.conversation_id}"
+
+
+#end

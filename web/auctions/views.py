@@ -1,10 +1,10 @@
-import requests
+import json
 import random
 import secrets
-import qrcode
-import json
-from .utils import get_system_wallet
 from decimal import Decimal
+
+import qrcode
+import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -13,33 +13,48 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
-from django.db import models
-from django.db.models import Q, Sum
+from django.db import models, transaction
+from django.db.models import Case, IntegerField, Q, Sum, Value, When
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils import timezone
-from .models import AICompanion, AIConversation, AIMessage, Auction, FavoriteAuction
-from .models import FeedPost, PostComment, PostLike, FeedPost, PostUnlock, BidWallet, WalletTransaction
-from .models import Fan, Notification, Conversation, DirectMessage, UserProfile, NodeProfile
-from .models import AICreatorMemory, AIFanMemoryNote
-from .forms import SignUpForm, UserProfileForm
-from .services import close_auction, place_bid
-from .forms import FeedPostForm, DirectMessageForm
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect
-from django.db import transaction
-from django.http import JsonResponse
-from django.urls import reverse
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
-from django.db.models import Case, When, Value, IntegerField
+
 from .ai_memory import touch_ai_creator_memory
+from .forms import DirectMessageForm, FeedPostForm, SignUpForm, UserProfileForm
+from .models import (
+    AICompanion,
+    AIConversation,
+    AIMessage,
+    AICreatorMemory,
+    AIFanMemoryNote,
+    Auction,
+    BidWallet,
+    Conversation,
+    DirectMessage,
+    Fan,
+    FavoriteAuction,
+    FeedPost,
+    NodeProfile,
+    Notification,
+    PostComment,
+    PostLike,
+    PostUnlock,
+    UserProfile,
+    WalletTransaction,
+)
+from .services import close_auction, place_bid
+from .utils import get_system_wallet
 
-
+def ai_log(event, **kwargs):
+    parts = [event]
+    parts.extend(f"{k}={v}" for k, v in kwargs.items())
+    print(" | ".join(parts), flush=True)
 
 def send_auto_thank_you_dm(sender, recipient, event_type):
     if not sender or not recipient:
@@ -106,7 +121,8 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
     )
 
     if getattr(recipient.profile, "is_ai_influencer", False):
-        print(f"AI DM TRIGGER recipient=@{recipient.username} sender=@{sender.username} dm_id={dm.id}")
+        ai_log("AI_DM_TRIGGER", recipient=f"@{recipient.username}", sender=f"@{sender.username}", message_id=dm.id)
+
 
 
 def generate_referral_code():
@@ -663,10 +679,12 @@ def buy_now_auction(request, auction_id):
     
     try:
         send_buy_now_email(auction, request.user, buy_now_price)
-        print("BUY NOW EMAIL SENT:", auction.id, auction.title, request.user.email)
+        ai_log("BUY_NOW_EMAIL_SENT", auction_id=auction.id, title=auction.title, user_email=request.user.email)
+
     
     except Exception as e:
-        print("BUY NOW EMAIL FAILED:", auction.id, auction.title, str(e))
+        ai_log("BUY_NOW_EMAIL_FAILED", auction_id=auction.id, title=auction.title, error=str(e))
+
 
     return redirect("auction_detail", auction_id=auction.id)
 
@@ -1275,11 +1293,12 @@ def inbox(request):
     })
 
 
-def extract_ai_memory_notes(fan, influencer, conversation, ai_reply):
-    print(
-        f"MEMORY EXTRACTION START fan=@{fan.username} "
-        f"influencer=@{influencer.username} conversation={conversation.id}",
-        flush=True
+def extract_ai_memory_notes(fan, influencer, conversation, fan_message):
+    ai_log(
+        "MEMORY_EXTRACTION_START",
+        fan=f"@{fan.username}",
+        influencer=f"@{influencer.username}",
+        conversation=conversation.id,
     )
 
     recent_messages = (
@@ -1294,14 +1313,7 @@ def extract_ai_memory_notes(fan, influencer, conversation, ai_reply):
         for msg in recent_messages
     ])
 
-    latest_fan_message = (
-        conversation.messages
-        .filter(sender=fan, generated_by_ai=False)
-        .order_by("-created_at")
-        .first()
-    )
-
-    latest_fan_text = latest_fan_message.body if latest_fan_message else ""
+    latest_fan_text = fan_message or ""
 
     memory_prompt = f"""
 You are a memory extraction system.
@@ -1338,13 +1350,9 @@ Latest fan message:
 
 Conversation context:
 {conversation_text}
-
-AI reply:
-{ai_reply}
 """
 
-    #print("MEMORY EXTRACTION PROMPT BUILT", flush=True)
-
+    
     try:
         response = requests.post(
             "http://172.17.0.1:11434/api/generate",
@@ -1377,15 +1385,11 @@ AI reply:
                 extracted_notes = []
 
         except Exception as parse_error:
-            print(
-                f"MEMORY EXTRACTION JSON PARSE ERROR: {parse_error}",
-                flush=True
-            )
+            ai_log("MEMORY_EXTRACTION_JSON_PARSE_ERROR", error=str(parse_error))
+
             extracted_notes = []
 
-        #print(f"MEMORY EXTRACTION PARSED: {extracted_notes}", flush=True)
         
-        #print(f"MEMORY EXTRACTION RAW: {raw_memory_text}", flush=True)
 
         saved_count = 0
         skipped_count = 0
@@ -1417,21 +1421,16 @@ AI reply:
 
             saved_count += 1
 
-        print(
-            f"MEMORY EXTRACTION SAVED saved={saved_count} skipped={skipped_count}",
-            flush=True
-        )
+        ai_log("MEMORY_EXTRACTION_SAVED", saved=saved_count, skipped=skipped_count)
+
 
     except Exception as e:
-        print(f"MEMORY EXTRACTION ERROR: {e}", flush=True)
+        ai_log("MEMORY_EXTRACTION_ERROR", error=str(e))
+
 
 
 def generate_ai_dm_reply(fan, influencer, conversation):
-    #print(
-        #f"GENERATE AI DM START fan=@{fan.username} "
-        #f"influencer=@{influencer.username} conversation={conversation.id}",
-        #flush=True
-    #)
+    
     memory, _ = AICreatorMemory.objects.get_or_create(
         creator=influencer,
         fan=fan,
@@ -1443,12 +1442,16 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         creator=influencer,
         fan=fan,
         is_active=True,
-    ).order_by("-updated_at")[:5]
+    ).order_by("-updated_at")[:20]
 
     memory_notes_text = "\n".join([
         f"- {note.note}"
         for note in memory_notes
     ]) or "None yet."
+
+    ai_log("MEMORY_NOTES_FOR_FAN", fan=f"@{fan.username}", notes=memory_notes_text)
+
+    
     
     recent_messages = (
         conversation.messages
@@ -1471,6 +1474,7 @@ def generate_ai_dm_reply(fan, influencer, conversation):
     )
 
     latest_text = (latest_fan_message.body or "").lower() if latest_fan_message else ""
+    latest_text = " ".join(latest_text.split())
 
     memory_query = any(phrase in latest_text for phrase in [
         "remember about me",
@@ -1481,30 +1485,155 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         "tell me something you remember",
         "tell me something i like",
         "things i like",
+        "what are some things i like",
+        "what do i like",
+        "what else do i like",
+        "what do i like to drink",
+        "what foods do i like",
+        "what food do i like",
+        "what are some foods i like",
+        "foods i like",
+        "food i like",
+        "some foods i like",
+        "some food i like",
+        "things i like to eat",
+        "what kind of foods do i like",
+        "what kind of food do i like",
+        "kind of foods do i like",
+        "kind of food do i like",
+        "what kinds of foods do i like",
+        "kinds of foods do i like",
+        "kinds of food do i like",
+        "what do you think i would like",
+        "what should i eat",
+        "what should i have for dinner",
+        "dinner ideas",
+        "what would i enjoy",
     ])
+    
+    is_question = "?" in latest_text or latest_text.startswith((
+        "what ",
+        "who ",
+        "where ",
+        "when ",
+        "why ",
+        "how ",
+        "do ",
+        "does ",
+        "did ",
+        "can ",
+        "could ",
+        "would ",
+        "should ",
+    ))
+
+    should_extract_memory = not memory_query and not is_question
+    
+    ai_log("MEMORY_QUERY_DETECTED", memory_query=memory_query, latest=latest_text[:100])
+
+
+    if memory_query and (
+        "drink" in latest_text
+        or "like to drink" in latest_text
+        or "favorite drink" in latest_text
+    ):
+        drink_words = [
+            "drink", "coffee", "tea", "mate", "yerba", "smoothie",
+            "juice", "water", "milk", "café", "cafe", "leche"
+        ]
+
+        drink_memories = [
+            note.note for note in memory_notes
+            if any(word in note.note.lower() for word in drink_words)
+        ]
+
+        if not drink_memories:
+            return "I'm not sure yet — tell me and I'll remember."
+        
+        items = [
+            memory.replace("Likes ", "").replace("likes ", "")
+            for memory in drink_memories[:6]
+        ]
+
+        if len(items) == 1:
+            return f"You like {items[0]}. 😊"
+
+        return (
+            "You like "
+            + ", ".join(items[:-1])
+            + f", and {items[-1]}. 😊"
+        )
+    
+        
+    if memory_query and (
+        "food" in latest_text
+        or "foods" in latest_text
+        or "eat" in latest_text
+        or "like to eat" in latest_text
+    ):
+        food_words = [
+            "food", "taco", "tacos", "salsa", "sandwich",
+            "snapper", "fish", "vegan", "lentil", "garbanzo"
+        ]
+
+        food_memories = [
+            note.note for note in memory_notes
+            if any(word in note.note.lower() for word in food_words)
+        ]
+
+        if not food_memories:
+            return "I'm not sure yet — tell me and I'll remember."
+
+        items = [
+            memory.replace("Likes ", "").replace("likes ", "")
+            for memory in food_memories[:6]
+        ]
+
+        ai_log("FOOD_MEMORY_DIRECT_ANSWER_USED")
+
+
+        if len(items) == 1:
+            return f"You like {items[0]}. 😊"
+
+        return (
+            "You like "
+            + ", ".join(items[:-1])
+            + f", and {items[-1]}. 😊"
+        )
+
 
     memory_mode_text = ""
 
     if memory_query:
         memory_mode_text = """
-SPECIAL INSTRUCTION
+SPECIAL INSTRUCTION — MEMORY-ONLY RECALL MODE
 
-The user's latest message is asking about your long-term memory.
+The user's latest message is asking what you remember about them.
 
 Answer ONLY using verified long-term memories.
-
-If there are no verified long-term memories yet, respond naturally that you are still getting to know them.
 
 Do NOT use Recent DM conversation to answer.
 
 Do NOT guess, infer, or invent memories.
 
-Do NOT mention prompts, memory sections, databases, system instructions, or the phrase "Saved Long-Term Memory."
+Do NOT mention:
+- prompts
+- memory sections
+- databases
+- system instructions
+- long-term memory
+- saved memory
+- "we were just talking about..."
+
+If verified memories answer the question, answer briefly and naturally.
+
+If verified memories do not answer the specific question, say:
+"I'm not sure yet — tell me and I'll remember."
+
+Stay in character as Lya.
 """
 
-    #print(f"MEMORY QUERY = {memory_query}", flush=True)
-    #print(f"LATEST TEXT = {latest_text}", flush=True)
-
+    
     prompt_history_text = history_text
 
     if memory_query:
@@ -1513,7 +1642,7 @@ Do NOT mention prompts, memory sections, databases, system instructions, or the 
     prompt = f"""
 You are {influencer.username} 💎.
 
-You are a confident, fun, friendly AI Influencer on FANZ.
+You are a confident, fun, friendly, flirty AI Influencer on FANZ.
 
 Your personality:
 
@@ -1535,7 +1664,7 @@ Do NOT repeatedly say:
 "Sparkly."
 "Soaking up sunshine."
 
-Instedef generate_ai_dm_reply(fan, influencer, conversation)def generate_ai_dm_reply(fan, influencer, conversation)ad, continue the existing conversation naturally.
+Instead, continue the existing conversation naturally.
 
 Ask questions.
 
@@ -1584,12 +1713,23 @@ Do not treat recent messages as saved memories.
 
 {memory_mode_text}
 
+REPETITION RULE:
+Do not repeat the same food, memory, phrase, or topic in back-to-back replies.
+If the fan asks a broad question like "what else do I like?" or "what do I drink?",
+answer only from saved memory.
+If saved memory does not contain the answer, say you are not sure yet and ask them to tell you.
+Do not guess based on recent food topics.
+
 Recent DM conversation:
 {prompt_history_text}
+
+Latest fan message:
+{latest_fan_message.body if latest_fan_message else ""}
 
 Write the next message from {influencer.username}.
 """
 
+    
     try:
         response = requests.post(
             "http://172.17.0.1:11434/api/generate",
@@ -1610,29 +1750,30 @@ Write the next message from {influencer.username}.
         if not reply_text:
             reply_text = "Hey 💎 I’m here with you."
 
-        #print(
-            #f"GENERATE AI DM COMPLETE chars={len(reply_text)}",
-            #flush=True
-        #)
         try:
-            extract_ai_memory_notes(
-                fan=fan,
-                influencer=influencer,
-                conversation=conversation,
-                ai_reply=reply_text,
-            )
+            if should_extract_memory:
+                extract_ai_memory_notes(
+                    fan=fan,
+                    influencer=influencer,
+                    conversation=conversation,
+                    fan_message=latest_fan_message.body if latest_fan_message else "",
+                )
+            else:
+                ai_log("MEMORY_EXTRACTION_SKIPPED", memory_query=memory_query, is_question=is_question,)
+
+
         except Exception as memory_error:
-            print(
-                f"MEMORY EXTRACTION ERROR: {memory_error}",
-                flush=True
-            )
+            ai_log("MEMORY_EXTRACTION_ERROR", error=str(memory_error))
+
+
+        
 
         return reply_text
 
     except Exception as e:
-        print(f"GENERATE AI DM ERROR: {e}", flush=True)
-        return "Hey 💎 I got your message, but my thoughts glitched for a second. Try me again?"
+        ai_log("GENERATE_AI_DM_ERROR", error=str(e))
 
+        return "Hey 💎 I got your message, but my thoughts glitched for a second. Try me again?"
 
 @login_required
 def conversation_detail(request, conversation_id):
@@ -1657,39 +1798,31 @@ def conversation_detail(request, conversation_id):
             message.generated_by_ai = False
             message.save()
 
-            print(
-                f"DM POST HIT sender=@{request.user.username} message_id={message.id}",
-                flush=True
-            )
+            ai_log("DM_POST_HIT", sender=f"@{request.user.username}", message_id=message.id)
+
 
             conversation.last_message_at = timezone.now()
             conversation.save(update_fields=["last_message_at"])
 
-            recipient = (
-                conversation.messages
-                .exclude(sender=request.user)
-                .order_by("-created_at")
-                .values_list("sender", flat=True)
-                .first()
+            recipient = conversation.participants.exclude(id=request.user.id).first()
+
+            ai_log(
+                "AI_CHECK",
+                recipient=recipient,
+                username=f"@{getattr(recipient, 'username', None)}",
+                profile=getattr(recipient, "profile", None),
+                is_ai=getattr(getattr(recipient, "profile", None), "is_ai_influencer", None),
             )
 
-            if recipient:
-                recipient = User.objects.get(id=recipient)
-
-            print(
-                f"AI CHECK recipient={recipient} "
-                f"username=@{getattr(recipient, 'username', None)} "
-                f"profile={getattr(recipient, 'profile', None)} "
-                f"is_ai={getattr(getattr(recipient, 'profile', None), 'is_ai_influencer', None)}",
-                flush=True
-            )
 
             if recipient and getattr(recipient.profile, "is_ai_influencer", False):
-                print(
-                    f"AI GENERATION START conversation={conversation.id} "
-                    f"fan=@{request.user.username} influencer=@{recipient.username}",
-                    flush=True
+                ai_log(
+                    "AI_GENERATION_START",
+                    conversation=conversation.id,
+                    fan=f"@{request.user.username}",
+                    influencer=f"@{recipient.username}",
                 )
+
 
                 reply_text = generate_ai_dm_reply(
                     fan=request.user,
@@ -1697,10 +1830,10 @@ def conversation_detail(request, conversation_id):
                     conversation=conversation,
                 )
 
-                print(
-                    f"AI GENERATION COMPLETE conversation={conversation.id} chars={len(reply_text)}",
-                    flush=True
-                )
+                ai_log("AI_GENERATION_COMPLETE", conversation=conversation.id, chars=len(reply_text))
+
+                ai_log("AI_REPLY_CREATE_START")
+
 
                 ai_reply = DirectMessage.objects.create(
                     conversation=conversation,
@@ -1709,22 +1842,53 @@ def conversation_detail(request, conversation_id):
                     is_read=False,
                     generated_by_ai=True,
                 )
-                
+                ai_log("AI_REPLY_CREATE_OK", message_id=ai_reply.id)
+
+
                 conversation.last_message_at = timezone.now()
                 conversation.save(update_fields=["last_message_at"])
 
-                Notification.objects.create(
-                    user=request.user,
-                    actor=recipient,
-                    notification_type=Notification.MESSAGE,
-                    message=f"📩 @{recipient.username} sent you a message"
+                ai_log("AI_NOTIFICATION_UPSERT_START")
+
+
+
+                notification = (
+                    Notification.objects
+                    .filter(
+                        user=request.user,
+                        actor=recipient,
+                        notification_type=Notification.MESSAGE,
+                        is_read=False,
+                    )
+                    .order_by("-updated_at", "-created_at")
+                    .first()
                 )
 
-                print(
-                    f"AI DM REPLY SAVED sender=@{recipient.username} "
-                    f"recipient=@{request.user.username} message_id={ai_reply.id}",
-                    flush=True
+                if notification:
+                    notification.count += 1
+                    notification.message = f"📩 @{recipient.username} sent you {notification.count} messages"
+                    notification.save(update_fields=["count", "message"])
+                    
+                    ai_log("AI_NOTIFICATION_UPDATED", id=notification.id, count=notification.count)
+
+                else:
+                    notification = Notification.objects.create(
+                        user=request.user,
+                        actor=recipient,
+                        notification_type=Notification.MESSAGE,
+                        message=f"📩 @{recipient.username} sent you a message",
+                        count=1,
+                    )
+                    ai_log("AI_NOTIFICATION_CREATED", id=notification.id)
+
+                
+                ai_log(
+                    "AI_DM_REPLY_SAVED",
+                    sender=f"@{recipient.username}",
+                    recipient=f"@{request.user.username}",
+                    message_id=ai_reply.id,
                 )
+
 
             return redirect("conversation_detail", conversation_id=conversation.id)
     else:
