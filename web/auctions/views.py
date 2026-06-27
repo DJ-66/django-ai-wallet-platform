@@ -16,6 +16,7 @@ from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.db import models, transaction
 from django.db.models import Case, IntegerField, Q, Sum, Value, When
 from django.http import JsonResponse
+
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -24,6 +25,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
+from .services import close_auction, place_bid
+from .utils import get_system_wallet
 
 from .ai_memory import touch_ai_creator_memory
 from .forms import DirectMessageForm, FeedPostForm, SignUpForm, UserProfileForm
@@ -47,9 +50,53 @@ from .models import (
     PostUnlock,
     UserProfile,
     WalletTransaction,
+    NotificationSound,
 )
-from .services import close_auction, place_bid
-from .utils import get_system_wallet
+
+def notification_sounds_json(request):
+    sounds = {}
+
+    for sound in NotificationSound.objects.filter(active=True):
+        sounds[sound.sound_type] = sound.file.url
+
+    return JsonResponse(sounds)
+
+
+
+def latest_notification_check(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"latest_id": None, "sound_type": None})
+
+    notification = (
+        Notification.objects
+        .filter(user=request.user)
+        .order_by("-id")
+        .first()
+    )
+
+    if not notification:
+        return JsonResponse({"latest_id": None, "sound_type": None})
+
+    text = (notification.message or "").lower()
+
+    if (
+        "tipped" in text
+        or "credits" in text
+        or "unlocked" in text
+        or "premium" in text
+        or "support means" in text
+    ):
+        sound_type = "cash"
+    else:
+        sound_type = "social"
+
+    return JsonResponse({
+        "latest_id": notification.id,
+        "sound_type": sound_type,
+        "message": notification.message,
+    })
+
+
 
 def ai_log(event, **kwargs):
     parts = [event]

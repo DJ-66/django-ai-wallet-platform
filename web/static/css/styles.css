@@ -2891,4 +2891,25 @@ img {
     box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.35);
 }
 
+.notifications-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+#enable-notification-sounds {
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .notifications-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+}
+
 /* end_css */

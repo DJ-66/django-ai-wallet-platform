@@ -2,6 +2,14 @@ from django.contrib import admin
 from .models import DigitalItem, Auction, Bid, BidWallet
 from .models import NodeProfile, AICreatorMemory, UserProfile
 from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
+from django.contrib import admin
+from .models import NotificationSound
+
+
+@admin.register(NotificationSound)
+class NotificationSoundAdmin(admin.ModelAdmin):
+    list_display = ("name", "sound_type", "active", "file")
+    list_filter = ("sound_type", "active")
 
 
 @admin.register(DigitalItem)

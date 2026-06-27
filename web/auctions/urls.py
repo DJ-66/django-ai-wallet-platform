@@ -6,6 +6,8 @@ from .views import pay_user
 from .views import wallet_view
 from . import views_ai
 
+
+
 urlpatterns = [
     path("", auction_list, name="auction_list"),
     path("<int:auction_id>/", auction_detail, name="auction_detail"),
@@ -27,9 +29,11 @@ urlpatterns = [
     path("messages/<int:conversation_id>/", views.conversation_detail, name="conversation_detail"),
     path("messages/<int:conversation_id>/delete/", views.delete_conversation, name="delete_dm_conversation"),
     path("u/<str:username>/message/", views.start_conversation, name="start_conversation"),
+    path("notification-sounds.json", views.notification_sounds_json, name="notification_sounds_json"),
+    path("notifications/check/", views.latest_notification_check, name="latest_notification_check"),
 
     path("terms/", views.terms_view, name="terms"),
-
+    
     path(
     "notifications/<int:notification_id>/delete/",
     views.delete_notification,

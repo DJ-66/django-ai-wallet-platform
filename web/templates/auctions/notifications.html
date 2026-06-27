@@ -3,11 +3,15 @@
 
 {% block content %}
 
-<a href="{{ next_url }}" class="back-link">
-    ← Back
-</a>
+<div class="notifications-toolbar">
+    <a href="{{ next_url }}" class="back-link">
+        ← Back
+    </a>
 
-<br>
+    <button class="auth-primary-btn" id="enable-notification-sounds">
+        Enable notification sounds 🔔
+    </button>
+</div>
 
 <h1>🔔 Notifications</h1>
 

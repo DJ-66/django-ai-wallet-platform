@@ -9,7 +9,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=181">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=184">
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
 </svg>">
@@ -166,6 +166,100 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 3000);
   });
 });
+</script>
+<script>
+let notificationSounds = {};
+let notificationSoundsEnabled =
+  localStorage.getItem("notificationSoundsEnabled") === "true";
+
+fetch("/auctions/notification-sounds.json")
+  .then(response => response.json())
+  .then(data => {
+    notificationSounds = data;
+    console.log("Notification sounds loaded:", notificationSounds);
+  });
+
+function updateSoundButton() {
+  const btn = document.getElementById("enable-notification-sounds");
+  if (!btn) return;
+
+  btn.innerText = notificationSoundsEnabled
+    ? "Sounds enabled ✅"
+    : "Enable sounds 🔔";
+}
+
+function playNotificationSound(eventType, forcePlay = false) {
+  if (!forcePlay && !notificationSoundsEnabled) return;
+
+  const cashEvents = ["tip", "unlock", "purchase", "cash"];
+  const soundType = cashEvents.includes(eventType) ? "cash" : "social";
+  const url = notificationSounds[soundType];
+  if (!url) return;
+
+  const audio = new Audio(url);
+  audio.volume = soundType === "cash" ? 0.75 : 0.45;
+  audio.play().catch(() => {});
+}
+
+function guessNotificationSoundTypeFromText(text) {
+  text = (text || "").toLowerCase();
+  if (text.includes("tipped") || text.includes("credits") || text.includes("unlocked") || text.includes("premium")) {
+    return "cash";
+  }
+  return "social";
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  updateSoundButton();
+
+  document.getElementById("enable-notification-sounds")?.addEventListener("click", function () {
+    notificationSoundsEnabled = true;
+    localStorage.setItem("notificationSoundsEnabled", "true");
+    updateSoundButton();
+
+    playNotificationSound("social", true);
+  });
+
+  document.querySelectorAll(".notification-item, li, .notification").forEach(function (item) {
+    item.addEventListener("click", function (event) {
+      if (event.target.closest("button") || event.target.closest("form") || event.target.closest(".delete-notification")) {
+        return;
+      }
+
+      const soundType = guessNotificationSoundTypeFromText(item.innerText);
+      playNotificationSound(soundType, true);
+    });
+  });
+});
+
+let lastSeenNotificationId = null;
+
+function checkForNewNotification() {
+  if (!notificationSoundsEnabled) return;
+
+  fetch("/auctions/notifications/check/")
+    .then(response => response.json())
+    .then(data => {
+      if (!data.latest_id) return;
+
+      if (lastSeenNotificationId === null) {
+        lastSeenNotificationId = data.latest_id;
+        return;
+      }
+
+      if (data.latest_id > lastSeenNotificationId) {
+        lastSeenNotificationId = data.latest_id;
+        playNotificationSound(data.sound_type || "social");
+      }
+    })
+    .catch(error => console.log("Notification check failed:", error));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  checkForNewNotification();
+  setInterval(checkForNewNotification, 10000);
+});
+
 </script>
 </body>
 </html>
