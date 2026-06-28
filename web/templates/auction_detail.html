@@ -2,17 +2,15 @@
 
 {% block content %}
 
-<!--###################### -->
-
 
 <div class="auction-detail-panel">
 
   <div class="auction-stats">
     <h1>{{ auction.title }}</h1>
-    <p><strong>Status:</strong> {{ auction.status }}</p>
-    <p><strong>Current Price:</strong> {{ auction.current_price|floatformat:0 }} credits</p>
-    <p><strong>Time Remaining:</strong>
-      <span id="countdown" data-seconds="{{ seconds_remaining }}"></span>
+    <p><strong>Status: </strong> <span style="color:#0b5ed7;font-weight:bold"> {{ auction.status }}</span></p>
+    <p><strong>Current Bid: </strong> <span style="color:#0b5ed7;font-weight:bold"> {{ auction.current_price|floatformat:0 }} credits</span></p>
+    <p><strong>Ends In: </strong>
+      <span id="countdown" style="color:#0b5ed7;font-weight:bold" data-seconds="{{ seconds_remaining }}"></span>
     </p>
 
     {% if auction.status == "live" %}
@@ -66,7 +64,6 @@
     {% endif %}
   </div>
 
-<!--###################### -->   
 
   </div>
 
@@ -206,13 +203,26 @@ function showAuctionVideo(button) {
   button.classList.add("active");
 }
 
-function formatTime(seconds) {
-  if (seconds <= 0) return "0s";
+function formatTime(totalSeconds) {
+  totalSeconds = Math.max(0, parseInt(totalSeconds || 0, 10));
 
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const days = Math.floor(totalSeconds / 86400);
+  totalSeconds %= 86400;
 
-  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds %= 3600;
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts = [];
+
+  if (days > 0) parts.push(days + " D" + (days === 1 ? "" : "s"));
+  if (hours > 0) parts.push(hours + " H" + (hours === 1 ? "" : "s"));
+  if (minutes > 0) parts.push(minutes + " M" + (minutes === 1 ? "" : "s"));
+  if (seconds > 0 || parts.length === 0) parts.push(seconds + " S" + (seconds === 1 ? "" : "s"));
+
+  return parts.join(" | ");
 }
 
 function updateDetailCountdown() {

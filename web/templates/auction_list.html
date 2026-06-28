@@ -4,7 +4,7 @@
 
 <div class="page-header">
   <h1>Live Auctions</h1>
-  <p>Bid with credits. Auctions ending soon may extend when bids come in.</p>
+  <p>Bid with credits. Auctions ending soon extend 15s with new bid</p>
 </div>
 
 {% if auctions %}
@@ -37,12 +37,12 @@
 
         <div class="auction-meta">
           <div>
-            <span class="label">Current Price</span>
+            <span class="label">Current Bid:</span>
             <strong>{{ auction.current_price|floatformat:0 }} credits</strong>
           </div>
 
           <div>
-            <span class="label">Time Left</span>
+            <span class="label">Ends In:</span>
             <strong class="countdown"
                     data-seconds="{{ auction.seconds_remaining }}">
               {{ auction.seconds_remaining }}s
@@ -54,31 +54,35 @@
 
           <a href="{% url 'auction_detail' auction.id %}"
              class="auction-view-link">
-            View auction →
+            View Auction Details →
           </a>
            <br>
            <br>
-          {% if user.is_authenticated %}
-            <form method="post"
-                  action="{% url 'toggle_favorite_auction' auction.id %}"
-                  class="favorite-form">
-              {% csrf_token %}
+          <div class="auction-status-row">
 
-              <button type="submit" class="favorite-button">
-                {% if auction.is_favorited %}
-                  ❤️ Watching
-                {% else %}
-                  🤍 Watch
-                {% endif %}
-              </button>
-            </form>
-          {% endif %}
+  {% if user.is_authenticated %}
+    <form method="post"
+          action="{% url 'toggle_favorite_auction' auction.id %}"
+          class="favorite-form">
+      {% csrf_token %}
 
-          {% if auction.is_high_bidder %}
-            <div class="high-bidder-badge">
-              🏆 High Bidder
-            </div>
-          {% endif %}
+      <button type="submit" class="favorite-button">
+        {% if auction.is_favorited %}
+          ❤️ Watching
+        {% else %}
+          🤍 Watch
+        {% endif %}
+      </button>
+    </form>
+  {% endif %}
+
+  {% if auction.is_high_bidder %}
+    <div class="high-bidder-badge">
+      🏆 High Bidder
+    </div>
+  {% endif %}
+
+</div>
 
         </div>
 
@@ -97,6 +101,29 @@
 {% endif %}
 
 <script>
+  function formatAuctionTime(totalSeconds) {
+    totalSeconds = Math.max(0, parseInt(totalSeconds || 0, 10));
+
+    const days = Math.floor(totalSeconds / 86400);
+    totalSeconds %= 86400;
+
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    const parts = [];
+
+    if (days > 0) parts.push(days + " D" + (days === 1 ? "" : "s"));
+    if (hours > 0) parts.push(hours + " H" + (hours === 1 ? "" : "s"));
+    if (minutes > 0) parts.push(minutes + " M" + (minutes === 1 ? "" : "s"));
+    if (seconds > 0 || parts.length === 0) parts.push(seconds + " S" + (seconds === 1 ? "" : "s"));
+
+
+    return parts.join(" | ");
+  }
+
   function updateCountdowns() {
     document.querySelectorAll(".countdown").forEach(function(el) {
       let seconds = parseInt(el.dataset.seconds, 10);
@@ -106,7 +133,7 @@
       if (seconds > 0) {
         seconds -= 1;
         el.dataset.seconds = seconds;
-        el.textContent = seconds + "s";
+        el.textContent = formatAuctionTime(seconds);
 
         if (badge) {
           if (seconds < 60) {
@@ -153,5 +180,23 @@
 
   setInterval(updateCountdowns, 1000);
 </script>
+<script>
+window.addEventListener("beforeunload", function () {
+    sessionStorage.setItem(
+        "auctionListScrollY",
+        window.scrollY
+    );
+});
 
+window.addEventListener("load", function () {
+    const scrollY =
+        sessionStorage.getItem(
+            "auctionListScrollY"
+        );
+
+    if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY));
+    }
+});
+</script>
 {% endblock %}

@@ -13,13 +13,34 @@
         <form method="post" enctype="multipart/form-data" class="auth-form">
             {% csrf_token %}
             {{ form.as_p }}
-             
-            <center>              
-            <label class="tos-check">
-            <input type="checkbox" name="tos_accepted">
-             {% trans "I accept" %} Fanz.to 
-            <a href="{% url 'terms' %}" target="_blank">{% trans "Terms of Service" %}</a>.
-            </label>
+
+            <hr>
+
+            <div class="profile-setting-row">
+                <label for="notification-sounds-toggle">
+                    🔔 {% trans "Notification Sounds" %}
+                </label>
+
+                <!--  <span id="notification-sounds-label">
+                    Enabled
+                </span> -->
+
+                <label class="switch">
+                    <input
+                        type="checkbox"
+                        id="notification-sounds-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <center>
+                <label class="tos-check">
+                    <input type="checkbox" name="tos_accepted">
+                    {% trans "I accept" %} Fanz.to
+                    <a href="{% url 'terms' %}" target="_blank">
+                        {% trans "Terms of Service" %}
+                    </a>.
+                </label>
             </center>
 
             <button type="submit" class="auth-primary-btn">
@@ -28,5 +49,41 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const toggle = document.getElementById(
+        "notification-sounds-toggle"
+    );
+
+    const label = document.getElementById(
+        "notification-sounds-label"
+    );
+
+    if (!toggle || !label) return;
+
+    const enabled =
+        localStorage.getItem(
+            "notificationSoundsEnabled"
+        ) === "true";
+
+    toggle.checked = enabled;
+
+    label.textContent =
+        enabled ? "Enabled" : "Disabled";
+
+    toggle.addEventListener("change", function () {
+        localStorage.setItem(
+            "notificationSoundsEnabled",
+            this.checked
+        );
+
+        label.textContent =
+            this.checked
+                ? "Enabled"
+                : "Disabled";
+    });
+});
+</script>
 
 {% endblock %}
