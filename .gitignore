@@ -27,3 +27,7 @@ venv/
 *.sql.gz
 backup-*.sql
 backup-*.sql.gz
+
+# Don's push *.save
+*.save
+
