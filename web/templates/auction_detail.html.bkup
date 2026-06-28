@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block content %}
 
@@ -8,60 +7,60 @@
 
   <div class="auction-stats">
     <h1>{{ auction.title }}</h1>
-    <p><strong>{% trans "Status" %}: </strong> <span style="color:#0b5ed7;font-weight:650"> {{ auction.status }}</span></p>
-    <p><strong>{% trans "Current Bid" %}: </strong> <span style="color:#0b5ed7;font-weight:650"> {{ auction.current_price|floatformat:0 }} {% trans "credits" %}</span></p>
-    <p><strong>{% trans "Ends In" %}: </strong>
-      <span id="countdown" style="color:#0b5ed7;font-size:.75rem;font-weight:650" data-seconds="{{ seconds_remaining }}"></span>
+    <p><strong>Status: </strong> <span style="color:#0b5ed7;font-weight:650"> {{ auction.status }}</span></p>
+    <p><strong>Current Bid: </strong> <span style="color:#0b5ed7;font-weight:650"> {{ auction.current_price|floatformat:0 }} credits</span></p>
+    <p><strong>Ends In: </strong>
+      <span id="countdown" style="color:#0b5ed7;font-size:.75rem;font-weight:650" data-seconds=" {{ seconds_remaining }}"></span>
     </p>
 
     {% if auction.status == "live" %}
 
       <div class="auction-action-row">
 
-        <form method="post" action="{% url 'place_bid' auction.id %}">
+  <form method="post" action="{% url 'place_bid' auction.id %}">
+    {% csrf_token %}
+
+    <button
+      id="bidButton"
+      type="submit"
+      class="auction-action-btn bid-action-btn"
+    >
+      👋 Bid Now!
+    </button>
+  </form>
+
+  <button
+    type="button"
+    class="auction-action-btn buy-now-action-btn"
+    onclick="openBuyNowModal()">
+    💰 Buy Now! — {{ buy_now_price|floatformat:0 }} credits
+  </button>
+      
+<br>
+
+      {% if is_high_bidder %}
+        <div class="high-bidder-badge">
+          🏆 High Bidder
+        </div>
+        <br>
+      {% endif %}
+
+      {% if user.is_authenticated %}
+        <form method="post"
+              action="{% url 'toggle_favorite_auction' auction.id %}">
           {% csrf_token %}
 
-          <button
-            id="bidButton"
-            type="submit"
-            class="auction-action-btn bid-action-btn"
-          >
-            👋 {% trans "Bid Now!" %}
+          <button type="submit" class="favorite-button {% if is_favorited %}favorited{% endif %}">
+            {% if is_favorited %}
+              ❤️ Watching
+            {% else %}
+              🤍 Watch
+            {% endif %}
           </button>
         </form>
-
-        <button
-          type="button"
-          class="auction-action-btn buy-now-action-btn"
-          onclick="openBuyNowModal()">
-          💰 {% trans "Buy Now!" %} — {{ buy_now_price|floatformat:0 }} {% trans "credits" %}
-        </button>
-
-        <br>
-
-        {% if is_high_bidder %}
-          <div class="high-bidder-badge">
-            🏆 {% trans "High Bidder" %}
-          </div>
-          <br>
-        {% endif %}
-
-        {% if user.is_authenticated %}
-          <form method="post"
-                action="{% url 'toggle_favorite_auction' auction.id %}">
-            {% csrf_token %}
-
-            <button type="submit" class="favorite-button {% if is_favorited %}favorited{% endif %}">
-              {% if is_favorited %}
-                ❤️ {% trans "Watching" %}
-              {% else %}
-                🤍 {% trans "Watch" %}
-              {% endif %}
-            </button>
-          </form>
-
-        {% endif %}
-      </div>
+        
+      {% endif %}
+	</div>
     {% endif %}
   </div>
 
@@ -74,7 +73,7 @@
     {% if auction.image %}
       <img src="{{ auction.image.url }}" alt="{{ auction.title }}">
     {% else %}
-      <div class="image-placeholder">{% trans "No image" %}</div>
+      <div class="image-placeholder">No image</div>
     {% endif %}
   </div>
 
@@ -83,14 +82,14 @@
     {% if auction.image %}
       <img class="gallery-thumb active"
            src="{{ auction.image.url }}"
-           alt="{% trans 'Image 1' %}"
+           alt="Image 1"
            onclick="showAuctionImage(this)">
     {% endif %}
 
     {% if auction.image_2 %}
       <img class="gallery-thumb"
            src="{{ auction.image_2.url }}"
-           alt="{% trans 'Image 2' %}"
+           alt="Image 2"
            onclick="showAuctionImage(this)">
     {% endif %}
 
@@ -99,14 +98,14 @@
               type="button"
               data-video-url="{{ auction.video.url }}"
               onclick="showAuctionVideo(this)">
-        ▶ {% trans "Video" %}
+        ▶ Video
       </button>
     {% endif %}
 
   </div>
 <br><br>
 </div>
-
+        
   <div class="digital-item-description">
     <h2>{{ auction.digital_item.title }}</h2>
     <p>{{ auction.digital_item.description}}</p>
@@ -118,12 +117,12 @@
 
   <div class="buy-now-card">
 
-    <h2>💰 {% trans "Buy Now" %}</h2>
+    <h2>💰 Buy Now</h2>
 
     <p>
-      {% trans "Buy" %} <strong>{{ auction.title }}</strong>
-      {% trans "now for" %}
-      <strong>{{ buy_now_price|floatformat:0 }} {% trans "credits" %}</strong>
+      Buy <strong>{{ auction.title }}</strong>
+      now for
+      <strong>{{ buy_now_price|floatformat:0 }} credits</strong>
     </p>
 
     <form method="post" action="{% url 'buy_now_auction' auction.id %}">
@@ -132,7 +131,7 @@
       <div class="buy-now-modal-actions">
 
         <button type="submit" class="buy-now-approve">
-          {% trans "Approve" %}
+          Approve
         </button>
 
         <button
@@ -140,7 +139,7 @@
           class="buy-now-cancel"
           onclick="closeBuyNowModal()"
         >
-          {% trans "Cancel" %}
+          Cancel
         </button>
 
       </div>
@@ -186,7 +185,7 @@ function showAuctionImage(thumb) {
 
   clearActiveThumbs();
   thumb.classList.add("active");
-
+  
 }
 
 function showAuctionVideo(button) {
@@ -196,7 +195,7 @@ function showAuctionVideo(button) {
   fadeSwap(`
     <video autoplay muted playsinline controls>
       <source src="${videoUrl}" type="video/mp4">
-      {% trans "Your browser does not support the video tag." %}
+      Your browser does not support the video tag.
     </video>
   `);
 
@@ -218,10 +217,10 @@ function formatTime(totalSeconds) {
 
   const parts = [];
 
-  if (days > 0) parts.push(days + " {% trans 'D' %}" + (days === 1 ? "" : "s"));
-  if (hours > 0) parts.push(hours + " {% trans 'H' %}" + (hours === 1 ? "" : "s"));
-  if (minutes > 0) parts.push(minutes + " {% trans 'M' %}" + (minutes === 1 ? "" : "s"));
-  if (seconds > 0 || parts.length === 0) parts.push(seconds + " {% trans 'S' %}" + (seconds === 1 ? "" : "s"));
+  if (days > 0) parts.push(days + " D" + (days === 1 ? "" : "s"));
+  if (hours > 0) parts.push(hours + " H" + (hours === 1 ? "" : "s"));
+  if (minutes > 0) parts.push(minutes + " M" + (minutes === 1 ? "" : "s"));
+  if (seconds > 0 || parts.length === 0) parts.push(seconds + " S" + (seconds === 1 ? "" : "s"));
 
   return parts.join(" | ");
 }
@@ -237,7 +236,7 @@ function updateDetailCountdown() {
     const bidButton = document.getElementById("bidButton");
     if (bidButton) {
       bidButton.disabled = true;
-      bidButton.textContent = "{% trans 'Auction Ended' %}";
+      bidButton.textContent = "Auction Ended";
     }
     return;
   }
@@ -259,3 +258,4 @@ function closeBuyNowModal() {
 }
 </script>
 {% endblock %}
+

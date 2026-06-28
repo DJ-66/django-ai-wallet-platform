@@ -1,27 +1,28 @@
+{% extends "base.html" %}
 {% load i18n %}
 
 {% block content %}
 
 <div class="notifications-toolbar">
     <a href="{{ next_url }}" class="back-link">
-        ← {% trans "Back" %}
+        ← Back
     </a>
+
 </div>
 
-<h1>🔔 {% trans "Notifications" %}</h1>
+<h1>🔔 Notifications</h1>
 
 {% if notifications %}
     <div class="notifications-panel">
         {% for notification in notifications %}
             <div class="notification-item">
-
                 {% if notification.notification_type == "message" %}
-                    <a href="{% url 'inbox' %}" class="notification-message-link">
-                        {{ notification.message }}
-                    </a>
-                {% else %}
-                    <span>{{ notification.message }}</span>
-                {% endif %}
+                <a href="{% url 'inbox' %}" class="notification-message-link">
+                {{ notification.message }}
+                </a>
+               {% else %}
+               <span>{{ notification.message }}</span>
+               {% endif %}
 
                 <form method="post"
                       action="{% url 'delete_notification' notification.id %}"
@@ -30,12 +31,11 @@
                     <input type="hidden" name="next" value="{{ next_url }}">
                     <button type="submit" class="notification-x-btn">❌</button>
                 </form>
-
             </div>
         {% endfor %}
     </div>
 {% else %}
-    <p>{% trans "No notifications yet." %}</p>
+    <p>No notifications yet.</p>
 {% endif %}
 
 {% endblock %}

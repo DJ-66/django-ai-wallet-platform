@@ -175,7 +175,7 @@
         data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
         data-amount="1"
     >
-        💰 Tip 1
+        💰 {% trans "Tip" %} 1
     </button>
 
     <button
@@ -184,7 +184,7 @@
         data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
         data-amount="5"
     >
-         💰 Tip 5
+         💰 {% trans "Tip" %} 5
     </button>
 
     <button
@@ -193,7 +193,7 @@
         data-url="{% url 'quick_tip_user' post.user.bidwallet.wallet_code %}"
         data-amount="10"
     >
-        💰 Tip 10
+        💰 {% trans "Tip" %} 10
     </button>
 
 </div>
@@ -206,7 +206,7 @@
     class="feed-like-btn share-post-btn"
     data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
 >
-    🔗 Share
+    🔗 {% trans "Share" %}
 </button>
 <div class="post-comments-section">
 
@@ -338,14 +338,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (data.success) {
 
-                    button.innerHTML = "✅ Tipped";
+                    button.innerHTML = "✅ {% trans 'Tipped' %}";
 
                     setTimeout(() => {
-                        button.innerHTML = "💰 Thanks";
+                        button.innerHTML = "💰 {% trans 'Thanks' %}";
                     }, 1500);
 
                 } else {
-                    alert(data.error || "Tip failed.");
+                    alert(data.error || "{% trans 'Tip failed.' %}");
                 }
 
             })
@@ -444,7 +444,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             navigator.clipboard.writeText(url).then(() => {
                 const originalText = button.innerHTML;
-                button.innerHTML = "✅ Copied";
+                button.innerHTML = "✅ {% trans 'Copied' %}";
 
                 setTimeout(() => {
                     button.innerHTML = originalText;

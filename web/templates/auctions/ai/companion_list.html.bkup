@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
-{% load i18n %}
+
 
 {% block content %}
 <link rel="stylesheet"
       href="{% static 'css/ai-chat.css' %}?v=21">
 
-<h1>🤖 {% trans "AI Friends" %}</h1>
+
+
+<h1>🤖 AI Friends</h1>
 
 <div class="ai-companion-grid">
 
 {% for companion in companions %}
+
 
 <div class="ai-companion-card-list">
 
@@ -36,37 +39,34 @@
     <h2>{{ companion.name }}</h2>
 
     {% if companion.is_deluxe %}
-      <p class="ai-companion-badge">✨ {% trans "Deluxe Creator" %}</p>
+      <p class="ai-companion-badge">✨ Deluxe Creator</p>
     {% else %}
-      <div class="auth-primary-btn">🤖 {% trans "AI Influencer" %}</div>
+      <div class="auth-primary-btn">🤖 AI Influencer</div>
     {% endif %}
 
     <a
-      href="/{{ companion.creator.username }}/"
-      class="auth-primary-btn"
-    >
-      ❤️ {% trans "Visit Profile" %}
-    </a>
+  href="/{{ companion.creator.username }}/"
+  class="auth-primary-btn"
+> ❤️ Visit Profile </a>
 
    <p>
-  💰 {{ companion.cost_per_message }}
-  {% blocktrans trimmed count counter=companion.cost_per_message %}
-    credit per message
-  {% plural %}
-    credits per message
-  {% endblocktrans %}
-</p>
+      💰 {{ companion.cost_per_message }}
+      credit{{ companion.cost_per_message|pluralize }}
+      per message
+    </p>
 
   </div>
 
 </div>
 
+
 {% empty %}
 
-<p>{% trans "No AI creators available yet." %}</p>
+<p>No AI creators available yet.</p>
 
 {% endfor %}
 
 </div>
 
 {% endblock %}
+

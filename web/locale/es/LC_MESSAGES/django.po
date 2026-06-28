@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-28 04:22+0000\n"
+"POT-Creation-Date: 2026-06-28 18:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -44,10 +44,8 @@ msgid "Banner"
 msgstr "Bandera"
 
 #: auctions/forms.py:73
-#, fuzzy
-#| msgid "View Payment QR"
 msgid "Payment QR Code"
-msgstr "Ver código QR de pago"
+msgstr "Código QR de pago"
 
 #: auctions/forms.py:74
 msgid "Payment instructions"
@@ -62,8 +60,6 @@ msgid "Website"
 msgstr "Sitio web"
 
 #: auctions/forms.py:94
-#, fuzzy
-#| msgid "Write a comment..."
 msgid "Write a message..."
 msgstr "Escribe un comentario..."
 
@@ -114,9 +110,8 @@ msgid "Open"
 msgstr "abierta"
 
 #: auctions/templates/auctions/inbox.html:60
-msgid "No public posts yet."
-msgstr "Aún no hay publicaciones públicas."
-
+msgid "No conversations yet."
+msgstr "conversación con"
 
 #: templates/404.html:7
 msgid "Page not found"
@@ -127,6 +122,8 @@ msgid ""
 "The page you are looking for does not exist, may have moved, or the link may "
 "be incorrect."
 msgstr ""
+"La página que estás buscando no existe, puede que se haya movido o que el "
+"enlace ser incorrecto."
 
 #: templates/404.html:14
 msgid "Go to Feed"
@@ -169,6 +166,171 @@ msgstr "Su contraseña se ha cambiado correctamente."
 msgid "Sign In"
 msgstr "Iniciar sesión"
 
+#: templates/auction_detail.html:11
+msgid "Status"
+msgstr "Estado"
+
+#: templates/auction_detail.html:12 templates/auction_list.html:41
+msgid "Current Bid"
+msgstr "Oferta actual"
+
+#: templates/auction_detail.html:12 templates/auction_detail.html:37
+#: templates/auction_detail.html:126 templates/auction_list.html:42
+#: templates/auctions/feed_home.html:124
+#: templates/auctions/public_profile.html:328
+msgid "credits"
+msgstr "Créditos:"
+
+#: templates/auction_detail.html:13 templates/auction_list.html:46
+msgid "Ends In"
+msgstr "termina en"
+
+#: templates/auction_detail.html:29
+msgid "Bid Now!"
+msgstr "¡Oferta ahora!"
+
+#: templates/auction_detail.html:37
+msgid "Buy Now!"
+msgstr "¡Comprar ahora!"
+
+#: templates/auction_detail.html:44 templates/auction_list.html:83
+msgid "High Bidder"
+msgstr "Mejor postor"
+
+#: templates/auction_detail.html:56 templates/auction_list.html:73
+msgid "Watching"
+msgstr "Mirando"
+
+#: templates/auction_detail.html:58 templates/auction_list.html:75
+msgid "Watch"
+msgstr "Mirar"
+
+#: templates/auction_detail.html:77
+msgid "No image"
+msgstr "Sin imagen"
+
+#: templates/auction_detail.html:86
+msgid "Image 1"
+msgstr "Imagen 1"
+
+#: templates/auction_detail.html:93
+msgid "Image 2"
+msgstr "Imagen 2"
+
+#: templates/auction_detail.html:102
+msgid "Video"
+msgstr "Video"
+
+#: templates/auction_detail.html:121
+msgid "Buy Now"
+msgstr "Comprar ahora"
+
+#: templates/auction_detail.html:124
+msgid "Buy"
+msgstr "Comprar"
+
+#: templates/auction_detail.html:125
+msgid "now for"
+msgstr "ahora por"
+
+#: templates/auction_detail.html:135
+msgid "Approve"
+msgstr "Aprobar"
+
+#: templates/auction_detail.html:143
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: templates/auction_detail.html:199
+msgid "Your browser does not support the video tag."
+msgstr "Su navegador no soporta la etiqueta de video."
+
+#: templates/auction_detail.html:221 templates/auction_list.html:120
+msgid "D"
+msgstr "D"
+
+#: templates/auction_detail.html:222 templates/auction_list.html:121
+msgid "H"
+msgstr "H"
+
+#: templates/auction_detail.html:223 templates/auction_list.html:122
+msgid "M"
+msgstr "M"
+
+#: templates/auction_detail.html:224 templates/auction_list.html:123
+msgid "S"
+msgstr "S"
+
+#: templates/auction_detail.html:240
+msgid "Auction Ended"
+msgstr "Subasta finalizada"
+
+#: templates/auction_list.html:7
+msgid "Live Auctions"
+msgstr "Subastas en vivo"
+
+#: templates/auction_list.html:8
+msgid "Bid with credits. Auctions ending soon extend 15s with new bid"
+msgstr ""
+"Oferta con créditos. Las subastas que finalizarán pronto amplían los 15 con "
+"una nueva oferta"
+
+#: templates/auction_list.html:31 templates/auction_list.html:141
+msgid "Ending NOW"
+msgstr "Terminando AHORA"
+
+#: templates/auction_list.html:33 templates/auction_list.html:144
+msgid "Ending Soon"
+msgstr "Terminando pronto"
+
+#: templates/auction_list.html:35 templates/auction_list.html:147
+msgid "Live"
+msgstr "Vivir"
+
+#: templates/auction_list.html:58
+msgid "View Auction Details"
+msgstr "Ver detalles de la subasta"
+
+#: templates/auction_list.html:100
+msgid "No live auctions right now"
+msgstr "No hay subastas en vivo en este momento"
+
+#: templates/auction_list.html:101
+msgid "Check back soon for new auctions."
+msgstr "Vuelva pronto para conocer nuevas subastas."
+
+#: templates/auction_list.html:153 templates/auction_list.html:160
+msgid "Ended"
+msgstr "Terminado"
+
+#: templates/auctions/ai/companion_list.html:9
+msgid "AI Friends"
+msgstr "Amigos de IA"
+
+#: templates/auctions/ai/companion_list.html:39
+msgid "Deluxe Creator"
+msgstr "Creador Deluxe"
+
+#: templates/auctions/ai/companion_list.html:41
+#: templates/auctions/public_profile.html:53
+msgid "AI Influencer"
+msgstr "Influencer de IA"
+
+#: templates/auctions/ai/companion_list.html:48
+msgid "Visit Profile"
+msgstr "Visitar perfil"
+
+#: templates/auctions/ai/companion_list.html:53
+msgid "credit per message"
+msgid_plural "credits per message"
+msgstr[0] "crédito por mensaje"
+msgstr[1] "créditos por mensaje"
+msgstr[2] "créditos por mensaje"
+
+#: templates/auctions/ai/companion_list.html:66
+msgid "No AI creators available yet."
+msgstr ""
+
 #: templates/auctions/edit_profile.html:11
 #: templates/auctions/public_profile.html:268
 msgid "Edit Profile"
@@ -196,7 +358,7 @@ msgstr "Feed de la comunidad"
 
 #: templates/auctions/feed_home.html:24
 msgid "Choose Image"
-msgstr "Elige Imagen"
+msgstr "Seleccionar imagen"
 
 #: templates/auctions/feed_home.html:37
 msgid "Public Post"
@@ -236,15 +398,23 @@ msgstr "Privado"
 msgid "Unlock media for"
 msgstr "Desbloquear contenido multimedia para"
 
-#: templates/auctions/feed_home.html:124
-#: templates/auctions/public_profile.html:328
-msgid "credits"
-msgstr "Créditos:"
-
 #: templates/auctions/feed_home.html:131
 #: templates/auctions/public_profile.html:335
 msgid "Unlock Post"
 msgstr "Desbloquear publicación"
+
+#: templates/auctions/feed_home.html:178 templates/auctions/feed_home.html:187
+#: templates/auctions/feed_home.html:196
+#: templates/auctions/public_profile.html:398
+#: templates/auctions/public_profile.html:406
+#: templates/auctions/public_profile.html:414
+msgid "Tip"
+msgstr "Consejo"
+
+#: templates/auctions/feed_home.html:209
+#: templates/auctions/public_profile.html:427
+msgid "Share"
+msgstr "Compartir"
 
 #: templates/auctions/feed_home.html:245
 #: templates/auctions/public_profile.html:497
@@ -265,9 +435,40 @@ msgstr "Comentario"
 msgid "No posts yet. Be the first to post."
 msgstr "Aún no hay publicaciones. Sé el primero en publicar."
 
-#: templates/auctions/public_profile.html:53
-msgid "AI Influencer"
-msgstr "Influencer de IA"
+#: templates/auctions/feed_home.html:341
+#: templates/auctions/public_profile.html:577
+msgid "Tipped"
+msgstr "Con propina"
+
+#: templates/auctions/feed_home.html:344
+#: templates/auctions/public_profile.html:580
+msgid "Thanks"
+msgstr "Gracias"
+
+#: templates/auctions/feed_home.html:348
+#: templates/auctions/public_profile.html:584
+msgid "Tip failed."
+msgstr "La punta falló."
+
+#: templates/auctions/feed_home.html:447
+#: templates/auctions/public_profile.html:676
+#: templates/auctions/public_profile.html:698
+msgid "Copied"
+msgstr "Copiado"
+
+#: templates/auctions/notifications.html:7
+#, fuzzy
+#| msgid "Back Home"
+msgid "Back"
+msgstr "Volver al inicio"
+
+#: templates/auctions/notifications.html:11
+msgid "Notifications"
+msgstr "Notificacións"
+
+#: templates/auctions/notifications.html:38
+msgid "No notifications yet."
+msgstr "conversación con"
 
 #: templates/auctions/public_profile.html:79
 msgid "Tips"
@@ -289,6 +490,10 @@ msgstr "Dejar de seguir"
 msgid "Become a Fan"
 msgstr "Hazte fan"
 
+#: templates/auctions/public_profile.html:137
+msgid "Message"
+msgstr "Mensaje a"
+
 #: templates/auctions/public_profile.html:144 templates/wallet/pay.html:11
 #: templates/wallet/pay.html:47
 msgid "Send Credits"
@@ -303,13 +508,6 @@ msgid "Buy Credits From Creator"
 msgstr "Comprar créditos al creador"
 
 #: templates/auctions/public_profile.html:208
-#, fuzzy
-#| msgid ""
-#| "\n"
-#| "        Payments are handled directly between users. Fanz.to does not "
-#| "process,\n"
-#| "        guarantee, or reverse creator payment transactions.\n"
-#| "        "
 msgid ""
 "\n"
 "                    Payments are handled directly between users. Fanz.to "
@@ -317,21 +515,16 @@ msgid ""
 "                    guarantee, or reverse creator payment transactions.\n"
 "                    "
 msgstr ""
-"\n"
-"Los pagos se gestionan directamente entre usuarios. Fanz.to no procesa, \n"
-"garantiza ni revierte transacciones de pago entre usuarios.    "
 
 #: templates/auctions/public_profile.html:216
 msgid "View Payment QR"
-msgstr "Ver código QR de pago"
+msgstr "Código QR de pago"
 
 #: templates/auctions/public_profile.html:221
 msgid "Seller"
 msgstr "Vendedor"
 
 #: templates/auctions/public_profile.html:242
-#, fuzzy
-#| msgid "Seller"
 msgid "DM Seller"
 msgstr "Vendedor DM"
 
@@ -355,15 +548,9 @@ msgstr "Alfiler"
 msgid "Delete"
 msgstr "Borrar"
 
-#: templates/auctions/public_profile.html:398
-#: templates/auctions/public_profile.html:406
-#: templates/auctions/public_profile.html:414
-msgid "Tip"
-msgstr "Consejo"
-
-#: templates/auctions/public_profile.html:427
-msgid "Share"
-msgstr "Compartir"
+#: templates/auctions/public_profile.html:515
+msgid "No public posts yet."
+msgstr "Aún no hay publicaciones públicas."
 
 #: templates/auctions/wallet.html:7
 msgid "My Wallet"

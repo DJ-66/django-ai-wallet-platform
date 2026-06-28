@@ -3012,41 +3012,7 @@ img {
     margin-top: 8px;
 }
 
-.feed-action-btn-2 {
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: fit-content;
-    padding: 4px 8px !important;
-    font-size: 0.75rem !important;
-    line-height: 1.1;
-    border-radius: 6px;
-}
 
-.auth-primary-btn-2 {
-    display: flex;
-    align-items: left;
-    justify-content: center;
-    gap: 10px;
-
-    width: 100%;
-    max-width: 280px;
-
-    margin: 0 auto;
-
-    padding: 12px 18px;
-
-    background: linear-gradient(135deg, #2563eb, #111827);
-    color: #ffffff;
-
-    border-radius: 12px;
-
-    font-weight: 600;
-    text-decoration: none;
-
-    transition: 0.2s ease;
-
-    box-sizing: border-box;
-}
 
 html,
 body {

@@ -1,11 +1,10 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block content %}
 
 <div class="page-header">
-  <h1>{% trans "Live Auctions" %}</h1>
-  <p>{% trans "Bid with credits. Auctions ending soon extend 15s with new bid" %}</p>
+  <h1>Live Auctions</h1>
+  <p>Bid with credits. Auctions ending soon extend 15s with new bid</p>
 </div>
 
 {% if auctions %}
@@ -28,22 +27,22 @@
           <h2>{{ auction.title }}</h2>
 
           {% if auction.seconds_remaining < 60 %}
-            <span class="badge hot">🔥🔥 {% trans "Ending NOW" %}</span>
+            <span class="badge hot">🔥🔥 Ending NOW</span>
           {% elif auction.seconds_remaining < 300 %}
-            <span class="badge hot">🔥 {% trans "Ending Soon" %}</span>
+            <span class="badge hot">🔥 Ending Soon</span>
           {% else %}
-            <span class="badge live">{% trans "Live" %}</span>
+            <span class="badge live">Live</span>
           {% endif %}
         </div>
 
         <div class="auction-meta">
           <div>
-            <span class="label">{% trans "Current Bid" %}:</span>
-            <strong>{{ auction.current_price|floatformat:0 }} {% trans "credits" %}</strong>
+            <span class="label">Current Bid:</span>
+            <strong>{{ auction.current_price|floatformat:0 }} credits</strong>
           </div>
 
           <div>
-            <span class="label">{% trans "Ends In" %}:</span>
+            <span class="label">Ends In:</span>
             <strong class="countdown"
                     data-seconds="{{ auction.seconds_remaining }}">
               {{ auction.seconds_remaining }}s
@@ -55,36 +54,35 @@
 
           <a href="{% url 'auction_detail' auction.id %}"
              class="auction-view-link">
-            {% trans "View Auction Details" %} →
+            View Auction Details →
           </a>
            <br>
            <br>
-
           <div class="auction-status-row">
 
-            {% if user.is_authenticated %}
-              <form method="post"
-                    action="{% url 'toggle_favorite_auction' auction.id %}"
-                    class="favorite-form">
-                {% csrf_token %}
+  {% if user.is_authenticated %}
+    <form method="post"
+          action="{% url 'toggle_favorite_auction' auction.id %}"
+          class="favorite-form">
+      {% csrf_token %}
 
-                <button type="submit" class="favorite-button">
-                  {% if auction.is_favorited %}
-                    ❤️ {% trans "Watching" %}
-                  {% else %}
-                    🤍 {% trans "Watch" %}
-                  {% endif %}
-                </button>
-              </form>
-            {% endif %}
+      <button type="submit" class="favorite-button">
+        {% if auction.is_favorited %}
+          ❤️ Watching
+        {% else %}
+          🤍 Watch
+        {% endif %}
+      </button>
+    </form>
+  {% endif %}
 
-            {% if auction.is_high_bidder %}
-              <div class="high-bidder-badge">
-                🏆 {% trans "High Bidder" %}
-              </div>
-            {% endif %}
+  {% if auction.is_high_bidder %}
+    <div class="high-bidder-badge">
+      🏆 High Bidder
+    </div>
+  {% endif %}
 
-          </div>
+</div>
 
         </div>
 
@@ -95,10 +93,10 @@
 <br>
 <br>
 {% else %}
-
+ 
   <div class="empty-state">
-    <h2>{% trans "No live auctions right now" %}</h2>
-    <p>{% trans "Check back soon for new auctions." %}</p>
+    <h2>No live auctions right now</h2>
+    <p>Check back soon for new auctions.</p>
   </div>
 {% endif %}
 
@@ -117,10 +115,11 @@
 
     const parts = [];
 
-    if (days > 0) parts.push(days + " {% trans 'D' %}" + (days === 1 ? "" : "s"));
-    if (hours > 0) parts.push(hours + " {% trans 'H' %}" + (hours === 1 ? "" : "s"));
-    if (minutes > 0) parts.push(minutes + " {% trans 'M' %}" + (minutes === 1 ? "" : "s"));
-    if (seconds > 0 || parts.length === 0) parts.push(seconds + " {% trans 'S' %}" + (seconds === 1 ? "" : "s"));
+    if (days > 0) parts.push(days + " D" + (days === 1 ? "" : "s"));
+    if (hours > 0) parts.push(hours + " H" + (hours === 1 ? "" : "s"));
+    if (minutes > 0) parts.push(minutes + " M" + (minutes === 1 ? "" : "s"));
+    if (seconds > 0 || parts.length === 0) parts.push(seconds + " S" + (seconds === 1 ? "" : "s"));
+
 
     return parts.join(" | ");
   }
@@ -138,26 +137,26 @@
 
         if (badge) {
           if (seconds < 60) {
-            badge.textContent = "🔥🔥 {% trans 'Ending NOW' %}";
+            badge.textContent = "🔥🔥 Ending NOW";
             badge.className = "badge hot";
           } else if (seconds < 300) {
-            badge.textContent = "🔥 {% trans 'Ending Soon' %}";
+            badge.textContent = "🔥 Ending Soon";
             badge.className = "badge hot";
           } else {
-            badge.textContent = "{% trans 'Live' %}";
+            badge.textContent = "Live";
             badge.className = "badge live";
           }
         }
 
       } else {
-        el.textContent = "{% trans 'Ended' %}";
+        el.textContent = "Ended";
 
         if (card) {
           card.classList.add("ended");
         }
 
         if (badge) {
-          badge.textContent = "{% trans 'Ended' %}";
+          badge.textContent = "Ended";
           badge.className = "badge ended";
         }
       }
@@ -181,7 +180,6 @@
 
   setInterval(updateCountdowns, 1000);
 </script>
-
 <script>
 window.addEventListener("beforeunload", function () {
     sessionStorage.setItem(

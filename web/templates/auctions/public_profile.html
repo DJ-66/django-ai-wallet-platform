@@ -134,7 +134,7 @@
          {% if request.user.is_authenticated %}
          <a href="{% url 'start_conversation' profile_user.username %}"
          class="auth-primary-btn">
-        💌 Message {{ profile_user.username }}
+        💌 {% trans "Message" %} {{ profile_user.username }}
         </a>
         {% endif %}
         <br>
@@ -245,7 +245,7 @@
 {% elif not request.user.is_authenticated %}
     <a href="{% url 'account_login' %}"
        class="buy-credits-btn">
-        📩 {% trans "auth-primary-btn" %}
+        📩 Login to DM Seller
     </a>
 {% endif %}
 
@@ -574,14 +574,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (data.success) {
 
-                    button.innerHTML = "✅ Tipped";
+                    button.innerHTML = "✅ {% trans 'Tipped' %}";
 
                     setTimeout(() => {
-                        button.innerHTML = "💰 Thanks ";
+                        button.innerHTML = "💰 {% trans 'Thanks' %} ";
                     }, 1500);
 
                 } else {
-                    alert(data.error || "Tip failed.");
+                    alert(data.error || "{% trans 'Tip failed.' %}");
                 }
 
             })
@@ -673,7 +673,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             navigator.clipboard.writeText(url).then(() => {
                 const originalText = button.innerHTML;
-                button.innerHTML = "✅ Copied";
+                button.innerHTML = "✅ {% trans 'Copied' %}";
 
                 setTimeout(() => {
                     button.innerHTML = originalText;
@@ -695,7 +695,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const originalText = shareBtn.innerHTML;
 
         navigator.clipboard.writeText(url).then(() => {
-            shareBtn.innerHTML = "✅ Copied";
+            shareBtn.innerHTML = "✅ {% trans 'Copied' %}";
 
             setTimeout(() => {
                 shareBtn.innerHTML = originalText;
