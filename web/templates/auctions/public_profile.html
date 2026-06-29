@@ -316,11 +316,26 @@
 
                     {% else %}
 
-                        <div class="locked-post-card">
+    <div class="locked-post-card">
 
-                            <p class="locked-post-title">
-                                🔒 {% trans "Premium content locked" %}
-                            </p>
+        {% if post.image %}
+        <div class="premium-preview">
+
+            <img
+                src="{{ post.image.url }}"
+                class="feed-image premium-blur"
+            >
+
+            <div class="premium-overlay">
+             🔒 {% trans "Premium Content" %}
+            </div>
+
+        </div>
+        {% endif %}
+
+        <p class="locked-post-title">
+            🔒 {% trans "Premium content locked" %}
+        </p>
 
                             <p class="locked-post-price">
                                 {% trans "Unlock media for" %}

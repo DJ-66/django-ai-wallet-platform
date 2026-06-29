@@ -3056,4 +3056,34 @@ body {
     margin: 0;
 }
 
+.premium-preview {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.premium-blur {
+    filter: blur(20px);
+    transform: scale(1.08);
+    pointer-events: none;
+}
+
+.premium-overlay {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0,0,0,.35);
+
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+
+    text-shadow: 0 0 10px rgba(0,0,0,.8);
+}
+
 /* end_css */
