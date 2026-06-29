@@ -78,10 +78,56 @@ def add_fanz_brand_banner(img, username):
 
     return img.convert("RGB")
 
+def add_fanz_auction_footer(img):
+    """
+    Add simple Fanz.to platform footer below auction images.
+    Original image content stays untouched.
+    """
+    img = img.convert("RGBA")
+
+    width, height = img.size
+    footer_height = max(140, int(width * 0.18))
+
+    new_img = Image.new(
+        "RGBA",
+        (width, height + footer_height),
+        (0, 0, 0, 255),
+    )
+
+    new_img.paste(img, (0, 0))
+
+    draw = ImageDraw.Draw(new_img)
+
+    brand_text = "Fanz.to"
+
+    font_size = int(footer_height * 0.72)
+
+    try:
+        brand_font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
+    except OSError:
+        brand_font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), brand_text, font=brand_font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    text_x = (width - text_width) // 2
+    text_y = height + (footer_height - text_height) // 2 - int(footer_height * 0.06)
+
+    draw.text(
+        (text_x, text_y),
+        brand_text,
+        font=brand_font,
+        fill=(255, 255, 255, 255),
+    )
+
+    return new_img.convert("RGB")
+
 def process_fanz_image_upload(
     image,
     username=None,
     watermark=False,
+    auction_footer=False,
     max_width=1600,
     max_height=2400,
     quality=82,
@@ -118,7 +164,9 @@ def process_fanz_image_upload(
     img = img.convert("RGB")
     img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
 
-    if watermark:
+    if auction_footer:
+        img = add_fanz_auction_footer(img)
+    elif watermark:
         img = add_fanz_brand_banner(img, username)
 
     output = BytesIO()

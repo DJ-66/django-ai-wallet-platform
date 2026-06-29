@@ -4,7 +4,8 @@ from .models import NodeProfile, AICreatorMemory, UserProfile
 from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
 from django.contrib import admin
 from .models import NotificationSound
-
+from django import forms
+from .forms import process_fanz_image_upload
 
 @admin.register(NotificationSound)
 class NotificationSoundAdmin(admin.ModelAdmin):
@@ -17,8 +18,36 @@ class DigitalItemAdmin(admin.ModelAdmin):
     list_display = ("title",)
 
 
+class AuctionAdminForm(forms.ModelForm):
+    class Meta:
+        model = Auction
+        fields = "__all__"
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+
+        return process_fanz_image_upload(
+            image,
+            auction_footer=True,
+            max_width=1600,
+            max_height=2400,
+            quality=82,
+        )
+
+    def clean_image_2(self):
+        image = self.cleaned_data.get("image_2")
+
+        return process_fanz_image_upload(
+            image,
+            auction_footer=True,
+            max_width=1600,
+            max_height=2400,
+            quality=82,
+        )
+
 @admin.register(Auction)
 class AuctionAdmin(admin.ModelAdmin):
+    form = AuctionAdminForm
     list_display = ("title", "status", "current_price", "starts_at", "ends_at", "winner")
     list_filter = ("status",)
     search_fields = ("title",)
