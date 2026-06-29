@@ -239,6 +239,59 @@ class UserProfileForm(forms.ModelForm):
             "telegram": "Telegram",
 }
 
+    def clean_avatar(self):
+        image = self.cleaned_data.get("avatar")
+
+        return process_fanz_image_upload(
+            image,
+            watermark=False,
+            max_width=600,
+            max_height=600,
+            quality=86,
+        )
+
+    def clean_banner(self):
+        image = self.cleaned_data.get("banner")
+
+        return process_fanz_image_upload(
+            image,
+            watermark=False,
+            max_width=1800,
+            max_height=700,
+            quality=86,
+        )
+
+    def clean_bank_qr_image(self):
+        image = self.cleaned_data.get("bank_qr_image")
+
+        if not image:
+            return image
+
+        max_size = 10 * 1024 * 1024
+
+        if image.size > max_size:
+            raise forms.ValidationError(
+                _("QR image file is too large. Maximum size is 10 MB.")
+            )
+
+        try:
+            img = Image.open(image)
+            original_format = img.format
+            img.verify()
+            image.seek(0)
+
+        except (UnidentifiedImageError, OSError):
+            raise forms.ValidationError(
+                _("Upload a valid QR image file.")
+            )
+
+        if original_format not in ["JPEG", "PNG", "WEBP"]:
+            raise forms.ValidationError(
+                _("Supported QR image formats are JPG, PNG, and WebP.")
+            )
+
+        return image
+
 class DirectMessageForm(forms.ModelForm):
     class Meta:
         model = DirectMessage
