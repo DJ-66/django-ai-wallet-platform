@@ -1,6 +1,6 @@
 from django import forms
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from PIL import Image, UnidentifiedImageError, ImageOps
+from PIL import Image, UnidentifiedImageError, ImageOps, ImageDraw, ImageFont
 from io import BytesIO
 import os
 
@@ -8,7 +8,82 @@ from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from .models import FeedPost, UserProfile, DirectMessage
 
+def add_fanz_brand_banner(img, username):
+    if not username:
+        return img
+
+    img = img.convert("RGBA")
+
+    draw = ImageDraw.Draw(img)
+    text = f"❤  Fanz.to/{username}"
+
+    font_size = 75
+    
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+    ]
+
+    font = None
+
+    for font_path in font_paths:
+        try:
+            font = ImageFont.truetype(font_path, font_size)
+            
+            break
+        except OSError:
+            continue
+
+    if font is None:
+        font = ImageFont.load_default()
+
+    padding_x = font_size // 2
+    padding_y = font_size // 3
+    margin = font_size // 3
+    radius = font_size // 2
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+
+    banner_w = text_w + padding_x * 2
+    banner_h = text_h + padding_y * 2
+
+    img_w, img_h = img.size
+
+    x1 = img_w - banner_w - margin
+    y1 = img_h - banner_h - margin
+    x2 = img_w - margin
+    y2 = img_h - margin
+
+    draw.rounded_rectangle(
+        [x1, y1, x2, y2],
+        radius=radius,
+        fill=(0, 0, 0, 160),
+        outline=(255, 255, 255, 200),
+        width=2,
+    )
+
+    text_x = x1 + padding_x
+    text_y = y1 + padding_y - bbox[1]
+
+    draw.text(
+        (text_x, text_y),
+        text,
+        font=font,
+        fill=(255, 255, 255, 255),
+        stroke_width=1,
+        stroke_fill=(255, 255, 255, 100),
+    )
+
+    return img.convert("RGB")
+
 class FeedPostForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        self.current_username = kwargs.pop("current_username", None)
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = FeedPost
         fields = [
@@ -47,6 +122,7 @@ class FeedPostForm(forms.ModelForm):
 
         try:
             img = Image.open(image)
+            original_format = img.format
             img.verify()
 
             image.seek(0)
@@ -58,8 +134,9 @@ class FeedPostForm(forms.ModelForm):
             raise forms.ValidationError(
                 _("Upload a valid image file.")
             )
+            
 
-        if img.format not in ["JPEG", "PNG", "WEBP", "AVIF"]:
+        if original_format not in ["JPEG", "PNG", "WEBP", "AVIF"]:
             raise forms.ValidationError(
                 _("Supported image formats are JPG, PNG, WebP, and AVIF.")
             )
@@ -71,7 +148,13 @@ class FeedPostForm(forms.ModelForm):
 
         img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
 
+        username = self.current_username
+        
+        
+        img = add_fanz_brand_banner(img, username)
+
         output = BytesIO()
+
         img.save(
             output,
             format="WEBP",

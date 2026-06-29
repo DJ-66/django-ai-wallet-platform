@@ -318,9 +318,14 @@ def ensure_api_key(node):
 @login_required
 def feed_home(request):
     if request.method == "POST":
-        form = FeedPostForm(request.POST, request.FILES)
+        form = FeedPostForm(
+            request.POST,
+            request.FILES,
+            current_username=request.user.username,
+        )
 
         if form.is_valid():
+
             post = form.save(commit=False)
             post.user = request.user
             post.title = post.title.strip()
@@ -337,6 +342,9 @@ def feed_home(request):
             post.save()
 
             return redirect("feed_home")
+        else:
+            print("FEED POST FORM ERRORS:", form.errors, flush=True)
+
     else:
         form = FeedPostForm()
 
