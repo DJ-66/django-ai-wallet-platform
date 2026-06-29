@@ -78,6 +78,74 @@ def add_fanz_brand_banner(img, username):
 
     return img.convert("RGB")
 
+def process_fanz_image_upload(
+    image,
+    username=None,
+    watermark=False,
+    max_width=1600,
+    max_height=2400,
+    quality=82,
+):
+    if not image:
+        return image
+
+    max_size = 40 * 1024 * 1024
+
+    if image.size > max_size:
+        raise forms.ValidationError(
+            _("Image file is too large. Maximum size is 40 MB.")
+        )
+
+    try:
+        img = Image.open(image)
+        original_format = img.format
+        img.verify()
+
+        image.seek(0)
+        img = Image.open(image)
+        img = ImageOps.exif_transpose(img)
+
+    except (UnidentifiedImageError, OSError):
+        raise forms.ValidationError(
+            _("Upload a valid image file.")
+        )
+
+    if original_format not in ["JPEG", "PNG", "WEBP", "AVIF"]:
+        raise forms.ValidationError(
+            _("Supported image formats are JPG, PNG, WebP, and AVIF.")
+        )
+
+    img = img.convert("RGB")
+    img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+
+    if watermark:
+        img = add_fanz_brand_banner(img, username)
+
+    output = BytesIO()
+
+    img.save(
+        output,
+        format="WEBP",
+        quality=quality,
+        method=6,
+        optimize=True,
+    )
+
+    output.seek(0)
+
+    original_name = os.path.splitext(image.name)[0]
+    new_name = f"{original_name}.webp"
+
+    return InMemoryUploadedFile(
+        output,
+        "ImageField",
+        new_name,
+        "image/webp",
+        output.getbuffer().nbytes,
+        None,
+    )
+
+
 class FeedPostForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
@@ -110,70 +178,10 @@ class FeedPostForm(forms.ModelForm):
     def clean_image(self):
         image = self.cleaned_data.get("image")
 
-        if not image:
-            return image
-
-        max_size = 40 * 1024 * 1024
-
-        if image.size > max_size:
-            raise forms.ValidationError(
-                _("Image file is too large. Maximum size is 40 MB.")
-            )
-
-        try:
-            img = Image.open(image)
-            original_format = img.format
-            img.verify()
-
-            image.seek(0)
-            img = Image.open(image)
-            img = ImageOps.exif_transpose(img)
-
-
-        except (UnidentifiedImageError, OSError):
-            raise forms.ValidationError(
-                _("Upload a valid image file.")
-            )
-            
-
-        if original_format not in ["JPEG", "PNG", "WEBP", "AVIF"]:
-            raise forms.ValidationError(
-                _("Supported image formats are JPG, PNG, WebP, and AVIF.")
-            )
-
-        img = img.convert("RGB")
-
-        max_width = 1600
-        max_height = 2400
-
-        img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-
-        username = self.current_username
-        
-        
-        img = add_fanz_brand_banner(img, username)
-
-        output = BytesIO()
-
-        img.save(
-            output,
-            format="WEBP",
-            quality=82,
-            method=6,
-            optimize=True,
-        )
-        output.seek(0)
-
-        original_name = os.path.splitext(image.name)[0]
-        new_name = f"{original_name}.webp"
-
-        return InMemoryUploadedFile(
-            output,
-            "ImageField",
-            new_name,
-            "image/webp",
-            output.getbuffer().nbytes,
-            None,
+        return process_fanz_image_upload(
+            image,
+            username=self.current_username,
+            watermark=True,
         )
 
 class SignUpForm(forms.ModelForm):
