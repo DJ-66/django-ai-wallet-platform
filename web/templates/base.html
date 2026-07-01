@@ -1,15 +1,16 @@
 {% load static %}
 {% load i18n %}
-{% load auction_extras %}
 
+{% load auction_extras %}
 <!DOCTYPE html>
-<html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<meta name="google" content="notranslate">
 <head>
   <title>Fanz.to</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=204">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=205">
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
 </svg>">
@@ -191,7 +192,7 @@ function updateSoundButton() {
 function playNotificationSound(eventType, forcePlay = false) {
   if (!forcePlay && !notificationSoundsEnabled) return;
 
-  const cashEvents = ["tip", "unlock", "purchase", "cash"];
+  const cashEvents = ["tip", "unlock", "purchase", "cash", "auction"];
   const soundType = cashEvents.includes(eventType) ? "cash" : "social";
   const url = notificationSounds[soundType];
   if (!url) return;
@@ -203,7 +204,13 @@ function playNotificationSound(eventType, forcePlay = false) {
 
 function guessNotificationSoundTypeFromText(text) {
   text = (text || "").toLowerCase();
-  if (text.includes("tipped") || text.includes("credits") || text.includes("unlocked") || text.includes("premium")) {
+  if (
+    text.includes("tipped") || 
+    text.includes("credits") || 
+    text.includes("unlocked") || 
+    text.includes("premium") ||
+    text.includes("auction")
+){
     return "cash";
   }
   return "social";

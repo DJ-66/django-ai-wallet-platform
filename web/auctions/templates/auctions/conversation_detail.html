@@ -22,7 +22,7 @@
                 <div class="dm-sender">@{{ message.sender.username }}</div>
 
                 <div class="dm-body">
-                    {{ message.body|linebreaksbr }}
+                    {{ message.body|urlize|linebreaksbr }}
                 </div>
 
                 <div class="dm-time">
@@ -111,4 +111,12 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".dm-body a").forEach(function (link) {
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener");
+  });
+});
+</script>
 {% endblock %}

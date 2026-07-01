@@ -1,12 +1,12 @@
 from datetime import timedelta
-
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
-from auctions.models import Auction, FavoriteAuction, Bid, Notification
+from auctions.models import Auction, FavoriteAuction, Bid, Notification, Conversation, DirectMessage
+from django.contrib.auth import get_user_model
 
 
 def send_winner_email(auction):
@@ -62,12 +62,6 @@ class Command(BaseCommand):
                 auction.winner = last_bid.user
 
             auction.save(update_fields=["status", "winner"])
-            Notification.objects.create(
-                user=auction.winner,
-                actor=None,
-                notification_type=Notification.AUCTION,
-                message=f"🏆 You won the auction: {auction.title}!"
-            )
 
             if auction.winner and not auction.winner_email_sent:
                 print(
@@ -78,12 +72,31 @@ class Command(BaseCommand):
 
                 try:
                     send_winner_email(auction)
-                    
+
                     Notification.objects.create(
                         user=auction.winner,
                         actor=None,
                         notification_type=Notification.AUCTION,
-                        message=f"🏆 You won the auction: {auction.title}!"
+                        message=f"🏆 You're a Winner! ~ {auction.title}!"
+                    )
+
+                    User = get_user_model()
+                    platform_sender = User.objects.get(username="platform")
+
+                    delivery_link = ""
+                    if auction.digital_item and auction.digital_item.delivery_url:
+                        delivery_link = (
+                            f"\n\n📦 Download your item:\n"
+                            f"{auction.digital_item.delivery_url}"
+                        )
+
+                    conversation = Conversation.objects.create()
+                    conversation.participants.add(platform_sender, auction.winner)
+
+                    DirectMessage.objects.create(
+                        conversation=conversation,
+                        sender=platform_sender,
+                        body=f"🎉 You're a Winner! ~ {auction.title}!{delivery_link}",
                     )
 
                     auction.winner_email_sent = True
@@ -93,7 +106,7 @@ class Command(BaseCommand):
                         "WINNER EMAIL SENT:",
                         auction.id,
                         auction.title,
-    )
+                    )
 
                 except Exception as e:
                     print(
@@ -101,7 +114,7 @@ class Command(BaseCommand):
                         auction.id,
                         auction.title,
                         str(e),
-    )
+                    )
 
             closed_count += 1
 

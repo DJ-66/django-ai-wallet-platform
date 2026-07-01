@@ -2424,6 +2424,11 @@ img {
   padding: 7px;
 }
 
+.dm-body a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
 .dm-time {
   font-size: 0.78rem;
   padding: 7px;

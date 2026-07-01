@@ -16,8 +16,11 @@
         {% for notification in notifications %}
             <div class="notification-item">
 
-                {% if notification.notification_type == "message" %}
-                    <a href="{% url 'inbox' %}" class="notification-message-link">
+                {% if notification.notification_type == "message" or notification.notification_type == "auction" %}
+                    <a href="{% url 'inbox' %}"
+                        class="notification-message-link"
+                        target="_blank"
+                        rel="noopener">
                         {{ notification.message }}
                     </a>
                 {% else %}

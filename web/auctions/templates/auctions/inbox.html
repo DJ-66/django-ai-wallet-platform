@@ -23,7 +23,11 @@
 
         {% if last_message %}
             <div class="inbox-preview copyable-message-text">
-                {{ last_message.body|truncatechars:90 }}
+                {% if "Download your item:" in last_message.body %}
+                    🎉 {% trans "You're a Winner! — download link inside." %}
+                {% else %}
+                    {{ last_message.body|truncatechars:90 }}
+                {% endif %}
             </div>
 
             <div class="inbox-meta">
