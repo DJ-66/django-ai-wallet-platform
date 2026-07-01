@@ -26,24 +26,39 @@ class AuctionAdminForm(forms.ModelForm):
     def clean_image(self):
         image = self.cleaned_data.get("image")
 
-        return process_fanz_image_upload(
-            image,
-            auction_footer=True,
-            max_width=1600,
-            max_height=2400,
-            quality=82,
-        )
+        # Only process if a NEW file was uploaded in this admin save
+        if "image" not in self.files:
+            return self.instance.image if self.instance and self.instance.pk else image
+
+        if image:
+            return process_fanz_image_upload(
+                image,
+                auction_footer=True,
+                max_width=1600,
+                max_height=2400,
+                quality=82,
+            )
+
+        return image
+
 
     def clean_image_2(self):
         image = self.cleaned_data.get("image_2")
 
-        return process_fanz_image_upload(
-            image,
-            auction_footer=True,
-            max_width=1600,
-            max_height=2400,
-            quality=82,
-        )
+        # Only process if a NEW file was uploaded in this admin save
+        if "image_2" not in self.files:
+            return self.instance.image_2 if self.instance and self.instance.pk else image
+
+        if image:
+            return process_fanz_image_upload(
+                image,
+                auction_footer=True,
+                max_width=1600,
+                max_height=2400,
+                quality=82,
+            )
+
+        return image
 
 @admin.register(Auction)
 class AuctionAdmin(admin.ModelAdmin):
