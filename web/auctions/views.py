@@ -79,8 +79,13 @@ def latest_notification_check(request):
 
     text = (notification.message or "").lower()
 
-    if (
-        "tipped" in text
+    if "outbid" in text:
+        sound_type = "social"
+    elif (
+        "winner" in text
+        or "purchase complete" in text
+        or "download link inside" in text
+        or "tipped" in text
         or "credits" in text
         or "unlocked" in text
         or "premium" in text

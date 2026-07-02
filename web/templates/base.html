@@ -204,15 +204,24 @@ function playNotificationSound(eventType, forcePlay = false) {
 
 function guessNotificationSoundTypeFromText(text) {
   text = (text || "").toLowerCase();
+
+  if (text.includes("outbid")) {
+    return "social";
+  }
+
   if (
-    text.includes("tipped") || 
-    text.includes("credits") || 
-    text.includes("unlocked") || 
+    text.includes("winner") ||
+    text.includes("purchase complete") ||
+    text.includes("download link inside") ||
+    text.includes("tipped") ||
+    text.includes("credits") ||
+    text.includes("unlocked") ||
     text.includes("premium") ||
-    text.includes("auction")
-){
+    text.includes("support means")
+  ) {
     return "cash";
   }
+
   return "social";
 }
 
