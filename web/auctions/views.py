@@ -25,7 +25,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
-from .services import close_auction, place_bid
+from .services import close_auction, place_bid, send_digital_delivery_message
 from .utils import get_system_wallet
 
 from .ai_memory import touch_ai_creator_memory
@@ -774,11 +774,16 @@ def buy_now_auction(request, auction_id):
     
     try:
         send_buy_now_email(auction, request.user, buy_now_price)
-        ai_log("BUY_NOW_EMAIL_SENT", auction_id=auction.id, title=auction.title, user_email=request.user.email)
+        send_digital_delivery_message(
+            user=request.user,
+            auction=auction,
+            event_type="buy_now",
+        )
+        ai_log("BUY_NOW_DELIVERY_SENT", auction_id=auction.id, title=auction.title, user_email=request.user.email)
 
     
     except Exception as e:
-        ai_log("BUY_NOW_EMAIL_FAILED", auction_id=auction.id, title=auction.title, error=str(e))
+        ai_log("BUY_NOW_DELIVERY_FAILED", auction_id=auction.id, title=auction.title, error=str(e))
 
 
     return redirect("auction_detail", auction_id=auction.id)

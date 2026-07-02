@@ -12,6 +12,7 @@ from .models import Auction, Bid, BidWallet
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from .utils import get_system_wallet
+
 from .models import (
     BidWallet,
     CreditPurchase,
@@ -48,6 +49,45 @@ def send_winner_email(auction):
 
     email.attach_alternative(html_content, "text/html")
     email.send()
+
+def send_digital_delivery_message(user, auction, event_type="buy_now"):
+    User = get_user_model()
+    platform_sender = User.objects.get(username="platform")
+
+    delivery_link = ""
+    if auction.digital_item and auction.digital_item.delivery_url:
+        delivery_link = (
+            f"\n\n📦 Download your item:\n"
+            f"{auction.digital_item.delivery_url}"
+        )
+
+    if event_type == "auction_win":
+        notification_message = (
+            f"🏆 You're a Winner!\n\n{auction.title}\n\nDownload link inside."
+        )
+        dm_body = f"🎉 You're a Winner!\n\n{auction.title}!{delivery_link}"
+    else:
+        notification_message = (
+            f"🎉 Purchase Complete!\n\n{auction.title}\n\nDownload link inside."
+        )
+        dm_body = f"🎉 Purchase Complete!\n\n{auction.title}!{delivery_link}"
+
+    Notification.objects.create(
+        user=user,
+        actor=None,
+        notification_type=Notification.AUCTION,
+        message=notification_message,
+    )
+
+    conversation = Conversation.objects.create()
+    conversation.participants.add(platform_sender, user)
+
+    DirectMessage.objects.create(
+        conversation=conversation,
+        sender=platform_sender,
+        body=dm_body,
+    )
+
 
 @transaction.atomic
 def place_bid(auction_id, user):
@@ -125,7 +165,7 @@ def place_bid(auction_id, user):
             actor=user,
             notification_type=Notification.MESSAGE,
             message=(
-                f"😡 You Were Outbid!\n"
+                f"📣 You Were Outbid!\n"
                 f"{auction.title}\n"
                 f"Tap to bid again."
             ),
@@ -141,7 +181,7 @@ def place_bid(auction_id, user):
             conversation=conversation,
             sender=platform_sender,
             body=(
-                f"📣 You were outbid!\n\n" 
+                f"😡 You were outbid!\n\n"
                 f"{auction.title}.\n\n"
                 f"Bid again here:\n"
                 f"{auction_url}"
@@ -174,30 +214,10 @@ def close_auction(auction_id):
     if auction.winner and not auction.winner_email_sent:
         send_winner_email(auction)
 
-        Notification.objects.create(
+        send_digital_delivery_message(
             user=auction.winner,
-            actor=None,
-            notification_type=Notification.AUCTION,
-            message=f"🏆 You're a Winner!\n\n{auction.title}\n\nDownload link inside."
-        )
-
-        User = get_user_model()
-        platform_sender = User.objects.get(username="platform")
-
-        delivery_link = ""
-        if auction.digital_item and auction.digital_item.delivery_url:
-            delivery_link = (
-                f"\n\n📦 Download your item:\n"
-                f"{auction.digital_item.delivery_url}"
-            )
-
-        conversation = Conversation.objects.create()
-        conversation.participants.add(platform_sender, auction.winner)
-
-        DirectMessage.objects.create(
-            conversation=conversation,
-            sender=platform_sender,
-            body=f"🎉 You're a Winner!\n\n{auction.title}!{delivery_link}",
+            auction=auction,
+            event_type="auction_win",
         )
 
         auction.winner_email_sent = True
