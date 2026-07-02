@@ -21,10 +21,10 @@
                         class="notification-message-link"
                         target="_blank"
                         rel="noopener">
-                        {{ notification.message }}
+                        {{ notification.message|linebreaksbr }}
                     </a>
                 {% else %}
-                    <span>{{ notification.message }}</span>
+                    <span>{{ notification.message|linebreaksbr }}</span>
                 {% endif %}
 
                 <form method="post"

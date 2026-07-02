@@ -31,7 +31,7 @@ def send_winner_email(auction):
     text_content = strip_tags(html_content)
 
     email = EmailMultiAlternatives(
-        subject=f"🎉 You won: {auction.title}",
+        subject=f"🎉 You Won: {auction.title}",
         body=text_content,
         to=[auction.winner.email],
     )

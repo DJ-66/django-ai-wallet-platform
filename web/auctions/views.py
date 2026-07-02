@@ -228,14 +228,10 @@ def auction_list(request):
     )
 
     for auction in expired_auctions:
-        last_bid = auction.bids.order_by("-created_at").first()
-
-        auction.status = "ended"
-
-        if last_bid:
-            auction.winner = last_bid.user
-
-        auction.save()
+        try:
+            close_auction(auction.id)
+        except Exception:
+            pass
 
     auctions = Auction.objects.filter(
         status="live"

@@ -77,6 +77,7 @@ class AuctionAdmin(admin.ModelAdmin):
         "image_2",
         "video",
         "winner",
+        "winner_email_sent",
     )
 
 @admin.register(Bid)
