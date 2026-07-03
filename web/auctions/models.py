@@ -477,6 +477,17 @@ class UserProfile(models.Model):
     x_url = models.URLField(blank=True)
     tiktok = models.URLField(blank=True)
     telegram = models.URLField(blank=True)
+    whatsapp = models.CharField(max_length=40, blank=True)
+
+    featured_link_1_label = models.CharField(max_length=80, blank=True)
+    featured_link_1_url = models.URLField(blank=True)
+
+    featured_link_2_label = models.CharField(max_length=80, blank=True)
+    featured_link_2_url = models.URLField(blank=True)
+
+    featured_link_3_label = models.CharField(max_length=80, blank=True)
+    featured_link_3_url = models.URLField(blank=True) 
+
 
     fan_count = models.PositiveIntegerField(default=0)
 
@@ -488,7 +499,6 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    
 
     def __str__(self):
         return self.display_name or self.user.username
@@ -549,6 +559,7 @@ class PostUnlock(models.Model):
 
 class PostLike(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
 
     post = models.ForeignKey(
         FeedPost,

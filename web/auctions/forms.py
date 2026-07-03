@@ -266,6 +266,14 @@ class UserProfileForm(forms.ModelForm):
             "x_url",
             "tiktok",
             "telegram",
+            "whatsapp",
+            "featured_link_1_label",
+            "featured_link_1_url",
+            "featured_link_2_label",
+            "featured_link_2_url",
+            "featured_link_3_label",
+            "featured_link_3_url",
+
         ]
 
 
@@ -285,6 +293,14 @@ class UserProfileForm(forms.ModelForm):
             "x_url": "X.com",
             "tiktok": "TikTok",
             "telegram": "Telegram",
+            "whatsapp": "WhatsApp",
+            "featured_link_1_label": _("Featured link 1 label"),
+            "featured_link_1_url": _("Featured link 1 URL"),
+            "featured_link_2_label": _("Featured link 2 label"),
+            "featured_link_2_url": _("Featured link 2 URL"),
+            "featured_link_3_label": _("Featured link 3 label"),
+            "featured_link_3_url": _("Featured link 3 URL"),
+
 }
 
     def clean_avatar(self):

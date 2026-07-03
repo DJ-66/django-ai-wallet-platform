@@ -104,9 +104,14 @@
                     {% endif %}
 
                     {% if profile.location %}
-                        <p class="profile-meta">
-                            📍 {{ profile.location }}
-                        </p>
+                    <div class="profile-location">
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ profile.location|urlencode }}"
+                    target="_blank"
+                    rel="noopener"
+                    title="View on map">
+                   📍 {{ profile.location }}
+                    </a>
+                    </div>
                     {% endif %}
 
                     {% if profile.website %}
@@ -153,11 +158,16 @@
                         </p>
                     {% endif %}
 
-                    {% if profile.location %}
-                        <p class="profile-meta">
-                            📍 {{ profile.location }}
-                        </p>
-                    {% endif %}
+                   {% if profile.location %}
+                   <div class="profile-location">
+                   <a href="https://www.google.com/maps/search/?api=1&query={{ profile.location|urlencode }}"
+                   target="_blank"
+                   rel="noopener"
+                   title="View on map">
+                   📍 {{ profile.location }}
+                   </a>
+                   </div>
+                  {% endif %}
 
                     {% if profile.website %}
                         <p class="profile-meta">
@@ -192,6 +202,20 @@
             {% if profile.telegram %}
                 <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
             {% endif %}
+            {% if profile.whatsapp %}
+                <a href="https://wa.me/{{ profile.whatsapp }}" target="_blank" rel="noopener">📱 WhatsApp</a>
+            {% endif %}
+
+            {% if profile.featured_link_1_label and profile.featured_link_1_url %}
+                <a href="{{ profile.featured_link_1_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_1_label }}</a>
+            {% endif %}
+            {% if profile.featured_link_2_label and profile.featured_link_2_url %}
+                <a href="{{ profile.featured_link_2_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_2_label }}</a>
+            {% endif %}
+            {% if profile.featured_link_3_label and profile.featured_link_3_url %}
+                <a href="{{ profile.featured_link_3_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_3_label }}</a>
+            {% endif %}
+
         </div>
 <br>
 
