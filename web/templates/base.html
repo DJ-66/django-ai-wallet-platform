@@ -227,7 +227,12 @@ function guessNotificationSoundTypeFromText(text) {
 
 document.addEventListener("DOMContentLoaded", function () {
   updateSoundButton();
-
+    
+document.querySelectorAll(".app-message").forEach(function (item) {
+    const soundType = guessNotificationSoundTypeFromText(item.innerText);
+    playNotificationSound(soundType);
+  
+  });
   document.getElementById("enable-notification-sounds")?.addEventListener("click", function () {
     notificationSoundsEnabled = true;
     localStorage.setItem("notificationSoundsEnabled", "true");

@@ -344,12 +344,16 @@
                             </p>
 
                             <form method="post" action="{% url 'unlock_feed_post' post.id %}">
-                                {% csrf_token %}
+                             {% csrf_token %}
 
-                                <button type="submit" class="auth-primary-btn">
-                                    {% trans "Unlock Post" %}
-                                </button>
-                            </form>
+                          <button
+                          type="submit"
+                          class="auth-primary-btn"
+                          onclick="return confirm('Unlock this premium post for {{ post.unlock_price }} credits?');"
+                          >
+                          {% trans "Unlock Post" %} 
+                         </button> 
+                         </form>
 
                         </div>
 
@@ -719,5 +723,48 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+<div id="premiumUnlockModal" class="premium-unlock-modal" style="display:none;">
+    <div class="premium-unlock-box">
+        <h3>🔒 Unlock Premium Post?</h3>
+        <p id="premiumUnlockText"></p>
 
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
+            <button type="button" id="cancelPremiumUnlock" class="auth-secondary-btn">
+                Cancel
+            </button>
+            <button type="button" id="confirmPremiumUnlock" class="auth-primary-btn">
+                Unlock Post
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let pendingPremiumUnlockForm = null;
+
+document.querySelectorAll(".premium-unlock-trigger").forEach((button) => {
+    button.addEventListener("click", function () {
+        pendingPremiumUnlockForm = this.closest("form");
+
+        const title = this.dataset.postTitle || "Premium Post";
+        const price = this.dataset.unlockPrice || "0";
+
+        document.getElementById("premiumUnlockText").textContent =
+            `Unlock "${title}" for ${price} credits?`;
+
+        document.getElementById("premiumUnlockModal").style.display = "flex";
+    });
+});
+
+document.getElementById("cancelPremiumUnlock").addEventListener("click", function () {
+    pendingPremiumUnlockForm = null;
+    document.getElementById("premiumUnlockModal").style.display = "none";
+});
+
+document.getElementById("confirmPremiumUnlock").addEventListener("click", function () {
+    if (pendingPremiumUnlockForm) {
+        pendingPremiumUnlockForm.submit();
+    }
+});
+</script>
 {% endblock %}

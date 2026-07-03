@@ -326,14 +326,13 @@ def feed_home(request):
         )
 
         if form.is_valid():
-
             post = form.save(commit=False)
             post.user = request.user
             post.title = post.title.strip()
             post.content = post.content.strip()
 
             if post.is_paid:
-                post.is_public = True
+                post.is_public = False
 
                 if post.unlock_price < 1:
                     post.unlock_price = 1
@@ -351,7 +350,10 @@ def feed_home(request):
 
     posts = (
         FeedPost.objects
-        .filter(is_public=True)
+        .filter(
+            is_public=True,
+            is_paid=False,
+        )
         .annotate(
             community_pin_rank=Case(
                 When(
@@ -875,7 +877,6 @@ def public_profile(request, username):
         "user__profile"
     ).filter(
         user=profile_user,
-        is_public=True,
     ).order_by("-is_pinned", "-created_at")
 
     premium_post_count = profile_posts.filter(is_paid=True).count()
