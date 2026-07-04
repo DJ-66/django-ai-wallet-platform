@@ -91,6 +91,10 @@ path(
     name="quick_tip_user",
 ),
 
-
+path(
+    "tag/<str:tag_name>/",
+    views.hashtag_feed,
+    name="hashtag_feed",
+),
 
 ]

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load hashtag_tags %}
+
+{% block content %}
+
+<style>
+.hashtag-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.hashtag-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+.hashtag-card {
+    background: rgba(255,255,255,0.65);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.hashtag-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.hashtag-chip {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #7c3aed;
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hashtag-chip:hover {
+    opacity: 0.85;
+}
+
+.hashtag-post {
+    background: rgba(255,255,255,0.65);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+</style>
+
+<div class="hashtag-page">
+
+    <div class="hashtag-card">
+        <h3>🔥 {{ total_hashtags }} Hashtags on FANZ</h3>
+        <div class="hashtag-chip-row">
+            {% for tag in trending_hashtags %}
+                <a href="{% url 'hashtag_feed' tag.name %}" class="hashtag-chip">
+                    #{{ tag.name }} ({{ tag.usage_count }})
+                </a>
+            {% empty %}
+                <span>No trending hashtags yet.</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="hashtag-card">
+       <h2 class="hashtag-title">#{{ hashtag.name }}</h2>
+        <p>{{ hashtag.usage_count }} posts tagged</p>
+    </div>
+
+    {% for post in posts %}
+        <div class="hashtag-post">
+            <strong>{{ post.user.username }}</strong>
+
+            <p>
+                {{ post.content|link_hashtags|linebreaksbr }}
+            </p>
+        </div>
+    {% empty %}
+        <div class="hashtag-card">
+            No posts found.
+        </div>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

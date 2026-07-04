@@ -2,7 +2,8 @@ import json
 import random
 import secrets
 from decimal import Decimal
-
+from .models import Hashtag
+from .hashtags import sync_post_hashtags
 import qrcode
 import requests
 from django.conf import settings
@@ -52,6 +53,37 @@ from .models import (
     WalletTransaction,
     NotificationSound,
 )
+
+def hashtag_feed(request, tag_name):
+
+    hashtag = get_object_or_404(
+        Hashtag,
+        name=tag_name.lower()
+    )
+
+    posts = (
+        FeedPost.objects
+        .filter(hashtags=hashtag)
+        .select_related("user")
+        .order_by("-created_at")
+    )
+
+    trending_hashtags = (
+        Hashtag.objects
+        .exclude(id=hashtag.id)
+        .order_by("-usage_count", "name")[:10]
+    )
+    total_hashtags = Hashtag.objects.count()
+
+    return render(
+        request,
+        "auctions/hashtag_feed.html",
+        {
+            "hashtag": hashtag,
+            "posts": posts,
+            "trending_hashtags": trending_hashtags,
+        }
+    )
 
 def notification_sounds_json(request):
     sounds = {}
@@ -340,6 +372,7 @@ def feed_home(request):
                 post.unlock_price = 0
 
             post.save()
+            sync_post_hashtags(post)
 
             return redirect("feed_home")
         else:

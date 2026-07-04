@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load hashtag_tags %}
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+
+        <h5>🔥 Trending Hashtags</h5>
+
+        {% for tag in trending_hashtags %}
+
+            <a
+                href="{% url 'hashtag_feed' tag.name %}"
+                class="badge bg-primary text-decoration-none me-1"
+            >
+                #{{ tag.name }}
+                ({{ tag.usage_count }})
+            </a>
+
+        {% endfor %}
+
+    </div>
+</div>
+<h2>#{{ hashtag.name }}</h2>
+
+<p>
+{{ hashtag.usage_count }} posts
+</p>
+
+{% for post in posts %}
+
+<div class="card mb-3">
+    <div class="card-body">
+
+        <strong>
+            {{ post.user.username }}
+        </strong>
+
+        <p>
+          <!--  {{ post.content|linebreaksbr|link_hashtags }}  -->
+                {{ post.content|link_hashtags|linebreaksbr }}
+         </p>
+
+    </div>
+</div>
+
+{% empty %}
+
+<p>No posts found.</p>
+
+{% endfor %}
+
+{% endblock %}

@@ -503,7 +503,16 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.display_name or self.user.username
 
+class Hashtag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    usage_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"#{self.name}"
 
 class FeedPost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -515,6 +524,12 @@ class FeedPost(models.Model):
     )
 
     content = models.TextField(max_length=2000)
+
+    hashtags = models.ManyToManyField(
+        "Hashtag",
+        blank=True,
+        related_name="posts"
+    )
 
     image = models.ImageField(
         upload_to="feed/",

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load hashtag_tags %}
+
+{% block content %}
+<style>
+.hashtag-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+.hashtag-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.hashtag-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.hashtag-chip {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #7c3aed;
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hashtag-post {
+    background: rgba(255,255,255,0.65);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+</style>
+
+<div class="container py-3">
+
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <h5 class="mb-3">🔥 Trending Hashtags</h5>
+
+            <div class="d-flex flex-wrap gap-2">
+                {% for tag in trending_hashtags %}
+                    <a
+                        href="{% url 'hashtag_feed' tag.name %}"
+                        class="badge bg-primary text-decoration-none"
+                    >
+                        #{{ tag.name }} ({{ tag.usage_count }})
+                    </a>
+                {% empty %}
+                    <span class="text-muted">No trending hashtags yet.</span>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <h2 class="mb-1">#{{ hashtag.name }}</h2>
+            <p class="text-muted mb-0">{{ hashtag.usage_count }} posts tagged</p>
+
+        </div>
+    </div>
+
+    {% for post in posts %}
+
+        <div class="card mb-3">
+            <div class="card-body">
+
+                <strong>{{ post.user.username }}</strong>
+
+                <p class="mt-2 mb-0">
+                    {{ post.content|link_hashtags|linebreaksbr }}
+                </p>
+
+            </div>
+        </div>
+
+    {% empty %}
+
+        <div class="card">
+            <div class="card-body text-muted">
+                No posts found.
+            </div>
+        </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

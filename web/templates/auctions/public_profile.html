@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load i18n %}
-
+{% load hashtag_tags %}
 {% block content %}
 
 <div class="feed-page">
@@ -311,7 +311,11 @@
                     </h3>
                    {% endif %}
 
-    <div class="feed-content">{{ post.content|linebreaksbr }}</div>
+    <div class="feed-content">
+ 
+     <!-- {{ post.content|linebreaksbr|link_hashtags }} -->
+          {{ post.content|link_hashtags|linebreaksbr }}
+</div>
 </div>
                 </div>
             {% endif %}
@@ -329,7 +333,12 @@
         </h3>
     {% endif %}
 
-    <div class="feed-content"> {{ post.content|linebreaksbr }} </div>
+    <div class="feed-content"> 
+ 
+<!--   {{ post.content|linebreaksbr|link_hashtags }} -->
+       {{ post.content|link_hashtags|linebreaksbr }}
+ 
+    </div>
 {% endif %}
 
                     {% if post.id in unlocked_post_ids %}
@@ -392,7 +401,10 @@
         </h3>
     {% endif %}
 
-    <div class="feed-content"> {{ post.content|linebreaksbr }} </div>
+    <div class="feed-content"> 
+<!--   {{ post.content|linebreaksbr|link_hashtags }} -->
+       {{ post.content|link_hashtags|linebreaksbr }}
+    </div>
 {% endif %}
 
                     {% if post.image %}
