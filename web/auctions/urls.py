@@ -92,9 +92,17 @@ path(
 ),
 
 path(
+    "tags/",
+    views.discovery_hub,
+    name="discovery_hub",
+),
+
+
+path(
     "tag/<str:tag_name>/",
     views.hashtag_feed,
     name="hashtag_feed",
 ),
+
 
 ]

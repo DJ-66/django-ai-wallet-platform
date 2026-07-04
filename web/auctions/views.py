@@ -85,6 +85,43 @@ def hashtag_feed(request, tag_name):
         }
     )
 
+
+def discovery_hub(request):
+    trending_hashtags = (
+        Hashtag.objects
+        .filter(usage_count__gt=0)
+        .order_by("-usage_count", "name")[:20]
+    )
+
+    newest_hashtags = (
+        Hashtag.objects
+        .order_by("-created_at")[:20]
+    )
+
+    recent_posts = (
+        FeedPost.objects
+        .select_related("user")
+        .prefetch_related("hashtags")
+        .order_by("-created_at")[:20]
+    )
+
+    creators = (
+        UserProfile.objects
+        .select_related("user")
+        .order_by("-created_at")[:20]
+    )
+
+    return render(
+        request,
+        "auctions/discovery_hub.html",
+        {
+            "trending_hashtags": trending_hashtags,
+            "newest_hashtags": newest_hashtags,
+            "recent_posts": recent_posts,
+            "creators": creators,
+        }
+    )
+
 def notification_sounds_json(request):
     sounds = {}
 

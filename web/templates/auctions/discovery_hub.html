@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load hashtag_tags %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="mb-4">
+        <h1 class="mb-1">Discover FANZ</h1>
+        <p class="text-muted mb-0">
+            Explore trending tags, fresh posts, and creators across the platform.
+        </p>
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-8">
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Trending Hashtags</h4>
+
+                    {% if trending_hashtags %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for tag in trending_hashtags %}
+                                <a href="{% url 'hashtag_feed' tag.name %}" class="badge rounded-pill text-bg-primary text-decoration-none">
+                                    #{{ tag.name }} · {{ tag.usage_count }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No trending hashtags yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Recent Posts</h4>
+
+                    {% if recent_posts %}
+                        {% for post in recent_posts %}
+                            <div class="border rounded p-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>
+                                        <a href="{% url 'public_profile' post.user.username %}" class="text-decoration-none">
+                                            @{{ post.user.username }}
+                                        </a>
+                                    </strong>
+                                    <small class="text-muted">{{ post.created_at|timesince }} ago</small>
+                                </div>
+
+                                {% if post.title %}
+                                    <h5 class="mb-2">{{ post.title }}</h5>
+                                {% endif %}
+
+                                <p class="mb-2">{{ post.content|linebreaksbr|link_hashtags }}</p>
+
+                                {% if post.hashtags.all %}
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        {% for tag in post.hashtags.all %}
+                                            <a href="{% url 'hashtag_feed' tag.name %}" class="badge rounded-pill text-bg-light text-decoration-none">
+                                                #{{ tag.name }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No posts yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Newest Hashtags</h4>
+
+                    {% if newest_hashtags %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for tag in newest_hashtags %}
+                                <a href="{% url 'hashtag_feed' tag.name %}" class="badge rounded-pill text-bg-secondary text-decoration-none">
+                                    #{{ tag.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No hashtags yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="mb-3">Discover Creators</h4>
+
+                    {% if creators %}
+                        {% for profile in creators %}
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                {% if profile.avatar %}
+                                    <img src="{{ profile.avatar.url }}" alt="{{ profile.user.username }}" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
+                                        {{ profile.user.username|first|upper }}
+                                    </div>
+                                {% endif %}
+
+                                <div>
+                                    <a href="{% url 'public_profile' profile.user.username %}"
+                                     class="fw-bold text-decoration-none">
+                                     {{ profile.display_name|default:profile.user.username }}
+                                     </a>
+
+                                     <div class="small text-muted">
+                                     @{{ profile.user.username }}
+                                     </div>
+                                    {% if profile.bio %}
+                                        <div class="small text-muted">
+                                            {{ profile.bio|truncatechars:70 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No creators yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}
