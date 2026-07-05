@@ -9,6 +9,8 @@ from . import views_ai
 
 
 urlpatterns = [
+    
+
     path("", auction_list, name="auction_list"),
     path("<int:auction_id>/", auction_detail, name="auction_detail"),
     path("<int:auction_id>/bid/", bid_view, name="place_bid"),
@@ -41,6 +43,7 @@ urlpatterns = [
 ),
     path("u/<str:username>/", views.public_profile, name="public_profile"),
     path("feed/", views.feed_home, name="feed_home"),
+    path("feed/post/<int:post_id>/", views.post_detail, name="post_detail"),
     path("feed/post/<int:post_id>/pin/", views.toggle_pin_post, name="toggle_pin_post"),
     path("feed/post/<int:post_id>/delete/", views.delete_feed_post, name="delete_feed_post"),
     path("feed/post/<int:post_id>/comment/", views.add_post_comment, name="add_post_comment"),

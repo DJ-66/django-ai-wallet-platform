@@ -297,7 +297,6 @@
 
     <div class="profile-feed-section">
 
-<!-- 1st loop  here  -->
         {% for post in profile_posts %}
             {% if post.is_pinned %}
                 <div class="featured-post-card">
@@ -311,6 +310,27 @@
                     {{ post.title }}
                     </h3>
                    {% endif %}
+{% if request.user == post.user %}
+    <div class="post-owner-actions">
+        <form method="post" action="{% url 'toggle_pin_post' post.id %}">
+            {% csrf_token %}
+            <button type="submit" class="feed-like-btn">
+                📌 {% trans "Unpin" %}
+            </button>
+        </form>
+
+        <form method="post" action="{% url 'delete_feed_post' post.id %}">
+            {% csrf_token %}
+            <button
+                type="submit"
+                class="feed-like-btn"
+                onclick="return confirm('Delete this post?');"
+            >
+                🗑️ {% trans "Delete" %}
+            </button>
+        </form>
+    </div>
+{% endif %}
 
    <div class="feed-content">
 
@@ -328,53 +348,53 @@
                 </div>
             {% endif %}
         {% endfor %}
-<!--  2nd loop here -->
+
        {% for post in profile_posts %}
-          <div class="feed-post-card" id="post-{{ post.id }}">
+    {% if not post.is_pinned %}
+        <div class="feed-post-card" id="post-{{ post.id }}">
 
-       {% if not post.is_pinned %}
+            {% if post.title %}
+                <h3 class="feed-post-title">{{ post.title }}</h3>
+            {% endif %}
 
-    {% if post.title %}
-        <h3 class="feed-post-title">{{ post.title }}</h3>
-    {% endif %}
-
-    {% if request.user == post.user %}
-        <div class="post-owner-actions">
-            <form method="post" action="{% url 'toggle_pin_post' post.id %}">
-                {% csrf_token %}
-                <button type="submit" class="feed-like-btn">
+             {% if request.user == post.user %}
+    <div class="post-owner-actions">
+        <form method="post" action="{% url 'toggle_pin_post' post.id %}">
+            {% csrf_token %}
+            <button type="submit" class="feed-like-btn">
+                {% if post.is_pinned %}
+                    📌 {% trans "Unpin" %}
+                {% else %}
                     📌 {% trans "Pin" %}
-                </button>
-            </form>
+                {% endif %}
+            </button>
+        </form>
 
-            <form method="post" action="{% url 'delete_feed_post' post.id %}">
-                {% csrf_token %}
-                <button
-                    type="submit"
-                    class="feed-like-btn"
-                    onclick="return confirm('Delete this post?');"
-                >
-                    🗑️ {% trans "Delete" %}
-                </button>
-            </form>
-        </div>
-    {% endif %}
-
-    <div class="feed-content">
-        {{ post.content|link_hashtags|linebreaksbr }}
-
-        {% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
-            <div class="post-tags">
-                <a href="{% url 'hashtag_feed' 'discover_fanz' %}">
-                    #discover_fanz
-                </a>
-            </div>
-        {% endif %}
+        <form method="post" action="{% url 'delete_feed_post' post.id %}">
+            {% csrf_token %}
+            <button
+                type="submit"
+                class="feed-like-btn"
+                onclick="return confirm('Delete this post?');"
+            >
+                🗑️ {% trans "Delete" %}
+            </button>
+        </form>
     </div>
+{% endif %}
 
-{% endif %}     
-<!-- down to here xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-->
-                 
+            <div class="feed-content">
+                {{ post.content|link_hashtags|linebreaksbr }}
+
+                {% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
+                    <div class="post-tags">
+                        <a href="{% url 'hashtag_feed' 'discover_fanz' %}">
+                            #discover_fanz
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
             {% if post.is_paid and request.user != post.user and post.id not in unlocked_post_ids %}
     <div class="locked-post-card">
 
@@ -531,7 +551,7 @@
 
   </div>
   </div>
-      
+      {% endif %}
       {% empty %}
 
 

@@ -88,6 +88,7 @@ h1 {
 
 .feed-post-card hr {
     margin-top: 24px;
+    margin-bottom: 20px;
     border: none;
     border-top: 1px solid #e5e7eb;
 }
@@ -1945,6 +1946,7 @@ img {
     border-radius: 16px;
     padding: 16px;
     margin: 18px 0;
+    margin-bottom: 20px;
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
 
@@ -3090,5 +3092,106 @@ body {
 
     text-shadow: 0 0 10px rgba(0,0,0,.8);
 }
+
+.post-tags {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.hashtag-link {
+  margin-bottom: 8px;
+
+}
+
+.post-owner-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 8px 0 10px;
+}
+
+.post-owner-actions form,
+.inline-post-action-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.post-owner-actions .feed-like-btn {
+    appearance: none;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(255,255,255,0.85);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.feed-post-card,
+.featured-post-card {
+    background: rgba(255,255,255,0.65);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 12px rgba(124,58,237,.20);
+}
+.hashtag-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.hashtag-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+.hashtag-card {
+    background: rgba(255,255,255,0.65);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.hashtag-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.hashtag-chip {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #7c3aed;
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hashtag-chip:hover {
+    opacity: 0.85;
+}
+
+.hashtag-post {
+    background: rgba(255,255,255,0.65);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.discover-fanz-banner-img {
+    display: block;
+    width: 100%;
+    max-width: 686px;
+    height: auto;
+    margin: 16px auto;
+    border-radius: 14px;
+}
+
 
 /* end_css */

@@ -2,7 +2,7 @@ import json
 import random
 import secrets
 from decimal import Decimal
-from .models import Hashtag
+from .models import Hashtag, PostUnlock
 from .hashtags import sync_post_hashtags
 import qrcode
 import requests
@@ -74,6 +74,14 @@ def hashtag_feed(request, tag_name):
         .order_by("-usage_count", "name")[:10]
     )
     total_hashtags = Hashtag.objects.count()
+    unlocked_post_ids = set()
+
+    if request.user.is_authenticated:
+        unlocked_post_ids = set(
+            PostUnlock.objects.filter(user=request.user)
+            .values_list("post_id", flat=True)
+        )
+
 
     return render(
         request,
@@ -82,6 +90,9 @@ def hashtag_feed(request, tag_name):
             "hashtag": hashtag,
             "posts": posts,
             "trending_hashtags": trending_hashtags,
+            "total_hashtags": total_hashtags,
+            "unlocked_post_ids": unlocked_post_ids,
+
         }
     )
 
@@ -188,7 +199,7 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
 
     message_bank = {
         "like": [
-            f"Thanks for the ❤️ @{username}! I 'm glad you're one of my Fanz",
+            f"Thanks for the ❤️  @{username}! I 'm glad you're one of my Fanz",
             f"That means a lot @{username}. Thanks for liking my post! ⭐",
             f"You're awesome @{username}! Thanks for the support ❤️",
         ],
@@ -738,7 +749,7 @@ def pay_user(request, wallet_code):
         
         messages.success(request, "✅ Transfer successful!")
 
-        return redirect("public_profile_root", username=target_user.username)
+        return redirect("public_profile", username=target_user.username)
         
         recent_notifications = []
 
@@ -933,6 +944,13 @@ def public_profile(request, username):
         username__iexact=username
     )
 
+    if request.resolver_match and request.resolver_match.url_name == "public_profile":
+        return redirect(
+            "public_profile_root",
+            username=profile_user.username,
+            permanent=True,
+    )
+
     if username != profile_user.username:
         return redirect(
             "public_profile_root",
@@ -1038,6 +1056,34 @@ def public_profile(request, username):
         }
     )
 
+def post_detail(request, post_id):
+    post = get_object_or_404(
+        FeedPost.objects.select_related("user").prefetch_related(
+            "hashtags",
+            "likes",
+            "comments",
+        ),
+        id=post_id,
+    )
+
+    unlocked_post_ids = set()
+
+    if request.user.is_authenticated:
+        unlocked_post_ids = set(
+            PostUnlock.objects.filter(user=request.user)
+            .values_list("post_id", flat=True)
+        )
+
+    return render(
+        request,
+        "auctions/post_detail.html",
+        {
+            "post": post,
+            "unlocked_post_ids": unlocked_post_ids,
+        }
+    )
+
+
 @login_required
 def toggle_post_like(request, post_id):
     post = get_object_or_404(FeedPost, id=post_id)
@@ -1084,11 +1130,11 @@ def unlock_feed_post(request, post_id):
 
     if post.user == request.user:
         messages.info(request, "You already own this post.")
-        return redirect("public_profile_root", username=post.user.username)
+        return redirect("public_profile", username=post.user.username)
 
     if not post.is_paid or post.unlock_price <= 0:
         messages.info(request, "This post does not require unlocking.")
-        return redirect("public_profile_root", username=post.user.username)
+        return redirect("public_profile", username=post.user.username)
 
     buyer_wallet = BidWallet.objects.select_for_update().get(user=request.user)
     creator_wallet = BidWallet.objects.select_for_update().get(user=post.user)
@@ -1105,12 +1151,12 @@ def unlock_feed_post(request, post_id):
 
     if not unlock_created:
         messages.info(request, "You already unlocked this post.")
-        return redirect("public_profile_root", username=post.user.username)
+        return redirect("public_profile", username=post.user.username)
 
     if buyer_wallet.credits < price:
         unlock.delete()
         messages.error(request, "You do not have enough credits to unlock this post.")
-        return redirect("public_profile_root", username=post.user.username)
+        return redirect("public_profile", username=post.user.username)
 
     platform_fee = 0
 
@@ -1172,7 +1218,7 @@ def unlock_feed_post(request, post_id):
     messages.success(request, f"Post unlocked for {price} credits.")
 
     profile_url = reverse(
-        "public_profile_root",
+        "public_profile",
         kwargs={"username": post.user.username}
     )
 

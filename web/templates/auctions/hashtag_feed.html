@@ -1,57 +1,9 @@
 {% extends "base.html" %}
 {% load hashtag_tags %}
-
+{% load i18n %}
+{% load static %}
 {% block content %}
 
-<style>
-.hashtag-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-}
-
-.hashtag-page {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 18px;
-}
-
-.hashtag-card {
-    background: rgba(255,255,255,0.65);
-    border-radius: 16px;
-    padding: 18px;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-}
-
-.hashtag-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.hashtag-chip {
-    display: inline-block;
-    padding: 7px 12px;
-    border-radius: 999px;
-    background: #7c3aed;
-    color: white;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.hashtag-chip:hover {
-    opacity: 0.85;
-}
-
-.hashtag-post {
-    background: rgba(255,255,255,0.65);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 14px;
-}
-</style>
 
 <div class="hashtag-page">
 
@@ -70,16 +22,87 @@
 
     <div class="hashtag-card">
        <h2 class="hashtag-title">#{{ hashtag.name }}</h2>
-        <p>{{ hashtag.usage_count }} posts tagged</p>
-    </div>
+
+{% if hashtag.name == "discover_fanz" %}
+    {% get_current_language as LANGUAGE_CODE %}
+
+    {% if LANGUAGE_CODE == "es" %}
+        <img
+            src="{% static 'auctions/img/ES-50-FREE.webp' %}"
+            alt="50 créditos gratis en Fanz.to"
+            class="discover-fanz-banner-img"
+            width="686"
+            height="936"
+        >
+    {% else %}
+        <img
+            src="{% static 'auctions/img/EN-50-FREE.webp' %}"
+            alt="Fifty Free Credits on Fanz.to"
+            class="discover-fanz-banner-img"
+            width="686"
+            height="930"
+        >
+    {% endif %}
+{% endif %}
+
+<p>{{ hashtag.usage_count }} posts tagged</p>
+    
+
+</div>
 
     {% for post in posts %}
         <div class="hashtag-post">
-            <strong>{{ post.user.username }}</strong>
+           <strong>
+  <a href="{% url 'public_profile_root' post.user.username %}" class="post-author-link">
+    @{{ post.user.username }}
+  </a>
+</strong>
+         {% if post.title %}
+    <h3 class="feed-post-title">{{ post.title }}</h3>
+{% endif %}
 
-            <p>
-                {{ post.content|link_hashtags|linebreaksbr }}
-            </p>
+{% if post.is_paid and request.user != post.user and post.id not in unlocked_post_ids %}
+    <div class="locked-post-card">
+
+        {% if post.image %}
+            <div class="premium-preview">
+                <img src="{{ post.image.url }}" class="feed-image premium-blur">
+                <div class="premium-overlay">
+                    🔒 {% trans "Premium Content" %}
+                </div>
+            </div>
+        {% endif %}
+
+        <p class="locked-post-title">
+            🔒 {% trans "Premium content locked" %}
+        </p>
+
+        <p class="locked-post-price">
+            {% trans "Unlock media for" %} {{ post.unlock_price }} {% trans "credits" %}
+        </p>
+
+        <form method="post" action="{% url 'unlock_feed_post' post.id %}">
+            {% csrf_token %}
+            <button type="submit" class="auth-primary-btn">
+                {% trans "Unlock Post" %}
+            </button>
+        </form>
+
+    </div>
+{% else %}
+    <p>{{ post.content|link_hashtags|linebreaksbr }}</p>
+
+    {% if post.image %}
+        <img src="{{ post.image.url }}" class="feed-image">
+    {% endif %}
+{% endif %}
+
+<div class="post-actions">
+    <a href="{% url 'post_detail' post.id %}" class="view-post-link">
+        View post →
+    </a>
+</div>
+            
         </div>
     {% empty %}
         <div class="hashtag-card">

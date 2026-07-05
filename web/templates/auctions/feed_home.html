@@ -102,10 +102,18 @@
     </h3>
 {% endif %}
 
-<div class="feed-content"> 
+<div class="feed-content">
 
-<!-- {{ post.content|linebreaksbr|link_hashtags }} -->
-     {{ post.content|link_hashtags|linebreaksbr }}
+{{ post.content|link_hashtags|linebreaksbr }}
+
+{% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
+<div class="post-tags">
+    <a href="{% url 'hashtag_feed' 'discover_fanz' %}">
+        #discover_fanz
+    </a>
+</div>
+{% endif %}
+
 </div>
 
     {% if post.id in unlocked_post_ids %}
@@ -167,10 +175,18 @@
     </h3>
 {% endif %}
 
-<div class="feed-content"> 
-<!-- {{ post.content|linebreaksbr|link_hashtags }} -->
-     {{ post.content|link_hashtags|linebreaksbr }}
- 
+<div class="feed-content">
+
+{{ post.content|link_hashtags|linebreaksbr }}
+
+{% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
+<div class="post-tags">
+    <a href="{% url 'hashtag_feed' 'discover_fanz' %}">
+        #discover_fanz
+    </a>
+</div>
+{% endif %}
+
 </div>
 
     {% if post.image %}
@@ -445,7 +461,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         <strong>@${data.username}</strong>
                         <p>${data.content}</p>
                     </div>
-                `;
+               
 
                 if (data.parent_id) {
                     form.insertAdjacentHTML("beforebegin", commentHtml);

@@ -42,7 +42,7 @@
                             <div class="border rounded p-3 mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <strong>
-                                        <a href="{% url 'public_profile' post.user.username %}" class="text-decoration-none">
+                                        <a href="{% url 'public_profile_root' post.user.username %}" class="text-decoration-none">
                                             @{{ post.user.username }}
                                         </a>
                                     </strong>
@@ -110,7 +110,7 @@
                                 {% endif %}
 
                                 <div>
-                                    <a href="{% url 'public_profile' profile.user.username %}"
+                                    <a href="{% url 'public_profile_root' profile.user.username %}"
                                      class="fw-bold text-decoration-none">
                                      {{ profile.display_name|default:profile.user.username }}
                                      </a>
