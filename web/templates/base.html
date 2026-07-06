@@ -282,6 +282,31 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    document.querySelectorAll(".prevent-double-submit").forEach(function(form) {
+
+        form.addEventListener("submit", function() {
+
+            const btn = form.querySelector(
+                "button[type='submit'], input[type='submit']"
+            );
+
+            if (!btn) return;
+
+            if (btn.disabled) return;
+
+            btn.disabled = true;
+
+            btn.innerHTML =
+                btn.dataset.loadingText || "Processing...";
+        });
+
+    });
+
+});
+</script>
 </body>
 </html>
 

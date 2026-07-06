@@ -11,7 +11,10 @@
         <div class="feed-compose-card">
             <h2>{% trans "Community Feed" %}</h2>
 
-            <form method="post" enctype="multipart/form-data" class="feed-form">
+            <form method="post"
+                enctype="multipart/form-data"
+                class="feed-form prevent-double-submit">            
+           
             {% csrf_token %}
             
             {{ form.title }}
@@ -50,7 +53,11 @@
 
 {{ form.unlock_price }}
 
-            <button type="submit" class="auth-primary-btn feed-action-btn">
+           <button
+           type="submit"
+           class="auth-primary-btn feed-action-btn"
+           data-loading-text="⏳ Publishing..."
+           >
             {% trans "Post" %}
             </button>
 
@@ -151,12 +158,18 @@
                 {% trans "credits" %}
             </p>
 
-            <form method="post" action="{% url 'unlock_feed_post' post.id %}">
+            <form method="post"
+                action="{% url 'unlock_feed_post' post.id %}"
+                class="prevent-double-submit">
+
+
+
             {% csrf_token %}
 
            <button
            type="submit"
            class="auth-primary-btn"
+           data-loading-text="🔓 Unlocking..."
            onclick="return confirm('Unlock this premium post for {{ post.unlock_price }} credits?');"
            >
            {% trans "Unlock Post" %}
@@ -174,7 +187,6 @@
         {{ post.title }}
     </h3>
 {% endif %}
-
 <div class="feed-content">
 
 {{ post.content|link_hashtags|linebreaksbr }}

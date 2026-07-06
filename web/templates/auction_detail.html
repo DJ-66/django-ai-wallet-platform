@@ -18,17 +18,18 @@
 
       <div class="auction-action-row">
 
-        <form method="post" action="{% url 'place_bid' auction.id %}">
-          {% csrf_token %}
+       <form method="post" action="{% url 'place_bid' auction.id %}" class="prevent-double-submit">
+       {% csrf_token %}
 
-          <button
-            id="bidButton"
-            type="submit"
-            class="auction-action-btn bid-action-btn"
+       <button
+          id="bidButton"
+          type="submit"
+          class="auction-action-btn bid-action-btn"
+          data-loading-text="⏳ Placing Bid..."
           >
-            👋 {% trans "Bid Now!" %}
-          </button>
-        </form>
+          👋 {% trans "Bid Now!" %}
+           </button>
+           </form>
 
         <button
           type="button"
@@ -128,26 +129,32 @@
       <strong>{{ buy_now_price|floatformat:0 }} {% trans "credits" %}</strong>
     </p>
 
-    <form method="post" action="{% url 'buy_now_auction' auction.id %}">
-      {% csrf_token %}
+   <form method="post"
+      action="{% url 'buy_now_auction' auction.id %}"
+      class="prevent-double-submit">
+  {% csrf_token %}
 
-      <div class="buy-now-modal-actions">
+  <div class="buy-now-modal-actions">
 
-        <button type="submit" class="buy-now-approve">
-          {% trans "Approve" %}
-        </button>
+    <button
+      type="submit"
+      class="buy-now-approve"
+      data-loading-text="💰 Purchasing..."
+    >
+      {% trans "Approve" %}
+    </button>
 
-        <button
-          type="button"
-          class="buy-now-cancel"
-          onclick="closeBuyNowModal()"
-        >
-          {% trans "Cancel" %}
-        </button>
+    <button
+      type="button"
+      class="buy-now-cancel"
+      onclick="closeBuyNowModal()"
+    >
+      {% trans "Cancel" %}
+    </button>
 
-      </div>
+  </div>
 
-    </form>
+</form>
 
   </div>
 

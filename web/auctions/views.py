@@ -396,9 +396,12 @@ def ensure_api_key(node):
         node.api_key = generate_api_key()
         node.save(update_fields=["api_key"])
 
-@login_required
+
 def feed_home(request):
     if request.method == "POST":
+        if not request.user.is_authenticated:
+            return redirect("login")
+
         form = FeedPostForm(
             request.POST,
             request.FILES,
@@ -432,9 +435,11 @@ def feed_home(request):
     posts = (
         FeedPost.objects
         .filter(
-            is_public=True,
-            is_paid=False,
+            Q(is_public=True, is_paid=False)
+            |
+            Q(is_pinned=True, user__is_staff=True)
         )
+     
         .annotate(
             community_pin_rank=Case(
                 When(
