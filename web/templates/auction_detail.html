@@ -59,6 +59,18 @@
                 🤍 {% trans "Watch" %}
               {% endif %}
             </button>
+
+<a
+    class="auction-action-btn telegram-share-btn"
+    href="https://t.me/share/url?url={{ request.scheme }}://{{ request.get_host }}{% url 'auction_detail' auction.id %}&text={{ auction.title|urlencode }}"
+    target="_blank"
+    rel="noopener noreferrer"
+>
+    📲 Telegram
+</a>
+
+
+
           </form>
 
         {% endif %}

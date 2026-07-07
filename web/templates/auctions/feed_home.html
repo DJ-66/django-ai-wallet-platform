@@ -263,6 +263,16 @@
 >
     🔗 {% trans "Share" %}
 </button>
+
+<a
+    class="feed-like-btn telegram-share-btn"
+    href="https://t.me/share/url?text={{ post.title|default:post.content|truncatechars:100|urlencode }}&url={{ request.scheme }}://{{ request.get_host }}{% url 'public_profile_root' post.user.username %}#post-{{ post.id }}"
+    target="_blank"
+    rel="noopener noreferrer"
+>
+    📲 Telegram
+</a>
+
 <div class="post-comments-section">
 
     {% for comment in post.comments.all %}
