@@ -45,7 +45,22 @@
     {% endif %}
 {% endif %}
 
-<p>{{ hashtag.usage_count }} posts tagged</p>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+
+    <p style="margin:0;">
+        {{ hashtag.usage_count }} posts tagged
+    </p>
+
+    <a
+        class="feed-like-btn telegram-share-btn"
+        href="https://t.me/share/url?text=%23{{ hashtag.name|urlencode }}%20on%20FANZ&url={{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
+        target="_blank"
+        rel="noopener noreferrer"
+    >
+        📲 Telegram
+    </a>
+
+</div>
     
 
 </div>
