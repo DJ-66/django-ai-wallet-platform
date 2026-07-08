@@ -508,7 +508,7 @@ def wallet_view(request):
 def send_activation_email(request, user):
     current_site = get_current_site(request)
 
-    subject = "Activate your account"
+    subject = "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
 
     html_content = render_to_string("auctions/account_activation_email.html", {
         "user": user,
@@ -578,6 +578,18 @@ def activate_view(request, uidb64, token):
         user = User.objects.get(pk=uid)
     except Exception:
         user = None
+
+    if user is not None and user.is_active:
+        login(
+            request,
+            user,
+            backend="django.contrib.auth.backends.ModelBackend"
+        )
+        messages.success(
+            request,
+            "✅ Your FANZ account is already active."
+        )
+        return redirect("auction_list")
 
     if user is not None and default_token_generator.check_token(user, token):
 

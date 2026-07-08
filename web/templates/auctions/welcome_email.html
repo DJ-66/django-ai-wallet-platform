@@ -1,0 +1,49 @@
+
+{% extends "emails/email_base.html" %}
+
+{% block email_icon %}🚀{% endblock %}
+
+{% block email_title %}
+Welcome to FANZ
+{% endblock %}
+
+{% block email_subtitle %}
+Your AI journey starts today.
+{% endblock %}
+
+{% block email_body %}
+
+<p style="margin:0 0 18px;font-size:16px;line-height:1.6;">
+  Hi <strong>{{ user.username }}</strong>,
+</p>
+
+<p style="margin:0 0 18px;font-size:16px;line-height:1.6;">
+  Your FANZ account is ready! We've already added
+  <strong>50 FREE credits</strong> to your wallet.
+</p>
+
+<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:16px;padding:22px;margin:0 0 22px;">
+  <h2 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:#111827;">
+    You're ready to:
+  </h2>
+
+  <p style="margin:8px 0;font-size:16px;line-height:1.5;">🌎 Discover creators, businesses, and communities</p>
+  <p style="margin:8px 0;font-size:16px;line-height:1.5;">🤖 Explore AI-powered tools</p>
+  <p style="margin:8px 0;font-size:16px;line-height:1.5;">💬 Connect through FANZ messaging</p>
+  <p style="margin:8px 0;font-size:16px;line-height:1.5;">💰 Use your FANZ wallet</p>
+  <p style="margin:8px 0;font-size:16px;line-height:1.5;">🚀 Grow your profile, business, or campaign</p>
+</div>
+
+<p style="margin:24px 0;text-align:center;">
+  <a href="https://fanz.to/auctions/"
+     style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 24px;border-radius:12px;">
+    Start Exploring FANZ
+  </a>
+</p>
+
+<p style="margin:18px 0 0;font-size:16px;line-height:1.6;">
+  Welcome aboard,<br>
+  <strong>The FANZ Team</strong>
+</p>
+
+{% endblock %}

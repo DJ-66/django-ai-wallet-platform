@@ -5,6 +5,9 @@ import string
 from django.conf import settings
 
 from .models import BidWallet, WalletTransaction
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 SIGNUP_BONUS = 50
 REFERRAL_BONUS = 50
@@ -12,6 +15,26 @@ REFERRAL_BONUS = 50
 def generate_referral_code(length=10):
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+def send_welcome_email(user):
+    if not user.email:
+        return
+
+    subject = "🎉 Welcome to FANZ — Your 50 FREE Credits Are Ready"
+
+    html_content = render_to_string("auctions/welcome_email.html", {
+        "user": user,
+    })
+
+    text_content = strip_tags(html_content)
+
+    email = EmailMultiAlternatives(
+        subject,
+        text_content,
+        to=[user.email],
+    )
+    email.attach_alternative(html_content, "text/html")
+    email.send(fail_silently=True)
 
 def provision_user_wallet(user, referral_code=None):
 
@@ -49,6 +72,8 @@ def provision_user_wallet(user, referral_code=None):
             transaction_type="bonus",
             reference="Signup bonus",
         )
+
+        send_welcome_email(user)
 
     # ---------------------------------------------------
     # REFERRAL BONUS

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-icon">🌐</div>
+
+    <h1>Complete Google Signup</h1>
+
+    <p class="auth-subtitle">
+      Choose your FANZ username to finish creating your account.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+
+      <button type="submit" class="auth-primary-btn">
+        Create FANZ Account
+      </button>
+    </form>
+
+    <p class="auth-footer-text">
+      AI for Everyone
+    </p>
+  </div>
+</div>
+{% endblock %}
