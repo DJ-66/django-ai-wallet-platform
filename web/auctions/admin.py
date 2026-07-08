@@ -2,10 +2,25 @@ from django.contrib import admin
 from .models import DigitalItem, Auction, Bid, BidWallet
 from .models import NodeProfile, AICreatorMemory, UserProfile
 from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
-from django.contrib import admin
 from .models import NotificationSound
 from django import forms
 from .forms import process_fanz_image_upload
+from .models import (
+    DigitalItem,
+    Auction,
+    Bid,
+    BidWallet,
+    NodeProfile,
+    AICreatorMemory,
+    UserProfile,
+    AICompanion,
+    AIConversation,
+    AIMessage,
+    AIFanMemoryNote,
+    NotificationSound,
+    DiscoveryHub,
+)
+
 
 @admin.register(NotificationSound)
 class NotificationSoundAdmin(admin.ModelAdmin):
@@ -191,4 +206,28 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = (
         "user__username",
         "display_name",
+    )
+
+@admin.register(DiscoveryHub)
+class DiscoveryHubAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "hashtag",
+        "is_active",
+        "sort_order",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "title",
+        "subtitle",
+        "hashtag",
+    )
+
+    ordering = (
+        "sort_order",
+        "title",
     )

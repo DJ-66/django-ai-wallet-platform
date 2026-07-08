@@ -723,4 +723,24 @@ class DirectMessage(models.Model):
         return f"Message from {self.sender.username} in conversation {self.conversation_id}"
 
 
+
+class DiscoveryHub(models.Model):
+    hashtag = models.CharField(max_length=80, unique=True)
+    title = models.CharField(max_length=160)
+    subtitle = models.TextField(blank=True)
+    hero_image = models.ImageField(upload_to="discovery_hubs/", blank=True, null=True)
+    button_text = models.CharField(max_length=80, blank=True)
+    button_url = models.URLField(blank=True)
+    telegram_text = models.TextField(blank=True)
+    pinterest_text = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "title"]
+
+    def __str__(self):
+        return self.title
+
+
 #end
