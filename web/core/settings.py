@@ -196,3 +196,6 @@ AUCTION_DURATION_DAYS = int(
     os.getenv("AUCTION_DURATION_DAYS", 3)
 )
 
+
+# Password reset: after user sets a new password, log them in automatically.
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
