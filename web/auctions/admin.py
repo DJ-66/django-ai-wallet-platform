@@ -212,6 +212,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 class DiscoveryHubAdmin(admin.ModelAdmin):
     list_display = (
         "title",
+        "slug",
         "hashtag",
         "is_active",
         "sort_order",
@@ -224,6 +225,7 @@ class DiscoveryHubAdmin(admin.ModelAdmin):
     search_fields = (
         "title",
         "subtitle",
+        "slug",
         "hashtag",
     )
 

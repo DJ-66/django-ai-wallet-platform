@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal
-
+from django.utils.text import slugify
 
 class NotificationSound(models.Model):
     SOUND_TYPES = [
@@ -726,6 +726,7 @@ class DirectMessage(models.Model):
 
 class DiscoveryHub(models.Model):
     hashtag = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
     title = models.CharField(max_length=160)
     subtitle = models.TextField(blank=True)
     hero_image = models.ImageField(upload_to="discovery_hubs/", blank=True, null=True)
@@ -735,6 +736,11 @@ class DiscoveryHub(models.Model):
     pinterest_text = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.hashtag)
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["sort_order", "title"]
