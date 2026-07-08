@@ -1,6 +1,6 @@
 import re
+from .models import Hashtag, DiscoveryHub
 
-from .models import Hashtag
 
 HASHTAG_RE = re.compile(r"#([A-Za-z0-9_]{2,50})")
 
@@ -26,7 +26,12 @@ def sync_post_hashtags(post):
     names = extract_hashtag_names(f"{post.title} {post.content}")
 
     if not names:
-        names = ["discover_fanz"]
+        default_hub = (
+            DiscoveryHub.objects
+            .filter(slug="discover-fanz", is_active=True)
+            .first()
+        )
+        names = [default_hub.hashtag if default_hub else "discover_fanz"]
 
     tags = []
     for name in names:
