@@ -41,6 +41,7 @@ from .models import (
     BidWallet,
     Conversation,
     DirectMessage,
+    DiscoveryHub,
     Fan,
     FavoriteAuction,
     FeedPost,
@@ -96,8 +97,13 @@ def hashtag_feed(request, tag_name):
         }
     )
 
-
 def discovery_hub(request):
+    hub = (
+        DiscoveryHub.objects
+        .filter(slug="discover-fanz", is_active=True)
+        .first()
+    )
+
     trending_hashtags = (
         Hashtag.objects
         .filter(usage_count__gt=0)
@@ -126,12 +132,14 @@ def discovery_hub(request):
         request,
         "auctions/discovery_hub.html",
         {
+            "hub": hub,
             "trending_hashtags": trending_hashtags,
             "newest_hashtags": newest_hashtags,
             "recent_posts": recent_posts,
             "creators": creators,
         }
     )
+
 
 def notification_sounds_json(request):
     sounds = {}
