@@ -14,6 +14,42 @@
     <div class="row g-4">
 
         <div class="col-lg-8">
+         
+                           <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Explore Discovery Hubs</h4>
+
+                    {% if featured_hubs %}
+                        <div class="row g-3">
+                            {% for hub_card in featured_hubs %}
+                                <div class="col-md-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <h5 class="mb-2">{{ hub_card.title }}</h5>
+
+                                        {% if hub_card.subtitle %}
+                                            <p class="text-muted mb-3">
+                                                {{ hub_card.subtitle|truncatechars:120 }}
+                                            </p>
+                                        {% endif %}
+
+                                        {% if hub_card.button_url %}
+                                        <a href="{{ hub_card.button_url }}" class="btn btn-sm btn-primary">
+                                        {{ hub_card.button_text|default:"Explore" }}
+                                        </a>
+                                        {% else %}
+                                        <span class="btn btn-sm btn-secondary disabled">
+                                        {{ hub_card.button_text|default:"Coming Soon" }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No discovery hubs yet.</p>
+                    {% endif %}
+                </div>
+            </div>
 
             <div class="card mb-4">
                 <div class="card-body">

@@ -16,8 +16,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.db import models, transaction
 from django.db.models import Case, IntegerField, Q, Sum, Value, When
-from django.http import JsonResponse
-
+from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -42,6 +41,7 @@ from .models import (
     Conversation,
     DirectMessage,
     DiscoveryHub,
+    DiscoveryHubTranslation,
     Fan,
     FavoriteAuction,
     FeedPost,
@@ -97,12 +97,20 @@ def hashtag_feed(request, tag_name):
         }
     )
 
+def get_featured_discovery_hubs(limit=6):
+    return (
+        DiscoveryHub.objects
+        .filter(is_active=True)[:limit]
+    )
+
 def discovery_hub(request):
     hub = (
         DiscoveryHub.objects
         .filter(slug="discover-fanz", is_active=True)
         .first()
     )
+
+    featured_hubs = get_featured_discovery_hubs()
 
     trending_hashtags = (
         Hashtag.objects
@@ -133,12 +141,67 @@ def discovery_hub(request):
         "auctions/discovery_hub.html",
         {
             "hub": hub,
+            "featured_hubs": featured_hubs,
             "trending_hashtags": trending_hashtags,
             "newest_hashtags": newest_hashtags,
             "recent_posts": recent_posts,
             "creators": creators,
         }
     )
+
+
+def discovery_home(request):
+    language = request.GET.get("lang", "en")
+
+    translations = (
+        DiscoveryHubTranslation.objects
+        .select_related("hub")
+        .filter(
+            language=language,
+            is_active=True,
+            hub__is_active=True,
+        )
+        .order_by("hub__sort_order", "title")
+    )
+
+    return render(
+        request,
+        "auctions/discovery_home.html",
+        {
+            "translations": translations,
+            "language": language,
+        }
+    )
+
+def discovery_hub_detail(request, slug):
+    language = request.GET.get("lang", "en")
+
+    hub = (
+        DiscoveryHub.objects
+        .filter(slug=slug, is_active=True)
+        .first()
+    )
+
+    if hub is None:
+        raise Http404("Discovery Hub not found")
+
+    translation = hub.get_translation(language)
+
+    if translation is None:
+        raise Http404("Discovery Hub translation not found")
+
+    template_key = translation.template_name or "default"
+    template_name = f"auctions/discovery/{template_key}.html"
+
+    return render(
+        request,
+        template_name,
+    {
+        "hub": hub,
+        "translation": translation,
+        "language": language,
+    }
+)
 
 
 def notification_sounds_json(request):

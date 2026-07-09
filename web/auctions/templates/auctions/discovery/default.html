@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.discovery-detail-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.discovery-back {
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.discovery-hero-card {
+    border-radius: 26px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.84);
+    box-shadow: 0 14px 38px rgba(0,0,0,0.12);
+}
+
+.discovery-hero-image {
+    width: 100%;
+    max-height: 380px;
+    object-fit: cover;
+    display: block;
+}
+
+.discovery-hero-body {
+    padding: 2rem;
+}
+
+.discovery-hero-body h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.05;
+    margin: 0 0 1rem;
+}
+
+.discovery-subtitle {
+    font-size: 1.15rem;
+    line-height: 1.5;
+    color: #555;
+    margin-bottom: 1.5rem;
+}
+
+.discovery-cta {
+    display: inline-block;
+    padding: .85rem 1.25rem;
+    border-radius: 999px;
+    background: #5b35ff;
+    color: #fff !important;
+    text-decoration: none;
+    font-weight: 800;
+}
+
+.discovery-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.discovery-action-card {
+    border-radius: 20px;
+    padding: 1.35rem;
+    background: rgba(255,255,255,0.80);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.discovery-action-card h3 {
+    margin-top: 0;
+    margin-bottom: .5rem;
+}
+
+.discovery-action-card p {
+    margin-bottom: 0;
+    color: #555;
+}
+</style>
+
+<div class="discovery-detail-wrap">
+
+    <a href="{% url 'discovery_home' %}?lang={{ language }}" class="discovery-back">
+        ← Back to Discovery
+    </a>
+
+    <section class="discovery-hero-card">
+
+        {% if translation.hero_image %}
+            <img
+                src="{{ translation.hero_image.url }}"
+                alt="{{ translation.title }}"
+                class="discovery-hero-image">
+        {% endif %}
+
+        <div class="discovery-hero-body">
+            <h1>{{ translation.title }}</h1>
+
+            {% if translation.subtitle %}
+                <p class="discovery-subtitle">
+                    {{ translation.subtitle }}
+                </p>
+            {% endif %}
+
+            {% if translation.button_url and translation.button_text %}
+                <a href="{{ translation.button_url }}" class="discovery-cta">
+                    {{ translation.button_text }}
+                </a>
+            {% else %}
+                <a href="{% url 'discovery_home' %}?lang={{ language }}" class="discovery-cta">
+                    Start Exploring
+                </a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="discovery-action-grid">
+        <div class="discovery-action-card">
+            <h3>Find answers</h3>
+            <p>Start with the question you are trying to solve today.</p>
+        </div>
+
+        <div class="discovery-action-card">
+            <h3>Take action</h3>
+            <p>Move from ideas to practical next steps.</p>
+        </div>
+
+        <div class="discovery-action-card">
+            <h3>Create value</h3>
+            <p>Use FANZ to grow, share, and build momentum.</p>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

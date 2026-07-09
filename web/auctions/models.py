@@ -745,8 +745,92 @@ class DiscoveryHub(models.Model):
     class Meta:
         ordering = ["sort_order", "title"]
 
+    def get_translation(self, language="en"):
+        """
+        Return the best available translation for this hub.
+
+        Fallback order:
+            requested language
+            Spanish (for Guaraní)
+            English
+        """
+
+        fallback_order = [language]
+
+        if language == "gn":
+            fallback_order.append("es")
+
+        if "en" not in fallback_order:
+            fallback_order.append("en")
+
+        for code in fallback_order:
+            translation = (
+                self.translations
+                .filter(language=code, is_active=True)
+                .first()
+            )
+
+            if translation:
+                return translation
+
+        return None
+
     def __str__(self):
         return self.title
 
+
+class DiscoveryHubTranslation(models.Model):
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("es", "Spanish"),
+    ]
+
+    hub = models.ForeignKey(
+        DiscoveryHub,
+        on_delete=models.CASCADE,
+        related_name="translations"
+    )
+
+    language = models.CharField(
+        max_length=10,
+        choices=LANGUAGE_CHOICES
+    )
+
+    title = models.CharField(max_length=200)
+    subtitle = models.TextField(blank=True)
+
+    hero_image = models.ImageField(
+        upload_to="discovery_hubs/",
+        blank=True,
+        null=True
+    )
+
+    button_text = models.CharField(max_length=100, blank=True)
+    button_url = models.CharField(max_length=255, blank=True)
+
+    telegram_text = models.TextField(blank=True)
+    pinterest_text = models.TextField(blank=True)
+
+    seo_title = models.CharField(max_length=200, blank=True)
+    seo_description = models.TextField(blank=True)
+
+    template_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="default",
+        help_text="Template key for this localized Discovery Experience, e.g. default, restaurants, hotels, doctors."
+    )
+    
+    system_prompt = models.TextField(blank=True)
+    ai_personality = models.CharField(max_length=100, blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("hub", "language")
+        ordering = ["hub__sort_order", "language"]
+
+    def __str__(self):
+        return f"{self.hub.title} ({self.language})"
 
 #end

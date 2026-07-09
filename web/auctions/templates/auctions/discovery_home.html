@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<style>
+.discovery-home {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.discovery-home h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+}
+
+.discovery-home > p {
+    font-size: 1.15rem;
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.hub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+}
+
+.hub-card {
+    display: block;
+    padding: 1.25rem;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.75);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.hub-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+}
+
+.hub-card h2 {
+    font-size: 1.35rem;
+    margin-bottom: .5rem;
+}
+
+.hub-card span {
+    display: inline-block;
+    margin-top: .75rem;
+    font-weight: 700;
+    color: #4b2cff;
+}
+</style>
+
+<section class="discovery-home">
+    <h1>What problem are you trying to solve today?</h1>
+    <p>Choose a Discovery Hub to find answers, actions, and opportunities.</p>
+
+    <div class="hub-grid">
+        {% for item in translations %}
+            <a class="hub-card" href="{% url 'discovery_hub_detail' item.hub.slug %}?lang={{ language }}">
+                {% if item.hero_image %}
+                    <img src="{{ item.hero_image.url }}" alt="{{ item.title }}">
+                {% endif %}
+
+                <h2>{{ item.title }}</h2>
+
+                {% if item.subtitle %}
+                    <p>{{ item.subtitle }}</p>
+                {% endif %}
+
+                {% if item.button_text %}
+                    <span>{{ item.button_text }}</span>
+                {% endif %}
+            </a>
+        {% empty %}
+            <p>No Discovery Hubs are active for this language yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -95,6 +95,26 @@ path(
 ),
 
 path(
+    "discover/",
+    views.discovery_home,
+    name="discovery_home",
+),
+
+path(
+    "discover/<slug:slug>/",
+    views.discovery_hub_detail,
+    name="discovery_hub_detail",
+),
+
+
+path(
+    "discover/<slug:slug>/",
+    views.discovery_hub_detail,
+    name="discovery_hub_detail",
+),
+
+
+path(
     "tags/",
     views.discovery_hub,
     name="discovery_hub",

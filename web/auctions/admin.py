@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import DigitalItem, Auction, Bid, BidWallet
-from .models import NodeProfile, AICreatorMemory, UserProfile
+from .models import NodeProfile, AICreatorMemory, UserProfile, DiscoveryHubTranslation
 from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
 from .models import NotificationSound
 from django import forms
@@ -232,4 +232,67 @@ class DiscoveryHubAdmin(admin.ModelAdmin):
     ordering = (
         "sort_order",
         "title",
+    )
+
+@admin.register(DiscoveryHubTranslation)
+class DiscoveryHubTranslationAdmin(admin.ModelAdmin):
+    list_display = (
+        "hub",
+        "language",
+        "title",
+        "template_name",
+        "is_active",
+    )
+
+    list_filter = (
+        "language",
+        "template_name",
+        "is_active",
+    )
+
+    search_fields = (
+        "title",
+        "subtitle",
+        "hub__title",
+        "hub__slug",
+    )
+
+    autocomplete_fields = ("hub",)
+
+    fieldsets = (
+        ("Hub + Language", {
+            "fields": (
+                "hub",
+                "language",
+                "is_active",
+                "template_name",
+            )
+        }),
+        ("Public Content", {
+            "fields": (
+                "title",
+                "subtitle",
+                "hero_image",
+                "button_text",
+                "button_url",
+            )
+        }),
+        ("Social Sharing", {
+            "fields": (
+                "telegram_text",
+                "pinterest_text",
+            )
+        }),
+        ("SEO", {
+            "fields": (
+                "seo_title",
+                "seo_description",
+            )
+        }),
+        ("AI Experience", {
+            "fields": (
+                "system_prompt",
+                "ai_personality",
+            )
+        }),
     )

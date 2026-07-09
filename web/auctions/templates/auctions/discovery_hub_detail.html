@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="discovery-hub-detail">
+    <p>
+        <a href="{% url 'discovery_home' %}?lang={{ language }}">
+            ← Back to Discovery
+        </a>
+    </p>
+
+    <h1>{{ translation.title }}</h1>
+
+    {% if translation.subtitle %}
+        <p>{{ translation.subtitle }}</p>
+    {% endif %}
+
+    {% if translation.button_url and translation.button_text %}
+        <p>
+            <a href="{{ translation.button_url }}">
+                {{ translation.button_text }}
+            </a>
+        </p>
+    {% endif %}
+</section>
+{% endblock %}

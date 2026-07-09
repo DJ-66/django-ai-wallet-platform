@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.discovery-detail-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.discovery-back {
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.discovery-hero-card {
+    border-radius: 24px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.82);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.10);
+}
+
+.discovery-hero-body {
+    padding: 2rem;
+}
+
+.discovery-hero-body h1 {
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    line-height: 1.05;
+    margin-bottom: 1rem;
+}
+
+.discovery-cta {
+    display: inline-block;
+    margin-top: .75rem;
+    padding: .8rem 1.15rem;
+    border-radius: 999px;
+    background: #5b35ff;
+    color: white !important;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.discovery-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.discovery-action-card {
+    border-radius: 18px;
+    padding: 1.25rem;
+    background: rgba(255,255,255,0.78);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+</style>
+
+<div class="container py-4">
+
+    <p class="mb-4">
+        <a href="{% url 'discovery_home' %}?lang={{ language }}"
+           class="text-decoration-none">
+            ← Back to Discovery
+        </a>
+    </p>
+
+    <section class="card border-0 discovery-hero-card mb-4">
+
+        {% if translation.hero_image %}
+            <img
+                src="{{ translation.hero_image.url }}"
+                alt="{{ translation.title }}"
+                class="img-fluid w-100"
+                style="max-height: 380px; object-fit: cover;">
+        {% endif %}
+
+        <div class="card-body p-4 p-md-5">
+            <h1 class="display-5 fw-bold mb-3">
+                {{ translation.title }}
+            </h1>
+
+            {% if translation.subtitle %}
+                <p class="lead text-muted mb-4">
+                    {{ translation.subtitle }}
+                </p>
+            {% endif %}
+
+            {% if translation.button_url and translation.button_text %}
+                <a href="{{ translation.button_url }}"
+                   class="btn btn-primary btn-lg">
+                    {{ translation.button_text }}
+                </a>
+            {% else %}
+                <a href="{% url 'discovery_home' %}?lang={{ language }}"
+                   class="btn btn-primary btn-lg">
+                    Start Exploring
+                </a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="h5">Find answers</h3>
+                    <p class="text-muted mb-0">
+                        Start with the question you are trying to solve today.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="h5">Take action</h3>
+                    <p class="text-muted mb-0">
+                        Move from ideas to practical next steps.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="h5">Create value</h3>
+                    <p class="text-muted mb-0">
+                        Use FANZ to grow, share, and build momentum.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
