@@ -130,6 +130,7 @@ def home(request):
 urlpatterns = [
     path("", home),
     path("admin/", admin.site.urls),
+    path("b/", include("businesses.urls")),
     path("accounts/", include("allauth.urls")),
     path("auctions/", include("auctions.urls")),
     path("u/<str:username>/", legacy_user_profile_redirect, name="legacy_public_profile"),

@@ -45,6 +45,7 @@ SESSION_COOKIE_SECURE = True
 
 INSTALLED_APPS = [
     "auctions.apps.AuctionsConfig",
+    "businesses.apps.BusinessesConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

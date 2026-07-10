@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ business.name }} | FANZ
+{% endblock %}
+
+{% block content %}
+
+<section class="business-page">
+    <div class="container">
+
+        <header class="business-hero">
+
+            <div class="business-hero__meta">
+
+                <span class="business-industry">
+                    {{ business.get_industry_display }}
+                </span>
+
+                {% if business.is_claimed %}
+                    <span class="business-status business-status--claimed">
+                        Claimed
+                    </span>
+                {% else %}
+                    <span class="business-status business-status--unclaimed">
+                        Community Listing
+                    </span>
+                {% endif %}
+
+            </div>
+
+            <h1>{{ business.name }}</h1>
+
+            {% if business.city or business.country %}
+                <p class="business-location">
+                    {% if business.city %}{{ business.city }}{% endif %}
+                    {% if business.city and business.country %}, {% endif %}
+                    {% if business.country %}{{ business.country }}{% endif %}
+                </p>
+            {% endif %}
+
+            {% if business.description %}
+                <div class="business-description">
+                    {{ business.description|linebreaks }}
+                </div>
+            {% endif %}
+            {% if business.discovery_hub %}
+            <section class="business-discovery">
+
+            <h2>Discovery Hub</h2>
+
+            <p>
+            This business is part of the
+            <strong>{{ business.discovery_hub.title }}</strong>
+            Discovery Hub.
+            </p>
+
+</section>
+{% endif %}
+        </header>
+         <section class="business-contact">
+  <h2>Contact</h2>
+
+  {% if business.phone or business.email or business.website_url %}
+    <dl>
+      {% if business.phone %}
+        <dt>Phone</dt>
+        <dd>
+          <a href="tel:{{ business.phone }}">
+            {{ business.phone }}
+          </a>
+        </dd>
+      {% endif %}
+
+      {% if business.email %}
+        <dt>Email</dt>
+        <dd>
+          <a href="mailto:{{ business.email }}">
+            {{ business.email }}
+          </a>
+        </dd>
+      {% endif %}
+
+      {% if business.website_url %}
+        <dt>Website</dt>
+        <dd>
+          <a
+            href="{{ business.website_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Visit website
+          </a>
+        </dd>
+      {% endif %}
+    </dl>
+  {% else %}
+    <p>Contact information has not been added yet.</p>
+  {% endif %}
+</section>
+{% if not business.is_claimed %}
+  <section class="business-claim">
+    <h2>Is this your business?</h2>
+
+    <p>
+      Claim this listing to manage your information, publish updates,
+      connect with customers, and unlock FANZ business tools.
+    </p>
+
+    <a
+      href="#"
+      class="business-claim__button"
+    >
+      Claim this business
+    </a>
+  </section>
+{% endif %}
+    </div>
+</section>
+
+{% endblock %}

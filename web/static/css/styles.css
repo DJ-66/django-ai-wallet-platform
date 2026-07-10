@@ -3193,6 +3193,120 @@ body {
     border-radius: 14px;
 }
 
+/* =========================================================
+   Business Listing Detail
+   ========================================================= */
+
+.business-page {
+  padding: 48px 20px;
+}
+
+.business-page .container {
+  width: min(100%, 960px);
+  margin: 0 auto;
+}
+
+.business-hero,
+.business-contact,
+.business-claim {
+  padding: 28px;
+  margin-bottom: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+}
+
+.business-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.business-industry,
+.business-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.business-industry {
+  background: #eef2ff;
+}
+
+.business-status--claimed {
+  background: #dcfce7;
+}
+
+.business-status--unclaimed {
+  background: #fef3c7;
+}
+
+.business-hero h1 {
+  margin: 0 0 10px;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.1;
+}
+
+.business-location {
+  margin: 0 0 18px;
+  font-weight: 600;
+}
+
+.business-description p:last-child {
+  margin-bottom: 0;
+}
+
+.business-contact h2,
+.business-claim h2 {
+  margin-top: 0;
+}
+
+.business-contact dl {
+  margin: 0;
+}
+
+.business-contact dt {
+  margin-top: 14px;
+  font-weight: 700;
+}
+
+.business-contact dd {
+  margin: 4px 0 0;
+}
+
+.business-contact a,
+.business-claim__button {
+  text-decoration: none;
+}
+
+.business-claim__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 18px;
+  margin-top: 8px;
+  font-weight: 700;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .business-page {
+    padding: 24px 12px;
+  }
+
+  .business-hero,
+  .business-contact,
+  .business-claim {
+    padding: 20px;
+    border-radius: 14px;
+  }
+}
 
 
 /* end_css */
