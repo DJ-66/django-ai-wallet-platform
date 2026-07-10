@@ -3307,6 +3307,31 @@ body {
     border-radius: 14px;
   }
 }
+/* ============================================
+   BUSINESS ACTIONS
+============================================ */
 
+.business-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.business-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.business-action--call {
+  background: var(--accent-color, #7c3aed);
+  color: #fff;
+}
 
 /* end_css */

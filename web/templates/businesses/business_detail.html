@@ -58,6 +58,16 @@
 </section>
 {% endif %}
         </header>
+{% if business.phone %}
+  <section class="business-actions">
+    <a
+      href="tel:{{ business.phone }}"
+      class="business-action business-action--call"
+    >
+     📞 Call
+    </a>
+  </section>
+{% endif %}
          <section class="business-contact">
   <h2>Contact</h2>
 
