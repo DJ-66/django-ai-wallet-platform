@@ -84,7 +84,7 @@ It's trying to organize the answers people need today.
 
 # 3AM Revelations
 
-*FANZ Co-Development Team: 1 Human + ChatGPT*\ 
+*FANZ Co-Development Team: 1 Human + ChatGPT* \ 
 *3:00 AM --- July 11, 2026*
 
 We're building digital homes.
