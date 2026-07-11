@@ -102,6 +102,20 @@
   </section>
 {% endif %}
 
+{% if request.user.is_authenticated %}
+  <section class="business-community">
+    <a
+      href="{% url 'businesses:toggle_fan' business.slug %}"
+      class="business-community__button"
+    >
+      {% if is_fan %}
+        ⭐ Unfan
+      {% else %}
+        ⭐ Become a Fan
+      {% endif %}
+    </a>
+  </section>
+{% endif %}
 
          <section class="business-contact">
   <h2>Contact</h2>

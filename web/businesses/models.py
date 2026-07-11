@@ -80,5 +80,26 @@ class BusinessListing(models.Model):
             }
         )
 
+class BusinessFan(models.Model):
+    business = models.ForeignKey(
+        BusinessListing,
+        on_delete=models.CASCADE,
+        related_name="fans",
+    )
+    fan = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="followed_businesses",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("business", "fan")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.fan.username} is a fan of {self.business.name}"
+
+
     def __str__(self):
         return self.name

@@ -3342,14 +3342,45 @@ body {
 
 .business-action--website {
   background: #fff;
-  color: #2563eb;
-  border-color: #2563eb;
+  color: var(--accent-color, #7c3aed);
+  border-color: var(--accent-color, #7c3aed);
+}
+
+.business-action--directions {
+  background: #fff;
+  color: var(--accent-color, #7c3aed);
+  border-color: var(--accent-color, #7c3aed);
+}
+
+.business-action--message {
+  background: #fff;
+  color: var(--accent-color, #7c3aed);
+  border-color: var(--accent-color, #7c3aed);
 }
 
 .business-action:hover,
 .business-action:focus-visible {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgb(0 0 0 / 14%);
+}
+
+.business-community {
+  margin: 0 0 1.5rem;
+}
+
+.business-community__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--accent-color, #7c3aed);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #7c3aed
+;
+  text-decoration: none;
+  font-weight: 700;
 }
 
 /* end_css */
