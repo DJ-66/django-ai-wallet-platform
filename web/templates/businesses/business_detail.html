@@ -58,27 +58,44 @@
 </section>
 {% endif %}
         </header>
-{% if business.phone %}
+{% if business.phone or business.website_url or business.city or business.country %}
   <section class="business-actions">
-    <a
-      href="tel:{{ business.phone }}"
-      class="business-action business-action--call"
-    >
-     📞 Call
-    </a>
 
+    {% if business.phone %}
+      <a
+        href="tel:{{ business.phone }}"
+        class="business-action business-action--call"
+      >
+        📞 Call
+      </a>
+    {% endif %}
+
+      {% if business.city or business.country %}
+        <a
+          href="{{ business.google_maps_url }}"
+          class="business-action business-action--directions"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          📍 Directions
+        </a>
+      {% endif %}
+
+    {% if business.website_url %}
+      <a
+        href="{{ business.website_url }}"
+        class="business-action business-action--website"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        🌐 Website
+      </a>
+    {% endif %}
+
+  </section>
 {% endif %}
-{% if business.website_url %}
-  <a
-    href="{{ business.website_url }}"
-    class="business-action business-action--website"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    🌐 Website
-  </a>
-{% endif %}
-</section>
+
+
          <section class="business-contact">
   <h2>Contact</h2>
 

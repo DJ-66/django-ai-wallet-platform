@@ -1,6 +1,6 @@
+from urllib.parse import urlencode
 from django.conf import settings
 from django.db import models
-
 
 class BusinessListing(models.Model):
     INDUSTRY_REAL_ESTATE = "real_estate"
@@ -56,6 +56,29 @@ class BusinessListing(models.Model):
         ordering = ["name"]
         verbose_name = "Business Listing"
         verbose_name_plural = "Business Listings"
+
+    @property
+    def google_maps_url(self):
+        location_parts = [
+            self.name,
+            self.city,
+            self.country,
+        ]
+        query = ", ".join(
+            part.strip()
+            for part in location_parts
+            if part and part.strip()
+        )
+
+        if not query:
+            return ""
+
+        return "https://www.google.com/maps/search/?" + urlencode(
+            {
+                "api": "1",
+                "query": query,
+            }
+        )
 
     def __str__(self):
         return self.name
