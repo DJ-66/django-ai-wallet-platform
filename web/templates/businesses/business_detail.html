@@ -66,8 +66,19 @@
     >
      📞 Call
     </a>
-  </section>
+
 {% endif %}
+{% if business.website_url %}
+  <a
+    href="{{ business.website_url }}"
+    class="business-action business-action--website"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    🌐 Website
+  </a>
+{% endif %}
+</section>
          <section class="business-contact">
   <h2>Contact</h2>
 
