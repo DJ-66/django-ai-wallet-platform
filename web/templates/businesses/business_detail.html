@@ -58,7 +58,7 @@
 </section>
 {% endif %}
         </header>
-{% if business.phone or business.website_url or business.city or business.country %}
+{% if business.phone or business.website_url or business.city or business.country or business.owner %}
   <section class="business-actions">
 
     {% if business.phone %}
@@ -80,7 +80,14 @@
           📍 Directions
         </a>
       {% endif %}
-
+     {% if business.owner and request.user != business.owner %}
+     <a
+     href="{% url 'start_conversation' business.owner.username %}?message={{ business.name|urlencode }}%20business%20inquiry"
+     class="business-action business-action--message"
+     >
+    💬 Message
+    </a>
+    {% endif %}
     {% if business.website_url %}
       <a
         href="{{ business.website_url }}"
