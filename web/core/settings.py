@@ -27,7 +27,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
-    "fanz.to,www.fanz.to,django.usdrick.com,192.168.100.109,localhost,127.0.0.1"
+    "fanz.to,www.fanz.to,192.168.100.109,localhost,127.0.0.1"
 ).split(",")
 
 # Needed for Django admin/login behind Cloudflare + Nginx + HTTPS
