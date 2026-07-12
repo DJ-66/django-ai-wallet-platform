@@ -3133,6 +3133,7 @@ body {
     background: rgba(255,255,255,0.65);
     border-radius: 16px;
     padding: 18px;
+    box-sizing: border-box;
     margin-bottom: 16px;
     box-shadow: 0 0 12px rgba(124,58,237,.20);
 }

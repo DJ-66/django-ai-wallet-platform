@@ -17,7 +17,12 @@ def add_fanz_brand_banner(img, username):
     draw = ImageDraw.Draw(img)
     text = f"❤  Fanz.to/{username}"
 
-    font_size = 75
+    img_w, img_h = img.size
+
+    font_size = max(
+        18,
+        min(75, int(min(img_w, img_h) * 0.075)),
+    )
     
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -48,8 +53,6 @@ def add_fanz_brand_banner(img, username):
 
     banner_w = text_w + padding_x * 2
     banner_h = text_h + padding_y * 2
-
-    img_w, img_h = img.size
 
     x1 = img_w - banner_w - margin
     y1 = img_h - banner_h - margin
