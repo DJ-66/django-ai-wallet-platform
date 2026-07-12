@@ -80,29 +80,10 @@ class BusinessListing(models.Model):
             }
         )
 
-    @property
-    def google_maps_url(self):
-        location_parts = [
-            self.name,
-            self.city,
-            self.country,
-        ]
+    def __str__(self):
+        return self.name
 
-        query = ", ".join(
-            part.strip()
-            for part in location_parts
-            if part and part.strip()
-        )
 
-        if not query:
-            return ""
-
-        return "https://www.google.com/maps/search/?" + urlencode(
-            {
-                "api": "1",
-                "query": query,
-            }
-        )
 
 class BusinessFan(models.Model):
     business = models.ForeignKey(

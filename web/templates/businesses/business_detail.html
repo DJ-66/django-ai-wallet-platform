@@ -116,6 +116,34 @@
     </a>
   </section>
 {% endif %}
+  {% if updates %}
+    <section class="business-updates">
+      <h2>Latest Updates</h2>
+
+      {% for update in updates %}
+        <article class="business-update">
+          <h3>{{ update.title }}</h3>
+
+          <p class="business-update__date">
+            {{ update.created_at|date:"M j, Y" }}
+          </p>
+
+          {% if update.image %}
+            <img
+              src="{{ update.image.url }}"
+              alt="{{ update.title }}"
+              class="business-update__image"
+              loading="lazy"
+            >
+          {% endif %}
+
+          <div class="business-update__body">
+            {{ update.body|linebreaks }}
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
 
          <section class="business-contact">
   <h2>Contact</h2>

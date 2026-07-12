@@ -23,12 +23,15 @@ def business_detail(request, slug):
             fan=request.user,
         ).exists()
 
+    updates = business.updates.filter(is_published=True)
+
     return render(
         request,
         "businesses/business_detail.html",
         {
             "business": business,
             "is_fan": is_fan,
+            "updates": updates,
         },
     )
 
