@@ -5,11 +5,11 @@ from .views import bid_view, auction_detail, auction_list, signup_view, activate
 from .views import pay_user
 from .views import wallet_view
 from . import views_ai
-
+from . import views_events
 
 
 urlpatterns = [
-    
+
 
     path("", auction_list, name="auction_list"),
     path("<int:auction_id>/", auction_detail, name="auction_detail"),
@@ -25,6 +25,13 @@ urlpatterns = [
     path("ai/chat/<int:conversation_id>/", views_ai.ai_conversation, name="ai_conversation"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
+
+    path(
+    "events/create/",
+    views_events.create_event,
+    name="create_event",
+    ),
+
     path("<str:username>/fan/", views.toggle_fan, name="toggle_fan"),
     path("notifications/", views.notifications_page, name="notifications"),
     path("inbox/", views.inbox, name="inbox"),
@@ -35,7 +42,7 @@ urlpatterns = [
     path("notifications/check/", views.latest_notification_check, name="latest_notification_check"),
 
     path("terms/", views.terms_view, name="terms"),
-    
+
     path(
     "notifications/<int:notification_id>/delete/",
     views.delete_notification,
