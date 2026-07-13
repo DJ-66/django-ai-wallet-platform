@@ -6,7 +6,13 @@ import os
 
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
-from .models import FeedPost, UserProfile, DirectMessage
+from .models import (
+    DirectMessage,
+    Event,
+    FeedPost,
+    UserProfile,
+)
+
 
 def add_fanz_brand_banner(img, username):
     if not username:
@@ -195,6 +201,88 @@ def process_fanz_image_upload(
         output.getbuffer().nbytes,
         None,
     )
+
+
+class EventForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+        business_field = self.fields.get("business")
+
+        if business_field is None:
+            return
+
+        if self.user and self.user.is_authenticated:
+            business_field.queryset = business_field.queryset.filter(
+                owner=self.user,
+                is_active=True,
+            )
+        else:
+            business_field.queryset = business_field.queryset.none()
+
+    class Meta:
+        model = Event
+        fields = [
+            "business",
+            "event_type",
+            "title",
+            "description",
+            "start_at",
+            "end_at",
+            "location",
+            "image",
+        ]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": _("Event title..."),
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "rows": 5,
+                    "placeholder": _("Describe the event..."),
+                }
+            ),
+            "start_at": forms.DateTimeInput(
+                attrs={
+                    "type": "datetime-local",
+                }
+            ),
+            "end_at": forms.DateTimeInput(
+                attrs={
+                    "type": "datetime-local",
+                }
+            ),
+            "location": forms.TextInput(
+                attrs={
+                    "placeholder": _("Event location..."),
+                }
+            ),
+        }
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+
+        return process_fanz_image_upload(
+            image,
+            watermark=False,
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        start_at = cleaned_data.get("start_at")
+        end_at = cleaned_data.get("end_at")
+
+        if start_at and end_at and end_at < start_at:
+            self.add_error(
+                "end_at",
+                _("End time cannot be earlier than start time."),
+            )
+
+        return cleaned_data
 
 
 class FeedPostForm(forms.ModelForm):
