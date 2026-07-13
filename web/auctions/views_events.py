@@ -4,6 +4,29 @@ from django.shortcuts import redirect, render
 
 from .capabilities import can_create_events
 from .forms import EventForm
+from .models import Event
+
+
+def event_list(request):
+    events = (
+        Event.objects.filter(
+            is_published=True,
+            is_cancelled=False,
+        )
+        .select_related(
+            "creator",
+            "business",
+        )
+        .order_by("start_at")
+    )
+
+    return render(
+        request,
+        "auctions/events/event_list.html",
+        {
+            "events": events,
+        },
+    )
 
 
 @login_required

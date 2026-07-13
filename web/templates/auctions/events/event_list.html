@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="event-list-page">
+  <div class="event-list-header">
+    <div>
+      <h1>Events</h1>
+      <p>Discover upcoming events from creators and businesses.</p>
+    </div>
+
+    {% if user.is_authenticated %}
+      <a href="{% url 'create_event' %}" class="event-create-link">
+        + Create Event
+      </a>
+    {% endif %}
+  </div>
+
+  {% if events %}
+    <div class="event-list">
+      {% for event in events %}
+        <article class="event-list-card">
+          {% if event.image %}
+            <div class="event-list-image">
+              <img
+                src="{{ event.image.url }}"
+                alt="{{ event.title }}"
+                loading="lazy"
+              >
+            </div>
+          {% endif %}
+
+          <div class="event-list-content">
+            <div class="event-list-meta">
+              <span>{{ event.get_event_type_display }}</span>
+              <span>{{ event.start_at|date:"M j, Y" }}</span>
+            </div>
+
+            <h2>{{ event.title }}</h2>
+
+            <p>{{ event.description|truncatewords:30 }}</p>
+
+            {% if event.location %}
+              <p class="event-list-location">
+                📍 {{ event.location }}
+              </p>
+            {% endif %}
+
+            {% if event.business %}
+              <p class="event-list-host">
+                Hosted by {{ event.business.name }}
+              </p>
+            {% else %}
+              <p class="event-list-host">
+                Hosted by @{{ event.creator.username }}
+              </p>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="event-list-empty">
+      <h2>No upcoming events yet</h2>
+      <p>Be the first to create one.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
