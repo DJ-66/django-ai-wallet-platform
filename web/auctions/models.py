@@ -253,6 +253,64 @@ class CreditPurchase(models.Model):
     def __str__(self):
         return f"{self.user} - {self.package} - ${self.amount_paid}"
 
+EVENT_TYPES = [
+    ("general", "General"),
+    ("promotion", "Promotion"),
+    ("music", "Live Music"),
+    ("food", "Food"),
+    ("community", "Community"),
+    ("private", "Private"),
+    ("holiday", "Holiday"),
+]
+
+
+class Event(models.Model):
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="created_events",
+    )
+    business = models.ForeignKey(
+        "businesses.BusinessListing",
+        on_delete=models.SET_NULL,
+        related_name="events",
+        blank=True,
+        null=True,
+    )
+    event_type = models.CharField(
+        max_length=20,
+        choices=EVENT_TYPES,
+        default="general",
+    )
+
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    start_at = models.DateTimeField()
+    end_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+    location = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+    image = models.ImageField(
+        upload_to="events/",
+        blank=True,
+        null=True,
+    )
+    is_published = models.BooleanField(default=True)
+    is_cancelled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_at"]
+
+    def __str__(self):
+        return self.title
+
+
 class AICompanion(models.Model):
     PROVIDER_CHOICES = [
         ("local_ollama", "Local Ollama"),
