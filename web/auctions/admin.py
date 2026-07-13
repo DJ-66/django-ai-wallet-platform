@@ -1,24 +1,24 @@
 from django.contrib import admin
-from .models import DigitalItem, Auction, Bid, BidWallet
-from .models import NodeProfile, AICreatorMemory, UserProfile, DiscoveryHubTranslation
-from .models import AICompanion, AIConversation, AIMessage, AIFanMemoryNote
-from .models import NotificationSound
 from django import forms
+from django.contrib import admin
+
 from .forms import process_fanz_image_upload
 from .models import (
-    DigitalItem,
+    AICreatorMemory,
+    AICompanion,
+    AIConversation,
+    AIFanMemoryNote,
+    AIMessage,
     Auction,
     Bid,
     BidWallet,
-    NodeProfile,
-    AICreatorMemory,
-    UserProfile,
-    AICompanion,
-    AIConversation,
-    AIMessage,
-    AIFanMemoryNote,
-    NotificationSound,
+    DigitalItem,
     DiscoveryHub,
+    DiscoveryHubTranslation,
+    Event,
+    NodeProfile,
+    NotificationSound,
+    UserProfile,
 )
 
 
@@ -295,4 +295,38 @@ class DiscoveryHubTranslationAdmin(admin.ModelAdmin):
                 "ai_personality",
             )
         }),
+    )
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "creator",
+        "business",
+        "start_at",
+        "end_at",
+        "location",
+        "is_published",
+        "is_cancelled",
+    )
+    list_filter = (
+        "is_published",
+        "is_cancelled",
+        "start_at",
+        "created_at",
+    )
+    search_fields = (
+        "title",
+        "description",
+        "location",
+        "creator__username",
+        "business__name",
+    )
+    autocomplete_fields = (
+        "creator",
+        "business",
+    )
+    readonly_fields = (
+        "created_at",
+        "updated_at",
     )
