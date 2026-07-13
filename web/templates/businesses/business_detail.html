@@ -125,7 +125,8 @@
           <h3>{{ update.title }}</h3>
 
           <p class="business-update__date">
-            {{ update.created_at|date:"M j, Y" }}
+            📅 {{ update.created_at|date:"M j, Y" }}
+
           </p>
 
           {% if update.image %}
