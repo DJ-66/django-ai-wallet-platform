@@ -40,15 +40,24 @@
             <p>{{ event.description|truncatewords:30 }}</p>
 
             {% if event.location %}
-              <p class="event-list-location">
-                📍 {{ event.location }}
-              </p>
-            {% endif %}
+                <p class="event-list-location">
+            <a
+                href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+               📍 {{ event.location }}
+           </a>
+          </p>
+                {% endif %}
 
             {% if event.business %}
-              <p class="event-list-host">
-                Hosted by {{ event.business.name }}
-              </p>
+                <p class="event-list-host">
+                Hosted by
+                <a href="{% url 'businesses:detail' event.business.slug %}">
+                {{ event.business.name }}
+                </a>
+                </p>
             {% else %}
               <p class="event-list-host">
                 Hosted by @{{ event.creator.username }}

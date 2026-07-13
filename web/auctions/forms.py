@@ -260,6 +260,12 @@ class EventForm(forms.ModelForm):
                     "placeholder": _("Event location..."),
                 }
             ),
+
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
         }
 
     def clean_image(self):
