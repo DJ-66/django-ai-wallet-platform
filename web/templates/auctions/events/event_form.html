@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="event-form-page">
+  <div class="event-form-card">
+    <h1>Create Event</h1>
+
+    <p>
+      Publish an event for your community or associate it with one of your businesses.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {{ form.non_field_errors }}
+
+      {% for field in form %}
+        <div class="event-form-field">
+          {{ field.label_tag }}
+          {{ field }}
+
+          {% if field.help_text %}
+            <p class="event-form-help">{{ field.help_text }}</p>
+          {% endif %}
+
+          {% for error in field.errors %}
+            <p class="event-form-error">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="event-form-submit">
+        Create Event
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %}
