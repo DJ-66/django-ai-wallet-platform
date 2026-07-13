@@ -27,6 +27,12 @@ urlpatterns = [
     path("profile/edit/", views.edit_profile, name="edit_profile"),
 
     path(
+    "events/",
+    views_events.event_list,
+    name="event_list",
+    ),
+
+    path(
     "events/create/",
     views_events.create_event,
     name="create_event",
