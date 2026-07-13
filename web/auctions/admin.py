@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django import forms
-from django.contrib import admin
-
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 from .forms import process_fanz_image_upload
 from .models import (
     AICreatorMemory,
@@ -191,6 +191,27 @@ class AIFanMemoryNoteAdmin(admin.ModelAdmin):
         "note",
     )
 
+
+class UserProfileInlineForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ("is_ai_creator",)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["is_ai_creator"].label = "AI Influencer badge"
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    form = UserProfileInlineForm
+    can_delete = False
+    extra = 0
+    max_num = 1
+    verbose_name = "Profile designation"
+    verbose_name_plural = "Profile designation"
+
+
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = (
@@ -207,6 +228,14 @@ class UserProfileAdmin(admin.ModelAdmin):
         "user__username",
         "display_name",
     )
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    inlines = (UserProfileInline,)
+
 
 @admin.register(DiscoveryHub)
 class DiscoveryHubAdmin(admin.ModelAdmin):

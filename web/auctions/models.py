@@ -507,7 +507,10 @@ class UserProfile(models.Model):
         null=True
     )
 
-    is_ai_influencer = models.BooleanField(default=False)
+    is_ai_influencer = models.BooleanField(
+        default=False,
+        help_text="Display the AI Influencer badge on the public profile."
+    )
 
     
     banner = models.ImageField(
