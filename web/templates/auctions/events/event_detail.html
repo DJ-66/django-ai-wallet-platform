@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    {% if event.image %}
+        <img
+            src="{{ event.image.url }}"
+            alt="{{ event.title }}"
+            class="event-detail-image"
+        >
+    {% endif %}
+
+    <h1>{{ event.title }}</h1>
+
+    <p>
+        <strong>Type:</strong>
+        {{ event.get_event_type_display }}
+    </p>
+
+    <p>
+        <strong>Starts:</strong>
+        {{ event.start_at }}
+    </p>
+
+    {% if event.end_at %}
+        <p>
+            <strong>Ends:</strong>
+            {{ event.end_at }}
+        </p>
+    {% endif %}
+
+    {% if event.location %}
+        <p>
+            <strong>Location:</strong>
+            <a
+                href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
+                target="_blank"
+            >
+                {{ event.location }}
+            </a>
+        </p>
+    {% endif %}
+
+    {% if event.business %}
+        <p>
+            <strong>Hosted by:</strong>
+
+            <a href="{% url 'businesses:detail' event.business.slug %}">
+            {{ event.business.name }}
+            </a>
+        </p>
+    {% endif %}
+
+    <p>
+        <strong>Creator:</strong>
+
+        <a href="{% url 'public_profile' event.creator.username %}">
+            {{ event.creator.username }}
+        </a>
+    </p>
+
+    <hr>
+
+    <p>
+        {{ event.description|linebreaks }}
+    </p>
+
+</div>
+
+{% endblock %}

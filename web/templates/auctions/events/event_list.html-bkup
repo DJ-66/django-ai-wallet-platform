@@ -20,17 +20,17 @@
       {% for event in events %}
         <article class="event-list-card">
           {% if event.image %}
-            <a
-              href="{% url 'event_detail' event.id %}"
-              class="event-list-image"
-              aria-label="View {{ event.title }}"
-            >
-              <img
-                src="{{ event.image.url }}"
-                alt="{{ event.title }}"
-                loading="lazy"
-              >
-            </a>
+       <a
+          href="{% url 'event_detail' event.id %}"
+          class="event-list-image"
+          aria-label="View {{ event.title }}"
+       >
+       <img
+          src="{{ event.image.url }}"
+          alt="{{ event.title }}"
+          loading="lazy"
+      >
+      </a>
           {% endif %}
 
           <div class="event-list-content">
@@ -40,38 +40,35 @@
             </div>
 
             <h2>
-              <a href="{% url 'event_detail' event.id %}">
-                {{ event.title }}
-              </a>
+            <a href="{% url 'event_detail' event.id %}">
+            {{ event.title }}
+            </a>
             </h2>
 
             <p>{{ event.description|truncatewords:30 }}</p>
 
             {% if event.location %}
-              <p class="event-list-location">
-                <a
-                  href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  📍 {{ event.location }}
-                </a>
-              </p>
-            {% endif %}
+                <p class="event-list-location">
+            <a
+                href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+               📍 {{ event.location }}
+           </a>
+          </p>
+                {% endif %}
 
             {% if event.business %}
-              <p class="event-list-host">
+                <p class="event-list-host">
                 Hosted by
                 <a href="{% url 'businesses:detail' event.business.slug %}">
-                  {{ event.business.name }}
+                {{ event.business.name }}
                 </a>
-              </p>
+                </p>
             {% else %}
               <p class="event-list-host">
-                Hosted by
-                <a href="{% url 'public_profile' event.creator.username %}">
-                  @{{ event.creator.username }}
-                </a>
+                Hosted by @{{ event.creator.username }}
               </p>
             {% endif %}
           </div>

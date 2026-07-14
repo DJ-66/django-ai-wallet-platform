@@ -33,6 +33,12 @@ urlpatterns = [
     ),
 
     path(
+    "events/<int:event_id>/",
+    views_events.event_detail,
+    name="event_detail",
+    ),
+
+    path(
     "events/create/",
     views_events.create_event,
     name="create_event",
