@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="event-detail-page">
+  <a href="{% url 'event_list' %}" class="event-detail-back">
+    ← Back to Events
+  </a>
+
+  <article class="event-detail-card">
+    {% if event.image %}
+      <img
+        src="{{ event.image.url }}"
+        alt="{{ event.title }}"
+        class="event-detail-image"
+      >
+    {% endif %}
+
+    <div class="event-detail-content">
+      <div class="event-detail-meta">
+        <span>{{ event.get_event_type_display }}</span>
+        <span>{{ event.start_at|date:"M j, Y" }}</span>
+      </div>
+
+      <h1 class="event-detail-title">{{ event.title }}</h1>
+
+      <div class="event-detail-info">
+        <p>
+          <strong>Starts:</strong><br>
+          {{ event.start_at|date:"M j, Y, g:i A" }}
+        </p>
+
+        {% if event.end_at %}
+          <p>
+            <strong>Ends:</strong><br>
+            {{ event.end_at|date:"M j, Y, g:i A" }}
+          </p>
+        {% endif %}
+
+        {% if event.location %}
+          <p>
+            <strong>Location:</strong><br>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              📍 {{ event.location }}
+            </a>
+          </p>
+        {% endif %}
+
+        {% if event.business %}
+          <p>
+            <strong>Hosted by:</strong><br>
+            <a href="{% url 'businesses:detail' event.business.slug %}">
+              {{ event.business.name }}
+            </a>
+          </p>
+        {% endif %}
+
+        <p>
+          <strong>Creator:</strong><br>
+          <a href="{% url 'public_profile' event.creator.username %}">
+            @{{ event.creator.username }}
+          </a>
+        </p>
+      </div>
+
+      <div class="event-detail-description">
+        {{ event.description|linebreaks }}
+      </div>
+    </div>
+  </article>
+</section>
+{% endblock %}

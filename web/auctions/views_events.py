@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .capabilities import can_create_events
 from .forms import EventForm
@@ -25,6 +25,26 @@ def event_list(request):
         "auctions/events/event_list.html",
         {
             "events": events,
+        },
+    )
+
+
+def event_detail(request, event_id):
+    event = get_object_or_404(
+        Event.objects.select_related(
+            "creator",
+            "business",
+        ),
+        id=event_id,
+        is_published=True,
+        is_cancelled=False,
+    )
+
+    return render(
+        request,
+        "auctions/events/event_detail.html",
+        {
+            "event": event,
         },
     )
 
