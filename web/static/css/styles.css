@@ -3990,4 +3990,29 @@ body.page-qr-open {
   }
 }
 
+.business-tos-field {
+    margin: 1.25rem 0;
+}
+
+.business-tos-field .tos-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.business-tos-field input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-height: auto;
+    margin: 0.1rem 0 0;
+    flex: 0 0 auto;
+}
+
+.business-tos-field a {
+    font-weight: 700;
+    text-underline-offset: 0.15rem;
+}
+
 /* end_css */

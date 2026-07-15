@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import BusinessListingForm
 from .models import BusinessFan, BusinessListing
 
 
@@ -35,6 +36,47 @@ def business_detail(request, slug):
         },
     )
 
+
+@login_required
+def business_create(request):
+    if request.method == "POST":
+        form = BusinessListingForm(
+            request.POST,
+            request.FILES,
+        )
+
+        if form.is_valid():
+            business = form.save(commit=False)
+            business.owner = request.user
+            business.is_claimed = True
+            business.is_active = True
+            business.save()
+
+            messages.success(
+                request,
+            (
+                f"🎉 Congratulations! {business.name} is now live on FANZ. "
+                "Next, publish an update, create your first event, "
+                "and start connecting with your community."
+            ),
+        )
+
+            return redirect(
+                "businesses:detail",
+                slug=business.slug,
+            )
+    else:
+        form = BusinessListingForm()
+
+    return render(
+        request,
+        "businesses/business_form.html",
+        {
+            "form": form,
+        },
+    )
+
+
 @login_required
 def toggle_business_fan(request, slug):
     business = get_object_or_404(
@@ -61,5 +103,3 @@ def toggle_business_fan(request, slug):
         )
 
     return redirect("businesses:detail", slug=business.slug)
-
-

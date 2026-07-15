@@ -20,15 +20,15 @@
     >
   </div>
 
-{% elif not business.is_claimed %}
+   {% elif not business.is_claimed %}
   <a
-    href="{% url 'signup' %}?next={{ request.path|urlencode }}&business={{ business.slug|urlencode }}"
+    href="{% url 'businesses:create' %}?community={{ business.slug|urlencode }}"
     class="business-unclaimed-hero"
-    aria-label="Claim this business free on FANZ"
+    aria-label="List my business on FANZ"
   >
     <img
       src="{% static 'img/businesses/unclaimed-business-hero.webp' %}"
-      alt="Claim your business free on FANZ"
+      alt="List your business free on FANZ"
       loading="eager"
     >
   </a>
@@ -213,16 +213,20 @@
     <h2>Is this your business?</h2>
 
     <p>
-      Claim this listing to manage your information, publish updates,
-      connect with customers, and unlock FANZ business tools.
+      List your business on FANZ for free. Reach local customers,
+      publish updates, create events, and grow your community.
     </p>
 
     <a
-      href="#"
+      href="{% url 'businesses:create' %}?community={{ business.slug|urlencode }}"
       class="business-claim__button"
     >
-      Claim this business
+      🚀 List My Business on FANZ
     </a>
+
+    <p class="business-claim__note">
+      Free forever.
+    </p>
   </section>
 {% endif %}
     </div>
