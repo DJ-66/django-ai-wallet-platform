@@ -8,9 +8,31 @@
 
 <section class="business-page">
     <div class="container">
-
         <header class="business-hero">
+        {% load static %}
 
+{% if business.is_claimed and business.hero_image %}
+  <div class="business-hero-image">
+    <img
+      src="{{ business.hero_image.url }}"
+      alt="{{ business.name }}"
+      loading="eager"
+    >
+  </div>
+
+{% elif not business.is_claimed %}
+  <a
+    href="{% url 'signup' %}?next={{ request.path|urlencode }}&business={{ business.slug|urlencode }}"
+    class="business-unclaimed-hero"
+    aria-label="Claim this business free on FANZ"
+  >
+    <img
+      src="{% static 'img/businesses/unclaimed-business-hero.webp' %}"
+      alt="Claim your business free on FANZ"
+      loading="eager"
+    >
+  </a>
+{% endif %}
             <div class="business-hero__meta">
 
                 <span class="business-industry">

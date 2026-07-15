@@ -48,7 +48,7 @@ class AuctionAdminForm(forms.ModelForm):
         if image:
             return process_fanz_image_upload(
                 image,
-                auction_footer=True,
+                platform_footer=True,
                 max_width=1600,
                 max_height=2400,
                 quality=82,
@@ -67,7 +67,7 @@ class AuctionAdminForm(forms.ModelForm):
         if image:
             return process_fanz_image_upload(
                 image,
-                auction_footer=True,
+                platform_footer=True,
                 max_width=1600,
                 max_height=2400,
                 quality=82,

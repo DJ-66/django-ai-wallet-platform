@@ -1,6 +1,7 @@
 
 from django.contrib import admin
 from django.http import HttpResponse
+from core.views import current_page_qr
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from auctions.views import activate_view
@@ -129,6 +130,13 @@ def home(request):
 
 urlpatterns = [
     path("", home),
+
+    path(
+    "qr/",
+    current_page_qr,
+    name="current_page_qr",
+    ),
+
     path("admin/", admin.site.urls),
     path("b/", include("businesses.urls")),
     path("accounts/", include("allauth.urls")),

@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=244">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=251">
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
 </svg>">
@@ -71,7 +71,53 @@
 </nav>
 
 </header>
+<button
+  type="button"
+  class="page-qr-button"
+  id="pageQrButton"
+  aria-label="{% trans 'Show QR code for this page' %}"
+  aria-controls="pageQrModal"
+  aria-expanded="false"
+>
+  ▦
+</button>
 
+<div
+  class="page-qr-modal"
+  id="pageQrModal"
+  hidden
+>
+  <div
+    class="page-qr-modal__backdrop"
+    data-qr-close
+  ></div>
+
+  <section
+    class="page-qr-modal__card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="pageQrTitle"
+  >
+    <button
+      type="button"
+      class="page-qr-modal__close"
+      data-qr-close
+      aria-label="{% trans 'Close' %}"
+    >
+      ×
+    </button>
+
+    <h2 id="pageQrTitle">
+      {% trans "Scan this page" %}
+    </h2>
+
+    <img
+      id="pageQrImage"
+      class="page-qr-modal__image"
+      alt="{% trans 'QR code for this page' %}"
+    >
+  </section>
+</div>
 <main class="container">
   
 <br>
@@ -311,6 +357,50 @@ document.addEventListener("DOMContentLoaded", function() {
 
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const button = document.getElementById("pageQrButton");
+  const modal = document.getElementById("pageQrModal");
+  const image = document.getElementById("pageQrImage");
+  const closeControls = modal?.querySelectorAll("[data-qr-close]");
+
+  if (!button || !modal || !image) return;
+
+  function openQrModal() {
+    const currentUrl = window.location.href;
+    const qrEndpoint =
+      "{% url 'current_page_qr' %}?url=" +
+      encodeURIComponent(currentUrl);
+
+    image.src = qrEndpoint;
+    modal.hidden = false;
+    document.body.classList.add("page-qr-open");
+    button.setAttribute("aria-expanded", "true");
+
+    modal.querySelector(".page-qr-modal__close")?.focus();
+  }
+
+  function closeQrModal() {
+    modal.hidden = true;
+    document.body.classList.remove("page-qr-open");
+    button.setAttribute("aria-expanded", "false");
+    button.focus();
+  }
+
+  button.addEventListener("click", openQrModal);
+
+  closeControls?.forEach(function (control) {
+    control.addEventListener("click", closeQrModal);
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.hidden) {
+      closeQrModal();
+    }
+  });
+});
+</script>
+
 </body>
 </html>
 

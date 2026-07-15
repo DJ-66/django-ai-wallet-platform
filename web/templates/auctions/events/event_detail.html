@@ -2,71 +2,168 @@
 
 {% block content %}
 
-<div class="container">
+<section class="event-detail-page">
 
-    {% if event.image %}
+    <a
+        href="{% url 'event_list' %}"
+        class="event-detail-back"
+    >
+        ← Back to Events
+    </a>
+
+    <article class="event-detail-card">
+
+        {% if event.image %}
         <img
-            src="{{ event.image.url }}"
-            alt="{{ event.title }}"
-            class="event-detail-image"
+        src="{{ event.image.url }}"
+        alt="{{ event.title }}"
+        class="event-detail-image"
         >
-    {% endif %}
+        {% endif %}
 
-    <h1>{{ event.title }}</h1>
+        <div class="event-detail-content">
 
-    <p>
-        <strong>Type:</strong>
-        {{ event.get_event_type_display }}
-    </p>
+    <div class="event-detail-meta">
 
-    <p>
-        <strong>Starts:</strong>
-        {{ event.start_at }}
-    </p>
+        <span>
+            {{ event.get_event_type_display }}
+        </span>
 
-    {% if event.end_at %}
-        <p>
-            <strong>Ends:</strong>
-            {{ event.end_at }}
-        </p>
-    {% endif %}
+    </div>
 
-    {% if event.location %}
-        <p>
-            <strong>Location:</strong>
-            <a
-                href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
-                target="_blank"
-            >
-                {{ event.location }}
-            </a>
-        </p>
-    {% endif %}
+    <h1 class="event-detail-title">
+
+        {{ event.title }}
+
+    </h1>
 
     {% if event.business %}
         <p>
-            <strong>Hosted by:</strong>
+
+            Hosted by
 
             <a href="{% url 'businesses:detail' event.business.slug %}">
-            {{ event.business.name }}
+                {{ event.business.name }}
             </a>
+
         </p>
     {% endif %}
 
     <p>
-        <strong>Creator:</strong>
+
+        Created by
 
         <a href="{% url 'public_profile' event.creator.username %}">
-            {{ event.creator.username }}
+            @{{ event.creator.username }}
         </a>
+
     </p>
 
-    <hr>
+        <div class="event-detail-info">
 
     <p>
-        {{ event.description|linebreaks }}
+        <strong>📅 Date</strong><br>
+        {{ event.start_at|date:"l, F j, Y" }}
     </p>
 
+    <p>
+        <strong>🕖 Time</strong><br>
+        {{ event.start_at|date:"g:i A" }}
+    </p>
+
+    {% if event.location %}
+    <p>
+        <strong>📍 Location</strong><br>
+
+        <a
+            href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            {{ event.location }}
+        </a>
+    </p>
+    {% endif %}
+
+    {% if event.end_at %}
+    <p>
+        <strong>🏁 Ends</strong><br>
+        {{ event.end_at|date:"g:i A" }}
+    </p>
+    {% endif %}
+
 </div>
+
+        <section class="event-detail-description">
+    <h2>About This Event</h2>
+
+    <div class="event-detail-description__body">
+        {{ event.description|linebreaks }}
+    </div>
+</section>
+
+        <section class="event-detail-actions">
+
+    <h2>Actions</h2>
+
+    <div class="event-detail-action-grid">
+        {% if event.location %}
+            <a
+                href="https://www.google.com/maps/search/?api=1&query={{ event.location|urlencode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="event-detail-action"
+            >
+                📍 Directions
+            </a>
+        {% endif %}
+
+        <button
+            type="button"
+            class="event-detail-action"
+            id="event-share-button"
+        >
+            🔗 Share Event
+        </button>
+    </div>
+</section>
+
+        <section class="event-detail-capabilities">
+    <h2>Expand This Event</h2>
+
+    <div class="event-detail-capability-grid">
+
+        <article class="event-detail-capability">
+            <h3>🎟 Admission</h3>
+            <p>Manage entry and attendance.</p>
+            <span>Coming Soon</span>
+        </article>
+
+        <article class="event-detail-capability">
+            <h3>⭐ Spotlight</h3>
+            <p>Promote this event across FANZ.</p>
+            <span>Coming Soon</span>
+        </article>
+
+        <article class="event-detail-capability">
+            <h3>👥 Community</h3>
+            <p>Build conversation around this event.</p>
+            <span>Coming Soon</span>
+        </article>
+
+        <article class="event-detail-capability">
+            <h3>🤖 AI Receptionist</h3>
+            <p>Answer attendee questions automatically.</p>
+            <span>Coming Soon</span>
+        </article>
+
+    </div>
+</section>
+
+</div>
+
+    </article>
+
+</section>
 
 {% endblock %}
