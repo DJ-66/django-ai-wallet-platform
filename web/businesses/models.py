@@ -1,6 +1,9 @@
 from urllib.parse import urlencode
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
+
 
 class BusinessListing(models.Model):
     INDUSTRY_REAL_ESTATE = "real_estate"
@@ -14,7 +17,10 @@ class BusinessListing(models.Model):
     ]
 
     name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(
+    unique=True,
+    blank=True,
+    )
 
     industry = models.CharField(
         max_length=50,
@@ -22,6 +28,16 @@ class BusinessListing(models.Model):
     )
 
     description = models.TextField(blank=True)
+
+    hero_image = models.ImageField(
+        _("Business hero image"),
+        upload_to="businesses/hero_images/",
+        blank=True,
+        null=True,
+        help_text=_(
+            "Upload a wide image that represents your business."
+        ),
+    )
 
     city = models.CharField(max_length=120, blank=True)
     country = models.CharField(max_length=120, blank=True)
@@ -79,6 +95,23 @@ class BusinessListing(models.Model):
                 "query": query,
             }
         )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.name) or "business"
+            candidate = base_slug
+            number = 2
+
+            while BusinessListing.objects.exclude(
+                pk=self.pk
+            ).filter(slug=candidate).exists():
+                candidate = f"{base_slug}-{number}"
+                number += 1
+
+            self.slug = candidate
+
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.name

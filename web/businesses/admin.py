@@ -1,10 +1,12 @@
 from django.contrib import admin
-
-from .models import BusinessListing
 from .models import BusinessListing, BusinessUpdate
+from django.utils.translation import gettext_lazy as _
+from .forms import BusinessListingAdminForm
+
 
 @admin.register(BusinessListing)
 class BusinessListingAdmin(admin.ModelAdmin):
+    form = BusinessListingAdminForm
     list_display = (
         "name",
         "industry",
@@ -39,6 +41,59 @@ class BusinessListingAdmin(admin.ModelAdmin):
     readonly_fields = (
         "created_at",
         "updated_at",
+    )
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "slug",
+                    "industry",
+                    "description",
+                    "hero_image",
+                ),
+            },
+        ),
+        (
+            _("Location"),
+            {
+                "fields": (
+                    "city",
+                    "country",
+                    "discovery_hub",
+                ),
+            },
+        ),
+        (
+            _("Contact"),
+            {
+                "fields": (
+                    "website_url",
+                    "phone",
+                    "email",
+                ),
+            },
+        ),
+        (
+            _("Ownership and status"),
+            {
+                "fields": (
+                    "owner",
+                    "is_claimed",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            _("Dates"),
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
     )
 
 @admin.register(BusinessUpdate)
