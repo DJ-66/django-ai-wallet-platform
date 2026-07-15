@@ -39,10 +39,22 @@ def business_detail(request, slug):
 
 @login_required
 def business_create(request):
+    community_slug = request.GET.get("community", "").strip()
+    community_business = None
+
+    if community_slug:
+        community_business = get_object_or_404(
+            BusinessListing,
+            slug=community_slug,
+            is_claimed=False,
+            is_active=True,
+        )
+    
     if request.method == "POST":
         form = BusinessListingForm(
             request.POST,
             request.FILES,
+            instance=community_business,
         )
 
         if form.is_valid():
@@ -52,27 +64,42 @@ def business_create(request):
             business.is_active = True
             business.save()
 
-            messages.success(
-                request,
-            (
-                f"🎉 Congratulations! {business.name} is now live on FANZ. "
-                "Next, publish an update, create your first event, "
-                "and start connecting with your community."
-            ),
-        )
+            if community_business:
+                messages.success(
+                    request,
+                    (
+                        f"🎉 Congratulations! {business.name} is now "
+                        "your FANZ business listing. Next, publish an "
+                        "update, create your first event, and start "
+                        "connecting with your community."
+                    ),
+                )
+            else:
+                messages.success(
+                    request,
+                    (
+                        f"🎉 Congratulations! {business.name} is now "
+                        "live on FANZ. Next, publish an update, create "
+                        "your first event, and start connecting with "
+                        "your community."
+                    ),
+                )
 
             return redirect(
                 "businesses:detail",
                 slug=business.slug,
             )
     else:
-        form = BusinessListingForm()
+        form = BusinessListingForm(
+            instance=community_business,
+        )
 
     return render(
         request,
         "businesses/business_form.html",
         {
             "form": form,
+            "community_business": community_business,
         },
     )
 
