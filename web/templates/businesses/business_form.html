@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="event-form-page">
+  <div class="event-form-card">
+    <h1>Create Your Business</h1>
+
+    <p>
+      Build your business presence on FANZ. Add your details, upload a hero
+      image, and publish your listing for the community.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {{ form.non_field_errors }}
+
+      {% for field in form %}
+  {% if field.name == "tos_accepted" %}
+    <div class="event-form-field business-tos-field">
+      <label class="tos-check" for="{{ field.id_for_label }}">
+        {{ field }}
+        <span>
+          I accept the FANZ
+          <a
+            href="{% url 'terms' %}"
+            target="_blank"
+            rel="noopener"
+          >
+            Terms of Service
+          </a>.
+        </span>
+      </label>
+
+      {% for error in field.errors %}
+        <p class="event-form-error">
+          {{ error }}
+        </p>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="event-form-field">
+      {{ field.label_tag }}
+      {{ field }}
+
+      {% if field.help_text %}
+        <p class="event-form-help">
+          {{ field.help_text }}
+        </p>
+      {% endif %}
+
+      {% for error in field.errors %}
+        <p class="event-form-error">
+          {{ error }}
+        </p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endfor %}
+
+      <button type="submit" class="event-form-submit">
+        List My Business
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %}
