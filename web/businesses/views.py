@@ -130,3 +130,61 @@ def toggle_business_fan(request, slug):
         )
 
     return redirect("businesses:detail", slug=business.slug)
+
+@login_required
+def my_businesses(request):
+    businesses = (
+        BusinessListing.objects
+        .filter(owner=request.user, is_active=True)
+        .order_by("name")
+    )
+
+    return render(
+        request,
+        "businesses/my_businesses.html",
+        {
+            "businesses": businesses,
+        },
+    )
+
+@login_required
+def business_edit(request, slug):
+    business = get_object_or_404(
+        BusinessListing,
+        slug=slug,
+        owner=request.user,
+    )
+
+    if request.method == "POST":
+        form = BusinessListingForm(
+            request.POST,
+            request.FILES,
+            instance=business,
+        )
+
+        if form.is_valid():
+            business = form.save()
+
+            messages.success(
+                request,
+                "Your business was updated successfully.",
+            )
+
+            return redirect(
+                "businesses:detail",
+                slug=business.slug,
+            )
+    else:
+        form = BusinessListingForm(
+            instance=business,
+        )
+
+    return render(
+        request,
+        "businesses/business_form.html",
+        {
+            "form": form,
+            "business": business,
+            "is_edit": True,
+        },
+    )

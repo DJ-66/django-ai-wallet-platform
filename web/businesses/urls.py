@@ -12,6 +12,16 @@ urlpatterns = [
         name="create",
     ),
     path(
+        "my/businesses/",
+        views.my_businesses,
+        name="my_businesses",
+    ),
+    path(
+        "<slug:slug>/edit/",
+        views.business_edit,
+        name="edit",
+    ),
+    path(
         "<slug:slug>/fan/",
         views.toggle_business_fan,
         name="toggle_fan",
