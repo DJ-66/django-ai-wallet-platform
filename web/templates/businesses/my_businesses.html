@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Businesses{% endblock %}
+
+{% block content %}
+
+<h1>My Businesses</h1>
+
+<div class="business-grid">
+
+{% for business in businesses %}
+
+<div class="business-card">
+
+    <a href="{{ business.get_absolute_url }}">
+
+        {% if business.hero_image %}
+            <img
+                src="{{ business.hero_image.url }}"
+                class="business-card-image"
+                alt="{{ business.name }}">
+        {% else %}
+            <img
+                src="{% static 'img/businesses/unclaimed-business-hero.webp' %}"
+                class="business-card-image"
+                alt="{{ business.name }}">
+        {% endif %}
+
+    </a>
+
+    <div class="business-card-body">
+
+        <h2>{{ business.name }}</h2>
+
+        <p>
+            {{ business.get_industry_display }}
+            {% if business.city %}
+                • {{ business.city }}
+            {% endif %}
+        </p>
+
+        <div class="business-actions">
+
+            <a
+            class="business-action business-action--my-biz"
+            href="{% url 'create_event' %}?business={{ business.pk }}">
+            Create Event
+            </a>
+
+            <a
+            class="business-action business-action--my-biz"
+            href="{% url 'businesses:detail' business.slug %}">
+            View Business
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+{% endblock %}
