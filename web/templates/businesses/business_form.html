@@ -3,12 +3,23 @@
 {% block content %}
 <section class="event-form-page">
   <div class="event-form-card">
-    <h1>Create Your Business</h1>
+    {% if community_business %}
+  <h1>🎉 We Found Your Business!</h1>
 
-    <p>
-      Build your business presence on FANZ. Add your details, upload a hero
-      image, and publish your listing for the community.
-    </p>
+  <p>
+    We've already created a community listing for
+    <strong>{{ community_business.name }}</strong>.
+    Review the information below, make any changes you'd like.</p>
+
+    <p>🌟 Welcome to the Fanz Business Community!</p>
+{% else %}
+  <h1>Promote Your Business for FREE</h1>
+
+  <p>
+    List your business on Fanz, add your details, upload a hero image, 
+    and connect with you customers in the Fanz business community.
+  </p>
+{% endif %}
 
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
@@ -59,7 +70,11 @@
 {% endfor %}
 
       <button type="submit" class="event-form-submit">
-        List My Business
+      {% if community_business %}
+      Claim My Business
+      {% else %}
+      List My Business
+      {% endif %}
       </button>
     </form>
   </div>
