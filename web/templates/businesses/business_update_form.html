@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="business-update-form-page">
+  <div class="business-update-form-card">
+
+    <header class="business-update-form-header">
+      <span class="business-update-form-badge">
+        📣 Business Update
+      </span>
+
+      <h1>Publish Update</h1>
+
+      <p>
+        Share news, specials, announcements, or anything happening at
+        <strong>{{ business.name }}</strong>.
+      </p>
+    </header>
+
+    <form
+      method="post"
+      enctype="multipart/form-data"
+      class="business-update-form"
+    >
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="business-update-form-errors">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="business-update-form-field">
+        <label for="{{ form.title.id_for_label }}">
+          Update title
+        </label>
+
+        {{ form.title }}
+
+        {% if form.title.errors %}
+          <div class="business-update-form-errors">
+            {{ form.title.errors }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="business-update-form-field">
+        <label for="{{ form.body.id_for_label }}">
+          What’s happening?
+        </label>
+
+        {{ form.body }}
+
+        {% if form.body.errors %}
+          <div class="business-update-form-errors">
+            {{ form.body.errors }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="business-update-form-field">
+        <label>Update image</label>
+
+        <div class="business-update-upload">
+          <label
+            for="{{ form.image.id_for_label }}"
+            class="business-update-upload-button"
+          >
+            📷 Choose an Image
+          </label>
+
+          <span
+            id="business-update-file-name"
+            class="business-update-upload-name"
+          >
+            No image selected
+          </span>
+
+          {{ form.image }}
+        </div>
+
+        <p class="business-update-form-help">
+          Optional. JPEG, PNG, or WebP. Your image will be optimized,
+          converted to WebP, and branded by FANZ.
+        </p>
+
+        {% if form.image.errors %}
+          <div class="business-update-form-errors">
+            {{ form.image.errors }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="business-update-form-actions">
+        <button
+          type="submit"
+          class="business-update-publish-button"
+        >
+          📣 Publish Update
+        </button>
+
+        <a
+          href="{% url 'businesses:detail' business.slug %}"
+          class="business-update-cancel-button"
+        >
+          Cancel
+        </a>
+      </div>
+    </form>
+
+  </div>
+</section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById(
+      "{{ form.image.id_for_label }}"
+    );
+    const fileName = document.getElementById(
+      "business-update-file-name"
+    );
+
+    if (!fileInput || !fileName) {
+      return;
+    }
+
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files && fileInput.files.length > 0) {
+        fileName.textContent = fileInput.files[0].name;
+      } else {
+        fileName.textContent = "No image selected";
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,7 +1,10 @@
 from django.contrib import admin
 from .models import BusinessListing, BusinessUpdate
 from django.utils.translation import gettext_lazy as _
-from .forms import BusinessListingAdminForm
+from .forms import (
+    BusinessListingAdminForm,
+    BusinessUpdateAdminForm,
+)
 
 
 @admin.register(BusinessListing)
@@ -98,6 +101,7 @@ class BusinessListingAdmin(admin.ModelAdmin):
 
 @admin.register(BusinessUpdate)
 class BusinessUpdateAdmin(admin.ModelAdmin):
+    form = BusinessUpdateAdminForm
     list_display = (
         "title",
         "business",

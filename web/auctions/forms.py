@@ -79,9 +79,17 @@ class EventForm(forms.ModelForm):
     def clean_image(self):
         image = self.cleaned_data.get("image")
 
+        if not image:
+            return image
+
+        username = None
+
+        if self.user and self.user.is_authenticated:
+            username = self.user.username
+
         return process_fanz_image_upload(
             image,
-            username=self.current_username,
+            username=username,
             watermark=False,
         )
 

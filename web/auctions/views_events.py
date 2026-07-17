@@ -40,11 +40,30 @@ def event_detail(request, event_id):
         is_cancelled=False,
     )
 
+    business = event.business
+
+    fan_count = 0
+    event_count = 0
+    update_count = 0
+
+    if business:
+        fan_count = business.fans.count()
+        event_count = business.events.filter(
+            is_published=True,
+            is_cancelled=False,
+        ).count()
+        update_count = business.updates.filter(
+            is_published=True,
+        ).count()
+
     return render(
         request,
         "auctions/events/event_detail.html",
         {
             "event": event,
+            "fan_count": fan_count,
+            "event_count": event_count,
+            "update_count": update_count,
         },
     )
 
@@ -79,7 +98,17 @@ def create_event(request):
                 username=request.user.username,
             )
     else:
-        form = EventForm(user=request.user)
+        initial = {}
+
+        business_id = request.GET.get("business")
+
+        if business_id:
+            initial["business"] = business_id
+
+        form = EventForm(
+            user=request.user,
+            initial=initial,
+        )
 
     return render(
         request,
