@@ -31,4 +31,9 @@ urlpatterns = [
         views.business_detail,
         name="detail",
     ),
+    path(
+        "<slug:slug>/update/new/",
+        views.publish_business_update,
+        name="publish_update",
+    ),
 ]

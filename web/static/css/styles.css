@@ -3378,6 +3378,13 @@ body {
   }
 }
 
+.business-action--my-biz {
+  background: #fff;
+  color: var(--accent-color, #7c3aed);
+  border-color: var(--accent-color, #7c3aed);
+}
+
+
 .business-action--website {
   background: #fff;
   color: var(--accent-color, #7c3aed);
@@ -4015,4 +4022,326 @@ body.page-qr-open {
     text-underline-offset: 0.15rem;
 }
 
+.business-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:24px;
+}
+
+.business-card{
+    background:#fff;
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,.08);
+}
+
+.business-card-image{
+    width:100%;
+    aspect-ratio:16/9;
+    object-fit:cover;
+    display:block;
+}
+
+.business-card-body{
+    padding:20px;
+}
+
+.business-card-body h2{
+    margin:0 0 8px;
+}
+
+.business-actions{
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.business-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
+    margin: 1rem 0;
+}
+
+.business-card-stat {
+    padding: 0.75rem 0.45rem;
+    text-align: center;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.business-card-stat strong,
+.business-card-stat span {
+    display: block;
+}
+
+.business-card-stat strong {
+    font-size: 1.1rem;
+    line-height: 1.2;
+}
+
+.business-card-stat span {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    opacity: 0.72;
+}
+
+.business-meta-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+}
+
+@media (min-width: 768px) {
+    .business-meta-badges {
+        flex-basis: 100%;
+    }
+}
+
 /* end_css */
+
+
+/* =========================================================
+   BUSINESS UPDATE FORM
+   ========================================================= */
+
+.business-update-form-page {
+  width: 100%;
+  padding: 2rem 1rem 4rem;
+}
+
+.business-update-form-card {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+  border: 1px solid rgba(124, 58, 237, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 16px 40px rgba(76, 29, 149, 0.10),
+    0 3px 12px rgba(0, 0, 0, 0.05);
+}
+
+.business-update-form-header {
+  margin-bottom: 1.75rem;
+}
+
+.business-update-form-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.10);
+  color: #6d28d9;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.business-update-form-header h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  line-height: 1.08;
+}
+
+.business-update-form-header p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.business-update-form {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.business-update-form-field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.business-update-form-field > label {
+  color: #1f2937;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.business-update-form-field input[type="text"],
+.business-update-form-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  line-height: 1.5;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.business-update-form-field textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.business-update-form-field input[type="text"]:focus,
+.business-update-form-field textarea:focus {
+  border-color: #7c3aed;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+}
+
+.business-update-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px dashed rgba(124, 58, 237, 0.45);
+  border-radius: 16px;
+  background: rgba(245, 243, 255, 0.7);
+}
+
+.business-update-upload input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.business-update-upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(109, 40, 217, 0.25);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #6d28d9;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(76, 29, 149, 0.08);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.business-update-upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(76, 29, 149, 0.14);
+}
+
+.business-update-upload-name {
+  min-width: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.business-update-form-help {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.business-update-form-errors {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.88rem;
+}
+
+.business-update-form-errors ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.business-update-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 0.4rem;
+}
+
+.business-update-publish-button,
+.business-update-cancel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 0.8rem 1.15rem;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.business-update-publish-button {
+  border: 0;
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.25);
+}
+
+.business-update-publish-button:hover {
+  transform: translateY(-1px);
+}
+
+.business-update-cancel-button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+@media (max-width: 600px) {
+  .business-update-form-page {
+    padding: 1rem 0.65rem 3rem;
+  }
+
+  .business-update-form-card {
+    padding: 1.2rem;
+    border-radius: 20px;
+  }
+
+  .business-update-form-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .business-update-publish-button,
+  .business-update-cancel-button {
+    width: 100%;
+  }
+
+  .business-update-upload {
+    align-items: stretch;
+  }
+
+  .business-update-upload-button {
+    width: 100%;
+  }
+}

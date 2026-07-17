@@ -48,7 +48,7 @@
 
         </p>
     {% endif %}
-
+    
     <p>
 
         Created by
@@ -58,7 +58,9 @@
         </a>
 
     </p>
-
+        {% if event.business %}
+        {% include "businesses/_business_stats.html" with fan_count=fan_count event_count=event_count update_count=update_count %}
+        {% endif %}
         <div class="event-detail-info">
 
     <p>

@@ -1,8 +1,8 @@
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
-
-from .forms import BusinessListingForm
+from django.db.models import Count
+from .forms import BusinessListingForm, BusinessUpdateForm
 from .models import BusinessFan, BusinessListing
 
 
@@ -26,6 +26,10 @@ def business_detail(request, slug):
 
     updates = business.updates.filter(is_published=True)
 
+    fan_count = business.fans.count()
+    event_count = business.events.count()
+    update_count = updates.count()
+
     return render(
         request,
         "businesses/business_detail.html",
@@ -33,6 +37,9 @@ def business_detail(request, slug):
             "business": business,
             "is_fan": is_fan,
             "updates": updates,
+            "fan_count": fan_count,
+            "event_count": event_count,
+            "update_count": update_count,
         },
     )
 
@@ -55,6 +62,7 @@ def business_create(request):
             request.POST,
             request.FILES,
             instance=community_business,
+            
         )
 
         if form.is_valid():
@@ -92,6 +100,7 @@ def business_create(request):
     else:
         form = BusinessListingForm(
             instance=community_business,
+            
         )
 
     return render(
@@ -135,7 +144,24 @@ def toggle_business_fan(request, slug):
 def my_businesses(request):
     businesses = (
         BusinessListing.objects
-        .filter(owner=request.user, is_active=True)
+        .filter(
+            owner=request.user,
+            is_active=True,
+        )
+        .annotate(
+            fan_count=Count(
+                "fans",
+                distinct=True,
+            ),
+            event_count=Count(
+                "events",
+                distinct=True,
+            ),
+            update_count=Count(
+                "updates",
+                distinct=True,
+            ),
+        )
         .order_by("name")
     )
 
@@ -160,6 +186,7 @@ def business_edit(request, slug):
             request.POST,
             request.FILES,
             instance=business,
+            is_edit=True,
         )
 
         if form.is_valid():
@@ -177,6 +204,7 @@ def business_edit(request, slug):
     else:
         form = BusinessListingForm(
             instance=business,
+            is_edit=True,
         )
 
     return render(
@@ -186,5 +214,48 @@ def business_edit(request, slug):
             "form": form,
             "business": business,
             "is_edit": True,
+        },
+    )
+
+
+@login_required
+def publish_business_update(request, slug):
+    business = get_object_or_404(
+        BusinessListing,
+        slug=slug,
+        owner=request.user,
+    )
+
+    if request.method == "POST":
+        form = BusinessUpdateForm(
+            request.POST,
+            request.FILES,
+        )
+
+        if form.is_valid():
+            update = form.save(commit=False)
+            update.business = business
+            update.author = request.user
+            update.is_published = True
+            update.save()
+
+            messages.success(
+                request,
+                "Business update published successfully.",
+            )
+
+            return redirect(
+                "businesses:detail",
+                slug=business.slug,
+            )
+    else:
+        form = BusinessUpdateForm()
+
+    return render(
+        request,
+        "businesses/business_update_form.html",
+        {
+            "business": business,
+            "form": form,
         },
     )

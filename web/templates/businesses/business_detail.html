@@ -35,21 +35,27 @@
 {% endif %}
             <div class="business-hero__meta">
 
-                <span class="business-industry">
-                    {{ business.get_industry_display }}
-                </span>
+    {% include "businesses/_business_stats.html" with fan_count=fan_count event_count=event_count update_count=update_count %}
 
-                {% if business.is_claimed %}
-                    <span class="business-status business-status--claimed">
-                        Claimed
-                    </span>
-                {% else %}
-                    <span class="business-status business-status--unclaimed">
-                        Community Listing
-                    </span>
-                {% endif %}
+    <div class="business-meta-badges">
 
-            </div>
+        <span class="business-industry">
+            {{ business.get_industry_display }}
+        </span>
+
+        {% if business.is_claimed %}
+            <span class="business-status business-status--claimed">
+                Claimed
+            </span>
+        {% else %}
+            <span class="business-status business-status--unclaimed">
+                Community Listing
+            </span>
+        {% endif %}
+
+    </div>
+
+</div>
 
             <h1>{{ business.name }}</h1>
 

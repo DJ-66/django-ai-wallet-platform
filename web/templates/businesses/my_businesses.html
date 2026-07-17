@@ -39,7 +39,11 @@
                 • {{ business.city }}
             {% endif %}
         </p>
+          <div class="business-card-stats">
+          {% include "businesses/_business_stats.html" with fan_count=business.fan_count event_count=business.event_count update_count=business.update_count %}
+  
 
+        </div>
         <div class="business-actions">
 
             <a
@@ -54,6 +58,16 @@
             View Business
             </a>
 
+           <a
+           class="business-action business-action--my-biz"
+           href="{% url 'businesses:edit' business.slug %}">
+           Edit Business
+           </a>
+           <a
+          class="business-action business-action--my-biz"
+          href="{% url 'businesses:publish_update' business.slug %}">
+          Publish Biz Update
+          </a>
         </div>
 
     </div>

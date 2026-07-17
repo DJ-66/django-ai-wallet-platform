@@ -2,7 +2,7 @@ from django import forms
 
 from core.image_utils import process_fanz_image_upload
 
-from .models import BusinessListing
+from .models import BusinessListing, BusinessUpdate
 
 
 class BusinessListingAdminForm(forms.ModelForm):
@@ -46,6 +46,12 @@ class BusinessListingForm(forms.ModelForm):
             ),
         },
     )
+    def __init__(self, *args, **kwargs):
+        is_edit = kwargs.pop("is_edit", False)
+        super().__init__(*args, **kwargs)
+
+        if is_edit:
+            self.fields.pop("tos_accepted", None)
 
     class Meta:
         model = BusinessListing
@@ -115,6 +121,79 @@ class BusinessListingForm(forms.ModelForm):
             return image
 
         existing_image = getattr(self.instance, "hero_image", None)
+
+        if (
+            self.instance.pk
+            and existing_image
+            and image == existing_image
+        ):
+            return image
+
+        return process_fanz_image_upload(
+            image,
+            platform_footer=True,
+            max_width=1600,
+            max_height=1600,
+            quality=82,
+        )
+
+
+class BusinessUpdateForm(forms.ModelForm):
+    class Meta:
+        model = BusinessUpdate
+        fields = [
+            "title",
+            "body",
+            "image",
+        ]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": "Update title",
+                }
+            ),
+            "body": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "placeholder": (
+                        "Share news, specials, announcements, "
+                        "or anything happening at your business."
+                    ),
+                }
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "accept": "image/*,.jpg,.jpeg,.png,.webp,.avif",
+                }
+            ),
+        }
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+
+        if not image:
+            return image
+
+        return process_fanz_image_upload(
+            image,
+            platform_footer=True,
+            max_width=1600,
+            max_height=1600,
+            quality=82,
+        )
+
+class BusinessUpdateAdminForm(forms.ModelForm):
+    class Meta:
+        model = BusinessUpdate
+        fields = "__all__"
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+
+        if not image:
+            return image
+
+        existing_image = getattr(self.instance, "image", None)
 
         if (
             self.instance.pk
