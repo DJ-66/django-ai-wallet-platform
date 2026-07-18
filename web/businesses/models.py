@@ -158,6 +158,10 @@ class BusinessUpdate(models.Model):
         null=True,
     )
     is_published = models.BooleanField(default=True)
+    is_featured = models.BooleanField(
+        default=False,
+        help_text="Show this update at the top of the business page.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
