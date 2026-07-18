@@ -144,76 +144,33 @@
     </a>
   </section>
 {% endif %}
-     {% if updates %}
+  {% if updates %}
     <section class="business-updates">
-      <div class="business-updates__header">
-        <h2>Latest Updates</h2>
-      </div>
+      <h2>Latest Updates</h2>
 
-      <div class="business-updates__list">
-        {% for update in updates %}
-          <article class="business-update-card">
+      {% for update in updates %}
+        <article class="business-update">
+          <h3>{{ update.title }}</h3>
 
-            <header class="business-update-card__header">
-              <div class="business-update-card__heading">
-                <span
-                  class="business-update-card__icon"
-                  aria-hidden="true"
-                >
-                  📣
-                </span>
+          <p class="business-update__date">
+            📅 {{ update.created_at|date:"M j, Y" }}
 
-                <h3>{{ update.title }}</h3>
-              </div>
+          </p>
 
-              <time
-                class="business-update-card__date"
-                datetime="{{ update.created_at|date:'c' }}"
-              >
-                {{ update.created_at|date:"M j, Y" }}
-              </time>
-            </header>
+          {% if update.image %}
+            <img
+              src="{{ update.image.url }}"
+              alt="{{ update.title }}"
+              class="business-update__image"
+              loading="lazy"
+            >
+          {% endif %}
 
-            {% if update.image %}
-            <div class="business-update-card__media">
-            <span class="business-update-card__ribbon">
-            📣 Fanz Update
-           </span>
-
-           <img
-                  src="{{ update.image.url }}"
-                  alt="{{ update.title }}"
-                  class="business-update-card__image"
-                  loading="lazy"
-                >
-              </div>
-            {% endif %}
-
-            <div class="business-update-card__body">
-              {{ update.body|linebreaks }}
-            </div>
-
-            <footer class="business-update-card__footer">
-              <span class="business-update-card__stat">
-                 ⭐ {{ fan_count }} fan{{ fan_count|pluralize }}
-              </span>
-
-              <span
-                class="business-update-card__stat
-                       business-update-card__stat--future"
-                title="Comments are coming in a future update."
-              >
-                💬 Comments soon
-              </span>
-
-              <span class="business-update-card__stat">
-                📅 {{ update.created_at|date:"M j" }}
-              </span>
-            </footer>
-
-          </article>
-        {% endfor %}
-      </div>
+          <div class="business-update__body">
+            {{ update.body|linebreaks }}
+          </div>
+        </article>
+      {% endfor %}
     </section>
   {% endif %}
 

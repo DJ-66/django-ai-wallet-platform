@@ -89,6 +89,19 @@
             {{ form.image.errors }}
           </div>
         {% endif %}
+
+        <div class="business-update-form-field">
+    <label class="business-update-checkbox">
+        {{ form.is_featured }}
+        <span>📌 Pin this update to the top of my business page</span>
+    </label>
+
+    {% if form.is_featured.errors %}
+        <div class="business-update-form-errors">
+            {{ form.is_featured.errors }}
+        </div>
+    {% endif %}
+</div>
       </div>
 
       <div class="business-update-form-actions">

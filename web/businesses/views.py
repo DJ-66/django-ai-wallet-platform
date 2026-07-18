@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count
 from .forms import BusinessListingForm, BusinessUpdateForm
-from .models import BusinessFan, BusinessListing
+from .models import BusinessFan, BusinessListing, BusinessUpdate
 
 
 def business_detail(request, slug):
@@ -24,11 +24,27 @@ def business_detail(request, slug):
             fan=request.user,
         ).exists()
 
-    updates = business.updates.filter(is_published=True)
+    featured_update = (
+        business.updates
+        .filter(
+            is_published=True,
+            is_featured=True,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+    updates = (
+        business.updates
+        .filter(is_published=True)
+        .order_by("-is_featured", "-created_at")
+    )
 
     fan_count = business.fans.count()
     event_count = business.events.count()
-    update_count = updates.count()
+    update_count = business.updates.filter(
+        is_published=True,
+    ).count()
 
     return render(
         request,
@@ -36,6 +52,7 @@ def business_detail(request, slug):
         {
             "business": business,
             "is_fan": is_fan,
+            "featured_update": featured_update,
             "updates": updates,
             "fan_count": fan_count,
             "event_count": event_count,
@@ -234,9 +251,17 @@ def publish_business_update(request, slug):
 
         if form.is_valid():
             update = form.save(commit=False)
+
             update.business = business
             update.author = request.user
             update.is_published = True
+
+            if update.is_featured:
+                BusinessUpdate.objects.filter(
+                    business=business,
+                    is_featured=True,
+                ).update(is_featured=False)
+
             update.save()
 
             messages.success(

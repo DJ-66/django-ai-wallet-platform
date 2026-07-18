@@ -145,6 +145,7 @@ class BusinessUpdateForm(forms.ModelForm):
             "title",
             "body",
             "image",
+            "is_featured",
         ]
         widgets = {
             "title": forms.TextInput(
