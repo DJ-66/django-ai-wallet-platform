@@ -170,3 +170,60 @@ class BusinessUpdate(models.Model):
 
     def __str__(self):
         return f"{self.business.name}: {self.title}"
+
+
+class BusinessMedia(models.Model):
+    MEDIA_TYPE_IMAGE = "image"
+
+    MEDIA_TYPE_CHOICES = [
+        (MEDIA_TYPE_IMAGE, "Image"),
+    ]
+
+    business = models.ForeignKey(
+        BusinessListing,
+        on_delete=models.CASCADE,
+        related_name="media",
+    )
+
+    media_type = models.CharField(
+        max_length=20,
+        choices=MEDIA_TYPE_CHOICES,
+        default=MEDIA_TYPE_IMAGE,
+    )
+
+    image = models.ImageField(
+        upload_to="businesses/media/",
+    )
+
+    caption = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first.",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "-created_at",
+        ]
+        verbose_name = "Business Media"
+        verbose_name_plural = "Business Media"
+
+    def __str__(self):
+        return f"{self.business.name}: {self.caption or 'Business image'}"

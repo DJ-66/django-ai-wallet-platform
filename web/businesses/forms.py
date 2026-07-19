@@ -2,7 +2,7 @@ from django import forms
 
 from core.image_utils import process_fanz_image_upload
 
-from .models import BusinessListing, BusinessUpdate
+from .models import BusinessListing, BusinessUpdate, BusinessMedia
 
 
 class BusinessListingAdminForm(forms.ModelForm):
@@ -210,3 +210,38 @@ class BusinessUpdateAdminForm(forms.ModelForm):
             max_height=1600,
             quality=82,
         )
+
+
+class BusinessMediaForm(forms.ModelForm):
+    class Meta:
+        model = BusinessMedia
+        fields = [
+            "image",
+            "caption",
+        ]
+        widgets = {
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "accept": "image/*,.jpg,.jpeg,.png,.webp,.avif",
+                }
+            ),
+            "caption": forms.TextInput(
+                attrs={
+                    "placeholder": "Optional caption",
+                }
+            ),
+        }
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+
+        if not image:
+            return image
+
+        return process_fanz_image_upload(
+            image,
+            platform_footer=True,
+            max_width=1600,
+            max_height=1600,
+            quality=82,
+    )

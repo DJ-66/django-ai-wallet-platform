@@ -144,78 +144,64 @@
     </a>
   </section>
 {% endif %}
-     {% if updates %}
-    <section class="business-updates">
-      <div class="business-updates__header">
-        <h2>Latest Updates</h2>
-      </div>
+     {% if featured_update %}
+  <section class="business-updates business-updates--featured">
+    <div class="business-updates__header">
+      <h2>🌟 Business Spotlight</h2>
+    </div>
 
-      <div class="business-updates__list">
-        {% for update in updates %}
-          <article class="business-update-card">
+    <div class="business-updates__list">
+      {% include "businesses/_business_update_card.html" with update=featured_update fan_count=fan_count %}
+    </div>
+  </section>
+{% endif %}
+{% if gallery_images %}
+<section class="business-gallery">
 
-            <header class="business-update-card__header">
-              <div class="business-update-card__heading">
-                <span
-                  class="business-update-card__icon"
-                  aria-hidden="true"
-                >
-                  📣
-                </span>
+  <div class="business-gallery__header">
+    <h2>🖼 Gallery</h2>
+  </div>
 
-                <h3>{{ update.title }}</h3>
-              </div>
+  <div class="business-gallery__grid">
 
-              <time
-                class="business-update-card__date"
-                datetime="{{ update.created_at|date:'c' }}"
-              >
-                {{ update.created_at|date:"M j, Y" }}
-              </time>
-            </header>
+    {% for media in gallery_images %}
 
-            {% if update.image %}
-            <div class="business-update-card__media">
-            <span class="business-update-card__ribbon">
-            📣 Fanz Update
-           </span>
+      <figure class="business-gallery__item">
 
-           <img
-                  src="{{ update.image.url }}"
-                  alt="{{ update.title }}"
-                  class="business-update-card__image"
-                  loading="lazy"
-                >
-              </div>
-            {% endif %}
+        <img
+          src="{{ media.image.url }}"
+          alt="{{ media.caption|default:business.name }}"
+          loading="lazy"
+          class="business-gallery__image"
+        >
 
-            <div class="business-update-card__body">
-              {{ update.body|linebreaks }}
-            </div>
+        {% if media.caption %}
+          <figcaption>
+            {{ media.caption }}
+          </figcaption>
+        {% endif %}
 
-            <footer class="business-update-card__footer">
-              <span class="business-update-card__stat">
-                 ⭐ {{ fan_count }} fan{{ fan_count|pluralize }}
-              </span>
+      </figure>
 
-              <span
-                class="business-update-card__stat
-                       business-update-card__stat--future"
-                title="Comments are coming in a future update."
-              >
-                💬 Comments soon
-              </span>
+    {% endfor %}
 
-              <span class="business-update-card__stat">
-                📅 {{ update.created_at|date:"M j" }}
-              </span>
-            </footer>
+  </div>
 
-          </article>
-        {% endfor %}
-      </div>
-    </section>
-  {% endif %}
+</section>
+{% endif %}
+{% if updates %}
+  <section class="business-updates">
+    <div class="business-updates__header">
+      <h2>Recent Updates</h2>
+    </div>
+
+    <div class="business-updates__list">
+      {% for update in updates %}
+        {% include "businesses/_business_update_card.html" with update=update fan_count=fan_count %}
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
 
          <section class="business-contact">
   <h2>Contact</h2>

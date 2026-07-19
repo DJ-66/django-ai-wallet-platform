@@ -1,0 +1,59 @@
+<article class="business-update-card">
+
+  <header class="business-update-card__header">
+    <div class="business-update-card__heading">
+      <span
+        class="business-update-card__icon"
+        aria-hidden="true"
+      >
+        📣
+      </span>
+
+      <h3>{{ update.title }}</h3>
+    </div>
+
+    <time
+      class="business-update-card__date"
+      datetime="{{ update.created_at|date:'c' }}"
+    >
+      {{ update.created_at|date:"M j, Y" }}
+    </time>
+  </header>
+
+  {% if update.image %}
+    <div class="business-update-card__media">
+      <span class="business-update-card__ribbon">
+        📣 FANZ Update
+      </span>
+
+      <img
+        src="{{ update.image.url }}"
+        alt="{{ update.title }}"
+        class="business-update-card__image"
+        loading="lazy"
+      >
+    </div>
+  {% endif %}
+
+  <div class="business-update-card__body">
+    {{ update.body|linebreaks }}
+  </div>
+
+  <footer class="business-update-card__footer">
+    <span class="business-update-card__stat">
+      ⭐ {{ fan_count }} fan{{ fan_count|pluralize }}
+    </span>
+
+    <span
+      class="business-update-card__stat business-update-card__stat--future"
+      title="Comments are coming in a future update."
+    >
+      💬 Comments soon
+    </span>
+
+    <span class="business-update-card__stat">
+      📅 {{ update.created_at|date:"M j" }}
+    </span>
+  </footer>
+
+</article>

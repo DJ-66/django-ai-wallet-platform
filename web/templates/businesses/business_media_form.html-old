@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}
+Upload Gallery Photo | {{ business.name }} | FANZ
+{% endblock %}
+
+{% block content %}
+
+<section class="business-update-form-page">
+  <div class="container">
+
+    <div class="business-update-form-card">
+      <header class="business-update-form-card__header">
+        <p class="business-update-form-card__eyebrow">
+          🖼 Business Gallery
+        </p>
+
+        <h1>Upload a Gallery Photo</h1>
+
+        <p>
+          Add a photo to the gallery for
+          <strong>{{ business.name }}</strong>.
+        </p>
+      </header>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        class="business-update-form"
+      >
+        {% csrf_token %}
+        
+        {% if form.errors %}
+        <div class="business-update-form__errors">
+        <strong>Please correct the following:</strong>
+        {{ form.errors }}
+        </div>
+        {% endif %}
+       
+        {% if form.non_field_errors %}
+          <div class="business-update-form__errors">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="business-update-form__field">
+          <label for="{{ form.image.id_for_label }}">
+            Photo
+          </label>
+
+          {{ form.image }}
+
+          {% if form.image.errors %}
+            <div class="business-update-form__errors">
+              {{ form.image.errors }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="business-update-form__field">
+          <label for="{{ form.caption.id_for_label }}">
+            Caption
+            <span class="business-update-form__optional">
+              Optional
+            </span>
+          </label>
+
+          {{ form.caption }}
+
+          {% if form.caption.errors %}
+            <div class="business-update-form__errors">
+              {{ form.caption.errors }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="business-update-form__actions">
+          <button
+            type="submit"
+            class="business-update-form__submit"
+          >
+            🖼 Upload Photo
+          </button>
+
+          <a
+            href="{% url 'businesses:detail' business.slug %}"
+            class="business-update-form__cancel"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

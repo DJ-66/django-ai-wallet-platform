@@ -2,8 +2,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count
-from .forms import BusinessListingForm, BusinessUpdateForm
-from .models import BusinessFan, BusinessListing, BusinessUpdate
+from .forms import (
+    BusinessListingForm,
+    BusinessMediaForm,
+    BusinessUpdateForm,
+)
+from .models import (
+    BusinessFan,
+    BusinessListing,
+    BusinessMedia,
+    BusinessUpdate,
+)
 
 
 def business_detail(request, slug):
@@ -40,6 +49,18 @@ def business_detail(request, slug):
         .order_by("-is_featured", "-created_at")
     )
 
+    if featured_update:
+        updates = updates.exclude(pk=featured_update.pk)
+
+    gallery_images = (
+        business.media
+        .filter(
+            is_active=True,
+            media_type=BusinessMedia.MEDIA_TYPE_IMAGE,
+        )
+        .order_by("display_order", "-created_at")
+)
+
     fan_count = business.fans.count()
     event_count = business.events.count()
     update_count = business.updates.filter(
@@ -54,6 +75,7 @@ def business_detail(request, slug):
             "is_fan": is_fan,
             "featured_update": featured_update,
             "updates": updates,
+            "gallery_images": gallery_images,
             "fan_count": fan_count,
             "event_count": event_count,
             "update_count": update_count,
@@ -279,6 +301,49 @@ def publish_business_update(request, slug):
     return render(
         request,
         "businesses/business_update_form.html",
+        {
+            "business": business,
+            "form": form,
+        },
+    )
+
+
+@login_required
+def upload_business_media(request, slug):
+    business = get_object_or_404(
+        BusinessListing,
+        slug=slug,
+        owner=request.user,
+        is_active=True,
+    )
+
+    if request.method == "POST":
+        form = BusinessMediaForm(
+            request.POST,
+            request.FILES,
+        )
+
+        if form.is_valid():
+            media = form.save(commit=False)
+            media.business = business
+            media.media_type = BusinessMedia.MEDIA_TYPE_IMAGE
+            media.save()
+
+            messages.success(
+                request,
+                "Gallery image uploaded successfully.",
+            )
+
+            return redirect(
+                "businesses:detail",
+                slug=business.slug,
+            )
+    else:
+        form = BusinessMediaForm()
+
+    return render(
+        request,
+        "businesses/business_media_form.html",
         {
             "business": business,
             "form": form,
