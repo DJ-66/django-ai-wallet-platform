@@ -27,13 +27,18 @@ urlpatterns = [
         name="toggle_fan",
     ),
     path(
-        "<slug:slug>/",
-        views.business_detail,
-        name="detail",
-    ),
-    path(
         "<slug:slug>/update/new/",
         views.publish_business_update,
         name="publish_update",
+    ),
+    path(
+        "<slug:slug>/gallery/upload/",
+        views.upload_business_media,
+        name="upload_media",
+    ),
+    path(
+        "<slug:slug>/",
+        views.business_detail,
+        name="detail",
     ),
 ]

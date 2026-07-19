@@ -4538,4 +4538,51 @@ body.page-qr-open {
     height: 20px;
 }
 
+.business-updates--featured {
+    margin-top: 2rem;
+}
+
+/* ==========================================
+   BUSINESS GALLERY
+========================================== */
+
+.business-gallery{
+    margin:3rem 0;
+}
+
+.business-gallery__header{
+    margin-bottom:1.25rem;
+}
+
+.business-gallery__grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:1rem;
+}
+
+.business-gallery__item{
+    background:#fff;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+
+.business-gallery__image{
+    display:block;
+    width:100%;
+    aspect-ratio:1/1;
+    object-fit:cover;
+    transition:transform .25s ease;
+}
+
+.business-gallery__item:hover .business-gallery__image{
+    transform:scale(1.04);
+}
+
+.business-gallery__item figcaption{
+    padding:1rem;
+    font-size:.9rem;
+    color:#666;
+}
+
 /* end_css */
