@@ -168,20 +168,28 @@
 
       <figure class="business-gallery__item">
 
-        <img
-          src="{{ media.image.url }}"
-          alt="{{ media.caption|default:business.name }}"
-          loading="lazy"
-          class="business-gallery__image"
-        >
+    <a
+      href="{{ media.image.url }}"
+      class="business-gallery__link"
+      data-fanz-lightbox
+    >
 
-        {% if media.caption %}
-          <figcaption>
-            {{ media.caption }}
-          </figcaption>
-        {% endif %}
+      <img
+        src="{{ media.image.url }}"
+        alt="{{ media.caption|default:business.name }}"
+        loading="lazy"
+        class="business-gallery__image"
+      >
 
-      </figure>
+    </a>
+
+    {% if media.caption %}
+      <figcaption>
+        {{ media.caption }}
+      </figcaption>
+    {% endif %}
+
+</figure>
 
     {% endfor %}
 
