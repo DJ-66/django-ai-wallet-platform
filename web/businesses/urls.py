@@ -36,6 +36,13 @@ urlpatterns = [
         views.upload_business_media,
         name="upload_media",
     ),
+
+    path(
+        "<slug:slug>/gallery/delete/",
+        views.delete_business_media,
+        name="delete_media",
+    ),
+
     path(
         "<slug:slug>/",
         views.business_detail,

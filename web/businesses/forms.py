@@ -212,36 +212,65 @@ class BusinessUpdateAdminForm(forms.ModelForm):
         )
 
 
-class BusinessMediaForm(forms.ModelForm):
-    class Meta:
-        model = BusinessMedia
-        fields = [
-            "image",
-            "caption",
-        ]
-        widgets = {
-            "image": forms.ClearableFileInput(
+class MultipleBusinessImageInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleBusinessImageField(forms.ImageField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault(
+            "widget",
+            MultipleBusinessImageInput(
                 attrs={
                     "accept": "image/*,.jpg,.jpeg,.png,.webp,.avif",
                 }
             ),
-            "caption": forms.TextInput(
-                attrs={
-                    "placeholder": "Optional caption",
-                }
-            ),
-        }
+        )
+        super().__init__(*args, **kwargs)
 
-    def clean_image(self):
-        image = self.cleaned_data.get("image")
+    def clean(self, data, initial=None):
+        single_image_clean = super().clean
 
-        if not image:
-            return image
+        if isinstance(data, (list, tuple)):
+            return [
+                single_image_clean(image, initial)
+                for image in data
+            ]
 
-        return process_fanz_image_upload(
-            image,
-            platform_footer=True,
-            max_width=1600,
-            max_height=1600,
-            quality=82,
+        if data:
+            return [single_image_clean(data, initial)]
+
+        return []
+
+
+class BusinessMediaForm(forms.ModelForm):
+    images = MultipleBusinessImageField(
+        required=True,
     )
+
+    class Meta:
+        model = BusinessMedia
+        fields = []
+
+    def clean_images(self):
+        images = self.cleaned_data.get("images", [])
+
+        if len(images) > 8:
+            raise forms.ValidationError(
+                "You may upload a maximum of 8 images at once."
+            )
+
+        processed_images = []
+
+        for image in images:
+            processed_images.append(
+                process_fanz_image_upload(
+                    image,
+                    platform_footer=True,
+                    max_width=1600,
+                    max_height=1600,
+                    quality=82,
+                )
+            )
+
+        return processed_images

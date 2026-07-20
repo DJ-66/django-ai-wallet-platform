@@ -1,4 +1,4 @@
-\* =========================
+* =========================
    BASE / GLOBAL
 ========================= */
 
@@ -4565,7 +4565,6 @@ body.page-qr-open {
     border-radius:18px;
     overflow:hidden;
     box-shadow:0 10px 25px rgba(0,0,0,.08);
-    position: relative;
 }
 
 .business-gallery__image{
@@ -4594,26 +4593,14 @@ body.page-qr-open {
     position: fixed;
     inset: 0;
     z-index: 10000;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
-
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-
-    transition:
-        opacity .3s ease,
-        visibility 0s linear .3s;
 }
 
 .fanz-lightbox.is-open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-
-    transition-delay: 0s;
+    display: flex;
 }
 
 .fanz-lightbox__backdrop {
@@ -4644,16 +4631,18 @@ body.page-qr-open {
     border-radius: 16px;
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
 
-    transform: scale(.85);
+    transform: scale(.96);
     opacity: 0;
     transition:
-        transform .3s ease,
-        opacity .3s ease;
+        transform .18s ease,
+        opacity .18s ease;
 }
 
 .fanz-lightbox.is-open .fanz-lightbox__image {
     transform: scale(1);
     opacity: 1;
+}
+
 }
 
 .fanz-lightbox__caption {
@@ -4703,178 +4692,6 @@ body.fanz-lightbox-open {
         top: -0.75rem;
         right: -0.25rem;
     }
-}
-
-.fanz-lightbox__nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 52px;
-    height: 52px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255,255,255,.90);
-    color: #2d174f;
-    font-size: 2rem;
-    cursor: pointer;
-    z-index: 2;
-    transition: background .2s ease, transform .2s ease;
-}
-
-.fanz-lightbox__nav:hover {
-    background: #fff;
-    transform: translateY(-50%) scale(1.08);
-}
-
-.fanz-lightbox__nav--prev {
-    left: -70px;
-}
-
-.fanz-lightbox__nav--next {
-    right: -70px;
-}
-
-.fanz-lightbox__counter {
-    position: absolute;
-    left: 1.5rem;
-    transform: none;
-    bottom: 5rem;
-    z-index: 3;
-
-    padding: 0.45rem 0.85rem;
-    border-radius: 999px;
-    background: rgba(12, 8, 24, 0.72);
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    line-height: 1;
-    pointer-events: none;
-    backdrop-filter: blur(6px);
-}
-
-@media (max-width: 768px) {
-    .fanz-lightbox__nav {
-        display: none;
-    }
-}
-
-@media (hover: none) and (pointer: coarse) {
-    .fanz-lightbox__counter {
-        left: 1rem;
-        top: auto;
-        bottom: 2rem;
-    }
-}
-
-.business-gallery-capacity {
-    display: grid;
-    gap: 0.3rem;
-    margin-top: 1rem;
-    padding: 0.9rem 1rem;
-    border-radius: 14px;
-    background: rgba(111, 66, 193, 0.08);
-}
-
-.business-gallery-capacity strong {
-    color: #2d174f;
-}
-
-.business-gallery-capacity span {
-    color: #5f5670;
-    font-size: 0.95rem;
-}
-
-.business-gallery__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.business-gallery__upload-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.55rem 0.9rem;
-    border-radius: 999px;
-    background: #6f42c1;
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 700;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.business-gallery__upload-link:hover {
-    color: #fff;
-    text-decoration: none;
-    filter: brightness(1.08);
-}
-
-@media (max-width: 640px) {
-    .business-gallery__header {
-        align-items: flex-start;
-    }
-
-    .business-gallery__upload-link {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.85rem;
-    }
-}
-
-.business-gallery__select {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    z-index: 10;
-
-    display: flex;
-    align-items: center;
-
-    width: 22px;
-    height: 22px;
-
-    border-radius: 50%;
-    background: rgba(12, 8, 24, 0.72);
-    backdrop-filter: blur(6px);
-}
-
-.business-gallery__select span {
-    display: none;
-}
-
-.business-gallery__select input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    margin: auto;
-    accent-color: #7c3aed;
-    cursor: pointer;
-}
-
-.business-gallery__delete-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 0.55rem 0.9rem;
-
-    border: 0;
-    border-radius: 999px;
-
-    background: #dc3545;
-    color: #fff;
-
-    font-size: .9rem;
-    font-weight: 700;
-
-    cursor: pointer;
-
-    transition: filter .2s ease;
-}
-
-.business-gallery__delete-button:hover {
-    filter: brightness(1.08);
 }
 
 /* end_css */

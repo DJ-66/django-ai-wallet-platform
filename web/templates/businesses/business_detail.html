@@ -155,48 +155,109 @@
     </div>
   </section>
 {% endif %}
-{% if gallery_images %}
+
 <section class="business-gallery">
 
   <div class="business-gallery__header">
     <h2>🖼 Gallery</h2>
+
+    {% if request.user == business.owner %}
+      <a
+        href="{% url 'businesses:upload_media' business.slug %}"
+        class="business-gallery__upload-link"
+      >
+        📷 Add Photos
+      </a>
+    {% endif %}
   </div>
 
-  <div class="business-gallery__grid">
+  {% if gallery_images %}
 
-    {% for media in gallery_images %}
-
-      <figure class="business-gallery__item">
-
-    <a
-      href="{{ media.image.url }}"
-      class="business-gallery__link"
-      data-fanz-lightbox
-    >
-
-      <img
-        src="{{ media.image.url }}"
-        alt="{{ media.caption|default:business.name }}"
-        loading="lazy"
-        class="business-gallery__image"
+    {% if request.user == business.owner %}
+      <form
+        method="post"
+        action="{% url 'businesses:delete_media' business.slug %}"
+        class="business-gallery-manage-form"
+        onsubmit="return confirm('Delete the selected gallery images? This cannot be undone.');"
       >
-
-    </a>
-
-    {% if media.caption %}
-      <figcaption>
-        {{ media.caption }}
-      </figcaption>
+        {% csrf_token %}
     {% endif %}
 
-</figure>
+        <div class="business-gallery__grid">
 
-    {% endfor %}
+          {% for media in gallery_images %}
 
-  </div>
+            <figure class="business-gallery__item">
+
+              {% if request.user == business.owner %}
+                <label class="business-gallery__select">
+                  <input
+                    type="checkbox"
+                    name="media_ids"
+                    value="{{ media.pk }}"
+                    aria-label="Select gallery image for deletion"
+                  >
+                  <span>Select</span>
+                </label>
+              {% endif %}
+
+              <a
+                href="{{ media.image.url }}"
+                class="business-gallery__link"
+                data-fanz-lightbox
+              >
+                <img
+                  src="{{ media.image.url }}"
+                  alt="{{ media.caption|default:business.name }}"
+                  data-caption="{{ media.caption }}"
+                  loading="lazy"
+                  class="business-gallery__image"
+                >
+              </a>
+
+              {% if media.caption %}
+                <figcaption>
+                  {{ media.caption }}
+                </figcaption>
+              {% endif %}
+
+            </figure>
+
+          {% endfor %}
+
+        </div>
+
+    {% if request.user == business.owner %}
+        <div class="business-gallery__manage-actions">
+          <button
+            type="submit"
+            class="business-gallery__delete-button"
+          >
+            🗑 Delete Selected
+          </button>
+        </div>
+      </form>
+    {% endif %}
+
+  {% else %}
+
+    {% if request.user == business.owner %}
+      <div class="business-gallery__empty">
+        <p>
+          No gallery photos yet.
+        </p>
+
+        <p>
+          Add photos of your business, products, location,
+          menu, staff, or recent work.
+        </p>
+      </div>
+    {% endif %}
+
+  {% endif %}
 
 </section>
-{% endif %}
+
 {% if updates %}
   <section class="business-updates">
     <div class="business-updates__header">

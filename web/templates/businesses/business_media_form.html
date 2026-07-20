@@ -13,12 +13,32 @@ Upload Gallery Photo | {{ business.name }} | FANZ
         🖼 Business Gallery
       </span>
 
-      <h1>Upload Gallery Photo</h1>
+      <h1>Upload Gallery Photos</h1>
 
       <p>
-        Add a photo to the gallery for
+        Add photos to the gallery for
         <strong>{{ business.name }}</strong>.
       </p>
+
+      <div class="business-gallery-capacity">
+  <strong>Gallery</strong>
+
+  <span>
+    {{ current_media_count }} / 16 media
+  </span>
+
+  {% if remaining_slots > 0 %}
+    <span>
+      Maximum upload this time:
+      {{ max_upload_count }}
+      photo{{ max_upload_count|pluralize }}
+    </span>
+  {% else %}
+    <span>
+      Gallery full — replace an existing media item.
+    </span>
+  {% endif %}
+</div>
     </header>
 
     <form
@@ -36,14 +56,14 @@ Upload Gallery Photo | {{ business.name }} | FANZ
       {% endif %}
 
       <div class="business-update-form-field">
-        <label>Gallery photo</label>
+        <label>Gallery Photos</label>
 
         <div class="business-update-upload">
           <label
-            for="{{ form.image.id_for_label }}"
+            for="{{ form.images.id_for_label }}"
             class="business-update-upload-button"
           >
-            📷 Choose an Image
+            📷 Choose Images
           </label>
 
           <span
@@ -53,38 +73,23 @@ Upload Gallery Photo | {{ business.name }} | FANZ
             No image selected
           </span>
 
-          {{ form.image }}
+          {{ form.images }}
         </div>
 
         <p class="business-update-form-help">
+          Select up to 8 images.
           JPEG, PNG, WebP, or AVIF. Your image will be optimized,
           converted to WebP, and branded by FANZ.
         </p>
 
-        {% if form.image.errors %}
+        {% if form.images.errors %}
           <div class="business-update-form-errors">
-            {{ form.image.errors }}
+            {{ form.images.errors }}
           </div>
         {% endif %}
       </div>
 
-      <div class="business-update-form-field">
-        <label for="{{ form.caption.id_for_label }}">
-          Caption
-          <span class="business-update-form-help">
-            Optional
-          </span>
-        </label>
-
-        {{ form.caption }}
-
-        {% if form.caption.errors %}
-          <div class="business-update-form-errors">
-            {{ form.caption.errors }}
-          </div>
-        {% endif %}
-      </div>
-
+      
       <div class="business-update-form-actions">
         <button
           type="submit"
@@ -108,7 +113,7 @@ Upload Gallery Photo | {{ business.name }} | FANZ
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const fileInput = document.getElementById(
-      "{{ form.image.id_for_label }}"
+      "{{ form.images.id_for_label }}"
     );
     const fileName = document.getElementById(
       "business-media-file-name"
@@ -120,7 +125,13 @@ Upload Gallery Photo | {{ business.name }} | FANZ
 
     fileInput.addEventListener("change", function () {
       if (fileInput.files && fileInput.files.length > 0) {
-        fileName.textContent = fileInput.files[0].name;
+        const count = fileInput.files.length;
+
+        if (count === 1) {
+            fileName.textContent = fileInput.files[0].name;
+        } else {
+            fileName.textContent = `${count} images selected`;
+        }
       } else {
         fileName.textContent = "No image selected";
       }
