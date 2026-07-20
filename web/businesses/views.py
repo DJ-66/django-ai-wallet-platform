@@ -50,7 +50,9 @@ def business_detail(request, slug):
     )
 
     if featured_update:
-        updates = updates.exclude(pk=featured_update.pk)
+        updates = updates.exclude(
+            pk=featured_update.pk,
+        )
 
     gallery_images = (
         business.media
@@ -58,8 +60,11 @@ def business_detail(request, slug):
             is_active=True,
             media_type=BusinessMedia.MEDIA_TYPE_IMAGE,
         )
-        .order_by("display_order", "-created_at")
-)
+        .order_by(
+            "display_order",
+            "-created_at",
+        )
+    )
 
     fan_count = business.fans.count()
     event_count = business.events.count()
@@ -317,6 +322,20 @@ def upload_business_media(request, slug):
         is_active=True,
     )
 
+    current_media_count = business.media.filter(
+        is_active=True,
+    ).count()
+
+    remaining_slots = max(
+        0,
+        16 - current_media_count,
+    )
+
+    max_upload_count = min(
+        8,
+        remaining_slots,
+    )
+
     if request.method == "POST":
         form = BusinessMediaForm(
             request.POST,
@@ -324,20 +343,61 @@ def upload_business_media(request, slug):
         )
 
         if form.is_valid():
-            media = form.save(commit=False)
-            media.business = business
-            media.media_type = BusinessMedia.MEDIA_TYPE_IMAGE
-            media.save()
+            images = form.cleaned_data["images"]
 
-            messages.success(
-                request,
-                "Gallery image uploaded successfully.",
-            )
+            if len(images) > remaining_slots:
+                form.add_error(
+                    "images",
+                    (
+                        f"This gallery has room for only "
+                        f"{remaining_slots} more media item"
+                        f"{'s' if remaining_slots != 1 else ''}. "
+                        "A business gallery may contain a maximum "
+                        "of 16 active images or videos."
+                    ),
+                )
+            else:
+                existing_max_order = (
+                    business.media
+                    .order_by("-display_order")
+                    .values_list(
+                        "display_order",
+                        flat=True,
+                    )
+                    .first()
+                )
 
-            return redirect(
-                "businesses:detail",
-                slug=business.slug,
-            )
+                next_order = (
+                    existing_max_order + 1
+                    if existing_max_order is not None
+                    else 0
+                )
+
+                for offset, image in enumerate(images):
+                    BusinessMedia.objects.create(
+                        business=business,
+                        media_type=BusinessMedia.MEDIA_TYPE_IMAGE,
+                        image=image,
+                        caption="",
+                        display_order=next_order + offset,
+                        is_active=True,
+                    )
+
+                image_count = len(images)
+
+                messages.success(
+                    request,
+                    (
+                        f"{image_count} gallery image"
+                        f"{'s' if image_count != 1 else ''} "
+                        "uploaded successfully."
+                    ),
+                )
+
+                return redirect(
+                    "businesses:detail",
+                    slug=business.slug,
+                )
     else:
         form = BusinessMediaForm()
 
@@ -347,5 +407,58 @@ def upload_business_media(request, slug):
         {
             "business": business,
             "form": form,
+            "current_media_count": current_media_count,
+            "remaining_slots": remaining_slots,
+            "max_upload_count": max_upload_count,
         },
+    )
+
+
+@login_required
+def delete_business_media(request, slug):
+    business = get_object_or_404(
+        BusinessListing,
+        slug=slug,
+        owner=request.user,
+        is_active=True,
+    )
+
+    if request.method != "POST":
+        return redirect(
+            "businesses:detail",
+            slug=business.slug,
+        )
+
+    selected_ids = request.POST.getlist("media_ids")
+
+    if not selected_ids:
+        messages.warning(
+            request,
+            "Select at least one gallery image to delete.",
+        )
+        return redirect(
+            "businesses:detail",
+            slug=business.slug,
+        )
+
+    media_items = BusinessMedia.objects.filter(
+        business=business,
+        is_active=True,
+        pk__in=selected_ids,
+    )
+
+    deleted_count = media_items.count()
+    media_items.delete()
+
+    messages.success(
+        request,
+        (
+            f"{deleted_count} gallery image"
+            f"{'s' if deleted_count != 1 else ''} deleted."
+        ),
+    )
+
+    return redirect(
+        "businesses:detail",
+        slug=business.slug,
     )
