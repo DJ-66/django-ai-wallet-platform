@@ -314,6 +314,41 @@ def publish_business_update(request, slug):
 
 
 @login_required
+def delete_business_update(request, slug, update_id):
+    business = get_object_or_404(
+        BusinessListing,
+        slug=slug,
+        owner=request.user,
+    )
+
+    if request.method != "POST":
+        return redirect(
+            "businesses:detail",
+            slug=business.slug,
+        )
+
+    update = get_object_or_404(
+        BusinessUpdate,
+        pk=update_id,
+        business=business,
+    )
+
+    was_featured = update.is_featured
+
+    update.delete()
+
+    messages.success(
+        request,
+        "Business update deleted.",
+    )
+
+    return redirect(
+        "businesses:detail",
+        slug=business.slug,
+    )
+
+
+@login_required
 def upload_business_media(request, slug):
     business = get_object_or_404(
         BusinessListing,

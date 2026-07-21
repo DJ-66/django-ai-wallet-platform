@@ -39,6 +39,18 @@ urlpatterns = [
     ),
 
     path(
+        "events/<int:event_id>/edit/",
+        views_events.edit_event,
+        name="edit_event",
+    ),
+
+    path(
+        "events/<int:event_id>/delete/",
+        views_events.delete_event,
+        name="delete_event",
+    ),
+
+    path(
     "events/create/",
     views_events.create_event,
     name="create_event",

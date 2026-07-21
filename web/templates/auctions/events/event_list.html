@@ -3,16 +3,43 @@
 {% block content %}
 <section class="event-list-page">
   <div class="event-list-header">
-    <div>
-      <h1>Events</h1>
-      <p>Discover upcoming events from creators and businesses.</p>
-    </div>
+        <div>
 
-    {% if user.is_authenticated %}
-      <a href="{% url 'create_event' %}" class="event-create-link">
-        + Create Event
+  {% if selected_business %}
+
+    <h1>{{ selected_business.name }} Events</h1>
+
+    <p>
+      Discover upcoming events for
+      <strong>{{ selected_business.name }}</strong> (Below).
+    </p>
+    <br>
+    <p>
+      <a href="{% url 'event_list' %}" class="view-various-events">
+        ← View Various Events
       </a>
-    {% endif %}
+    </p>
+
+  {% else %}
+
+    <h1>Events</h1>
+
+    <p>
+      Discover upcoming events from creators and businesses.
+    </p>
+
+  {% endif %}
+
+</div>
+
+  {% if user_can_create_events %}
+  <a
+    href="{% url 'create_event' %}"
+    class="event-create-link"
+  >
+    + Create Event
+  </a>
+  {% endif %}
   </div>
 
   {% if events %}

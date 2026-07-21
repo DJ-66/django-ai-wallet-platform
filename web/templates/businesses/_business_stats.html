@@ -5,10 +5,14 @@
     <span>⭐ Fans</span>
   </div>
 
-  <div class="business-card-stat">
-    <strong>{{ event_count }}</strong>
-    <span>📅 Events</span>
-  </div>
+  <a
+  href="{% url 'event_list' %}?business={{ business.slug|urlencode }}"
+  class="business-card-stat business-card-stat--link"
+  aria-label="View events for {{ business.name }}"
+  >
+  <strong>{{ event_count }}</strong>
+  <span>📅 Events</span>
+  </a>
 
   <div class="business-card-stat">
     <strong>{{ update_count }}</strong>

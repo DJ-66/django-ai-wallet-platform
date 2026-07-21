@@ -31,6 +31,13 @@ urlpatterns = [
         views.publish_business_update,
         name="publish_update",
     ),
+
+    path(
+        "<slug:slug>/update/<int:update_id>/delete/",
+        views.delete_business_update,
+        name="delete_update",
+    ),
+
     path(
         "<slug:slug>/gallery/upload/",
         views.upload_business_media,
