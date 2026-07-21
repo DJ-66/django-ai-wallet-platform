@@ -59,7 +59,7 @@
 
     </p>
         {% if event.business %}
-        {% include "businesses/_business_stats.html" with fan_count=fan_count event_count=event_count update_count=update_count %}
+        {% include "businesses/_business_stats.html" with business=event.business fan_count=fan_count event_count=event_count update_count=update_count %}
         {% endif %}
         <div class="event-detail-info">
 
@@ -127,8 +127,35 @@
         >
             🔗 Share Event
         </button>
+
+        {% if request.user == event.creator %}
+    <a
+        href="{% url 'edit_event' event.id %}"
+        class="event-detail-action"
+    >
+        ✏️ Edit Event
+    </a>
+    {% endif %}
+
+    {% if request.user == event.creator %}
+    <form
+        method="post"
+        action="{% url 'delete_event' event.id %}"
+        onsubmit="return confirm('Delete this event? This cannot be undone.');"
+        >
+        {% csrf_token %}
+
+        <button
+            type="submit"
+            class="event-detail-action event-detail-action--danger"
+        >
+            🗑 Delete Event
+        </button>
+        </form>
+        {% endif %}
+
     </div>
-</section>
+    </section>
 
         <section class="event-detail-capabilities">
     <h2>Expand This Event</h2>
