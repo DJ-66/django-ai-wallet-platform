@@ -1,0 +1,76 @@
+{% load i18n %}
+
+<div class="feed-post-card event-feed-card"
+     id="event-{{ event.id }}">
+
+    <div class="feed-post-header">
+        <div class="feed-avatar-fallback">
+            📅
+        </div>
+
+        <div>
+            {% if event.business %}
+                <a
+                    href="{% url 'businesses:detail' slug=event.business.slug %}"
+                    class="feed-user-name"
+                >
+                    {{ event.business.name }}
+                </a>
+            {% else %}
+                <a
+                    href="{% url 'public_profile_root' event.creator.username %}"
+                    class="feed-user-name"
+                >
+                    {{ event.creator.profile.display_name|default:event.creator.username }}
+                </a>
+            {% endif %}
+
+            <p class="feed-username">
+                {% trans "Event" %}
+                · {{ event.created_at|timesince }} {% trans "ago" %}
+            </p>
+        </div>
+    </div>
+
+    <h3 class="feed-post-title">
+        {{ event.title }}
+    </h3>
+
+    <div class="feed-content">
+        {{ event.description|linebreaksbr }}
+    </div>
+
+    <p class="feed-username">
+        🗓️ {{ event.start_at|date:"M j, Y" }}
+        · {{ event.start_at|time:"g:i A" }}
+
+        {% if event.end_at %}
+            – {{ event.end_at|time:"g:i A" }}
+        {% endif %}
+    </p>
+
+    {% if event.location %}
+        <p class="feed-username">
+            📍 {{ event.location }}
+        </p>
+    {% endif %}
+
+    {% if event.image %}
+        <img
+            src="{{ event.image.url }}"
+            class="feed-image"
+            alt="{{ event.title }}"
+            data-fanz-lightbox
+            data-fanz-lightbox-caption="{{ event.title }}"
+        >
+    {% endif %}
+
+    <div class="feed-post-actions">
+        <a
+            href="{% url 'event_detail' event.id %}"
+            class="feed-like-btn"
+        >
+            📅 {% trans "View Event" %}
+        </a>
+    </div>
+</div>

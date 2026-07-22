@@ -175,7 +175,7 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False") == "True"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "webmaster@localhost")
 
 # Authentication redirects
-LOGIN_REDIRECT_URL = '/auctions/'
+LOGIN_REDIRECT_URL = '/auctions/feed/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 LOGIN_URL = '/accounts/login/'  # optional but recommended
 

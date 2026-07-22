@@ -3,6 +3,12 @@
 ========================= */
 
 
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 body {
   background: linear-gradient(to bottom, #e5d0ff, #e9f2ff);
   min-height: 100vh;
@@ -4171,6 +4177,7 @@ body.page-qr-open {
   width: 100%;
   max-width: 760px;
   margin: 0 auto;
+  boxsizing: border-box;
   padding: clamp(1.25rem, 4vw, 2.25rem);
   border: 1px solid rgba(124, 58, 237, 0.16);
   border-radius: 24px;
@@ -4178,6 +4185,17 @@ body.page-qr-open {
   box-shadow:
     0 16px 40px rgba(76, 29, 149, 0.10),
     0 3px 12px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+
+    .business-update-form-card {
+
+        margin: 12px;
+        width: auto;
+
+    }
+
 }
 
 .business-update-form-header {
@@ -4394,6 +4412,58 @@ body.page-qr-open {
   }
 }
 
+.business-update-form-page,
+.business-update-form-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.business-update-form-card *,
+.business-update-form-card *::before,
+.business-update-form-card *::after {
+    box-sizing: border-box;
+}
+
+.business-update-form-card input,
+.business-update-form-card textarea,
+.business-update-form-card select,
+.business-update-form-card button,
+.business-update-form-card label {
+    max-width: 100%;
+}
+
+.business-update-form-card textarea,
+.business-update-form-card input[type="text"],
+.business-update-form-card input[type="file"] {
+    width: 100%;
+    min-width: 0;
+}
+
+.business-update-form-card img {
+    max-width: 100%;
+    height: auto;
+}
+
+
+@media (max-width: 768px) {
+    .business-update-form-page {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .business-update-form-card {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .business-update-form-card .auth-primary-btn,
+    .business-update-form-card .auth-secondary-btn {
+        width: 100%;
+        white-space: normal;
+    }
+}
 
 /* =========================================================
    BUSINESS UPDATE CARDS
