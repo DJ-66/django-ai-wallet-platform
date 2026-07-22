@@ -1,5 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from datetime import timedelta
+from django.db.models import Q
+from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count
 from .forms import (
@@ -33,11 +36,14 @@ def business_detail(request, slug):
             fan=request.user,
         ).exists()
 
+    now = timezone.now()
+
     featured_update = (
         business.updates
         .filter(
             is_published=True,
             is_featured=True,
+            scheduled_for__lte=now,
         )
         .order_by("-created_at")
         .first()
@@ -45,7 +51,10 @@ def business_detail(request, slug):
 
     updates = (
         business.updates
-        .filter(is_published=True)
+        .filter(
+            is_published=True,
+            scheduled_for__lte=now,
+        )
         .order_by("-is_featured", "-created_at")
     )
 
@@ -70,6 +79,7 @@ def business_detail(request, slug):
     event_count = business.events.count()
     update_count = business.updates.filter(
         is_published=True,
+        scheduled_for__lte=now,
     ).count()
 
     return render(
@@ -283,18 +293,60 @@ def publish_business_update(request, slug):
             update.author = request.user
             update.is_published = True
 
-            if update.is_featured:
+            now = timezone.now()
+            release_interval = timedelta(hours=24)
+
+            latest_queued_update = (
+                BusinessUpdate.objects
+                .filter(
+                    business=business,
+                    is_published=True,
+                    scheduled_for__isnull=False,
+                )
+                .order_by("-scheduled_for")
+                .first()
+            )
+
+
+            if latest_queued_update:
+                next_available_time = (
+                    latest_queued_update.scheduled_for
+                    + release_interval
+                )
+
+                update.scheduled_for = max(
+                    now,
+                    next_available_time,
+                )
+            else:
+                update.scheduled_for = now
+
+            is_released_now = update.scheduled_for <= now
+
+            if update.is_featured and is_released_now:
                 BusinessUpdate.objects.filter(
                     business=business,
                     is_featured=True,
                 ).update(is_featured=False)
 
+            elif update.is_featured:
+                update.is_featured = False
+
             update.save()
 
-            messages.success(
-                request,
-                "Business update published successfully.",
+            if is_released_now:
+                messages.success(
+                    request,
+                    "Business update published successfully.",
             )
+            else:
+                messages.success(
+                    request,
+                    (
+                        "Business update saved and scheduled for "
+                        f"{timezone.localtime(update.scheduled_for):%b %d, %Y at %I:%M %p}."
+                    ),
+                )
 
             return redirect(
                 "businesses:detail",

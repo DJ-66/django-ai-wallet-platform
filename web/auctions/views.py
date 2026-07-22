@@ -27,9 +27,11 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
 from .services import close_auction, place_bid, send_digital_delivery_message
 from .utils import get_system_wallet
-
+from .models import Event
+from businesses.models import BusinessUpdate
 from .ai_memory import touch_ai_creator_memory
 from .forms import DirectMessageForm, FeedPostForm, SignUpForm, UserProfileForm
+from datetime import timedelta
 from .models import (
     AICompanion,
     AIConversation,
@@ -508,15 +510,19 @@ def feed_home(request):
         .filter(
             Q(is_public=True, is_paid=False)
             |
-            Q(is_pinned=True, user__is_staff=True)
+            Q(
+                is_pinned=True,
+                user__username__iexact="DJ",
+            )
         )
-     
+
+
         .annotate(
             community_pin_rank=Case(
                 When(
                     is_pinned=True,
-                    user__is_staff=True,
-                    then=Value(1)
+                    user__username__iexact="DJ",
+                    then=Value(1),
                 ),
                 default=Value(0),
                 output_field=IntegerField(),
@@ -525,6 +531,37 @@ def feed_home(request):
         .order_by(
             "-community_pin_rank",
             "-created_at"
+        )
+    )
+    business_updates = (
+        BusinessUpdate.objects
+        .select_related(
+            "business",
+            "author",
+        )
+        .filter(
+            is_published=True,
+            scheduled_for__lte=timezone.now(),
+        )
+    )
+    
+    now = timezone.now()
+    event_window_end = now + timedelta(hours=24)
+
+    events = (
+        Event.objects
+        .select_related(
+            "creator",
+            "business",
+        )
+        .filter(
+            is_published=True,
+            is_cancelled=False,
+        )
+        .filter(
+            Q(end_at__gte=now)
+            |
+            Q(end_at__isnull=True, start_at__gte=now)
         )
     )
 
@@ -540,12 +577,51 @@ def feed_home(request):
         unlocked_post_ids = []
         recent_notifications = []
 
+    feed_items = []
+
+    for post in posts:
+        feed_items.append({
+            "item_type": "post",
+            "created_at": post.created_at,
+            "object": post,
+        })
+
+    for update in business_updates:
+        feed_items.append({
+            "item_type": "business_update",
+            "created_at": update.created_at,
+            "object": update,
+        })
+
+    for event in events:
+        feed_items.append({
+            "item_type": "event",
+            "created_at": event.created_at,
+            "object": event,
+        })
+
+    feed_items.sort(
+        key=lambda item: (
+            (
+                item["item_type"] == "post"
+                and item["object"].is_pinned
+                and item["object"].user.username.lower() == "dj"
+            ),
+            item["created_at"],
+        ),
+        reverse=True,
+    )
+
+
     return render(request, "auctions/feed_home.html", {
         "form": form,
         "posts": posts,
+        "feed_items": feed_items,
         "unlocked_post_ids": unlocked_post_ids,
         "recent_notifications": recent_notifications,
     })
+
+
 
 @login_required
 def bid_view(request, auction_id):

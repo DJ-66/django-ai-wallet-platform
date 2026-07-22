@@ -162,6 +162,14 @@ class BusinessUpdate(models.Model):
         default=False,
         help_text="Show this update at the top of the business page.",
     )
+
+    scheduled_for = models.DateTimeField(
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="When this update becomes publicly visible.",
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,0 +1,52 @@
+{% load i18n %}
+
+<div class="feed-post-card business-update-feed-card"
+     id="business-update-{{ update.id }}">
+
+    <div class="feed-post-header">
+        <div class="feed-avatar-fallback">
+            📣
+        </div>
+
+        <div>
+            <a
+                href="{% url 'businesses:detail' slug=update.business.slug %}"
+                class="feed-user-name"
+            >
+                {{ update.business.name }}
+            </a>
+
+            <p class="feed-username">
+                {% trans "Business Update" %}
+                · {{ update.created_at|timesince }} {% trans "ago" %}
+            </p>
+        </div>
+    </div>
+
+    <h3 class="feed-post-title">
+        {{ update.title }}
+    </h3>
+
+    <div class="feed-content">
+        {{ update.body|linebreaksbr }}
+    </div>
+
+    {% if update.image %}
+        <img
+            src="{{ update.image.url }}"
+            class="feed-image"
+            alt="{{ update.title }}"
+            data-fanz-lightbox
+            data-fanz-lightbox-caption="{{ update.business.name }} — {{ update.title }}"
+        >
+    {% endif %}
+
+    <div class="feed-post-actions">
+        <a
+            href="{% url 'businesses:detail' slug=update.business.slug %}"
+            class="feed-like-btn"
+        >
+            🏪 {% trans "View Business" %}
+        </a>
+    </div>
+</div>
