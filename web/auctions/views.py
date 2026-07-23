@@ -15,7 +15,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.db import models, transaction
-from django.db.models import Case, IntegerField, Q, Sum, Value, When
+from django.db.models import Case, IntegerField, Q, Sum, Value, When, Count
 from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -67,8 +67,43 @@ def hashtag_feed(request, tag_name):
 
     posts = (
         FeedPost.objects
-        .filter(hashtags=hashtag)
+        .filter(
+            hashtags=hashtag,
+            is_paid=False,
+        )
+        .annotate(
+            active_image_count=Count(
+                "media",
+                filter=Q(
+                    media__is_active=True,
+                    media__media_type=FeedPostMedia.MEDIA_TYPE_IMAGE,
+                ),
+                distinct=True,
+            ),
+            forbidden_media_count=Count(
+                "media",
+                filter=Q(
+                    media__is_active=True,
+                    media__media_type__in=[
+                        FeedPostMedia.MEDIA_TYPE_VIDEO,
+                        FeedPostMedia.MEDIA_TYPE_AUDIO,
+                        FeedPostMedia.MEDIA_TYPE_PDF,
+                    ],
+                ),
+                distinct=True,
+            ),
+        )
+        .filter(
+            forbidden_media_count=0,
+            active_image_count__lte=3,
+        )
+        .filter(
+            Q(active_image_count__gte=1)
+            | Q(image__isnull=False)
+        )
+        .exclude(image="")
         .select_related("user")
+        .prefetch_related("media", "hashtags")
         .order_by("-created_at")
     )
 
@@ -483,97 +518,36 @@ def feed_home(request):
         )
 
         if form.is_valid():
-            try:
-                print("FEED POST: form valid", flush=True)
+            post = form.save(commit=False)
+            post.user = request.user
+            post.title = post.title.strip()
+            post.content = post.content.strip()
 
-                post = form.save(commit=False)
-                print(
-                    "FEED POST: form save commit=False complete",
-                    flush=True,
+            if post.is_paid:
+                post.is_public = False
+
+                if post.unlock_price < 1:
+                    post.unlock_price = 1
+            else:
+                post.unlock_price = 0
+
+            post.save()
+
+            media_items = form.cleaned_data.get("images", [])
+
+            for display_order, media_item in enumerate(media_items):
+                FeedPostMedia.objects.create(
+                    post=post,
+                    file=media_item["file"],
+                    media_type=media_item["media_type"],
+                    caption="",
+                    display_order=display_order,
+                    is_active=True,
                 )
 
-                post.user = request.user
-                post.title = post.title.strip()
-                post.content = post.content.strip()
+            sync_post_hashtags(post)
 
-                if post.is_paid:
-                    post.is_public = False
-
-                    if post.unlock_price < 1:
-                        post.unlock_price = 1
-                else:
-                    post.unlock_price = 0
-
-                print("FEED POST: saving post", flush=True)
-                post.save()
-                print(
-                    f"FEED POST: post saved id={post.id}",
-                    flush=True,
-                )
-
-                media_items = form.cleaned_data.get("images", [])
-
-                print(
-                    f"FEED POST: media count={len(media_items)}",
-                    flush=True,
-                )
-
-                for display_order, media_item in enumerate(media_items):
-                    print(
-                        (
-                            f"FEED POST: media item "
-                            f"{display_order} "
-                            f"type={type(media_item)} "
-                            f"value={media_item!r}"
-                        ),
-                        flush=True,
-                    )
-
-                    media_file = media_item["file"]
-                    media_type = media_item["media_type"]
-
-                    print(
-                        (
-                            f"FEED POST: saving media "
-                            f"{display_order} "
-                            f"media_type={media_type}"
-                        ),
-                        flush=True,
-                    )
-
-                    media = FeedPostMedia.objects.create(
-                        post=post,
-                        file=media_file,
-                        media_type=media_type,
-                        caption="",
-                        display_order=display_order,
-                        is_active=True,
-                    )
-
-                    print(
-                        (
-                            f"FEED POST: media saved "
-                            f"id={media.id} "
-                            f"file={media.file.name}"
-                        ),
-                        flush=True,
-                    )
-
-                print("FEED POST: syncing hashtags", flush=True)
-                sync_post_hashtags(post)
-                print("FEED POST: hashtags synced", flush=True)
-
-                print(
-                    "FEED POST: complete, redirecting",
-                    flush=True,
-                )
-
-                return redirect("feed_home")
-
-            except Exception:
-                print("FEED POST EXCEPTION:", flush=True)
-                traceback.print_exc()
-                raise
+            return redirect("feed_home")
 
         else:
             print(
@@ -582,6 +556,7 @@ def feed_home(request):
                 flush=True,
             )
 
+            
     else:
         form = FeedPostForm()
 

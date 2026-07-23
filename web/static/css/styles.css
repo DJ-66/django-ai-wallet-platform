@@ -5060,4 +5060,71 @@ body.fanz-lightbox-open {
     margin: 0.35rem 0 0;
 }
 
+.feed-video {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 520px;
+    object-fit: contain;
+    box-sizing: border-box;
+    margin: 12px 0;
+    border-radius: 14px;
+    background: #000;
+}
+
+.feed-post-card,
+.featured-post-card,
+.featured-post-body {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.feed-document-wrap {
+    margin: 14px 0;
+}
+
+.feed-pdf-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 14px 18px;
+    border: 1px solid currentColor;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.feed-post-card,
+.featured-post-card,
+.featured-post-body,
+.feed-content,
+.feed-video {
+    min-width: 0;
+}
+
+.feed-video {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 520px;
+    object-fit: contain;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.feed-video-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+
+
 /* end_css */
