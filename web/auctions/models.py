@@ -617,6 +617,72 @@ class FeedPost(models.Model):
     def __str__(self):
         return f"{self.user.username}: {self.content[:40]}"
 
+class FeedPostMedia(models.Model):
+    MEDIA_TYPE_IMAGE = "image"
+    MEDIA_TYPE_VIDEO = "video"
+    MEDIA_TYPE_AUDIO = "audio"
+    MEDIA_TYPE_PDF = "pdf"
+
+    MEDIA_TYPE_CHOICES = [
+        (MEDIA_TYPE_IMAGE, "Image"),
+        (MEDIA_TYPE_VIDEO, "Video"),
+        (MEDIA_TYPE_AUDIO, "Audio"),
+        (MEDIA_TYPE_PDF, "PDF"),
+    ]
+
+    post = models.ForeignKey(
+        FeedPost,
+        on_delete=models.CASCADE,
+        related_name="media",
+    )
+
+    file = models.FileField(
+        upload_to="feed/media/",
+    )
+
+    media_type = models.CharField(
+        max_length=20,
+        choices=MEDIA_TYPE_CHOICES,
+        default=MEDIA_TYPE_IMAGE,
+        db_index=True,
+    )
+
+    caption = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first.",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "created_at",
+        ]
+        verbose_name = "Feed Post Media"
+        verbose_name_plural = "Feed Post Media"
+
+    def __str__(self):
+        return (
+            f"Post {self.post_id}: "
+            f"{self.caption or self.get_media_type_display()}"
+        )
+
 class PostUnlock(models.Model):
     post = models.ForeignKey(
         FeedPost,

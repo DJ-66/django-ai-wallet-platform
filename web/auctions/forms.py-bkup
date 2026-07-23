@@ -186,182 +186,230 @@ class FeedPostForm(forms.ModelForm):
             }),
         }
 
+def clean_images(self):
+    uploaded_files = self.cleaned_data.get("images", [])
+    is_paid = self.cleaned_data.get("is_paid", False)
+    unlock_price = self.cleaned_data.get("unlock_price") or 0
 
-    def clean_images(self):
-        uploaded_files = self.cleaned_data.get("images", [])
-        is_paid = self.cleaned_data.get("is_paid", False)
-        unlock_price = self.cleaned_data.get("unlock_price") or 0
+    max_files = (
+        8
+        if is_paid and unlock_price >= 250
+        else 3
+    )
 
-        max_files = (
-            8
-            if is_paid and unlock_price >= 250
-            else 3
+    if len(uploaded_files) > max_files:
+        raise forms.ValidationError(
+            (
+                f"You may upload a maximum of {max_files} files "
+                "for this post."
+            )
         )
 
-        if len(uploaded_files) > max_files:
-            raise forms.ValidationError(
-                (
-                    f"You may upload a maximum of {max_files} files "
-                    "for this post."
-                )
+    allowed_image_types = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/avif",
+    }
+
+    allowed_premium_types = {
+        "video/mp4",
+        "audio/mpeg",
+        "application/pdf",
+    }
+
+    cleaned_media = []
+
+    for uploaded_file in uploaded_files:
+        content_type = (
+            getattr(uploaded_file, "content_type", "")
+            or ""
+        ).lower()
+
+        if content_type in allowed_image_types:
+            processed_file = process_fanz_image_upload(
+                uploaded_file,
+                footer_text=f"❤ Fanz.to/{self.current_username}",
+                max_width=1600,
+                max_height=1600,
+                quality=90,
             )
-
-        allowed_image_types = {
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/avif",
-        }
-
-        allowed_audio_types = {
-            "audio/mpeg",
-            "audio/mp3",
-        }
+        file_size = getattr(uploaded_file, "size", 0)
 
         max_image_size = 64 * 1024 * 1024
         max_video_size = 250 * 1024 * 1024
         max_audio_size = 50 * 1024 * 1024
         max_pdf_size = 50 * 1024 * 1024
-        max_image_pixels = 50_000_000
 
-        cleaned_media = []
+        if content_type.startswith("image/"):
+            if file_size > max_image_size:
+                raise forms.ValidationError(
+                    "Each image must be 64 MB or smaller."
+        )
+        
+            try:
+                uploaded_file.seek(0)
 
-        for uploaded_file in uploaded_files:
-            content_type = (
-                getattr(uploaded_file, "content_type", "")
-                or ""
-            ).lower()
+                with Image.open(uploaded_file) as image:
+                    width, height = image.size
 
-            file_size = getattr(uploaded_file, "size", 0)
+                max_image_pixels = 50_000_000
 
-            if content_type in allowed_image_types:
-                if file_size > max_image_size:
+                if width * height > max_image_pixels:
                     raise forms.ValidationError(
-                        "Each image must be 64 MB or smaller."
+                        "Each image must be 50 megapixels or smaller."
                     )
 
-                try:
-                    uploaded_file.seek(0)
-
-                    with Image.open(uploaded_file) as image:
-                        width, height = image.size
-
-                    if width * height > max_image_pixels:
-                        raise forms.ValidationError(
-                            "Each image must be 50 megapixels or smaller."
-                        )
-
-                except UnidentifiedImageError:
-                    raise forms.ValidationError(
-                        (
-                            "One of the uploaded image files is invalid "
-                            "or unsupported."
-                        )
-                    )
-                except OSError:
-                    raise forms.ValidationError(
-                        (
-                            "One of the uploaded image files "
-                            "could not be read."
-                        )
-                    )
-                finally:
-                    uploaded_file.seek(0)
-
-                processed_file = process_fanz_image_upload(
-                    uploaded_file,
-                    footer_text=f"❤ Fanz.to/{self.current_username}",
-                    max_width=1600,
-                    max_height=1600,
-                    quality=90,
+            except UnidentifiedImageError:
+                raise forms.ValidationError(
+                    "One of the uploaded image files is invalid or unsupported."
                 )
-
-                cleaned_media.append(
-                    {
-                        "file": processed_file,
-                        "media_type": FeedPostMedia.MEDIA_TYPE_IMAGE,
-                    }
+            except OSError:
+                raise forms.ValidationError(
+                    "One of the uploaded image files could not be read."
                 )
+            finally:
+                uploaded_file.seek(0)
 
-                continue
+            processed_image = process_fanz_image_upload(uploaded_file)
 
-            if content_type == "video/mp4":
-                if not is_paid:
-                    raise forms.ValidationError(
-                        (
-                            "MP4 video uploads are available only "
-                            "for Premium posts."
-                        )
-                    )
-
-                if file_size > max_video_size:
-                    raise forms.ValidationError(
-                        "Each MP4 video must be 250 MB or smaller."
-                    )
-
-                cleaned_media.append(
-                    {
-                        "file": uploaded_file,
-                        "media_type": FeedPostMedia.MEDIA_TYPE_VIDEO,
-                    }
-                )
-
-                continue
-
-            if content_type in allowed_audio_types:
-                if not is_paid:
-                    raise forms.ValidationError(
-                        (
-                            "MP3 audio uploads are available only "
-                            "for Premium posts."
-                        )
-                    )
-
-                if file_size > max_audio_size:
-                    raise forms.ValidationError(
-                        "Each MP3 audio file must be 50 MB or smaller."
-                    )
-
-                cleaned_media.append(
-                    {
-                        "file": uploaded_file,
-                        "media_type": FeedPostMedia.MEDIA_TYPE_AUDIO,
-                    }
-                )
-
-                continue
-
-            if content_type == "application/pdf":
-                if not is_paid:
-                    raise forms.ValidationError(
-                        (
-                            "PDF uploads are available only "
-                            "for Premium posts."
-                        )
-                    )
-
-                if file_size > max_pdf_size:
-                    raise forms.ValidationError(
-                        "Each PDF must be 50 MB or smaller."
-                    )
-
-                cleaned_media.append(
-                    {
-                        "file": uploaded_file,
-                        "media_type": FeedPostMedia.MEDIA_TYPE_PDF,
-                    }
-                )
-
-                continue
-
-            raise forms.ValidationError(
-                (
-                    f"Unsupported file type: {uploaded_file.name}. "
-                    "Upload a JPEG, PNG, WebP, AVIF, MP4, MP3, or PDF."
-                )
+            cleaned_media.append(
+                {
+                    "file": processed_image,
+                    "media_type": FeedPostMedia.MEDIA_TYPE_IMAGE,
+                }
             )
 
-        return cleaned_media
+            continue
+        
+        if content_type == "video/mp4":
+            if not is_premium:
+                raise forms.ValidationError(
+                    "MP4 video uploads are available for Premium posts only."
+                )
+
+            if file_size > max_video_size:
+                raise forms.ValidationError(
+                    "Each MP4 video must be 250 MB or smaller."
+                )
+
+            cleaned_media.append(
+                {
+                    "file": uploaded_file,
+                    "media_type": FeedPostMedia.MEDIA_TYPE_VIDEO,
+                }
+            )
+
+            continue
+
+        elif content_type == "video/mp4":
+            if file_size > max_video_size:
+                raise forms.ValidationError(
+                    "Each MP4 video must be 250 MB or smaller."
+                )
+
+        if content_type in {
+            "audio/mpeg",
+            "audio/mp3",
+        }:
+            if not is_premium:
+                raise forms.ValidationError(
+                    "MP3 audio uploads are available for Premium posts only."
+                )
+
+            if file_size > max_audio_size:
+                raise forms.ValidationError(
+                    "Each MP3 audio file must be 50 MB or smaller."
+                )
+
+            cleaned_media.append(
+                {
+                    "file": uploaded_file,
+                    "media_type": FeedPostMedia.MEDIA_TYPE_AUDIO,
+                }
+            )
+
+            continue
+
+        elif content_type in {
+            "audio/mpeg",
+            "audio/mp3",
+        }:
+            if file_size > max_audio_size:
+                raise forms.ValidationError(
+                    "Each MP3 audio file must be 50 MB or smaller."
+                )
+
+        if content_type == "application/pdf":
+            if not is_premium:
+                raise forms.ValidationError(
+                    "PDF uploads are available for Premium posts only."
+                )
+
+            if file_size > max_pdf_size:
+                raise forms.ValidationError(
+                    "Each PDF must be 50 MB or smaller."
+                )
+
+            cleaned_media.append(
+                {
+                    "file": uploaded_file,
+                    "media_type": FeedPostMedia.MEDIA_TYPE_PDF,
+                }
+            )
+
+            continue
+        
+        raise forms.ValidationError(
+            "Unsupported file type. Upload an image, MP4, MP3, or PDF."
+        )
+
+        elif content_type == "application/pdf":
+            if file_size > max_pdf_size:
+                raise forms.ValidationError(
+                    "Each PDF must be 50 MB or smaller."
+                )
+
+            cleaned_media.append(
+                {
+                    "file": processed_file,
+                    "media_type": FeedPostMedia.MEDIA_TYPE_IMAGE,
+                }
+            )
+            continue
+
+        if content_type in allowed_premium_types:
+            if not is_paid:
+                raise forms.ValidationError(
+                    (
+                        "Video, audio, and PDF uploads are available "
+                        "only for Premium posts."
+                    )
+                )
+
+            if content_type == "video/mp4":
+                media_type = FeedPostMedia.MEDIA_TYPE_VIDEO
+            elif content_type == "audio/mpeg":
+                media_type = FeedPostMedia.MEDIA_TYPE_AUDIO
+            else:
+                media_type = FeedPostMedia.MEDIA_TYPE_PDF
+
+            cleaned_media.append(
+                {
+                    "file": uploaded_file,
+                    "media_type": media_type,
+                }
+            )
+            continue
+
+        raise forms.ValidationError(
+            (
+                f"Unsupported file type: "
+                f"{uploaded_file.name}"
+            )
+        )
+
+    return cleaned_media
 
 class SignUpForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
