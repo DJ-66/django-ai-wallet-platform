@@ -57,28 +57,60 @@
 
     {% if post.id in unlocked_post_ids %}
 
-        {% if post.image %}
-            <img src="{{ post.image.url }}" class="feed-image">
+        {% for media in post.media.all %}
+        {% if media.is_active %}
+        <img
+            src="{{ media.file.url }}"
+            alt="{{ media.caption|default:post.title }}"
+            class="feed-image"
+        >
         {% endif %}
-
+{% endfor %}
+{% if not post.media.exists and post.image %}
+    <img
+        src="{{ post.image.url }}"
+        alt="{{ post.title }}"
+        class="feed-image"
+        loading="lazy"
+    >
+{% endif %}
     {% else %}
 
     <div class="locked-post-card">
 
-        {% if post.image %}
+        {% with first_media=post.media.first %}
+        {% if first_media and first_media.is_active and first_media.media_type == "image" %}
         <div class="premium-preview">
 
-            <img
-                src="{{ post.image.url }}"
-                class="feed-image premium-blur"
-            >
+        <img
+            src="{{ first_media.file.url }}"
+            alt="{{ first_media.caption|default:post.title }}"
+            class="feed-image premium-blur"
+        >
 
-            <div class="premium-overlay">
-                🔒 {% trans "Premium Content" %}
-            </div>
+        <div class="premium-overlay">
+            🔒 {% trans "Premium Content" %}
+        </div>
 
         </div>
         {% endif %}
+        {% if not first_media and post.image %}
+    <div class="premium-preview">
+
+        <img
+            src="{{ post.image.url }}"
+            alt="{{ post.title }}"
+            class="feed-image premium-blur"
+        >
+
+        <div class="premium-overlay">
+            🔒 {% trans "Premium Content" %}
+        </div>
+
+    </div>
+{% endif %}
+
+        {% endwith %}
 
         <p class="locked-post-title">
             🔒 {% trans "Premium content locked" %}
@@ -133,14 +165,26 @@
 
 </div>
 
-    {% if post.image %}
-        <img src="{{ post.image.url }}" class="feed-image">
+    {% for media in post.media.all %}
+    {% if media.is_active %}
+        <img
+            src="{{ media.file.url }}"
+            alt="{{ media.caption|default:post.title }}"
+            class="feed-image"
+        >
     {% endif %}
-
+    {% endfor %}
+{% if not post.media.exists and post.image %}
+    <img
+        src="{{ post.image.url }}"
+        alt="{{ post.title }}"
+        class="feed-image"
+        loading="lazy"
+    >
 {% endif %}
-            
-                     
-                       
+
+    {% endif %}
+                               
     <div class="feed-post-actions">
 
     <button

@@ -30,7 +30,7 @@ class BusinessListingAdminForm(forms.ModelForm):
             platform_footer=True,
             max_width=1600,
             max_height=1600,
-            quality=82,
+            quality=90,
         )
 
 
@@ -134,7 +134,7 @@ class BusinessListingForm(forms.ModelForm):
             platform_footer=True,
             max_width=1600,
             max_height=1600,
-            quality=82,
+            quality=90,
         )
 
 
@@ -180,7 +180,7 @@ class BusinessUpdateForm(forms.ModelForm):
             platform_footer=True,
             max_width=1600,
             max_height=1600,
-            quality=82,
+            quality=90,
         )
 
 class BusinessUpdateAdminForm(forms.ModelForm):
@@ -208,7 +208,7 @@ class BusinessUpdateAdminForm(forms.ModelForm):
             platform_footer=True,
             max_width=1600,
             max_height=1600,
-            quality=82,
+            quality=90,
         )
 
 
@@ -269,7 +269,7 @@ class BusinessMediaForm(forms.ModelForm):
                     platform_footer=True,
                     max_width=1600,
                     max_height=1600,
-                    quality=82,
+                    quality=90,
                 )
             )
 

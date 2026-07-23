@@ -16,6 +16,30 @@
                 class="feed-form prevent-double-submit">            
            
             {% csrf_token %}
+
+            {% if form.errors %}
+    <div class="feed-form-error-banner">
+        <strong>
+            ⚠️ {% trans "Your post could not be published." %}
+        </strong>
+
+        {% for error in form.non_field_errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+
+        {% for error in form.images.errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+
+        {% for field in form %}
+            {% if field.name != "images" %}
+                {% for error in field.errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
             
             {{ form.title }}
             
@@ -23,13 +47,13 @@
 
             <br><br>
 
-            <label for="id_image" class="auth-primary-btn feed-action-btn">
-            🖼️ {% trans "Choose Image" %}
+            <label for="id_images" class="auth-primary-btn feed-action-btn">
+            🖼️  {% trans  "Choose Images" %} 
             </label>
             
            
 
-            {{ form.image }}
+            {{ form.images }}
 
             <span id="selected-file-name"></span>
 
@@ -266,14 +290,14 @@ document.addEventListener("DOMContentLoaded", function () {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    const input = document.getElementById("id_image");
+    const input = document.getElementById("id_images");
     const filename = document.getElementById("selected-file-name");
 
     if (input) {
         input.addEventListener("change", function () {
             filename.textContent =
                 input.files.length
-                    ? input.files[0].name
+                    ? `${input.files.length} image(s) selected`
                     : "";
         });
     }

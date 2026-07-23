@@ -143,7 +143,7 @@ def process_fanz_image_upload(
     footer_text=None,
     max_width=1600,
     max_height=2400,
-    quality=82,
+    quality=90,
 ):
     if not image:
         return image

@@ -202,12 +202,12 @@
               {% endif %}
 
               <a
-                href="{{ media.image.url }}"
+                href="{{ media.file.url }}"
                 class="business-gallery__link"
                 data-fanz-lightbox
               >
                 <img
-                  src="{{ media.image.url }}"
+                  src="{{ media.file.url }}"
                   alt="{{ media.caption|default:business.name }}"
                   data-caption="{{ media.caption }}"
                   loading="lazy"

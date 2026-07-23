@@ -325,14 +325,44 @@
 {% endif %}
 
 </div>
+
+{% for media in post.media.all %}
+    {% if media.is_active %}
+        <img
+            src="{{ media.file.url }}"
+            alt="{{ media.caption|default:post.title }}"
+            class="feed-image"
+        >
+    {% endif %}
+{% endfor %}
+{% if request.user == post.user %}
+    <div class="post-owner-actions">
+        <form method="post" action="{% url 'toggle_pin_post' post.id %}">
+            {% csrf_token %}
+            <button type="submit" class="feed-like-btn">
+                📌 {% trans "Unpin" %}
+            </button>
+        </form>
+
+        <form method="post" action="{% url 'delete_feed_post' post.id %}">
+            {% csrf_token %}
+            <button
+                type="submit"
+                class="feed-like-btn"
+                onclick="return confirm('Delete this post?');"
+            >
+                🗑️ {% trans "Delete" %}
+            </button>
+        </form>
+    </div>
+{% endif %}
                 </div>
             {% endif %}
         {% endfor %}
 <!--  2nd loop here -->
        {% for post in profile_posts %}
-          <div class="feed-post-card" id="post-{{ post.id }}">
-
        {% if not post.is_pinned %}
+        <div class="feed-post-card" id="post-{{ post.id }}">
 
     {% if post.title %}
         <h3 class="feed-post-title">{{ post.title }}</h3>
@@ -371,21 +401,27 @@
             </div>
         {% endif %}
     </div>
-
-{% endif %}     
+    
 <!-- down to here xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-->
                  
             {% if post.is_paid and request.user != post.user and post.id not in unlocked_post_ids %}
     <div class="locked-post-card">
 
-        {% if post.image %}
-            <div class="premium-preview">
-                <img src="{{ post.image.url }}" class="feed-image premium-blur">
-                <div class="premium-overlay">
-                    🔒 {% trans "Premium Content" %}
+        {% with first_media=post.media.first %}
+            {% if first_media and first_media.is_active %}
+                <div class="premium-preview">
+                    <img
+                        src="{{ first_media.file.url }}"
+                        alt="{{ first_media.caption|default:post.title }}"
+                        class="feed-image premium-blur"
+                    >
+
+                    <div class="premium-overlay">
+                        🔒 {% trans "Premium Content" %}
+                    </div>
                 </div>
-            </div>
-        {% endif %}
+            {% endif %}
+        {% endwith %}
 
         <p class="locked-post-title">
             🔒 {% trans "Premium content locked" %}
@@ -411,9 +447,15 @@
 
     </div>
 {% else %}
-    {% if post.image %}
-        <img src="{{ post.image.url }}" class="feed-image">
-    {% endif %}
+    {% for media in post.media.all %}
+        {% if media.is_active %}
+            <img
+                src="{{ media.file.url }}"
+                alt="{{ media.caption|default:post.title }}"
+                class="feed-image"
+            >
+        {% endif %}
+    {% endfor %}
 {% endif %}
                 
           <div class="feed-post-actions">
@@ -537,13 +579,12 @@
             <input type="text" name="content" placeholder="{% trans 'Write a comment...' %}" required>
             <button type="submit">{% trans "Comment" %}</button>
         </form>
-    {% endif %}
+{% endif %}    
 
   </div>
   </div>
-      
+ {% endif %}      
       {% empty %}
-
 
     <p>{% trans "No public posts yet." %}</p>
 {% endfor %}

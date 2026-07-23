@@ -51,7 +51,7 @@ class AuctionAdminForm(forms.ModelForm):
                 platform_footer=True,
                 max_width=1600,
                 max_height=2400,
-                quality=82,
+                quality=90,
             )
 
         return image
@@ -70,7 +70,7 @@ class AuctionAdminForm(forms.ModelForm):
                 platform_footer=True,
                 max_width=1600,
                 max_height=2400,
-                quality=82,
+                quality=90,
             )
 
         return image
