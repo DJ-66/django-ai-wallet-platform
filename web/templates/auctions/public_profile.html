@@ -325,16 +325,70 @@
 {% endif %}
 
 </div>
+<br>
 
 {% for media in post.media.all %}
     {% if media.is_active %}
-        <img
-            src="{{ media.file.url }}"
-            alt="{{ media.caption|default:post.title }}"
-            class="feed-image"
-        >
+
+        {% if media.media_type == "image" %}
+            <img
+                src="{{ media.file.url }}"
+                alt="{{ media.caption|default:post.title }}"
+                class="feed-image"
+                loading="lazy"
+            >
+
+        {% elif media.media_type == "video" %}
+             <div class="feed-video-wrap">
+
+            <video
+                class="feed-video"
+                controls
+                preload="metadata"
+            >
+                <source
+                    src="{{ media.file.url }}"
+                    type="video/mp4"
+                >
+                {% trans "Your browser does not support video playback." %}
+            </video>
+            </div>
+        {% elif media.media_type == "audio" %}
+            <div class="feed-audio-wrap">
+                <p class="feed-media-label">
+                    🎵 {{ media.caption|default:post.title }}
+                </p>
+
+                <audio
+                    class="feed-audio"
+                    controls
+                    preload="metadata"
+                >
+                    <source
+                        src="{{ media.file.url }}"
+                        type="audio/mpeg"
+                    >
+                    {% trans "Your browser does not support audio playback." %}
+                </audio>
+            </div>
+
+        {% elif media.media_type == "pdf" %}
+            <div class="feed-document-wrap">
+                <a
+                    href="{{ media.file.url }}"
+                    class="feed-pdf-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    📄 {% trans "Open PDF" %}
+                </a>
+            </div>
+
+        {% endif %}
+
     {% endif %}
 {% endfor %}
+
 {% if request.user == post.user %}
     <div class="post-owner-actions">
         <form method="post" action="{% url 'toggle_pin_post' post.id %}">
@@ -356,6 +410,7 @@
         </form>
     </div>
 {% endif %}
+<br>
                 </div>
             {% endif %}
         {% endfor %}
@@ -447,15 +502,69 @@
 
     </div>
 {% else %}
-    {% for media in post.media.all %}
-        {% if media.is_active %}
+   
+{% for media in post.media.all %}
+    {% if media.is_active %}
+
+        {% if media.media_type == "image" %}
             <img
                 src="{{ media.file.url }}"
                 alt="{{ media.caption|default:post.title }}"
                 class="feed-image"
+                loading="lazy"
             >
+
+        {% elif media.media_type == "video" %}
+             <div class="feed-video-wrap">
+
+            <video
+                class="feed-video"
+                controls
+                preload="metadata"
+            >
+                <source
+                    src="{{ media.file.url }}"
+                    type="video/mp4"
+                >
+                {% trans "Your browser does not support video playback." %}
+            </video>
+            </div>
+        {% elif media.media_type == "audio" %}
+            <div class="feed-audio-wrap">
+                <p class="feed-media-label">
+                    🎵 {{ media.caption|default:post.title }}
+                </p>
+
+                <audio
+                    class="feed-audio"
+                    controls
+                    preload="metadata"
+                >
+                    <source
+                        src="{{ media.file.url }}"
+                        type="audio/mpeg"
+                    >
+                    {% trans "Your browser does not support audio playback." %}
+                </audio>
+            </div>
+
+        {% elif media.media_type == "pdf" %}
+            <div class="feed-document-wrap">
+                <a
+                    href="{{ media.file.url }}"
+                    class="feed-pdf-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    📄 {% trans "Open PDF" %}
+                </a>
+            </div>
+
         {% endif %}
-    {% endfor %}
+
+    {% endif %}
+{% endfor %}
+
 {% endif %}
                 
           <div class="feed-post-actions">
