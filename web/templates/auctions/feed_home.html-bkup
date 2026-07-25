@@ -11,58 +11,33 @@
         <div class="feed-compose-card">
             <h2>{% trans "Community Feed" %}</h2>
 
-            <form
-                id="community-feed-compose-form"
-                method="post"
+            <form method="post"
                 enctype="multipart/form-data"
-                class="feed-form prevent-double-submit"
-             >            
+                class="feed-form prevent-double-submit">            
            
             {% csrf_token %}
 
-           {% if form.errors %}
+            {% if form.errors %}
     <div class="feed-form-error-banner">
-        <div class="feed-form-error-heading">
-            <span aria-hidden="true">⚠️</span>
+        <strong>
+            ⚠️ {% trans "Your post could not be published." %}
+        </strong>
 
-            <strong>
-                {% trans "Your post could not be published." %}
-            </strong>
-        </div>
-<!--
-        <div class="feed-form-error-details">
-            {% for error in form.non_field_errors %}
-                <p>{{ error }}</p>
-            {% endfor %}
+        {% for error in form.non_field_errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
 
-            {% for error in form.images.errors %}
-                <p>{{ error }}</p>
-            {% endfor %}
+        {% for error in form.images.errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
 
-            {% for field in form %}
-                {% if field.name != "images" %}
-                    {% for error in field.errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                {% endif %}
-            {% endfor %}
-        </div> -->
-
-        <div class="feed-form-error-guide">
-            <p>
-     {% trans "See FANZ Upload Guide to publish 8 (Max) files per post" %}
-            </p>
-
-            <button
-                type="button"
-                class="feed-error-guide-button"
-                data-upload-rules-open
-                aria-haspopup="dialog"
-                aria-controls="feed-upload-rules-modal"
-            >
-                📖 {% trans "Fanz Upload Guide" %}
-            </button>
-        </div>
+        {% for field in form %}
+            {% if field.name != "images" %}
+                {% for error in field.errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
     </div>
 {% endif %}
             
@@ -84,21 +59,17 @@
             </strong>
 
             <span class="feed-smart-upload-badge">
-                ✨ {% trans "FANZ Smart Upload" %} 
-                
+                ✨ {% trans "FANZ Smart Upload" %}
             </span>
-
-            <button
-               type="button"
-               class="feed-upload-rules-button"
-               data-upload-rules-open
-               aria-haspopup="dialog"
-               aria-controls="feed-upload-rules-modal"
-           >
-               ⓘ {% trans "Upload Guide" %}
-           </button>
-           
         </div>
+
+        <button
+            type="button"
+            class="feed-upload-rules-button"
+            data-upload-rules-open
+        >
+            ⓘ {% trans "Upload Rules" %}
+        </button>
     </div>
 
     <div class="feed-media-type-selector">
@@ -184,114 +155,63 @@
         <span>{% trans "Publish Post" %}</span>
     </button>
 </div>
-</form>
     </div>
-<div
-    id="feed-upload-rules-modal"
-    class="feed-upload-rules-modal"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="feed-upload-rules-title"
-    hidden
->
-    <div
-        class="feed-upload-rules-backdrop"
-        data-upload-rules-close
-    ></div>
 
-    <div class="feed-upload-rules-dialog">
-        <button
-            type="button"
-            class="feed-upload-rules-close"
-            data-upload-rules-close
-            aria-label="{% trans 'Close upload rules' %}"
-        >
-            ×
-        </button>
-
-        <div class="feed-upload-rules-heading">
-            <span class="feed-upload-rules-heading-icon">✨</span>
-
-            <div>
-                <h2 id="feed-upload-rules-title">
-                    {% trans "FANZ Upload Guide" %}
-                </h2>
-
-                <p>
-                {% trans "FANZ Smart Upload helps you publish faster by choosing sensible Premium settings based on the media you select." %}
-                </p>
-            </div>
-        </div>
-
-        <div class="feed-upload-rules-grid">
-            <section class="feed-upload-rule-card">
-                <span class="feed-upload-rule-icon">🖼️</span>
-
-                <div>
-                    <h3>{% trans "Images" %}</h3>
-
-                    <p>
-                        {% trans "Selecting 4–8 images automatically enables Premium and suggests a minimum unlock price of 250 credits." %}
-                    </p>
-                </div>
-            </section>
-
-            <section class="feed-upload-rule-card">
-                <span class="feed-upload-rule-icon">🎬</span>
-
-                <div>
-                    <h3>{% trans "Videos" %}</h3>
-
-                    <p>
-                        {% trans "One video automatically enables Premium and suggests at least 1 credit. Selecting 2–8 videos suggests 250 credits." %}
-                    </p>
-                </div>
-            </section>
-
-            <section class="feed-upload-rule-card">
-                <span class="feed-upload-rule-icon">🎵</span>
-
-                <div>
-                    <h3>{% trans "Audio" %}</h3>
-
-                    <p>
-                        {% trans "One audio file automatically enables Premium and suggests at least 1 credit. Selecting 2–8 audio files suggests 250 credits." %}
-                    </p>
-                </div>
-            </section>
-
-            <section class="feed-upload-rule-card">
-                <span class="feed-upload-rule-icon">📄</span>
-
-                <div>
-                    <h3>{% trans "PDFs" %}</h3>
-
-                    <p>
-                        {% trans "One PDF automatically enables Premium and suggests at least 1 credit. Selecting 2–8 PDFs suggests 250 credits." %}
-                    </p>
-                </div>
-            </section>
-        </div>
-
-        <div class="feed-upload-rules-note">
-            <strong>
-                💡 {% trans "You remain in control" %}
-            </strong>
-
-            <p>
-                {% trans "FANZ never lowers an unlock price you have already entered. You may always increase the price." %}
-            </p>
-        </div>
-
-        <button
-            type="button"
-            class="auth-primary-btn feed-upload-rules-done"
-            data-upload-rules-close
-        >
-            {% trans "Got It" %}
-        </button>
-    </div>
+    {{ form.media_type }}
 </div>
+
+            <div class="feed-media-upload">
+
+    <label
+        id="feed-media-upload-label"
+        for="{{ form.images.id_for_label }}"
+        class="feed-media-upload-button"
+    >
+        📷 Choose Images
+    </label>
+
+    {{ form.images }}
+
+    <span id="selected-file-name">
+        No files selected
+    </span>
+
+</div>
+
+           
+
+            <label class="feed-private-toggle">
+            {{ form.is_public }}
+            {% trans "Public Post" %}
+            </label>
+
+           <label class="feed-private-toggle">
+    {{ form.is_paid }}
+    {% trans "Paid / Locked Post (Premium)" %}
+</label>
+
+
+
+<label class="feed-unlock-price-label">
+    {% trans "Unlock Price" %}
+</label>
+
+{{ form.unlock_price }}
+
+           <button
+           type="submit"
+           class="auth-primary-btn feed-action-btn"
+           data-loading-text="⏳ Publishing..."
+           >
+            {% trans "Post" %}
+            </button>
+
+            <br>
+
+            </form>
+            <br>
+        </div>
+
         {% for item in feed_items %}
 
         {% if item.item_type == "post" %}
@@ -313,75 +233,8 @@
         {% endfor %}
 
     </div>
+
 </div>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById("feed-upload-rules-modal");
-
-    if (!modal) {
-        return;
-    }
-
-    const openButtons = document.querySelectorAll(
-        "[data-upload-rules-open]"
-    );
-
-    const closeButtons = modal.querySelectorAll(
-        "[data-upload-rules-close]"
-    );
-
-    const dialog = modal.querySelector(
-        ".feed-upload-rules-dialog"
-    );
-
-    let previouslyFocusedElement = null;
-
-    function openUploadRulesModal() {
-        previouslyFocusedElement = document.activeElement;
-
-        modal.hidden = false;
-        document.body.classList.add("feed-upload-rules-open");
-
-        const closeButton = modal.querySelector(
-            ".feed-upload-rules-close"
-        );
-
-        if (closeButton) {
-            closeButton.focus();
-        }
-    }
-
-    function closeUploadRulesModal() {
-        modal.hidden = true;
-        document.body.classList.remove("feed-upload-rules-open");
-
-        if (previouslyFocusedElement) {
-            previouslyFocusedElement.focus();
-        }
-    }
-
-    openButtons.forEach(function (button) {
-        button.addEventListener("click", openUploadRulesModal);
-    });
-
-    closeButtons.forEach(function (button) {
-        button.addEventListener("click", closeUploadRulesModal);
-    });
-
-    document.addEventListener("keydown", function (event) {
-        if (event.key === "Escape" && !modal.hidden) {
-            closeUploadRulesModal();
-        }
-    });
-
-    if (dialog) {
-        dialog.addEventListener("click", function (event) {
-            event.stopPropagation();
-        });
-    }
-});
-</script>
-
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".ajax-like-btn").forEach(function (button) {

@@ -99,9 +99,12 @@ def hashtag_feed(request, tag_name):
         )
         .filter(
             Q(active_image_count__gte=1)
-            | Q(image__isnull=False)
+            |
+            (
+                Q(image__isnull=False)
+                & ~Q(image="")
+            )
         )
-        .exclude(image="")
         .select_related("user")
         .prefetch_related("media", "hashtags")
         .order_by("-created_at")

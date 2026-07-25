@@ -57,24 +57,50 @@
 
     {% if post.id in unlocked_post_ids %}
 
-        {% for media in post.media.all %}
-        {% if media.is_active %}
-        <img
-            src="{{ media.file.url }}"
-            alt="{{ media.caption|default:post.title }}"
-            class="feed-image"
-        >
+        <div class="feed-cover-media">
+    {% for media in post.media.all %}
+        {% if media.is_active and media.media_type == "image" %}
+            <a
+                href="{{ media.file.url }}"
+                class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
+                data-fanz-lightbox
+                data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                data-fanz-lightbox-group="post-{{ post.id }}"
+                {% if not forloop.first %}aria-hidden="true"{% endif %}
+            >
+                <img
+                    src="{{ media.file.url }}"
+                    alt="{{ media.caption|default:post.title }}"
+                    class="feed-image"
+                    loading="lazy"
+                >
+            </a>
         {% endif %}
-{% endfor %}
+    {% endfor %}
+
+    {% if post.media.count > 1 %}
+        <span class="feed-image-count">
+            🖼 {{ post.media.count }}
+        </span>
+    {% endif %}
+</div>
+
 {% if not post.media.exists and post.image %}
-    <img
-        src="{{ post.image.url }}"
-        alt="{{ post.title }}"
-        class="feed-image"
-        loading="lazy"
+    <a
+        href="{{ post.image.url }}"
+        class="feed-image-link"
+        data-fanz-lightbox
+        data-fanz-lightbox-caption="{{ post.title }}"
+        data-fanz-lightbox-group="post-{{ post.id }}"
     >
+        <img
+            src="{{ post.image.url }}"
+            alt="{{ post.title }}"
+            class="feed-image"
+            loading="lazy"
+        >
+    </a>
 {% endif %}
-    {% else %}
 
     <div class="locked-post-card">
 
@@ -165,22 +191,49 @@
 
 </div>
 
+    <div class="feed-cover-media">
     {% for media in post.media.all %}
-    {% if media.is_active %}
-        <img
-            src="{{ media.file.url }}"
-            alt="{{ media.caption|default:post.title }}"
-            class="feed-image"
-        >
-    {% endif %}
+        {% if media.is_active and media.media_type == "image" %}
+            <a
+                href="{{ media.file.url }}"
+                class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
+                data-fanz-lightbox
+                data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                data-fanz-lightbox-group="post-{{ post.id }}"
+                {% if not forloop.first %}aria-hidden="true"{% endif %}
+            >
+                <img
+                    src="{{ media.file.url }}"
+                    alt="{{ media.caption|default:post.title }}"
+                    class="feed-image"
+                    loading="lazy"
+                >
+            </a>
+        {% endif %}
     {% endfor %}
+
+    {% if post.media.count > 1 %}
+        <span class="feed-image-count">
+            🖼 {{ post.media.count }}
+        </span>
+    {% endif %}
+</div>
+
 {% if not post.media.exists and post.image %}
-    <img
-        src="{{ post.image.url }}"
-        alt="{{ post.title }}"
-        class="feed-image"
-        loading="lazy"
+    <a
+        href="{{ post.image.url }}"
+        class="feed-image-link"
+        data-fanz-lightbox
+        data-fanz-lightbox-caption="{{ post.title }}"
+        data-fanz-lightbox-group="post-{{ post.id }}"
     >
+        <img
+            src="{{ post.image.url }}"
+            alt="{{ post.title }}"
+            class="feed-image"
+            loading="lazy"
+        >
+    </a>
 {% endif %}
 
     {% endif %}
