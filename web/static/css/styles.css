@@ -5911,5 +5911,611 @@ body.feed-upload-rules-open {
     box-shadow: 0 0 0 4px rgba(123, 44, 255, 0.14);
 }
 
+/* =========================================================
+   FANZ MEDIA VIEWER TRIGGERS
+   ========================================================= */
+
+.feed-media-viewer-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    width: 100%;
+    min-height: 72px;
+    padding: 14px 18px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(123, 44, 255, 0.2);
+    border-radius: 16px;
+
+    background: rgba(255, 255, 255, 0.74);
+    color: #351553;
+
+    font: inherit;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.feed-media-viewer-trigger:hover {
+    transform: translateY(-1px);
+    border-color: rgba(123, 44, 255, 0.55);
+    background: rgba(123, 44, 255, 0.07);
+    box-shadow: 0 10px 24px rgba(66, 28, 112, 0.1);
+}
+
+.feed-media-viewer-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(123, 44, 255, 0.15);
+}
+
+.feed-media-viewer-icon {
+    font-size: 1.45rem;
+}
+
+.feed-media-viewer-trigger {
+    position: relative;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.feed-media-viewer-overlay {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(12, 8, 24, 0.28);
+    color: #fff;
+
+    font-size: 1rem;
+    font-weight: 800;
+
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.feed-media-viewer-trigger:hover .feed-media-viewer-overlay,
+.feed-media-viewer-trigger:focus-visible .feed-media-viewer-overlay {
+    opacity: 1;
+}
+
+/* =========================================================
+   FANZ MEDIA VIEWER — VIDEO SIZING
+   ========================================================= */
+
+.fanz-lightbox__video {
+    display: block;
+    width: auto;
+    max-width: min(90vw, 960px);
+    max-height: 90vh;
+
+    margin: 0 auto;
+
+    border-radius: 14px;
+    background: #000;
+    object-fit: contain;
+}
+
+/* Portrait video */
+@media (orientation: portrait) {
+    .fanz-lightbox__video {
+        max-width: 90vw;
+        max-height: 90vh;
+    }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .fanz-lightbox__video {
+        width: auto;
+        max-width: 92vw;
+        max-height: 92vh;
+        border-radius: 12px;
+    }
+}
+
+/* Very narrow phones */
+@media (max-width: 420px) {
+    .fanz-lightbox__video {
+        max-width: 92vw;
+        max-height: 92vh;
+    }
+}
+
+/* =========================================================
+   FANZ MEDIA VIEWER — HONOR HIDDEN MEDIA
+   ========================================================= */
+
+.fanz-lightbox__image[hidden],
+.fanz-lightbox__video[hidden],
+.fanz-lightbox__audio-wrap[hidden],
+.fanz-lightbox__pdf[hidden] {
+    display: none !important;
+}
+
+/* Only show the cover video in a multi-video post */
+.feed-video-wrap.feed-lightbox-only,
+.feed-media-viewer-trigger.feed-lightbox-only {
+    display: none !important;
+}
+
+.feed-video-wrap.feed-lightbox-only,
+.feed-media-viewer-trigger.feed-lightbox-only {
+    display: none !important;
+}
+
+.fanz-lightbox__image[hidden],
+.fanz-lightbox__video[hidden],
+.fanz-lightbox__audio-wrap[hidden],
+.fanz-lightbox__pdf[hidden] {
+    display: none !important;
+}
+
+.feed-video-thumbnail {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 230px;
+    overflow: hidden;
+
+    border-radius: 18px;
+
+    background:
+        radial-gradient(
+            circle at 30% 20%,
+            rgba(123, 44, 255, 0.42),
+            transparent 42%
+        ),
+        linear-gradient(
+            145deg,
+            #2f1750 0%,
+            #111a35 55%,
+            #07101f 100%
+        );
+
+    color: #fff;
+}
+
+.feed-video-thumbnail-brand {
+    position: absolute;
+    top: 16px;
+    left: 18px;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    z-index: 1;
+    font-weight: 800;
+}
+
+.feed-video-thumbnail-play {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 78px;
+    height: 78px;
+    padding-left: 5px;
+
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.13);
+    color: #fff;
+
+    font-size: 2rem;
+
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+}
+
+
+.feed-media-viewer-trigger:hover .feed-video-thumbnail-play,
+.feed-media-viewer-trigger:focus-visible .feed-video-thumbnail-play {
+    transform: scale(1.06);
+}
+
+@media (max-width: 640px) {
+    .feed-video-thumbnail {
+        min-height: 190px;
+    }
+
+    .feed-video-thumbnail-play {
+        width: 68px;
+        height: 68px;
+        font-size: 1.7rem;
+    }
+}
+
+.feed-cover-media .feed-lightbox-only,
+.feed-cover-media button.feed-lightbox-only,
+.feed-cover-media .feed-video-wrap.feed-lightbox-only {
+    display: none !important;
+}
+
+.fanz-lightbox__counter {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    right: auto;
+    bottom: auto;
+
+    z-index: 20;
+
+    padding: 7px 11px;
+    border-radius: 999px;
+
+    background: rgba(12, 8, 24, 0.74);
+    color: #fff;
+
+    font-size: 0.88rem;
+    font-weight: 800;
+
+    pointer-events: none;
+}
+
+@media (max-width: 640px) {
+    .fanz-lightbox__counter {
+        top: 12px;
+        left: 12px;
+    }
+}
+
+.fanz-lightbox__image[hidden],
+.fanz-lightbox__video[hidden],
+.fanz-lightbox__audio-wrap[hidden],
+.fanz-lightbox__pdf[hidden] {
+    display: none !important;
+}
+
+
+
+/* =========================================================
+   FANZ PDF CARDS
+   ========================================================= */
+
+.feed-document-wrap {
+    width: 100%;
+}
+
+.feed-pdf-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+
+    width: 100%;
+    min-height: 86px;
+    padding: 16px 18px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(123, 44, 255, 0.24);
+    border-radius: 18px;
+
+    background:
+        radial-gradient(
+            circle at 10% 20%,
+            rgba(123, 44, 255, 0.12),
+            transparent 42%
+        ),
+        rgba(255, 255, 255, 0.82);
+
+    color: #351553;
+    text-decoration: none;
+
+    box-shadow:
+        0 10px 24px rgba(62, 26, 104, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+    transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background-color 160ms ease;
+}
+
+.feed-pdf-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(123, 44, 255, 0.55);
+    background-color: rgba(123, 44, 255, 0.055);
+    box-shadow: 0 14px 30px rgba(62, 26, 104, 0.13);
+}
+
+.feed-pdf-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: 14px;
+    background: rgba(123, 44, 255, 0.1);
+
+    font-size: 1.5rem;
+}
+
+.feed-pdf-card-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.feed-pdf-card-copy strong {
+    overflow: hidden;
+    color: #351553;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.feed-pdf-card-copy small {
+    margin-top: 4px;
+    color: #786b82;
+    font-size: 0.84rem;
+}
+
+.feed-pdf-card-action {
+    padding: 7px 11px;
+    border-radius: 999px;
+
+    background: rgba(123, 44, 255, 0.09);
+    color: #5b2497;
+
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+@media (max-width: 520px) {
+    .feed-pdf-card {
+        grid-template-columns: auto 1fr;
+    }
+
+    .feed-pdf-card-action {
+        display: none;
+    }
+}
+
+/* =========================================================
+   FANZ AUDIO CARDS
+   ========================================================= */
+
+.feed-audio-card {
+    position: relative;
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(123, 44, 255, 0.2);
+    border-radius: 18px;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(123, 44, 255, 0.18),
+            transparent 38%
+        ),
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.94),
+            rgba(247, 242, 255, 0.92)
+        );
+
+    box-shadow: 0 10px 24px rgba(62, 26, 104, 0.08);
+}
+
+.feed-audio-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 13px;
+}
+
+.feed-audio-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+
+    border-radius: 50%;
+    background: linear-gradient(
+        145deg,
+        rgba(123, 44, 255, 0.18),
+        rgba(32, 76, 185, 0.12)
+    );
+
+    font-size: 1.45rem;
+}
+
+.feed-audio-card-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.feed-audio-card-copy strong {
+    overflow: hidden;
+    color: #351553;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.feed-audio-card-copy small {
+    margin-top: 3px;
+    color: #796d82;
+    font-size: 0.84rem;
+}
+
+.feed-audio-card .feed-audio {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.feed-audio-card:hover {
+    border-color: rgba(123, 44, 255, 0.45);
+}
+
+.feed-cover-media .feed-lightbox-only {
+    display: none !important;
+}
+
+/* =========================================================
+   FANZ AUDIO VIEWER COVER
+   ========================================================= */
+
+.feed-audio-card.feed-media-viewer-trigger {
+    appearance: none;
+    -webkit-appearance: none;
+
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+
+    font: inherit;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+.feed-audio-card-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 14px;
+    box-sizing: border-box;
+
+    border-radius: 999px;
+
+    background: linear-gradient(
+        135deg,
+        #2f6ce5,
+        #112443
+    );
+
+    color: #fff;
+
+    font-size: 0.92rem;
+    font-weight: 800;
+
+    box-shadow: 0 9px 20px rgba(25, 63, 140, 0.16);
+
+    transition:
+        transform 160ms ease,
+        filter 160ms ease;
+}
+
+.feed-audio-card:hover .feed-audio-card-action,
+.feed-audio-card:focus-visible .feed-audio-card-action {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+.feed-audio-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(123, 44, 255, 0.14);
+}
+
+.feed-cover-media .feed-lightbox-only {
+    display: none !important;
+}
+
+/* =========================================================
+   FANZ MEDIA VIEWER — AUDIO
+   ========================================================= */
+
+.fanz-lightbox__audio-wrap {
+    width: min(88vw, 560px);
+    padding: 28px 24px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 22px;
+
+    background:
+        radial-gradient(
+            circle at 20% 15%,
+            rgba(123, 44, 255, 0.48),
+            transparent 44%
+        ),
+        linear-gradient(
+            145deg,
+            #2e164b,
+            #111a35 58%,
+            #08101f
+        );
+
+    color: #fff;
+
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.fanz-lightbox__audio-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 84px;
+    height: 84px;
+    margin: 0 auto 22px;
+
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.12);
+
+    font-size: 2.3rem;
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.fanz-lightbox__audio {
+    display: block;
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .fanz-lightbox__audio-wrap {
+        width: 84vw;
+        padding: 22px 16px;
+    }
+
+    .fanz-lightbox__audio-icon {
+        width: 72px;
+        height: 72px;
+        font-size: 2rem;
+    }
+}
+
 
 /* end_css */

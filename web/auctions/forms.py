@@ -154,7 +154,7 @@ class FeedPostForm(forms.ModelForm):
         (FeedPostMedia.MEDIA_TYPE_IMAGE, _("Images")),
         (FeedPostMedia.MEDIA_TYPE_VIDEO, _("Videos")),
         (FeedPostMedia.MEDIA_TYPE_AUDIO, _("Audio")),
-        (FeedPostMedia.MEDIA_TYPE_PDF, _("PDF")),
+        (FeedPostMedia.MEDIA_TYPE_PDF, _("PDF (Max 1)")),
     )
 
     media_type = forms.ChoiceField(
@@ -211,19 +211,47 @@ class FeedPostForm(forms.ModelForm):
         is_paid = self.cleaned_data.get("is_paid", False)
         unlock_price = self.cleaned_data.get("unlock_price") or 0
 
-        max_files = (
-            8
-            if is_paid and unlock_price >= 250
-            else 3
-        )
+        pdf_files = [
+            uploaded_file
+            for uploaded_file in uploaded_files
+            if (
+                getattr(uploaded_file, "content_type", "")
+                or ""
+            ).lower() == "application/pdf"
+        ]
 
-        if len(uploaded_files) > max_files:
+        if len(pdf_files) > 1:
             raise forms.ValidationError(
                 (
-                    f"You may upload a maximum of {max_files} files "
-                    "for this post."
+                    "PDF posts support one document. "
+                    "Create a separate post for each additional PDF."
+            )
+        )
+
+        media_type = self.cleaned_data.get("media_type")
+
+        if media_type == FeedPostMedia.MEDIA_TYPE_PDF:
+            if len(uploaded_files) > 1:
+                raise forms.ValidationError(
+                (
+                        "PDF posts support one document. "
+                        "Create a separate post for each additional PDF."
                 )
             )
+        else:
+            max_files = (
+                8
+                if is_paid and unlock_price >= 250
+                else 3
+            )
+
+            if len(uploaded_files) > max_files:
+                raise forms.ValidationError(
+                    (
+                        f"You may upload a maximum of {max_files} files "
+                        "for this post."
+                    )
+                )
 
         allowed_image_types = {
             "image/jpeg",
