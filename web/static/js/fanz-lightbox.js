@@ -25,30 +25,34 @@
         "[data-fanz-lightbox-next]"
     );
 
-    const gallery = Array.from(
+    const lightboxItems = Array.from(
         document.querySelectorAll("[data-fanz-lightbox]")
     );
 
+    let activeGallery = [];
     let currentIndex = 0;
-    
     let touchStartX = 0;
     let touchStartY = 0;
 
     function showImage(index) {
-        if (!gallery.length) {
+        if (!activeGallery.length) {
             return;
         }
 
         currentIndex =
-            (index + gallery.length) % gallery.length;
+            (index + activeGallery.length) % activeGallery.length;
 
-        const link = gallery[currentIndex];
+        const link = activeGallery[currentIndex];
         const thumbnail = link.querySelector("img");
 
         image.src = link.href;
         image.alt = thumbnail?.alt || "";
 
-        const text = thumbnail?.dataset.caption || "";
+        const text =
+            link.dataset.fanzLightboxCaption ||
+            thumbnail?.dataset.caption ||
+            thumbnail?.alt ||
+            "";
 
         if (text) {
             caption.textContent = text;
@@ -58,12 +62,12 @@
             caption.hidden = true;
         }
 
-        const hasMultipleImages = gallery.length > 1;
+        const hasMultipleImages = activeGallery.length > 1;
 
         if (counter) {
             if (hasMultipleImages) {
                 counter.textContent =
-                    `${currentIndex + 1} / ${gallery.length}`;
+                    `${currentIndex + 1} / ${activeGallery.length}`;
                 counter.hidden = false;
             } else {
                 counter.textContent = "";
@@ -153,17 +157,25 @@
         }
     }
 
-    
+lightboxItems.forEach(function (item) {
+    item.addEventListener("click", function (event) {
+        event.preventDefault();
 
+        const groupName =
+            item.dataset.fanzLightboxGroup || "__default__";
 
-gallery.forEach(function (link, index) {
+        activeGallery = lightboxItems.filter(function (candidate) {
+            const candidateGroup =
+                candidate.dataset.fanzLightboxGroup || "__default__";
 
-
-        link.addEventListener("click", function (event) {
-            event.preventDefault();
-            showImage(index);
+            return candidateGroup === groupName;
         });
+
+        const clickedIndex = activeGallery.indexOf(item);
+
+        showImage(clickedIndex >= 0 ? clickedIndex : 0);
     });
+});
 
     previousButton?.addEventListener(
         "click",

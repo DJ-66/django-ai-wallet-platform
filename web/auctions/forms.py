@@ -150,6 +150,25 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 
 class FeedPostForm(forms.ModelForm):
+    MEDIA_TYPE_CHOICES = (
+        (FeedPostMedia.MEDIA_TYPE_IMAGE, _("Images")),
+        (FeedPostMedia.MEDIA_TYPE_VIDEO, _("Videos")),
+        (FeedPostMedia.MEDIA_TYPE_AUDIO, _("Audio")),
+        (FeedPostMedia.MEDIA_TYPE_PDF, _("PDF")),
+    )
+
+    media_type = forms.ChoiceField(
+        choices=MEDIA_TYPE_CHOICES,
+        widget=forms.RadioSelect(
+            attrs={
+                "class": "feed-media-type-input",
+        }
+    ),
+        initial=FeedPostMedia.MEDIA_TYPE_IMAGE,
+        required=True,
+        label=_("Media type"),
+)
+
     images = MultipleFeedMediaField(
         required=False,
         widget=MultipleFileInput(

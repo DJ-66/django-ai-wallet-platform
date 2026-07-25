@@ -5125,6 +5125,791 @@ body.fanz-lightbox-open {
     box-sizing: border-box;
 }
 
+.post-detail-info-card {
+    margin: 14px 10px 18px;
+    padding: 18px;
+    border: 1px solid rgba(110, 45, 190, 0.18);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.58);
+    box-shadow: 0 10px 28px rgba(78, 35, 125, 0.10);
+    backdrop-filter: blur(8px);
+}
+
+.post-detail-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-size: 0.95rem;
+}
+
+.post-detail-date {
+    color: #4f445c;
+}
+
+.post-detail-title {
+    margin: 0 0 14px;
+    line-height: 1.15;
+}
+
+.post-detail-content {
+    margin-bottom: 14px;
+    line-height: 1.55;
+}
+
+.post-detail-bio {
+    margin: 16px 0 12px;
+    padding: 13px 15px;
+    border-left: 4px solid #7b2cff;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.post-detail-bio strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.post-detail-bio p {
+    margin: 0;
+    line-height: 1.45;
+}
+
+.post-detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.post-detail-tags a {
+    text-decoration: none;
+}
+
+.feed-cover-media {
+    position: relative;
+}
+
+.feed-lightbox-only {
+    display: none;
+}
+
+.feed-image-count {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+
+    background: rgba(12, 8, 24, 0.76);
+    color: #fff;
+
+    font-size: 0.85rem;
+    font-weight: 700;
+    pointer-events: none;
+    backdrop-filter: blur(6px);
+}
+
+/* =========================================================
+   COMMUNITY FEED COMPOSER — POLISHED CARD
+   ========================================================= */
+
+.feed-compose-card {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto 34px;
+    padding: 26px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(123, 44, 255, 0.18);
+    border-radius: 24px;
+
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow:
+        0 18px 45px rgba(74, 31, 130, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.75);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.feed-compose-card > h2 {
+    margin: 0 0 22px;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    line-height: 1.2;
+    color: #25123f;
+}
+
+.feed-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    width: 100%;
+}
+
+.feed-compose-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.feed-compose-field {
+    width: 100%;
+}
+
+.feed-compose-field input,
+.feed-compose-field textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(97, 47, 153, 0.22);
+    border-radius: 16px;
+
+    background: rgba(255, 255, 255, 0.94);
+    color: #21172d;
+
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.45;
+
+    outline: none;
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background-color 160ms ease,
+        transform 160ms ease;
+}
+
+.feed-compose-field input {
+    min-height: 50px;
+    padding: 0 16px;
+}
+
+.feed-compose-field textarea {
+    min-height: 130px;
+    padding: 14px 16px;
+    resize: vertical;
+}
+
+.feed-compose-field input:hover,
+.feed-compose-field textarea:hover {
+    border-color: rgba(123, 44, 255, 0.42);
+}
+
+.feed-compose-field input:focus,
+.feed-compose-field textarea:focus {
+    border-color: #7b2cff;
+    background: #ffffff;
+    box-shadow:
+        0 0 0 4px rgba(123, 44, 255, 0.12),
+        0 8px 22px rgba(76, 31, 128, 0.08);
+}
+
+.feed-compose-field input::placeholder,
+.feed-compose-field textarea::placeholder {
+    color: #81758e;
+}
+
+/* Keep validation banner aligned with the new card layout. */
+.feed-form-error-banner {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid rgba(190, 40, 65, 0.25);
+    border-radius: 14px;
+    background: rgba(255, 237, 241, 0.92);
+    color: #7d1830;
+}
+
+.feed-form-error-banner p {
+    margin: 6px 0 0;
+}
+
+/* Mobile composer spacing */
+@media (max-width: 640px) {
+    .feed-compose-card {
+        padding: 18px 14px;
+        border-radius: 20px;
+    }
+
+    .feed-form {
+        gap: 18px;
+    }
+
+    .feed-compose-field textarea {
+        min-height: 115px;
+    }
+}
+
+.feed-access-option-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.feed-access-option-content span:last-child {
+    display: flex;
+    flex-direction: column;
+}
+
+.feed-access-option-content strong {
+    display: block;
+    line-height: 1.2;
+}
+
+.feed-access-option-content small {
+    display: block;
+    margin-top: 3px;
+    color: #777;
+    font-size: .85rem;
+}
+
+.feed-access-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    column-gap: 10px;
+    cursor: pointer;
+}
+
+.feed-access-option > input[type="checkbox"] {
+    margin: 3px 0 0;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    accent-color: #7b2cff;
+}
+
+.feed-access-option-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.feed-access-option-icon {
+    line-height: 1.2;
+}
+
+.feed-access-option-content > span:last-child {
+    display: flex;
+    flex-direction: column;
+}
+
+.feed-access-option-content strong {
+    display: block;
+    line-height: 1.25;
+}
+
+.feed-access-option-content small {
+    display: block;
+    margin-top: 4px;
+    color: #766c80;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+/* =========================================================
+   SMART UPLOAD — BUTTON PRIORITY
+   ========================================================= */
+
+/* Small secondary Upload Rules button */
+.feed-upload-rules-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    width: auto;
+    min-height: 36px;
+    padding: 7px 12px;
+
+    border: 1px solid rgba(123, 44, 255, 0.28);
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.72);
+    color: #56209a;
+
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+
+    cursor: pointer;
+    box-shadow: none;
+
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease;
+}
+
+.feed-upload-rules-button:hover {
+    border-color: #7b2cff;
+    background: rgba(123, 44, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.feed-upload-rules-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(123, 44, 255, 0.14);
+}
+
+/* Large primary media picker */
+.feed-media-upload-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 18px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(32, 80, 185, 0.8);
+    border-radius: 14px;
+
+    background: linear-gradient(135deg, #2f6ce5, #112443);
+    color: #ffffff;
+
+    font-size: 0.96rem;
+    font-weight: 800;
+    text-align: center;
+
+    cursor: pointer;
+
+    box-shadow: 0 10px 22px rgba(25, 63, 140, 0.18);
+
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        filter 160ms ease;
+}
+
+.feed-media-upload-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(25, 63, 140, 0.24);
+    filter: brightness(1.04);
+}
+
+.feed-media-upload-button:active {
+    transform: translateY(0);
+}
+
+.feed-media-upload-button:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 4px rgba(47, 108, 229, 0.18),
+        0 10px 22px rgba(25, 63, 140, 0.18);
+}
+
+.feed-media-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.feed-selected-file-name {
+    color: #70677a;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+/* Force Upload Rules back to a compact secondary pill */
+.feed-upload-rules-button {
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 34px !important;
+
+    padding: 6px 11px !important;
+    margin: 0 !important;
+
+    border: 1px solid rgba(123, 44, 255, 0.28) !important;
+    border-radius: 999px !important;
+
+    background: rgba(255, 255, 255, 0.78) !important;
+    color: #56209a !important;
+
+    box-shadow: none !important;
+    font-size: 0.86rem !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+}
+
+.feed-media-type-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.feed-media-type-header > div {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* =========================================================
+   RESET MEDIA TYPE RADIO WRAPPER
+   Removes accidental blue button styling
+   ========================================================= */
+
+.feed-media-type-selector {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+
+    margin: 12px 0 0 !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    background: transparent !important;
+    background-image: none !important;
+
+    box-shadow: none !important;
+    color: inherit !important;
+}
+
+/* Django usually wraps RadioSelect in a div */
+.feed-media-type-selector > div,
+.feed-media-type-selector #id_media_type {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 5px !important;
+
+    width: 100% !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    background: transparent !important;
+    background-image: none !important;
+
+    box-shadow: none !important;
+}
+
+/* Reset each radio choice */
+.feed-media-type-selector label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+
+    width: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    background: transparent !important;
+    background-image: none !important;
+
+    box-shadow: none !important;
+    color: inherit !important;
+
+    cursor: pointer;
+}
+
+/* Keep actual radios normal */
+.feed-media-type-selector input[type="radio"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    appearance: auto !important;
+    -webkit-appearance: radio !important;
+
+    accent-color: #7b2cff;
+    box-shadow: none !important;
+}
+
+/* =========================================================
+   FANZ SMART UPLOAD RULES MODAL
+   ========================================================= */
+
+.feed-upload-rules-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.feed-upload-rules-modal[hidden] {
+    display: none !important;
+}
+
+.feed-upload-rules-backdrop {
+    position: absolute;
+    inset: 0;
+
+    background: rgba(15, 8, 28, 0.72);
+
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+
+    cursor: pointer;
+}
+
+.feed-upload-rules-dialog {
+    position: relative;
+    z-index: 1;
+
+    width: min(100%, 580px);
+    max-height: 88vh;
+    overflow-y: auto;
+
+    padding: 26px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(123, 44, 255, 0.24);
+    border-radius: 24px;
+
+    background: #ffffff;
+    color: #281936;
+
+    box-shadow: 0 30px 90px rgba(13, 5, 26, 0.42);
+}
+
+.feed-upload-rules-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 38px;
+    height: 38px;
+
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+
+    background: rgba(123, 44, 255, 0.09);
+    color: #6021a8;
+
+    font-size: 1.65rem;
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+.feed-upload-rules-close:hover {
+    background: rgba(123, 44, 255, 0.16);
+}
+
+.feed-upload-rules-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+
+    padding-right: 38px;
+}
+
+.feed-upload-rules-heading-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.feed-upload-rules-heading h2 {
+    margin: 0 0 7px;
+
+    color: #351553;
+    font-size: 1.45rem;
+    line-height: 1.2;
+}
+
+.feed-upload-rules-heading p {
+    margin: 0;
+
+    color: #6f6279;
+    line-height: 1.5;
+}
+
+.feed-upload-rules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    margin-top: 22px;
+}
+
+.feed-upload-rule-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 11px;
+
+    margin: 0;
+    padding: 15px;
+
+    border: 1px solid rgba(123, 44, 255, 0.14);
+    border-radius: 15px;
+
+    background: rgba(123, 44, 255, 0.045);
+}
+
+.feed-upload-rule-icon {
+    font-size: 1.4rem;
+}
+
+.feed-upload-rule-card h3 {
+    margin: 0 0 5px;
+
+    color: #351553;
+    font-size: 1rem;
+}
+
+.feed-upload-rule-card p {
+    margin: 0;
+
+    color: #716579;
+    font-size: 0.9rem;
+    line-height: 1.42;
+}
+
+.feed-upload-rules-note {
+    margin-top: 18px;
+    padding: 14px 15px;
+
+    border-left: 4px solid #7b2cff;
+    border-radius: 12px;
+
+    background: rgba(123, 44, 255, 0.075);
+}
+
+.feed-upload-rules-note strong {
+    color: #411b67;
+}
+
+.feed-upload-rules-note p {
+    margin: 5px 0 0;
+
+    color: #66596f;
+    line-height: 1.45;
+}
+
+.feed-upload-rules-done {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+}
+
+body.feed-upload-rules-open {
+    overflow: hidden;
+}
+
+@media (max-width: 640px) {
+    .feed-upload-rules-dialog {
+        padding: 22px 16px 18px;
+        border-radius: 20px;
+    }
+
+    .feed-upload-rules-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.feed-form-error-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    margin: 0;
+    padding: 16px;
+
+    border: 1px solid rgba(190, 40, 65, 0.25);
+    border-radius: 16px;
+
+    background: rgba(255, 237, 241, 0.94);
+    color: #7d1830;
+}
+
+.feed-form-error-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-form-error-heading strong {
+    line-height: 1.3;
+}
+
+.feed-form-error-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.feed-form-error-details p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.feed-form-error-guide {
+    padding-top: 12px;
+    border-top: 1px solid rgba(125, 24, 48, 0.14);
+}
+
+.feed-form-error-guide p {
+    margin: 0 0 10px;
+    color: #6b3040;
+    line-height: 1.4;
+}
+
+.feed-error-guide-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    min-height: 36px;
+    padding: 8px 13px;
+
+    border: 1px solid rgba(123, 44, 255, 0.28);
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.78);
+    color: #56209a;
+
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+.feed-error-guide-button:hover {
+    border-color: #7b2cff;
+    background: rgba(123, 44, 255, 0.08);
+}
+
+.feed-error-guide-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(123, 44, 255, 0.14);
+}
 
 
 /* end_css */
