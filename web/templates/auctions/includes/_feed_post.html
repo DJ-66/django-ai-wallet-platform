@@ -59,24 +59,85 @@
 
         <div class="feed-cover-media">
     {% for media in post.media.all %}
-        {% if media.is_active and media.media_type == "image" %}
-            <a
-                href="{{ media.file.url }}"
-                class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
-                data-fanz-lightbox
-                data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-                data-fanz-lightbox-group="post-{{ post.id }}"
-                {% if not forloop.first %}aria-hidden="true"{% endif %}
-            >
-                <img
-                    src="{{ media.file.url }}"
-                    alt="{{ media.caption|default:post.title }}"
-                    class="feed-image"
-                    loading="lazy"
+        {% if media.is_active %}
+
+            {% if media.media_type == "image" %}
+                <a
+                    href="{{ media.file.url }}"
+                    class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="image"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                    {% if not forloop.first %}aria-hidden="true"{% endif %}
                 >
-            </a>
+                    <img
+                        src="{{ media.file.url }}"
+                        alt="{{ media.caption|default:post.title }}"
+                        class="feed-image"
+                        loading="lazy"
+                    >
+                </a>
+
+            {% elif media.media_type == "video" %}
+                <button
+                    type="button"
+                    class="feed-media-viewer-trigger feed-video-trigger"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="video"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                >
+                    <span class="feed-media-viewer-icon">▶️</span>
+                    <span>
+                        {% trans "View Video" %}
+                    </span>
+                </button>
+
+            {% elif media.media_type == "audio" %}
+                <button
+                    type="button"
+                    class="feed-media-viewer-trigger feed-audio-trigger"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="audio"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                >
+                    <span class="feed-media-viewer-icon">🎵</span>
+                    <span>
+                        {% trans "Play Audio" %}
+                    </span>
+                </button>
+
+            {% elif media.media_type == "pdf" %}
+                <button
+                    type="button"
+                    class="feed-media-viewer-trigger feed-pdf-trigger"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="pdf"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                >
+                    <span class="feed-media-viewer-icon">📄</span>
+                    <span>
+                        {% trans "View PDF" %}
+                    </span>
+                </button>
+            {% endif %}
+
         {% endif %}
     {% endfor %}
+
+    {% if post.media.count > 1 %}
+        <span class="feed-image-count">
+            {{ post.media.count }} {% trans "items" %}
+        </span>
+    {% endif %}
+</div>
 
     {% if post.media.count > 1 %}
         <span class="feed-image-count">
@@ -193,24 +254,85 @@
 
     <div class="feed-cover-media">
     {% for media in post.media.all %}
-        {% if media.is_active and media.media_type == "image" %}
-            <a
-                href="{{ media.file.url }}"
-                class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
-                data-fanz-lightbox
-                data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-                data-fanz-lightbox-group="post-{{ post.id }}"
-                {% if not forloop.first %}aria-hidden="true"{% endif %}
-            >
-                <img
-                    src="{{ media.file.url }}"
-                    alt="{{ media.caption|default:post.title }}"
-                    class="feed-image"
-                    loading="lazy"
+        {% if media.is_active %}
+
+            {% if media.media_type == "image" %}
+                <a
+                    href="{{ media.file.url }}"
+                    class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="image"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                    {% if not forloop.first %}aria-hidden="true"{% endif %}
                 >
-            </a>
+                    <img
+                        src="{{ media.file.url }}"
+                        alt="{{ media.caption|default:post.title }}"
+                        class="feed-image"
+                        loading="lazy"
+                    >
+                </a>
+
+            {% elif media.media_type == "video" %}
+                <button
+                    type="button"
+                    class="feed-media-viewer-trigger feed-video-trigger"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="video"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                >
+                    <span class="feed-media-viewer-icon">▶️</span>
+                    <span>
+                        {% trans "View Video" %}
+                    </span>
+                </button>
+
+            {% elif media.media_type == "audio" %}
+                <button
+                    type="button"
+                    class="feed-media-viewer-trigger feed-audio-trigger"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="audio"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                >
+                    <span class="feed-media-viewer-icon">🎵</span>
+                    <span>
+                        {% trans "Play Audio" %}
+                    </span>
+                </button>
+
+            {% elif media.media_type == "pdf" %}
+                <button
+                    type="button"
+                    class="feed-media-viewer-trigger feed-pdf-trigger"
+                    data-fanz-lightbox
+                    data-fanz-lightbox-type="pdf"
+                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+                    data-fanz-lightbox-group="post-{{ post.id }}"
+                >
+                    <span class="feed-media-viewer-icon">📄</span>
+                    <span>
+                        {% trans "View PDF" %}
+                    </span>
+                </button>
+            {% endif %}
+
         {% endif %}
     {% endfor %}
+
+    {% if post.media.count > 1 %}
+        <span class="feed-image-count">
+            {{ post.media.count }} {% trans "items" %}
+        </span>
+    {% endif %}
+</div>
 
     {% if post.media.count > 1 %}
         <span class="feed-image-count">

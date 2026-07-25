@@ -4,13 +4,13 @@
   aria-hidden="true"
   role="dialog"
   aria-modal="true"
-  aria-label="Image viewer"
+  aria-label="Media viewer"
 >
   <button
     type="button"
     class="fanz-lightbox__backdrop"
     data-fanz-lightbox-close
-    aria-label="Close image viewer"
+    aria-label="Close media viewer"
   ></button>
 
   <div class="fanz-lightbox__content">
@@ -18,38 +18,80 @@
       type="button"
       class="fanz-lightbox__close"
       data-fanz-lightbox-close
-      aria-label="Close image viewer"
+      aria-label="Close media viewer"
     >
       ×
     </button>
-      <button
-    type="button"
-    class="fanz-lightbox__nav fanz-lightbox__nav--prev"
-    data-fanz-lightbox-prev
-    aria-label="Previous image"
->
-    &#10094;
-</button>
-    <img
-      src=""
-      alt=""
-      class="fanz-lightbox__image"
-      data-fanz-lightbox-image
+
+    <button
+      type="button"
+      class="fanz-lightbox__nav fanz-lightbox__nav--prev"
+      data-fanz-lightbox-prev
+      aria-label="Previous media"
     >
-            <div
+      &#10094;
+    </button>
+
+    <div
+      class="fanz-lightbox__media"
+      data-fanz-lightbox-media
+    >
+      <img
+        src=""
+        alt=""
+        class="fanz-lightbox__image"
+        data-fanz-lightbox-image
+      >
+
+      <video
+        class="fanz-lightbox__video"
+        data-fanz-lightbox-video
+        controls
+        playsinline
+        hidden
+      ></video>
+
+      <div
+        class="fanz-lightbox__audio-wrap"
+        data-fanz-lightbox-audio-wrap
+        hidden
+      >
+        <div class="fanz-lightbox__audio-icon">
+          🎵
+        </div>
+
+        <audio
+          class="fanz-lightbox__audio"
+          data-fanz-lightbox-audio
+          controls
+          preload="metadata"
+        ></audio>
+      </div>
+
+      <iframe
+        class="fanz-lightbox__pdf"
+        data-fanz-lightbox-pdf
+        title="PDF viewer"
+        hidden
+      ></iframe>
+    </div>
+
+    <div
       class="fanz-lightbox__counter"
       data-fanz-lightbox-counter
       aria-live="polite"
       hidden
     ></div>
-      <button
-    type="button"
-    class="fanz-lightbox__nav fanz-lightbox__nav--next"
-    data-fanz-lightbox-next
-    aria-label="Next image"
->
-    &#10095;
-</button>
+
+    <button
+      type="button"
+      class="fanz-lightbox__nav fanz-lightbox__nav--next"
+      data-fanz-lightbox-next
+      aria-label="Next media"
+    >
+      &#10095;
+    </button>
+
     <p
       class="fanz-lightbox__caption"
       data-fanz-lightbox-caption

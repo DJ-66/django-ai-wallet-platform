@@ -339,50 +339,96 @@
             >
 
         {% elif media.media_type == "video" %}
-             <div class="feed-video-wrap">
-
-            <video
-                class="feed-video"
-                controls
-                preload="metadata"
-            >
-                <source
-                    src="{{ media.file.url }}"
-                    type="video/mp4"
-                >
-                {% trans "Your browser does not support video playback." %}
-            </video>
+    <button
+        type="button"
+        class="feed-video-wrap feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
+        data-fanz-lightbox
+        data-fanz-lightbox-type="video"
+        data-fanz-lightbox-src="{{ media.file.url }}"
+        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+        data-fanz-lightbox-group="post-{{ post.id }}"
+        {% if not forloop.first %}aria-hidden="true"{% endif %}
+    >
+        <div class="feed-video-thumbnail">
+            <div class="feed-video-thumbnail-brand">
+                <span class="feed-video-thumbnail-logo">🎬</span>
+                <strong>FANZ Video</strong>
             </div>
-        {% elif media.media_type == "audio" %}
-            <div class="feed-audio-wrap">
-                <p class="feed-media-label">
-                    🎵 {{ media.caption|default:post.title }}
-                </p>
 
-                <audio
-                    class="feed-audio"
-                    controls
-                    preload="metadata"
-                >
-                    <source
-                        src="{{ media.file.url }}"
-                        type="audio/mpeg"
-                    >
-                    {% trans "Your browser does not support audio playback." %}
-                </audio>
-            </div>
+            <span class="feed-video-thumbnail-play">
+                ▶
+            </span>
+
+            
+        </div>
+    </button>
+
+        <span class="feed-media-viewer-overlay">
+            ▶️ {% trans "View Video" %}
+        </span>
+    </button>
+        
+
+    {% elif media.media_type == "audio" %}
+    <button
+        type="button"
+        class="feed-audio-card feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
+        data-fanz-lightbox
+        data-fanz-lightbox-type="audio"
+        data-fanz-lightbox-src="{{ media.file.url }}"
+        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+        data-fanz-lightbox-group="post-{{ post.id }}"
+        {% if not forloop.first %}aria-hidden="true"{% endif %}
+    >
+        <span class="feed-audio-card-header">
+            <span class="feed-audio-card-icon">🎵</span>
+
+            <span class="feed-audio-card-copy">
+                <strong>
+                    {{ media.caption|default:post.title }}
+                </strong>
+
+                <small>
+                    {% if post.media.count > 1 %}
+                        {{ post.media.count }} {% trans "tracks" %}
+                    {% else %}
+                        {% trans "FANZ Audio" %}
+                    {% endif %}
+                </small>
+            </span>
+        </span>
+
+        <span class="feed-audio-card-action">
+            ▶ {% trans "Open Audio Player" %}
+        </span>
+    </button>
 
         {% elif media.media_type == "pdf" %}
-            <div class="feed-document-wrap">
-                <a
-                    href="{{ media.file.url }}"
-                    class="feed-pdf-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    📄 {% trans "Open PDF" %}
-                </a>
-            </div>
+    <div class="feed-document-wrap{% if not forloop.first %} feed-lightbox-only{% endif %}">
+        <a
+            href="{{ media.file.url }}"
+            class="feed-pdf-card"
+            target="_blank"
+            rel="noopener noreferrer"
+            {% if not forloop.first %}aria-hidden="true"{% endif %}
+        >
+            <span class="feed-pdf-card-icon">📄</span>
+
+            <span class="feed-pdf-card-copy">
+                <strong>
+                    {{ media.caption|default:post.title|default:_("FANZ Document") }}
+                </strong>
+
+                <small>
+                    {% trans "Open PDF document" %}
+                </small>
+            </span>
+
+            <span class="feed-pdf-card-action">
+                {% trans "Open" %} ↗
+            </span>
+        </a>
+    </div>
 
         {% endif %}
 
@@ -526,50 +572,88 @@
     </a>
 
         {% elif media.media_type == "video" %}
-             <div class="feed-video-wrap">
-
-            <video
-                class="feed-video"
-                controls
-                preload="metadata"
-            >
-                <source
-                    src="{{ media.file.url }}"
-                    type="video/mp4"
-                >
-                {% trans "Your browser does not support video playback." %}
-            </video>
+    <button
+        type="button"
+        class="feed-video-wrap feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
+        data-fanz-lightbox
+        data-fanz-lightbox-type="video"
+        data-fanz-lightbox-src="{{ media.file.url }}"
+        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+        data-fanz-lightbox-group="post-{{ post.id }}"
+        {% if not forloop.first %}aria-hidden="true"{% endif %}
+    >
+        <div class="feed-video-thumbnail">
+            <div class="feed-video-thumbnail-brand">
+                <span class="feed-video-thumbnail-logo">🎬</span>
+                <strong>FANZ Video</strong>
             </div>
+
+            <div class="feed-video-thumbnail-play">
+                ▶
+            </div>          
+        </div>
+    </button>
+
         {% elif media.media_type == "audio" %}
-            <div class="feed-audio-wrap">
-                <p class="feed-media-label">
-                    🎵 {{ media.caption|default:post.title }}
-                </p>
+    <button
+        type="button"
+        class="feed-audio-card feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
+        data-fanz-lightbox
+        data-fanz-lightbox-type="audio"
+        data-fanz-lightbox-src="{{ media.file.url }}"
+        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
+        data-fanz-lightbox-group="post-{{ post.id }}"
+        {% if not forloop.first %}aria-hidden="true"{% endif %}
+    >
+        <span class="feed-audio-card-header">
+            <span class="feed-audio-card-icon">🎵</span>
 
-                <audio
-                    class="feed-audio"
-                    controls
-                    preload="metadata"
-                >
-                    <source
-                        src="{{ media.file.url }}"
-                        type="audio/mpeg"
-                    >
-                    {% trans "Your browser does not support audio playback." %}
-                </audio>
-            </div>
+            <span class="feed-audio-card-copy">
+                <strong>
+                    {{ media.caption|default:post.title }}
+                </strong>
+
+                <small>
+                    {% if post.media.count > 1 %}
+                        {{ post.media.count }} {% trans "tracks" %}
+                    {% else %}
+                        {% trans "FANZ Audio" %}
+                    {% endif %}
+                </small>
+            </span>
+        </span>
+
+        <span class="feed-audio-card-action">
+            ▶ {% trans "Open Audio Player" %}
+        </span>
+    </button>
 
         {% elif media.media_type == "pdf" %}
-            <div class="feed-document-wrap">
-                <a
-                    href="{{ media.file.url }}"
-                    class="feed-pdf-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    📄 {% trans "Open PDF" %}
-                </a>
-            </div>
+    <div class="feed-document-wrap{% if not forloop.first %} feed-lightbox-only{% endif %}">
+        <a
+            href="{{ media.file.url }}"
+            class="feed-pdf-card"
+            target="_blank"
+            rel="noopener noreferrer"
+            {% if not forloop.first %}aria-hidden="true"{% endif %}
+        >
+            <span class="feed-pdf-card-icon">📄</span>
+
+            <span class="feed-pdf-card-copy">
+                <strong>
+                    {{ media.caption|default:post.title|default:_("FANZ Document") }}
+                </strong>
+
+                <small>
+                    {% trans "Open PDF document" %}
+                </small>
+            </span>
+
+            <span class="feed-pdf-card-action">
+                {% trans "Open" %} ↗
+            </span>
+        </a>
+    </div>
 
         {% endif %}
         

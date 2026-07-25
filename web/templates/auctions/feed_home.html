@@ -29,28 +29,10 @@
                 {% trans "Your post could not be published." %}
             </strong>
         </div>
-<!--
-        <div class="feed-form-error-details">
-            {% for error in form.non_field_errors %}
-                <p>{{ error }}</p>
-            {% endfor %}
-
-            {% for error in form.images.errors %}
-                <p>{{ error }}</p>
-            {% endfor %}
-
-            {% for field in form %}
-                {% if field.name != "images" %}
-                    {% for error in field.errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                {% endif %}
-            {% endfor %}
-        </div> -->
 
         <div class="feed-form-error-guide">
             <p>
-     {% trans "See FANZ Upload Guide to publish 8 (Max) files per post" %}
+     {% trans "See FANZ Upload Guide for best results" %}
             </p>
 
             <button
@@ -243,7 +225,7 @@
                     <h3>{% trans "Videos" %}</h3>
 
                     <p>
-                        {% trans "One video automatically enables Premium and suggests at least 1 credit. Selecting 2–8 videos suggests 250 credits." %}
+                        {% trans "Video automatically enables Premium and suggests at least 1 credit. Selecting 2–8 videos suggests 250 credits." %}
                     </p>
                 </div>
             </section>
@@ -255,7 +237,7 @@
                     <h3>{% trans "Audio" %}</h3>
 
                     <p>
-                        {% trans "One audio file automatically enables Premium and suggests at least 1 credit. Selecting 2–8 audio files suggests 250 credits." %}
+                        {% trans "Audio file automatically enables Premium and suggests at least 1 credit. Selecting 2–8 audio files suggests 250 credits." %}
                     </p>
                 </div>
             </section>
@@ -267,7 +249,7 @@
                     <h3>{% trans "PDFs" %}</h3>
 
                     <p>
-                        {% trans "One PDF automatically enables Premium and suggests at least 1 credit. Selecting 2–8 PDFs suggests 250 credits." %}
+                        {% trans "PDF automatically enables Premium and suggests at least 1 credit. - (Max: 1 PDF per post)" %}
                     </p>
                 </div>
             </section>
@@ -669,7 +651,7 @@ document.addEventListener("DOMContentLoaded", function () {
             accept: "audio/mpeg,.mp3",
         },
         pdf: {
-            label: "📄 Choose PDF Files",
+            label: "📄 Choose PDF - Max 1",
             accept: "application/pdf,.pdf",
         },
     };
@@ -734,14 +716,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (
             mediaType === "video" ||
-            mediaType === "audio" ||
-            mediaType === "pdf"
+            mediaType === "audio"
         ) {
             if (fileCount >= 2) {
                 return 250;
             }
 
             return fileCount >= 1 ? 1 : 0;
+        }
+
+        if (mediaType === "pdf") {
+            return fileCount === 1 ? 1 : 0;
         }
 
         return 0;
@@ -777,6 +762,26 @@ document.addEventListener("DOMContentLoaded", function () {
     fileInput.addEventListener(
         "change",
         function () {
+            const mediaType = getSelectedMediaType();
+            const fileCount = fileInput.files
+                ? fileInput.files.length
+                : 0;
+
+            if (mediaType === "pdf" && fileCount > 1) {
+                fileInput.setCustomValidity(
+                    "PDF Posts Support - Max 1 Document."
+                );
+
+                fileInput.reportValidity();
+
+                fileInput.value = "";
+                selectedFileName.textContent = "No files selected";
+
+                return;
+            }
+
+            fileInput.setCustomValidity("");
+
             updateSelectedFileCount();
             applyPremiumDefaults();
         }
