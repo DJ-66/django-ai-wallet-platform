@@ -5415,8 +5415,8 @@ body.fanz-lightbox-open {
    SMART UPLOAD — BUTTON PRIORITY
    ========================================================= */
 
-/* Small secondary Upload Rules button */
-.feed-upload-rules-button {
+/* Small secondary Upload Guide button */
+.feed-upload-guide-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5445,13 +5445,13 @@ body.fanz-lightbox-open {
         transform 160ms ease;
 }
 
-.feed-upload-rules-button:hover {
+.feed-upload-guide-button:hover {
     border-color: #7b2cff;
     background: rgba(123, 44, 255, 0.08);
     transform: translateY(-1px);
 }
 
-.feed-upload-rules-button:focus-visible {
+.feed-upload-guide-button:focus-visible {
     outline: none;
     box-shadow: 0 0 0 4px rgba(123, 44, 255, 0.14);
 }
@@ -5517,8 +5517,8 @@ body.fanz-lightbox-open {
     text-align: center;
 }
 
-/* Force Upload Rules back to a compact secondary pill */
-.feed-upload-rules-button {
+/* Force Upload Guide back to a compact secondary pill */
+.feed-upload-guide-button {
     display: inline-flex !important;
     width: auto !important;
     min-width: 0 !important;
@@ -5640,10 +5640,10 @@ body.fanz-lightbox-open {
 }
 
 /* =========================================================
-   FANZ SMART UPLOAD RULES MODAL
+   FANZ SMART UPLOAD GUIDE MODAL
    ========================================================= */
 
-.feed-upload-rules-modal {
+.feed-upload-guide-modal {
     position: fixed;
     inset: 0;
     z-index: 10050;
@@ -5656,11 +5656,11 @@ body.fanz-lightbox-open {
     box-sizing: border-box;
 }
 
-.feed-upload-rules-modal[hidden] {
+.feed-upload-guide-modal[hidden] {
     display: none !important;
 }
 
-.feed-upload-rules-backdrop {
+.feed-upload-guide-backdrop {
     position: absolute;
     inset: 0;
 
@@ -5672,7 +5672,7 @@ body.fanz-lightbox-open {
     cursor: pointer;
 }
 
-.feed-upload-rules-dialog {
+.feed-upload-guide-dialog {
     position: relative;
     z-index: 1;
 
@@ -5692,7 +5692,7 @@ body.fanz-lightbox-open {
     box-shadow: 0 30px 90px rgba(13, 5, 26, 0.42);
 }
 
-.feed-upload-rules-close {
+.feed-upload-guide-close {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -5717,11 +5717,11 @@ body.fanz-lightbox-open {
     cursor: pointer;
 }
 
-.feed-upload-rules-close:hover {
+.feed-upload-guide-close:hover {
     background: rgba(123, 44, 255, 0.16);
 }
 
-.feed-upload-rules-heading {
+.feed-upload-guide-heading {
     display: flex;
     align-items: flex-start;
     gap: 13px;
@@ -5729,12 +5729,12 @@ body.fanz-lightbox-open {
     padding-right: 38px;
 }
 
-.feed-upload-rules-heading-icon {
+.feed-upload-guide-heading-icon {
     font-size: 1.8rem;
     line-height: 1;
 }
 
-.feed-upload-rules-heading h2 {
+.feed-upload-guide-heading h2 {
     margin: 0 0 7px;
 
     color: #351553;
@@ -5742,14 +5742,14 @@ body.fanz-lightbox-open {
     line-height: 1.2;
 }
 
-.feed-upload-rules-heading p {
+.feed-upload-guide-heading p {
     margin: 0;
 
     color: #6f6279;
     line-height: 1.5;
 }
 
-.feed-upload-rules-grid {
+.feed-upload-guide-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
@@ -5790,7 +5790,7 @@ body.fanz-lightbox-open {
     line-height: 1.42;
 }
 
-.feed-upload-rules-note {
+.feed-upload-guide-note {
     margin-top: 18px;
     padding: 14px 15px;
 
@@ -5800,34 +5800,34 @@ body.fanz-lightbox-open {
     background: rgba(123, 44, 255, 0.075);
 }
 
-.feed-upload-rules-note strong {
+.feed-upload-guide-note strong {
     color: #411b67;
 }
 
-.feed-upload-rules-note p {
+.feed-upload-guide-note p {
     margin: 5px 0 0;
 
     color: #66596f;
     line-height: 1.45;
 }
 
-.feed-upload-rules-done {
+.feed-upload-guide-done {
     display: block;
     width: 100%;
     margin-top: 20px;
 }
 
-body.feed-upload-rules-open {
+body.feed-upload-guide-open {
     overflow: hidden;
 }
 
 @media (max-width: 640px) {
-    .feed-upload-rules-dialog {
+    .feed-upload-guide-dialog {
         padding: 22px 16px 18px;
         border-radius: 20px;
     }
 
-    .feed-upload-rules-grid {
+    .feed-upload-guide-grid {
         grid-template-columns: 1fr;
     }
 }

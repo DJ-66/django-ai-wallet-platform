@@ -38,9 +38,9 @@
             <button
                 type="button"
                 class="feed-error-guide-button"
-                data-upload-rules-open
+                data-upload-guide-open
                 aria-haspopup="dialog"
-                aria-controls="feed-upload-rules-modal"
+                aria-controls="feed-upload-guide-modal"
             >
                 📖 {% trans "Fanz Upload Guide" %}
             </button>
@@ -72,10 +72,10 @@
 
             <button
                type="button"
-               class="feed-upload-rules-button"
-               data-upload-rules-open
+               class="feed-upload-guide-button"
+               data-upload-guide-open
                aria-haspopup="dialog"
-               aria-controls="feed-upload-rules-modal"
+               aria-controls="feed-upload-guide-modal"
            >
                ⓘ {% trans "Upload Guide" %}
            </button>
@@ -169,33 +169,33 @@
 </form>
     </div>
 <div
-    id="feed-upload-rules-modal"
-    class="feed-upload-rules-modal"
+    id="feed-upload-guide-modal"
+    class="feed-upload-guide-modal"
     role="dialog"
     aria-modal="true"
-    aria-labelledby="feed-upload-rules-title"
+    aria-labelledby="feed-upload-guide-title"
     hidden
 >
     <div
-        class="feed-upload-rules-backdrop"
-        data-upload-rules-close
+        class="feed-upload-guide-backdrop"
+        data-upload-guide-close
     ></div>
 
-    <div class="feed-upload-rules-dialog">
+    <div class="feed-upload-guide-dialog">
         <button
             type="button"
-            class="feed-upload-rules-close"
-            data-upload-rules-close
-            aria-label="{% trans 'Close upload rules' %}"
+            class="feed-upload-guide-close"
+            data-upload-guide-close
+            aria-label="{% trans 'Close upload guide' %}"
         >
             ×
         </button>
 
-        <div class="feed-upload-rules-heading">
-            <span class="feed-upload-rules-heading-icon">✨</span>
+        <div class="feed-upload-guide-heading">
+            <span class="feed-upload-guide-heading-icon">✨</span>
 
             <div>
-                <h2 id="feed-upload-rules-title">
+                <h2 id="feed-upload-guide-title">
                     {% trans "FANZ Upload Guide" %}
                 </h2>
 
@@ -205,7 +205,7 @@
             </div>
         </div>
 
-        <div class="feed-upload-rules-grid">
+        <div class="feed-upload-guide-grid">
             <section class="feed-upload-rule-card">
                 <span class="feed-upload-rule-icon">🖼️</span>
 
@@ -255,7 +255,7 @@
             </section>
         </div>
 
-        <div class="feed-upload-rules-note">
+        <div class="feed-upload-guide-note">
             <strong>
                 💡 {% trans "You remain in control" %}
             </strong>
@@ -267,8 +267,8 @@
 
         <button
             type="button"
-            class="auth-primary-btn feed-upload-rules-done"
-            data-upload-rules-close
+            class="auth-primary-btn feed-upload-guide-done"
+            data-upload-guide-close
         >
             {% trans "Got It" %}
         </button>
@@ -298,34 +298,34 @@
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById("feed-upload-rules-modal");
+    const modal = document.getElementById("feed-upload-guide-modal");
 
     if (!modal) {
         return;
     }
 
     const openButtons = document.querySelectorAll(
-        "[data-upload-rules-open]"
+        "[data-upload-guide-open]"
     );
 
     const closeButtons = modal.querySelectorAll(
-        "[data-upload-rules-close]"
+        "[data-upload-guide-close]"
     );
 
     const dialog = modal.querySelector(
-        ".feed-upload-rules-dialog"
+        ".feed-upload-guide-dialog"
     );
 
     let previouslyFocusedElement = null;
 
-    function openUploadRulesModal() {
+    function openUploadGuideModal() {
         previouslyFocusedElement = document.activeElement;
 
         modal.hidden = false;
-        document.body.classList.add("feed-upload-rules-open");
+        document.body.classList.add("feed-upload-guide-open");
 
         const closeButton = modal.querySelector(
-            ".feed-upload-rules-close"
+            ".feed-upload-guide-close"
         );
 
         if (closeButton) {
@@ -333,9 +333,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function closeUploadRulesModal() {
+    function closeUploadGuideModal() {
         modal.hidden = true;
-        document.body.classList.remove("feed-upload-rules-open");
+        document.body.classList.remove("feed-upload-guide-open");
 
         if (previouslyFocusedElement) {
             previouslyFocusedElement.focus();
@@ -343,16 +343,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     openButtons.forEach(function (button) {
-        button.addEventListener("click", openUploadRulesModal);
+        button.addEventListener("click", openUploadGuideModal);
     });
 
     closeButtons.forEach(function (button) {
-        button.addEventListener("click", closeUploadRulesModal);
+        button.addEventListener("click", closeUploadGuideModal);
     });
 
     document.addEventListener("keydown", function (event) {
         if (event.key === "Escape" && !modal.hidden) {
-            closeUploadRulesModal();
+            closeUploadGuideModal();
         }
     });
 

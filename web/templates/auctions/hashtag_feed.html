@@ -106,48 +106,14 @@
     </div>
 {% else %}
     <p>{{ post.content|link_hashtags|linebreaksbr }}</p>
+     {% include "auctions/includes/_post_media.html" with post=post %}
 
-    <div class="feed-cover-media">
-    {% for media in post.media.all %}
-        {% if media.is_active and media.media_type == "image" %}
-            <a
-                href="{{ media.file.url }}"
-                class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
-                data-fanz-lightbox
-                data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-                data-fanz-lightbox-group="post-{{ post.id }}"
-                {% if not forloop.first %}aria-hidden="true"{% endif %}
-            >
-                <img
-                    src="{{ media.file.url }}"
-                    alt="{{ media.caption|default:post.title }}"
-                    class="feed-image"
-                    loading="lazy"
-                >
-            </a>
-        {% endif %}
-    {% endfor %}
-
-    {% if post.active_image_count > 1 %}
-        <span class="feed-image-count">
-            🖼 {{ post.active_image_count }}
-        </span>
-    {% endif %}
-</div>
-
-{% if not post.media.exists and post.image %}
-    <img
-        src="{{ post.image.url }}"
-        alt="{{ post.title }}"
-        class="feed-image"
-        loading="lazy"
-    >
-{% endif %}
 {% endif %}
 
 <div class="post-actions">
     <a href="{% url 'post_detail' post.id %}" class="view-post-link">
         View post →
+
     </a>
 </div>
             

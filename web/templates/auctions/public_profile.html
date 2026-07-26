@@ -327,113 +327,68 @@
 </div>
 <br>
 
-{% for media in post.media.all %}
-    {% if media.is_active %}
+{% if post.is_paid and request.user != post.user and post.id not in unlocked_post_ids %}
 
-        {% if media.media_type == "image" %}
-            <img
-                src="{{ media.file.url }}"
-                alt="{{ media.caption|default:post.title }}"
-                class="feed-image"
-                loading="lazy"
+    <div class="locked-post-card">
+
+        {% with first_media=post.media.first %}
+            {% if first_media and first_media.is_active and first_media.media_type == "image" %}
+                <div class="premium-preview">
+                    <img
+                        src="{{ first_media.file.url }}"
+                        alt="{{ first_media.caption|default:post.title }}"
+                        class="feed-image premium-blur"
+                    >
+
+                    <div class="premium-overlay">
+                        🔒 {% trans "Premium Content" %}
+                    </div>
+                </div>
+            {% elif not first_media and post.image %}
+                <div class="premium-preview">
+                    <img
+                        src="{{ post.image.url }}"
+                        alt="{{ post.title }}"
+                        class="feed-image premium-blur"
+                    >
+
+                    <div class="premium-overlay">
+                        🔒 {% trans "Premium Content" %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <p class="locked-post-title">
+            🔒 {% trans "Premium content locked" %}
+        </p>
+
+        <p class="locked-post-price">
+            {% trans "Unlock media for" %}
+            {{ post.unlock_price }}
+            {% trans "credits" %}
+        </p>
+
+        <form method="post" action="{% url 'unlock_feed_post' post.id %}">
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="auth-primary-btn premium-unlock-trigger"
+                data-post-title="{{ post.title|default:'Premium Post' }}"
+                data-unlock-price="{{ post.unlock_price }}"
             >
+                {% trans "Unlock Post" %}
+            </button>
+        </form>
 
-        {% elif media.media_type == "video" %}
-    <button
-        type="button"
-        class="feed-video-wrap feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
-        data-fanz-lightbox
-        data-fanz-lightbox-type="video"
-        data-fanz-lightbox-src="{{ media.file.url }}"
-        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-        data-fanz-lightbox-group="post-{{ post.id }}"
-        {% if not forloop.first %}aria-hidden="true"{% endif %}
-    >
-        <div class="feed-video-thumbnail">
-            <div class="feed-video-thumbnail-brand">
-                <span class="feed-video-thumbnail-logo">🎬</span>
-                <strong>FANZ Video</strong>
-            </div>
-
-            <span class="feed-video-thumbnail-play">
-                ▶
-            </span>
-
-            
-        </div>
-    </button>
-
-        <span class="feed-media-viewer-overlay">
-            ▶️ {% trans "View Video" %}
-        </span>
-    </button>
-        
-
-    {% elif media.media_type == "audio" %}
-    <button
-        type="button"
-        class="feed-audio-card feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
-        data-fanz-lightbox
-        data-fanz-lightbox-type="audio"
-        data-fanz-lightbox-src="{{ media.file.url }}"
-        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-        data-fanz-lightbox-group="post-{{ post.id }}"
-        {% if not forloop.first %}aria-hidden="true"{% endif %}
-    >
-        <span class="feed-audio-card-header">
-            <span class="feed-audio-card-icon">🎵</span>
-
-            <span class="feed-audio-card-copy">
-                <strong>
-                    {{ media.caption|default:post.title }}
-                </strong>
-
-                <small>
-                    {% if post.media.count > 1 %}
-                        {{ post.media.count }} {% trans "tracks" %}
-                    {% else %}
-                        {% trans "FANZ Audio" %}
-                    {% endif %}
-                </small>
-            </span>
-        </span>
-
-        <span class="feed-audio-card-action">
-            ▶ {% trans "Open Audio Player" %}
-        </span>
-    </button>
-
-        {% elif media.media_type == "pdf" %}
-    <div class="feed-document-wrap{% if not forloop.first %} feed-lightbox-only{% endif %}">
-        <a
-            href="{{ media.file.url }}"
-            class="feed-pdf-card"
-            target="_blank"
-            rel="noopener noreferrer"
-            {% if not forloop.first %}aria-hidden="true"{% endif %}
-        >
-            <span class="feed-pdf-card-icon">📄</span>
-
-            <span class="feed-pdf-card-copy">
-                <strong>
-                    {{ media.caption|default:post.title|default:_("FANZ Document") }}
-                </strong>
-
-                <small>
-                    {% trans "Open PDF document" %}
-                </small>
-            </span>
-
-            <span class="feed-pdf-card-action">
-                {% trans "Open" %} ↗
-            </span>
-        </a>
     </div>
 
-        {% endif %}
+{% else %}
 
-    {% endif %}
-{% endfor %}
+    {% include "auctions/includes/_post_media.html" with post=post %}
+
+{% endif %}
 
 {% if request.user == post.user %}
     <div class="post-owner-actions">
@@ -460,7 +415,7 @@
                 </div>
             {% endif %}
         {% endfor %}
-<!--  2nd loop here -->
+
        {% for post in profile_posts %}
        {% if not post.is_pinned %}
         <div class="feed-post-card" id="post-{{ post.id }}">
@@ -503,7 +458,7 @@
         {% endif %}
     </div>
     
-<!-- down to here xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-->
+
                  
             {% if post.is_paid and request.user != post.user and post.id not in unlocked_post_ids %}
     <div class="locked-post-card">
@@ -548,126 +503,8 @@
 
     </div>
 {% else %}
-
-
-<div class="feed-cover-media">   
-{% for media in post.media.all %}
-    {% if media.is_active %}
-
-        {% if media.media_type == "image" %}
-    <a
-        href="{{ media.file.url }}"
-        class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
-        data-fanz-lightbox
-        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-        data-fanz-lightbox-group="post-{{ post.id }}"
-        {% if not forloop.first %}aria-hidden="true"{% endif %}
-    >
-        <img
-            src="{{ media.file.url }}"
-            alt="{{ media.caption|default:post.title }}"
-            class="feed-image"
-            loading="lazy"
-        >
-    </a>
-
-        {% elif media.media_type == "video" %}
-    <button
-        type="button"
-        class="feed-video-wrap feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
-        data-fanz-lightbox
-        data-fanz-lightbox-type="video"
-        data-fanz-lightbox-src="{{ media.file.url }}"
-        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-        data-fanz-lightbox-group="post-{{ post.id }}"
-        {% if not forloop.first %}aria-hidden="true"{% endif %}
-    >
-        <div class="feed-video-thumbnail">
-            <div class="feed-video-thumbnail-brand">
-                <span class="feed-video-thumbnail-logo">🎬</span>
-                <strong>FANZ Video</strong>
-            </div>
-
-            <div class="feed-video-thumbnail-play">
-                ▶
-            </div>          
-        </div>
-    </button>
-
-        {% elif media.media_type == "audio" %}
-    <button
-        type="button"
-        class="feed-audio-card feed-media-viewer-trigger{% if not forloop.first %} feed-lightbox-only{% endif %}"
-        data-fanz-lightbox
-        data-fanz-lightbox-type="audio"
-        data-fanz-lightbox-src="{{ media.file.url }}"
-        data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
-        data-fanz-lightbox-group="post-{{ post.id }}"
-        {% if not forloop.first %}aria-hidden="true"{% endif %}
-    >
-        <span class="feed-audio-card-header">
-            <span class="feed-audio-card-icon">🎵</span>
-
-            <span class="feed-audio-card-copy">
-                <strong>
-                    {{ media.caption|default:post.title }}
-                </strong>
-
-                <small>
-                    {% if post.media.count > 1 %}
-                        {{ post.media.count }} {% trans "tracks" %}
-                    {% else %}
-                        {% trans "FANZ Audio" %}
-                    {% endif %}
-                </small>
-            </span>
-        </span>
-
-        <span class="feed-audio-card-action">
-            ▶ {% trans "Open Audio Player" %}
-        </span>
-    </button>
-
-        {% elif media.media_type == "pdf" %}
-    <div class="feed-document-wrap{% if not forloop.first %} feed-lightbox-only{% endif %}">
-        <a
-            href="{{ media.file.url }}"
-            class="feed-pdf-card"
-            target="_blank"
-            rel="noopener noreferrer"
-            {% if not forloop.first %}aria-hidden="true"{% endif %}
-        >
-            <span class="feed-pdf-card-icon">📄</span>
-
-            <span class="feed-pdf-card-copy">
-                <strong>
-                    {{ media.caption|default:post.title|default:_("FANZ Document") }}
-                </strong>
-
-                <small>
-                    {% trans "Open PDF document" %}
-                </small>
-            </span>
-
-            <span class="feed-pdf-card-action">
-                {% trans "Open" %} ↗
-            </span>
-        </a>
-    </div>
-
-        {% endif %}
-        
-    {% endif %}
-{% endfor %}
-{% if post.media.count > 1 %}
-    <span class="feed-image-count">
-        🖼 {{ post.media.count }}
-    </span>
-{% endif %}
-</div>
-
-{% endif %}
-                
+    {% include "auctions/includes/_post_media.html" with post=post %}
+{% endif %}                
           <div class="feed-post-actions">
 
     <button
