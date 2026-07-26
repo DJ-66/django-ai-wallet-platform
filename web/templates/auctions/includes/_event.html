@@ -56,14 +56,14 @@
     {% endif %}
 
     {% if event.image %}
-        <img
-            src="{{ event.image.url }}"
-            class="feed-image"
-            alt="{{ event.title }}"
-            data-fanz-lightbox
-            data-fanz-lightbox-caption="{{ event.title }}"
-        >
-    {% endif %}
+     <img
+        src="{{ event.image.url }}"
+        class="feed-image"
+        alt="{{ event.title }}"
+        loading="lazy"
+      >
+       {% endif %}
+    
 
     <div class="feed-post-actions">
         <a

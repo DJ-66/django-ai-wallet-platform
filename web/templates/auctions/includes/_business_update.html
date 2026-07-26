@@ -31,15 +31,12 @@
         {{ update.body|linebreaksbr }}
     </div>
 
-    {% if update.image %}
-        <img
-            src="{{ update.image.url }}"
-            class="feed-image"
-            alt="{{ update.title }}"
-            data-fanz-lightbox
-            data-fanz-lightbox-caption="{{ update.business.name }} — {{ update.title }}"
-        >
-    {% endif %}
+    <img
+    src="{{ update.image.url }}"
+    alt="{{ update.title }}"
+    class="feed-image"
+    loading="lazy"
+    >
 
     <div class="feed-post-actions">
         <a
