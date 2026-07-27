@@ -72,11 +72,6 @@
     {% endif %}
 </div>
 
-{% if post.media.count > 1 %}
-    <span class="feed-image-count">
-        🖼 {{ post.media.count }}
-    </span>
-{% endif %}
 
 {% if not post.media.exists and post.image %}
     <a

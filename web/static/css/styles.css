@@ -6517,5 +6517,43 @@ body.feed-upload-guide-open {
     }
 }
 
+.dm-nav-link {
+  position: relative;
+}
+
+.dm-icon-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.dm-nav-badge {
+  position: absolute !important;
+  top: -10px !important;
+  right: -12px !important;
+
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+
+  box-sizing: border-box;
+  box-shadow: 0 0 0 2px #f3d8ff;
+  pointer-events: none;
+  z-index: 3;
+}
 
 /* end_css */
