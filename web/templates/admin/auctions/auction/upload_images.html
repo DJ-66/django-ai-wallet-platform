@@ -1,0 +1,56 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+    <div id="content-main">
+        <h1>Upload auction images</h1>
+
+        <p>
+            <strong>{{ auction.title }}</strong>
+        </p>
+
+        <p>
+            Current images: {{ auction.active_images.count }} / 8
+        </p>
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+        >
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            <div style="margin: 24px 0;">
+                {{ form.images.errors }}
+
+                <label
+                    for="{{ form.images.id_for_label }}"
+                    style="
+                        display: block;
+                        margin-bottom: 10px;
+                        font-weight: 700;
+                    "
+                >
+                    Select one or more images
+                </label>
+
+                {{ form.images }}
+            </div>
+
+            <div class="submit-row">
+                <input
+                    type="submit"
+                    value="Upload selected images"
+                    class="default"
+                >
+
+                <a
+                    href="{% url 'admin:auctions_auction_change' auction.pk %}"
+                    class="button"
+                >
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
