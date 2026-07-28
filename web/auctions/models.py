@@ -8,6 +8,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal
 from django.utils.text import slugify
+from django.db import transaction, models
+
 
 class NotificationSound(models.Model):
     SOUND_TYPES = [
@@ -68,8 +70,146 @@ class Auction(models.Model):
         now = timezone.now()
         return self.status == "live" and self.starts_at <= now < self.ends_at
 
+    def active_images(self):
+        return self.media.filter(
+            media_type="image",
+            is_active=True,
+        ).order_by(
+            "display_order",
+            "created_at",
+        )
+
+    def hero_media(self):
+        return self.active_images().first()
+
+    def gallery_media(self):
+        return self.active_images()[1:]
+
+    def active_video(self):
+        return self.media.filter(
+            media_type="video",
+            is_active=True,
+        ).order_by(
+            "display_order",
+            "created_at",
+        ).first()
+
+
     def __str__(self):
         return self.title
+
+
+class AuctionMedia(models.Model):
+    MEDIA_TYPE_IMAGE = "image"
+    MEDIA_TYPE_VIDEO = "video"
+
+    MEDIA_TYPE_CHOICES = [
+        (MEDIA_TYPE_IMAGE, "Image"),
+        (MEDIA_TYPE_VIDEO, "Video"),
+    ]
+
+    auction = models.ForeignKey(
+        Auction,
+        on_delete=models.CASCADE,
+        related_name="media",
+    )
+
+    file = models.FileField(
+        upload_to="auctions/media/",
+    )
+
+    media_type = models.CharField(
+        max_length=20,
+        choices=MEDIA_TYPE_CHOICES,
+        default=MEDIA_TYPE_IMAGE,
+        db_index=True,
+    )
+
+    caption = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first.",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "created_at",
+        ]
+        verbose_name = "Auction Media"
+        verbose_name_plural = "Auction Media"
+
+    def make_hero(self):
+        if self.media_type != self.MEDIA_TYPE_IMAGE:
+            raise ValueError("Only auction images can become the hero.")
+
+        with transaction.atomic():
+            ordered_images = list(
+                AuctionMedia.objects.select_for_update()
+                .filter(
+                    auction=self.auction,
+                    media_type=self.MEDIA_TYPE_IMAGE,
+                    is_active=True,
+                )
+                .order_by(
+                    "display_order",
+                    "created_at",
+                    "pk",
+                )
+            )
+
+            ordered_images = [
+                media
+                for media in ordered_images
+                if media.pk != self.pk
+            ]
+
+            if not self.is_active:
+                self.is_active = True
+
+            self.display_order = 0
+            self.save(
+                update_fields=[
+                    "display_order",
+                    "is_active",
+                    "updated_at",
+                ]
+            )
+
+            for position, media in enumerate(
+                ordered_images,
+                start=1,
+            ):
+                if media.display_order != position:
+                    AuctionMedia.objects.filter(
+                        pk=media.pk,
+                    ).update(
+                        display_order=position,
+                    )
+
+
+    def __str__(self):
+        return (
+            f"Auction {self.auction_id}: "
+            f"{self.get_media_type_display()} "
+            f"#{self.display_order + 1}"
+        )
 
 
 class Bid(models.Model):

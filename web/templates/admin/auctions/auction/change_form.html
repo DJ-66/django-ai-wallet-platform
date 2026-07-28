@@ -1,0 +1,148 @@
+from django.http import HttpResponse
+
+def upload_images_view(self, request, auction_id):
+    return HttpResponse("UPLOAD VIEW REACHED")
+
+{% extends "admin/change_form.html" %}
+
+{% block after_field_sets %}
+    {{ block.super }}
+
+    {% if original %}
+        <section
+            style="
+                margin: 20px 0;
+                padding: 20px;
+                border: 2px solid #417690;
+                border-radius: 10px;
+                background: var(--body-bg);
+            "
+        >
+            <h2 style="margin-top: 0;">
+                FANZ Auction Studio
+            </h2>
+
+            <p>
+                Images: {{ original.active_images.count }} / 8
+            </p>
+
+                        <div style="margin: 20px 0;">
+                <input
+                    id="auction-studio-images"
+                    type="file"
+                    name="images"
+                    accept=".jpg,.jpeg,.png,.webp,.avif"
+                    multiple
+                >
+
+                <button
+                    type="submit"
+                    class="button"
+                    formaction="{% url 'admin:auctions_auction_upload_images' original.pk %}"
+                    formmethod="post"
+                    formenctype="multipart/form-data"
+                >
+                    Upload Selected Images
+                </button>
+            </div>
+            
+
+            {% with hero=original.hero_media %}
+                {% if hero %}
+                    <div style="margin-bottom: 24px;">
+                        <h3>⭐ Hero Image</h3>
+
+                        <img
+                            src="{{ hero.file.url }}"
+                            alt="Auction hero"
+                            style="
+                                display: block;
+                                width: 100%;
+                                max-width: 520px;
+                                max-height: 520px;
+                                object-fit: contain;
+                                border-radius: 12px;
+                                border: 1px solid var(--border-color);
+                            "
+                        >
+                    </div>
+                {% else %}
+                    <p>No AuctionMedia hero image has been added yet.</p>
+                {% endif %}
+            {% endwith %}
+
+            <div style="margin-bottom: 24px;">
+                <h3>Gallery</h3>
+
+                <div
+                    style="
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 14px;
+                    "
+                >
+                    {% for media in original.gallery_media %}
+                        <div
+                            style="
+                                width: 150px;
+                                padding: 10px;
+                                border: 1px solid var(--border-color);
+                                border-radius: 10px;
+                                text-align: center;
+                            "
+                        >
+                            <img
+                                src="{{ media.file.url }}"
+                                alt="Auction gallery image"
+                                style="
+                                    width: 130px;
+                                    height: 130px;
+                                    object-fit: cover;
+                                    border-radius: 8px;
+                                "
+                            >
+
+                            <div style="margin-top: 10px;">
+                                <a
+                                    class="button"
+                                    href="{% url 'admin:auctions_auction_make_hero' original.pk media.pk %}"
+                                >
+                                    ⭐ Make Hero
+                                </a>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p>No additional gallery images.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <h3>Video</h3>
+
+                {% with video=original.active_video %}
+                    {% if video %}
+                        <video
+                            controls
+                            preload="metadata"
+                            style="
+                                display: block;
+                                width: 100%;
+                                max-width: 520px;
+                                max-height: 360px;
+                                border-radius: 12px;
+                            "
+                        >
+                            <source
+                                src="{{ video.file.url }}"
+                                type="video/mp4"
+                            >
+                        </video>
+                    {% else %}
+                        <p>No active auction video.</p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}
