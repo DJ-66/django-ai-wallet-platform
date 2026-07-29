@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import path, reverse
 from .forms import process_fanz_image_upload
+from django.utils.html import format_html
 from .models import (
     AICreatorMemory,
     AICompanion,
@@ -40,50 +41,57 @@ class DigitalItemAdmin(admin.ModelAdmin):
 
 
 class AuctionAdminForm(forms.ModelForm):
+    starting_price = forms.DecimalField(
+        min_value=1,
+        max_digits=10,
+        decimal_places=2,
+        help_text="Enter a whole-number starting price.",
+        widget=forms.NumberInput(
+            attrs={
+                "step": "1",
+                "min": "1",
+            }
+        ),
+    )
+
+    bid_increment = forms.DecimalField(
+        min_value=1,
+        max_digits=10,
+        decimal_places=2,
+        help_text="Enter a whole-number credit increment.",
+        widget=forms.NumberInput(
+            attrs={
+                "step": "1",
+                "min": "1",
+            }
+        ),
+    )
+
     class Meta:
         model = Auction
-        fields = "__all__"
+        exclude = (
+            "image",
+            "image_2",
+            "video",
+            "current_price",
+        )
 
-    def clean_image(self):
-        image = self.cleaned_data.get("image")
+    def _validate_whole_number(self, field_name):
+        value = self.cleaned_data.get(field_name)
 
-        # Only process if a NEW file was uploaded in this admin save
-        if "image" not in self.files:
-            return self.instance.image if self.instance and self.instance.pk else image
-
-        if image:
-            return process_fanz_image_upload(
-                image,
-                platform_footer=True,
-                max_width=1600,
-                max_height=2400,
-                quality=90,
+        if value is not None and value != value.to_integral_value():
+            raise forms.ValidationError(
+                "Enter a whole number without cents."
             )
 
-        return image
+        return value
 
+    def clean_starting_price(self):
+        return self._validate_whole_number("starting_price")
 
-    def clean_image_2(self):
-        image = self.cleaned_data.get("image_2")
+    def clean_bid_increment(self):
+        return self._validate_whole_number("bid_increment")
 
-        # Only process if a NEW file was uploaded in this admin save
-        if "image_2" not in self.files:
-            return (
-                self.instance.image_2
-                if self.instance and self.instance.pk
-                else image
-            )
-
-        if image:
-            return process_fanz_image_upload(
-                image,
-                platform_footer=True,
-                max_width=1600,
-                max_height=2400,
-                quality=90,
-            )
-
-        return image
 
 class BaseAuctionMediaInlineForm(forms.ModelForm):
     expected_media_type = None
@@ -180,6 +188,60 @@ class AuctionStudioImageUploadForm(forms.Form):
             )
 
         return files
+
+
+class AuctionStudioVideoUploadForm(forms.Form):
+    video = forms.FileField(
+        required=True,
+        widget=forms.ClearableFileInput(
+            attrs={
+                "accept": "video/mp4,.mp4",
+            }
+        ),
+        label="Upload video",
+        help_text="Choose one MP4 auction video.",
+    )
+
+    def clean_video(self):
+        uploaded_file = self.cleaned_data["video"]
+
+        filename = getattr(
+            uploaded_file,
+            "name",
+            "",
+        ).lower()
+
+        content_type = (
+            getattr(
+                uploaded_file,
+                "content_type",
+                "",
+            )
+            or ""
+        ).lower()
+
+        if not filename.endswith(".mp4"):
+            raise forms.ValidationError(
+                "Auction video must be an MP4 file."
+            )
+
+        if content_type and content_type not in (
+            "video/mp4",
+            "application/mp4",
+            "application/octet-stream",
+        ):
+            raise forms.ValidationError(
+                "The uploaded file is not recognized as an MP4 video."
+            )
+
+        max_size = 50 * 1024 * 1024
+
+        if uploaded_file.size > max_size:
+            raise forms.ValidationError(
+                "Auction video must be 50 MB or smaller."
+            )
+
+        return uploaded_file
 
 
 class AuctionImageInlineForm(BaseAuctionMediaInlineForm):
@@ -344,6 +406,7 @@ class AuctionImageInline(admin.TabularInline):
     readonly_fields = (
         "media_preview",
         "hero_control",
+        "current_price",
     )
 
     ordering = (
@@ -443,6 +506,7 @@ class AuctionVideoInline(admin.TabularInline):
             obj.file.url,
         )
 
+
 @admin.register(Auction)
 class AuctionAdmin(admin.ModelAdmin):
     form = AuctionAdminForm
@@ -451,10 +515,79 @@ class AuctionAdmin(admin.ModelAdmin):
         "admin/auctions/auction/change_form.html"
     )
 
-    inlines = (
-        AuctionImageInline,
-        AuctionVideoInline,
+    list_display = (
+        "hero_thumbnail",
+        "title",
+        "status",
+        "current_price",
+        "starts_at",
+        "ends_at",
+        "winner",
     )
+
+    list_filter = (
+        "status",
+    )
+
+    search_fields = (
+        "title",
+        "digital_item__title",
+    )
+
+    ordering = (
+        "-created_at",
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            # A new auction always opens at its configured starting price.
+            obj.current_price = obj.starting_price
+
+        elif (
+            "starting_price" in form.changed_data
+            and not obj.bids.exists()
+        ):
+            # Before bidding begins, changing the starting price also changes
+            # the current price.
+            obj.current_price = obj.starting_price
+
+        super().save_model(
+            request,
+            obj,
+            form,
+            change,
+        )
+
+
+    def response_add(self, request, obj, post_url_continue=None):
+        self.message_user(
+            request,
+            "Auction created. Add images and video in FANZ Auction Studio.",
+            level="success",
+        )
+
+        return redirect(
+            "admin:auctions_auction_change",
+            obj.pk,
+        )
+
+    @admin.display(description="Hero")
+    def hero_thumbnail(self, obj):
+        hero = obj.hero_media()
+
+        if not hero or not hero.file:
+            return "—"
+
+        try:
+            return format_html(
+                '<img src="{}" alt="Auction hero" '
+                'style="width:64px;height:64px;'
+                'object-fit:cover;border-radius:8px;" />',
+                hero.file.url,
+            )
+        except ValueError:
+            return "—"
+
 
     def get_urls(self):
         urls = super().get_urls()
@@ -474,6 +607,31 @@ class AuctionAdmin(admin.ModelAdmin):
                 ),
                 name="auctions_auction_upload_images",
             ),
+
+            path(
+                "<int:auction_id>/upload-video/",
+                self.admin_site.admin_view(
+                    self.upload_video_view
+            ),
+            name="auctions_auction_upload_video",
+        ),
+
+        path(
+            "<int:auction_id>/delete-image/<int:media_id>/",
+            self.admin_site.admin_view(
+                self.delete_image_view
+            ),
+            name="auctions_auction_delete_image",
+        ),
+        path(
+            "<int:auction_id>/delete-video/<int:media_id>/",
+            self.admin_site.admin_view(
+                self.delete_video_view
+            ),
+            name="auctions_auction_delete_video",
+        ),
+
+
         ]
 
         return custom_urls + urls
@@ -640,124 +798,211 @@ class AuctionAdmin(admin.ModelAdmin):
             auction.pk,
         )
 
+    def upload_video_view(self, request, auction_id):
+        auction = get_object_or_404(
+            Auction,
+            pk=auction_id,
+        )
 
-    list_display = (
-        "hero_thumbnail",
-        "title",
-        "status",
-        "current_price",
-        "starts_at",
-        "ends_at",
-        "winner",
-    )
-    list_filter = ("status",)
-    search_fields = (
-        "title",
-        "digital_item__title",
-    )
-    ordering = ("-created_at",)
-    readonly_fields = (
-        "image_preview",
-        "image_2_preview",
-        "created_at",
-    )
-
-    @admin.display(description="Hero")
-    def hero_thumbnail(self, obj):
-        if obj.image:
-            return format_html(
-                '<img src="{}" style="width: 56px; height: 56px; '
-                'object-fit: cover; border-radius: 8px;" />',
-                obj.image.url,
+        if not self.has_change_permission(request, auction):
+            self.message_user(
+                request,
+                "You do not have permission to modify this auction.",
+                level="error",
             )
-        return "—"
-
-    @admin.display(description="Hero preview")
-    def image_preview(self, obj):
-        if obj and obj.image:
-            return format_html(
-                '<img src="{}" style="max-width: 320px; max-height: 220px; '
-                'object-fit: contain; border-radius: 10px;" />',
-                obj.image.url,
+            return redirect(
+                "admin:auctions_auction_changelist"
             )
-        return "No hero image uploaded."
 
-    @admin.display(description="Second image preview")
-    def image_2_preview(self, obj):
-        if obj and obj.image_2:
-            return format_html(
-                '<img src="{}" style="max-width: 320px; max-height: 220px; '
-                'object-fit: contain; border-radius: 10px;" />',
-                obj.image_2.url,
+        if request.method == "GET":
+            form = AuctionStudioVideoUploadForm()
+
+            context = {
+                **self.admin_site.each_context(request),
+                "title": f"Upload video: {auction.title}",
+                "auction": auction,
+                "form": form,
+                "opts": self.model._meta,
+            }
+
+            return TemplateResponse(
+                request,
+                "admin/auctions/auction/upload_video.html",
+                context,
             )
-        return "No second image uploaded."
 
-    fieldsets = (
-        (
-            "Auction Information",
-            {
-                "fields": (
-                    "title",
-                    "digital_item",
-                    "status",
-                ),
-            },
-        ),
-        (
-            "Pricing",
-            {
-                "fields": (
-                    "starting_price",
-                    "bid_increment",
-                    "current_price",
-                ),
-            },
-        ),
-        (
-            "Schedule",
-            {
-                "fields": (
-                    "starts_at",
-                    "ends_at",
-                ),
-            },
-        ),
-        (
-            "Media",
-            {
-                "fields": (
-                "image",
-                "image_preview",
-                "image_2",
-                "image_2_preview",
-                "video",
-            ),
-                "description": (
-                    "Upload the hero image, optional second image, "
-                    "and optional MP4 video."
-                ),
-            },
-        ),
-        (
-            "Auction Result",
-            {
-                "fields": (
-                    "winner",
-                    "winner_email_sent",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "Metadata",
-            {
-                "fields": (
-                    "created_at",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-    )
+        form = AuctionStudioVideoUploadForm(
+            request.POST,
+            request.FILES,
+        )
+
+        if not form.is_valid():
+            context = {
+                **self.admin_site.each_context(request),
+                "title": f"Upload video: {auction.title}",
+                "auction": auction,
+                "form": form,
+                "opts": self.model._meta,
+            }
+
+            return TemplateResponse(
+                request,
+                "admin/auctions/auction/upload_video.html",
+                context,
+            )
+
+        uploaded_video = form.cleaned_data["video"]
+
+        existing_video = auction.media.filter(
+            media_type=AuctionMedia.MEDIA_TYPE_VIDEO,
+        ).first()
+
+        if existing_video:
+            self.message_user(
+                request,
+                "This auction already has a video. Replace or delete it first.",
+                level="error",
+            )
+            return redirect(
+                "admin:auctions_auction_change",
+                auction.pk,
+            )
+
+        AuctionMedia.objects.create(
+            auction=auction,
+            file=uploaded_video,
+            media_type=AuctionMedia.MEDIA_TYPE_VIDEO,
+            display_order=0,
+            is_active=True,
+        )
+
+        self.message_user(
+            request,
+            "Auction video uploaded.",
+            level="success",
+        )
+
+        return redirect(
+            "admin:auctions_auction_change",
+            auction.pk,
+        )
+
+    def delete_image_view(self, request, auction_id, media_id):
+        auction = get_object_or_404(
+            Auction,
+            pk=auction_id,
+        )
+
+        if not self.has_change_permission(request, auction):
+            self.message_user(
+                request,
+                "You do not have permission to modify this auction.",
+                level="error",
+            )
+            return redirect(
+                "admin:auctions_auction_changelist"
+            )
+
+        media = get_object_or_404(
+            AuctionMedia,
+            pk=media_id,
+            auction=auction,
+            media_type=AuctionMedia.MEDIA_TYPE_IMAGE,
+        )
+
+        if request.method != "POST":
+            self.message_user(
+                request,
+                "Image deletion must be submitted from Auction Studio.",
+                level="error",
+            )
+            return redirect(
+                "admin:auctions_auction_change",
+                auction.pk,
+            )
+
+        media_file = media.file
+        media.delete()
+
+        if media_file:
+            media_file.delete(save=False)
+
+        remaining_images = list(
+            auction.media.filter(
+                media_type=AuctionMedia.MEDIA_TYPE_IMAGE,
+            ).order_by(
+                "display_order",
+                "created_at",
+            )
+        )
+
+        for index, image in enumerate(remaining_images):
+            if image.display_order != index:
+                image.display_order = index
+                image.save(update_fields=["display_order"])
+
+        self.message_user(
+            request,
+            "Auction image deleted.",
+            level="success",
+        )
+
+        return redirect(
+            "admin:auctions_auction_change",
+            auction.pk,
+        )
+
+    def delete_video_view(self, request, auction_id, media_id):
+        auction = get_object_or_404(
+            Auction,
+            pk=auction_id,
+        )
+
+        if not self.has_change_permission(request, auction):
+            self.message_user(
+                request,
+                "You do not have permission to modify this auction.",
+                level="error",
+            )
+            return redirect(
+                "admin:auctions_auction_changelist"
+            )
+
+        media = get_object_or_404(
+            AuctionMedia,
+            pk=media_id,
+            auction=auction,
+            media_type=AuctionMedia.MEDIA_TYPE_VIDEO,
+        )
+
+        if request.method != "POST":
+            self.message_user(
+                request,
+                "Video deletion must be submitted from Auction Studio.",
+                level="error",
+            )
+            return redirect(
+                "admin:auctions_auction_change",
+                auction.pk,
+            )
+
+        media_file = media.file
+        media.delete()
+
+        if media_file:
+            media_file.delete(save=False)
+
+        self.message_user(
+            request,
+            "Auction video deleted.",
+            level="success",
+        )
+
+        return redirect(
+            "admin:auctions_auction_change",
+            auction.pk,
+        )
+
 
 @admin.register(AuctionMedia)
 class AuctionMediaAdmin(admin.ModelAdmin):

@@ -48,7 +48,6 @@ class Auction(models.Model):
     video = models.FileField(upload_to="auction_videos/", blank=True, null=True)
     image = models.ImageField(upload_to="auction_images/", blank=True, null=True)
     image_2 = models.ImageField(upload_to="auction_images/", blank=True, null=True)
-    starting_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     current_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     bid_increment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("1.00"))
     starting_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("1.00"))

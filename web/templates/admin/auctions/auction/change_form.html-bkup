@@ -189,24 +189,10 @@
 {% endwith %}
 </div>
         </section>
-    {% else %}
-        <section
-            style="
-                margin: 20px 0;
-                padding: 18px;
-                border: 2px solid #417690;
-                border-radius: 10px;
-                background: var(--body-bg);
-            "
-        >
-            <h2 style="margin-top: 0;">
-                FANZ Auction Studio
-            </h2>
-
-            <p>
-                Save this auction first. You will then be taken directly
-                to Auction Studio to upload images and video.
-            </p>
-        </section>
     {% endif %}
 {% endblock %}
+
+
+
+
+

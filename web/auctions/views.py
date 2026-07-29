@@ -476,23 +476,27 @@ def auction_detail(request, auction_id):
             messages.error(request, str(e))
 
     wallet = None
-    
+
     buy_now_price = auction.current_price + Decimal("25.00")
-    
+
     is_favorited = False
 
     if request.user.is_authenticated:
         wallet, created = BidWallet.objects.get_or_create(user=request.user)
-        
+
         is_favorited = FavoriteAuction.objects.filter(
            user=request.user,
            auction=auction
         ).exists()
-    
+
     seconds_remaining = max(
     0,
     int((auction.ends_at - timezone.now()).total_seconds())
     )
+
+    hero_media = auction.hero_media()
+    gallery_media = auction.gallery_media()
+    active_video = auction.active_video()
 
     return render(request, "auction_detail.html", {
         "auction": auction,
@@ -501,6 +505,10 @@ def auction_detail(request, auction_id):
         "is_high_bidder": is_high_bidder,
         "is_favorited": is_favorited,
         "buy_now_price": buy_now_price,
+
+        "hero_media": hero_media,
+        "gallery_media": gallery_media,
+        "active_video": active_video,
     })
 
 def ensure_api_key(node):
