@@ -56,7 +56,7 @@ class NodeProfileAdmin(admin.ModelAdmin):
             node.role = "sales"
             node.status = "active"
             if not node.api_key:
-                node.api_key = generate_api_key()
+                node.api_key = NodeProfile.generate_api_key()
             node.save()
 
     def approve_validator(self, request, queryset):
@@ -64,7 +64,7 @@ class NodeProfileAdmin(admin.ModelAdmin):
             node.role = "validator"
             node.status = "active"
             if not node.api_key:
-                node.api_key = generate_api_key()
+                node.api_key = NodeProfile.generate_api_key()
             node.save()
 
 
