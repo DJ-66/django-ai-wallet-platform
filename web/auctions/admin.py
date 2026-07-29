@@ -1,4 +1,5 @@
 from . import admin_auction
+from . import admin_media
 from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -9,7 +10,6 @@ from .models import (
     AIConversation,
     AIFanMemoryNote,
     AIMessage,
-    AuctionMedia,
     Bid,
     BidWallet,
     DigitalItem,
@@ -31,31 +31,6 @@ class NotificationSoundAdmin(admin.ModelAdmin):
 class DigitalItemAdmin(admin.ModelAdmin):
     list_display = ("title",)
 
-
-@admin.register(AuctionMedia)
-class AuctionMediaAdmin(admin.ModelAdmin):
-    list_display = (
-        "auction",
-        "media_type",
-        "display_order",
-        "is_active",
-        "created_at",
-    )
-
-    list_filter = (
-        "media_type",
-        "is_active",
-    )
-
-    search_fields = (
-        "auction__title",
-        "caption",
-    )
-
-    ordering = (
-        "auction",
-        "display_order",
-    )
 
 @admin.register(Bid)
 class BidAdmin(admin.ModelAdmin):
