@@ -513,7 +513,7 @@ def auction_detail(request, auction_id):
 
 def ensure_api_key(node):
     if not node.api_key:
-        node.api_key = generate_api_key()
+        node.api_key = NodeProfile.generate_api_key()
         node.save(update_fields=["api_key"])
 
 
