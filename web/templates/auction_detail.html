@@ -83,42 +83,110 @@
 
 <div class="auction-gallery">
 
-  <div class="gallery-main" id="mainAuctionMedia">
-    {% if auction.image %}
-      <img src="{{ auction.image.url }}" alt="{{ auction.title }}">
+  <div
+  class="gallery-main"
+  id="mainAuctionMedia"
+  {% if hero_media %}
+    data-current-image-src="{{ hero_media.file.url }}"
+  {% elif auction.image %}
+    data-current-image-src="{{ auction.image.url }}"
+  {% endif %}
+>
+    {% if hero_media %}
+      <img
+        src="{{ hero_media.file.url }}"
+        alt="{{ auction.title }}"
+      >
+    {% elif auction.image %}
+      <img
+        src="{{ auction.image.url }}"
+        alt="{{ auction.title }}"
+      >
     {% else %}
-      <div class="image-placeholder">{% trans "No image" %}</div>
+      <div class="image-placeholder">
+        {% trans "No image" %}
+      </div>
     {% endif %}
   </div>
 
-  <div class="gallery-thumbs">
+<div
+  class="gallery-thumbs"
+  style="
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 760px;
+    margin: 16px auto 0;
+  "
+>
 
-    {% if auction.image %}
-      <img class="gallery-thumb active"
-           src="{{ auction.image.url }}"
-           alt="{% trans 'Image 1' %}"
-           onclick="showAuctionImage(this)">
-    {% endif %}
+    {% for media in gallery_media %}
+      <img
+        class="gallery-thumb"
+        src="{{ media.file.url }}"
+        alt="{% trans 'Auction image' %}"
+        onclick="showAuctionImage(this)"
+      >
+    {% empty %}
+      {% if not hero_media and auction.image_2 %}
+        <img
+          class="gallery-thumb"
+          src="{{ auction.image_2.url }}"
+          alt="{% trans 'Image 2' %}"
+          onclick="showAuctionImage(this)"
+        >
+      {% endif %}
+    {% endfor %}
 
-    {% if auction.image_2 %}
-      <img class="gallery-thumb"
-           src="{{ auction.image_2.url }}"
-           alt="{% trans 'Image 2' %}"
-           onclick="showAuctionImage(this)">
-    {% endif %}
+    {% if active_video %}
+  <button
+    class="gallery-thumb auction-video-thumb"
+    type="button"
+    data-video-url="{{ active_video.file.url }}"
+    onclick="showAuctionVideo(this)"
+    aria-label="{% trans 'Play auction video' %}"
+  >
+    <span class="auction-video-thumb-brand">
+      🤩 Play
+    </span>
 
-    {% if auction.video %}
-      <button class="gallery-thumb video-thumb"
-              type="button"
-              data-video-url="{{ auction.video.url }}"
-              onclick="showAuctionVideo(this)">
-        ▶ {% trans "Video" %}
-      </button>
-    {% endif %}
+    <span class="auction-video-thumb-play">
+      ▶
+    </span>
+
+    <span class="auction-video-thumb-label">
+      {% trans "Video" %}
+    </span>
+  </button>
+{% elif auction.video %}
+  <button
+    class="gallery-thumb auction-video-thumb"
+    type="button"
+    data-video-url="{{ auction.video.url }}"
+    onclick="showAuctionVideo(this)"
+    aria-label="{% trans 'Play auction video' %}"
+  >
+    <span class="auction-video-thumb-brand">
+      🤩 Play
+    </span>
+
+    <span class="auction-video-thumb-play">
+      ▶
+    </span>
+
+    <span class="auction-video-thumb-label">
+      {% trans "Video" %}
+    </span>
+  </button>
+{% endif %}
 
   </div>
-<br><br>
+
+  <br><br>
 </div>
+
 
   <div class="digital-item-description">
     <h2>{{ auction.digital_item.title }}</h2>
@@ -203,16 +271,59 @@ function fadeSwap(newHtml) {
 function showAuctionImage(thumb) {
   if (!thumb || !thumb.src) return;
 
-  fadeSwap(`<img src="${thumb.src}" alt="Auction image">`);
+  const mainMedia = document.getElementById("mainAuctionMedia");
+  if (!mainMedia) return;
+
+  const mainImage = mainMedia.querySelector("img");
+
+  /*
+   * When the main viewer currently contains a video, restore the image
+   * that was showing before the video was opened.
+   */
+  const currentMainSrc = mainImage
+    ? mainImage.src
+    : mainMedia.dataset.currentImageSrc;
+
+  if (!currentMainSrc) return;
+
+  const selectedSrc = thumb.src;
+  const selectedAlt = thumb.alt || "Auction image";
+
+  /*
+   * Move the currently displayed image into the clicked thumbnail.
+   */
+  thumb.src = currentMainSrc;
+
+  /*
+   * Move the clicked thumbnail into the main viewer.
+   */
+  mainMedia.innerHTML = `
+    <img
+      src="${selectedSrc}"
+      alt="${selectedAlt}"
+    >
+  `;
+
+  mainMedia.dataset.currentImageSrc = selectedSrc;
 
   clearActiveThumbs();
-  thumb.classList.add("active");
-
 }
 
+
 function showAuctionVideo(button) {
+  if (!button) return;
+
   const videoUrl = button.dataset.videoUrl;
-  if (!button || !videoUrl) return;
+  if (!videoUrl) return;
+
+  const mainMedia = document.getElementById("mainAuctionMedia");
+  if (!mainMedia) return;
+
+  const currentImage = mainMedia.querySelector("img");
+
+  if (currentImage) {
+    mainMedia.dataset.currentImageSrc = currentImage.src;
+  }
 
   fadeSwap(`
     <video autoplay muted playsinline controls>

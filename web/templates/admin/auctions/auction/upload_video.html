@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+    <div id="content-main">
+        <h1>Upload auction video</h1>
+
+        <p>
+            <strong>{{ auction.title }}</strong>
+        </p>
+
+        <p>
+            Upload one MP4 video, up to 50 MB.
+        </p>
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+        >
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            <div style="margin: 24px 0;">
+                {{ form.video.errors }}
+
+                <label
+                    for="{{ form.video.id_for_label }}"
+                    style="
+                        display: block;
+                        margin-bottom: 10px;
+                        font-weight: 700;
+                    "
+                >
+                    Select an MP4 video
+                </label>
+
+                {{ form.video }}
+
+                {% if form.video.help_text %}
+                    <p class="help">
+                        {{ form.video.help_text }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="submit-row">
+                <input
+                    type="submit"
+                    value="Upload video"
+                    class="default"
+                >
+
+                <a
+                    href="{% url 'admin:auctions_auction_change' auction.pk %}"
+                    class="button"
+                >
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

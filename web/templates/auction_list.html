@@ -16,13 +16,25 @@
            id="auction-{{ auction.id }}"
            data-url="{% url 'auction_detail' auction.id %}">
 
-        {% if auction.image %}
-          <div class="image-wrap">
-            <img class="auction-thumb"
-                 src="{{ auction.image.url }}"
-                 alt="{{ auction.title }}">
-          </div>
-        {% endif %}
+  {% with hero=auction.hero_media %}
+  {% if hero %}
+    <div class="image-wrap">
+      <img
+        class="auction-thumb"
+        src="{{ hero.file.url }}"
+        alt="{{ auction.title }}"
+      >
+    </div>
+  {% elif auction.image %}
+    <div class="image-wrap">
+      <img
+        class="auction-thumb"
+        src="{{ auction.image.url }}"
+        alt="{{ auction.title }}"
+      >
+    </div>
+  {% endif %}
+{% endwith %}
 
         <div class="auction-card-top">
           <h2>{{ auction.title }}</h2>

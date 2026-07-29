@@ -6556,4 +6556,140 @@ body.feed-upload-guide-open {
   z-index: 3;
 }
 
+.auction-video-thumb {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    width: 90px;
+    height: 116px;
+    padding: 8px;
+    overflow: hidden;
+
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 10px;
+
+    background:
+        radial-gradient(
+            circle at 30% 20%,
+            rgba(123, 44, 255, 0.46),
+            transparent 44%
+        ),
+        linear-gradient(
+            145deg,
+            #2f1750 0%,
+            #111a35 55%,
+            #07101f 100%
+        );
+
+    color: #fff;
+    cursor: pointer;
+}
+
+.auction-video-thumb-brand {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+
+    font-size: 0.66rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.auction-video-thumb-play {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 42px;
+    height: 42px;
+    padding-left: 3px;
+
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.13);
+    color: #fff;
+
+    font-size: 1.15rem;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+
+    transition: transform 150ms ease;
+}
+
+.auction-video-thumb-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.auction-video-thumb:hover .auction-video-thumb-play,
+.auction-video-thumb:focus-visible .auction-video-thumb-play {
+    transform: scale(1.08);
+}
+
+.gallery-thumbs .auction-video-thumb {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    width: 90px;
+    height: 116px;
+    min-height: 116px;
+    padding: 8px;
+
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 10px;
+
+    background:
+        radial-gradient(
+            circle at 30% 20%,
+            rgba(123, 44, 255, 0.46),
+            transparent 44%
+        ),
+        linear-gradient(
+            145deg,
+            #2f1750 0%,
+            #111a35 55%,
+            #07101f 100%
+        );
+
+    color: #fff;
+}
+
+@media (max-width: 640px) {
+    .gallery-thumbs .auction-video-thumb {
+        width: 90px;
+        height: 116px;
+        min-height: 116px;
+
+        background:
+            radial-gradient(
+                circle at 30% 20%,
+                rgba(123, 44, 255, 0.46),
+                transparent 44%
+            ),
+            linear-gradient(
+                145deg,
+                #2f1750 0%,
+                #111a35 55%,
+                #07101f 100%
+            );
+
+        color: #fff;
+    }
+
+    .gallery-thumbs .auction-video-thumb-play {
+        display: flex;
+        width: 42px;
+        height: 42px;
+        font-size: 1.15rem;
+    }
+}
+
 /* end_css */
