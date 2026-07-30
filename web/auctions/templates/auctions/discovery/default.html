@@ -180,6 +180,27 @@
     }
 }
 
+
+.discovery-events-section {
+    margin-top: 2.5rem;
+}
+
+.discovery-event-list {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.discovery-event-list .event-feed-card {
+    margin: 0;
+}
+
+.discovery-event-list .feed-content {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+}
+
 </style>
 
 <div class="discovery-detail-wrap">
@@ -307,6 +328,43 @@
                 >
                     Add Your Business
                 </a>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="discovery-events-section">
+        <div class="discovery-section-heading discovery-section-heading-row">
+            <div>
+                <h2>Upcoming Community Events</h2>
+
+                <p>
+                    Discover events hosted by businesses in the
+                    {{ translation.title }} community.
+                </p>
+            </div>
+
+            <a
+                class="discovery-section-cta"
+                href="{% url 'event_list' %}"
+            >
+                Explore All Events
+            </a>
+        </div>
+
+        {% if events %}
+            <div class="discovery-event-list">
+                {% for event in events %}
+                    {% include "auctions/includes/_event.html" with event=event %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="discovery-empty-state">
+                <h3>No community events yet</h3>
+
+                <p>
+                    Events created by businesses in this Discovery
+                    community will appear here automatically.
+                </p>
             </div>
         {% endif %}
     </section>
