@@ -73,18 +73,30 @@
                 </div>
             {% endif %}
             {% if business.discovery_hub %}
-            <section class="business-discovery">
+                <section class="business-discovery-card">
+                    <div class="business-discovery-card__content">
+                        <span class="business-discovery-card__eyebrow">
+                            Part of a FANZ Discovery Community
+                        </span>
 
-            <h2>Discovery Hub</h2>
+                        <h2>
+                            {{ business.discovery_hub.title }}
+                        </h2>
 
-            <p>
-            This business is part of the
-            <strong>{{ business.discovery_hub.title }}</strong>
-            Discovery Hub.
-            </p>
+                        <p>
+                            Explore related community posts, businesses,
+                            events, auctions, and creators.
+                        </p>
+                    </div>
 
-</section>
-{% endif %}
+                    <a
+                        class="business-discovery-card__link"
+                        href="{% url 'discovery_hub_detail' business.discovery_hub.slug %}"
+                    >
+                        Explore Community
+                    </a>
+                </section>
+            {% endif %}
         </header>
 {% if business.phone or business.website_url or business.city or business.country or business.owner %}
   <section class="business-actions">
