@@ -25,6 +25,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
+from .discovery_services import get_discovery_events
 from .services import (
     close_auction,
     get_public_hashtag_posts,
@@ -208,6 +209,7 @@ def discovery_hub_detail(request, slug):
         posts = FeedPost.objects.none()
 
     businesses = get_discovery_businesses(hub)
+    events = get_discovery_events(hub)
 
     template_key = translation.template_name or "default"
     template_name = f"auctions/discovery/{template_key}.html"
@@ -222,6 +224,7 @@ def discovery_hub_detail(request, slug):
             "hashtag": hashtag,
             "posts": posts,
             "businesses": businesses,
+            "events": events,
         },
     )
 
