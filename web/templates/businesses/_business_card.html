@@ -1,0 +1,82 @@
+<article class="business-profile-card">
+    <a
+        class="business-profile-card__image-link"
+        href="{% url 'businesses:detail' business.slug %}"
+        aria-label="View {{ business.name }}"
+    >
+        {% if business.hero_image %}
+            <img
+                class="business-profile-card__image"
+                src="{{ business.hero_image.url }}"
+                alt="{{ business.name }}"
+                loading="lazy"
+            >
+        {% else %}
+            <div class="business-profile-card__image-placeholder">
+                <span aria-hidden="true">🏪</span>
+                <span>Business Profile</span>
+            </div>
+        {% endif %}
+    </a>
+
+    <div class="business-profile-card__body">
+        <div class="business-profile-card__badges">
+            <span class="business-profile-card__industry">
+                {{ business.get_industry_display }}
+            </span>
+
+            {% if business.is_claimed %}
+                <span class="business-profile-card__status">
+                    ✓ Claimed
+                </span>
+            {% else %}
+                <span class="business-profile-card__status">
+                    Community Profile
+                </span>
+            {% endif %}
+        </div>
+
+        <h3 class="business-profile-card__title">
+            <a href="{% url 'businesses:detail' business.slug %}">
+                {{ business.name }}
+            </a>
+        </h3>
+
+        {% if business.city or business.country %}
+            <p class="business-profile-card__location">
+                <span aria-hidden="true">📍</span>
+
+                {% if business.city %}
+                    {{ business.city }}
+                {% endif %}
+
+                {% if business.city and business.country %}, {% endif %}
+
+                {% if business.country %}
+                    {{ business.country }}
+                {% endif %}
+            </p>
+        {% endif %}
+
+        {% if business.description %}
+            <p class="business-profile-card__description">
+                {{ business.description|truncatewords:22 }}
+            </p>
+        {% endif %}
+
+        <div class="business-profile-card__footer">
+            <span class="business-profile-card__fans">
+                <span aria-hidden="true">⭐</span>
+                {{ business.fans.count }}
+                fan{{ business.fans.count|pluralize }}
+            </span>
+
+            <a
+                class="business-profile-card__link"
+                href="{% url 'businesses:detail' business.slug %}"
+            >
+                View Business Profile
+            </a>
+        </div>
+    </div>
+</article>

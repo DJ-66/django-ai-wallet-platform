@@ -289,7 +289,7 @@
         {% if businesses %}
             <div class="discovery-business-grid">
                 {% for business in businesses %}
-                    {# Shared business card capability goes here next. #}
+                    {% include "businesses/_business_card.html" with business=business %}
                 {% endfor %}
             </div>
         {% else %}
