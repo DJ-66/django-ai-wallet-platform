@@ -193,18 +193,33 @@ def discovery_hub_detail(request, slug):
     if translation is None:
         raise Http404("Discovery Hub translation not found")
 
+    hashtag_name = hub.hashtag.lstrip("#").strip().lower()
+
+    hashtag = (
+        Hashtag.objects
+        .filter(name=hashtag_name)
+        .first()
+    )
+
+    if hashtag:
+        posts = get_public_hashtag_posts(hashtag)
+    else:
+        posts = FeedPost.objects.none()
+
     template_key = translation.template_name or "default"
     template_name = f"auctions/discovery/{template_key}.html"
 
     return render(
         request,
         template_name,
-    {
-        "hub": hub,
-        "translation": translation,
-        "language": language,
-    }
-)
+        {
+            "hub": hub,
+            "translation": translation,
+            "language": language,
+            "hashtag": hashtag,
+            "posts": posts,
+        },
+    )
 
 
 def notification_sounds_json(request):

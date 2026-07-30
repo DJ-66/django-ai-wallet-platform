@@ -79,6 +79,40 @@
     margin-bottom: 0;
     color: #555;
 }
+.discovery-posts-section {
+    margin-top: 2rem;
+}
+
+.discovery-section-heading {
+    margin-bottom: 1rem;
+}
+
+.discovery-section-heading h2 {
+    margin: 0 0 .35rem;
+    font-size: clamp(1.55rem, 4vw, 2.2rem);
+}
+
+.discovery-section-heading p {
+    margin: 0;
+    color: #555;
+}
+
+.discovery-post-list {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.discovery-empty-state {
+    padding: 1.5rem;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.80);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.discovery-empty-state h3 {
+    margin-top: 0;
+}
+
 </style>
 
 <div class="discovery-detail-wrap">
@@ -114,6 +148,43 @@
                     Start Exploring
                 </a>
             {% endif %}
+        </div>
+    </section>
+
+    <section class="discovery-posts-section">
+        <div class="discovery-section-heading">
+            <div>
+                <h2>Latest {{ translation.title }} Posts</h2>
+
+                {% if hashtag %}
+                    <p>
+                        Public community posts tagged
+                        <strong>#{{ hashtag.name }}</strong>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="discovery-post-list">
+            {% for post in posts %}
+                {% include "auctions/includes/_feed_post.html" with post=post %}
+            {% empty %}
+                <div class="discovery-empty-state">
+                    <h3>Be the first to contribute</h3>
+                    <p>
+                        No public posts have been shared in this
+                        Discovery Hub yet.
+                    </p>
+
+                    {% if hashtag %}
+                        <p>
+                            Create a free public post using
+                            <strong>#{{ hashtag.name }}</strong>
+                            and it will appear here automatically.
+                        </p>
+                    {% endif %}
+                </div>
+            {% endfor %}
         </div>
     </section>
 
