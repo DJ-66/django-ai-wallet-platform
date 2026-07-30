@@ -311,3 +311,69 @@ def process_credit_purchase(*, user, package, external_id, source_node=None):
     # until we decide whether commission is paid in USD or credits.
 
     return purchase, True
+
+
+def get_public_hashtag_posts(hashtag):
+    """
+    Return public, free hashtag posts eligible for public discovery surfaces.
+
+    This queryset is shared by hashtag feeds, Discovery Hubs, and future
+    search, syndication, API, and AI consumers.
+    """
+    from django.db.models import Count, Q
+
+    from .models import FeedPost, FeedPostMedia
+
+    return (
+        FeedPost.objects
+        .filter(
+            hashtags=hashtag,
+            is_public=True,
+            is_paid=False,
+        )
+        .annotate(
+            active_image_count=Count(
+                "media",
+                filter=Q(
+                    media__is_active=True,
+                    media__media_type=FeedPostMedia.MEDIA_TYPE_IMAGE,
+                ),
+                distinct=True,
+            ),
+            forbidden_media_count=Count(
+                "media",
+                filter=Q(
+                    media__is_active=True,
+                    media__media_type__in=[
+                        FeedPostMedia.MEDIA_TYPE_VIDEO,
+                        FeedPostMedia.MEDIA_TYPE_AUDIO,
+                        FeedPostMedia.MEDIA_TYPE_PDF,
+                    ],
+                ),
+                distinct=True,
+            ),
+        )
+        .filter(
+            forbidden_media_count=0,
+            active_image_count__lte=3,
+        )
+        .filter(
+            Q(active_image_count__gte=1)
+            |
+            (
+                Q(image__isnull=False)
+                & ~Q(image="")
+            )
+        )
+        .select_related(
+            "user",
+            "user__profile",
+            "user__bidwallet",
+        )
+        .prefetch_related(
+            "media",
+            "hashtags",
+            "likes",
+        )
+        .order_by("-created_at")
+    )
