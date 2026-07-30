@@ -1,6 +1,11 @@
 from django import forms
 
-from .models import Auction
+from .forms import process_fanz_image_upload
+from .models import (
+    Auction,
+    DiscoveryHub,
+    DiscoveryHubTranslation,
+)
 
 
 class AuctionAdminForm(forms.ModelForm):
@@ -159,3 +164,65 @@ class AuctionStudioVideoUploadForm(forms.Form):
             )
 
         return uploaded_file
+
+
+class DiscoveryHubAdminForm(forms.ModelForm):
+    class Meta:
+        model = DiscoveryHub
+        fields = "__all__"
+
+    def clean_hero_image(self):
+        image = self.cleaned_data.get("hero_image")
+
+        if not image:
+            return image
+
+        existing_image = getattr(self.instance, "hero_image", None)
+
+        if (
+            self.instance.pk
+            and existing_image
+            and image == existing_image
+        ):
+            return image
+
+        return process_fanz_image_upload(
+            image,
+            watermark=False,
+            platform_footer=False,
+            max_width=1800,
+            max_height=1000,
+            quality=88,
+        )
+
+
+class DiscoveryHubTranslationAdminForm(forms.ModelForm):
+    class Meta:
+        model = DiscoveryHubTranslation
+        fields = "__all__"
+
+    def clean_hero_image(self):
+        image = self.cleaned_data.get("hero_image")
+
+        if not image:
+            return image
+
+        existing_image = getattr(self.instance, "hero_image", None)
+
+        if (
+            self.instance.pk
+            and existing_image
+            and image == existing_image
+        ):
+            return image
+
+        return process_fanz_image_upload(
+            image,
+            watermark=False,
+            platform_footer=False,
+            max_width=1800,
+            max_height=1000,
+            quality=88,
+        )
+
+

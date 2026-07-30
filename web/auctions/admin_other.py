@@ -2,6 +2,10 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+from .admin_forms import (
+    DiscoveryHubAdminForm,
+    DiscoveryHubTranslationAdminForm,
+)
 from .models import (
     AICreatorMemory,
     AICompanion,
@@ -174,6 +178,8 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(DiscoveryHub)
 class DiscoveryHubAdmin(admin.ModelAdmin):
+    form = DiscoveryHubAdminForm
+
     list_display = (
         "title",
         "slug",
@@ -200,6 +206,8 @@ class DiscoveryHubAdmin(admin.ModelAdmin):
 
 @admin.register(DiscoveryHubTranslation)
 class DiscoveryHubTranslationAdmin(admin.ModelAdmin):
+    form = DiscoveryHubTranslationAdminForm
+
     list_display = (
         "hub",
         "language",
