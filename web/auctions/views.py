@@ -25,7 +25,12 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
-from .services import close_auction, place_bid, send_digital_delivery_message
+from .services import (
+    close_auction,
+    get_public_hashtag_posts,
+    place_bid,
+    send_digital_delivery_message,
+)
 from .utils import get_system_wallet
 from .models import Event
 from businesses.models import BusinessUpdate
@@ -65,50 +70,7 @@ def hashtag_feed(request, tag_name):
         name=tag_name.lower()
     )
 
-    posts = (
-        FeedPost.objects
-        .filter(
-            hashtags=hashtag,
-            is_paid=False,
-        )
-        .annotate(
-            active_image_count=Count(
-                "media",
-                filter=Q(
-                    media__is_active=True,
-                    media__media_type=FeedPostMedia.MEDIA_TYPE_IMAGE,
-                ),
-                distinct=True,
-            ),
-            forbidden_media_count=Count(
-                "media",
-                filter=Q(
-                    media__is_active=True,
-                    media__media_type__in=[
-                        FeedPostMedia.MEDIA_TYPE_VIDEO,
-                        FeedPostMedia.MEDIA_TYPE_AUDIO,
-                        FeedPostMedia.MEDIA_TYPE_PDF,
-                    ],
-                ),
-                distinct=True,
-            ),
-        )
-        .filter(
-            forbidden_media_count=0,
-            active_image_count__lte=3,
-        )
-        .filter(
-            Q(active_image_count__gte=1)
-            |
-            (
-                Q(image__isnull=False)
-                & ~Q(image="")
-            )
-        )
-        .select_related("user")
-        .prefetch_related("media", "hashtags")
-        .order_by("-created_at")
-    )
+    posts = get_public_hashtag_posts(hashtag)
 
     trending_hashtags = (
         Hashtag.objects
