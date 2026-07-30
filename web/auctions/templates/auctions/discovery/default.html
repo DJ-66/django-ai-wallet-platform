@@ -113,6 +113,73 @@
     margin-top: 0;
 }
 
+.discovery-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0 0;
+}
+
+.discovery-primary-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0.75rem 1.2rem;
+    border-radius: 999px;
+    background: #111;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.discovery-primary-cta:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 11px 28px rgba(0, 0, 0, 0.22);
+}
+
+.discovery-businesses-section {
+    margin-top: 2.5rem;
+}
+
+.discovery-section-heading-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.discovery-section-cta {
+    flex-shrink: 0;
+    font-weight: 700;
+    color: inherit;
+}
+
+.discovery-business-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+@media (max-width: 640px) {
+    .discovery-section-heading-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .discovery-hero-actions,
+    .discovery-primary-cta {
+        width: 100%;
+    }
+}
+
 </style>
 
 <div class="discovery-detail-wrap">
@@ -151,15 +218,27 @@
         </div>
     </section>
 
+    <div class="discovery-hero-actions">
+        <a
+            class="discovery-primary-cta"
+            href="{% url 'businesses:create' %}"
+        >
+            List Your Business
+        </a>
+    </div>
+
     <section class="discovery-posts-section">
         <div class="discovery-section-heading">
             <div>
-                <h2>Latest {{ translation.title }} Posts</h2>
+                <h2>
+                    Fresh from the {{ translation.title }} Community
+                </h2>
 
                 {% if hashtag %}
                     <p>
-                        Public community posts tagged
-                        <strong>#{{ hashtag.name }}</strong>
+                        Discover public stories, photos, and updates
+                        shared with
+                        <strong>#{{ hashtag.name }}</strong>.
                     </p>
                 {% endif %}
             </div>
@@ -186,6 +265,50 @@
                 </div>
             {% endfor %}
         </div>
+    </section>
+
+    <section class="discovery-businesses-section">
+        <div class="discovery-section-heading discovery-section-heading-row">
+            <div>
+                <h2>Businesses to Discover</h2>
+
+                <p>
+                    Find businesses connected to the
+                    {{ translation.title }} community.
+                </p>
+            </div>
+
+            <a
+                class="discovery-section-cta"
+                href="{% url 'businesses:create' %}"
+            >
+                List Your Business
+            </a>
+        </div>
+
+        {% if businesses %}
+            <div class="discovery-business-grid">
+                {% for business in businesses %}
+                    {# Shared business card capability goes here next. #}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="discovery-empty-state">
+                <h3>Does your business belong here?</h3>
+
+                <p>
+                    Join this Discovery community so customers can
+                    find your business, updates, events, and offers.
+                </p>
+
+                <a
+                    class="discovery-primary-cta"
+                    href="{% url 'businesses:create' %}"
+                >
+                    Add Your Business
+                </a>
+            </div>
+        {% endif %}
     </section>
 
     <section class="discovery-action-grid">

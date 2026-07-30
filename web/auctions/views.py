@@ -93,6 +93,7 @@ def hashtag_feed(request, tag_name):
         {
             "hashtag": hashtag,
             "posts": posts,
+            "businesses": [],
             "trending_hashtags": trending_hashtags,
             "total_hashtags": total_hashtags,
             "unlocked_post_ids": unlocked_post_ids,
