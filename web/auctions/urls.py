@@ -138,11 +138,6 @@ path(
 ),
 
 
-path(
-    "discover/<slug:slug>/",
-    views.discovery_hub_detail,
-    name="discovery_hub_detail",
-),
 
 
 path(
