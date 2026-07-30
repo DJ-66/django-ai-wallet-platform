@@ -113,6 +113,35 @@
     margin-top: 0;
 }
 
+.discovery-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.discovery-metric-card {
+    padding: 1.25rem;
+    border-radius: 18px;
+    background: rgba(255,255,255,.82);
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    text-align: center;
+}
+
+.discovery-metric-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: .35rem;
+}
+
+.discovery-metric-label {
+    color: #666;
+    font-size: .95rem;
+    font-weight: 600;
+}
+
 .discovery-hero-actions {
     display: flex;
     flex-wrap: wrap;
@@ -238,7 +267,36 @@
             {% endif %}
         </div>
     </section>
+    <section class="discovery-metrics">
 
+    <div class="discovery-metric-card">
+        <span class="discovery-metric-value">
+            {{ metrics.posts }}
+        </span>
+        <span class="discovery-metric-label">
+            Community Posts
+        </span>
+    </div>
+
+    <div class="discovery-metric-card">
+        <span class="discovery-metric-value">
+            {{ metrics.businesses }}
+        </span>
+        <span class="discovery-metric-label">
+            Business Profiles
+        </span>
+    </div>
+
+    <div class="discovery-metric-card">
+        <span class="discovery-metric-value">
+            {{ metrics.events }}
+        </span>
+        <span class="discovery-metric-label">
+            Upcoming Events
+        </span>
+    </div>
+
+</section>
     <div class="discovery-hero-actions">
         <a
             class="discovery-primary-cta"

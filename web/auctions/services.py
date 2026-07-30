@@ -313,12 +313,13 @@ def process_credit_purchase(*, user, package, external_id, source_node=None):
     return purchase, True
 
 
-def get_public_hashtag_posts(hashtag):
+def _get_public_hashtag_post_queryset(hashtag):
     """
-    Return public, free hashtag posts eligible for public discovery surfaces.
+    Build the shared queryset for public, free hashtag posts eligible
+    for public Discovery surfaces.
 
-    This queryset is shared by hashtag feeds, Discovery Hubs, and future
-    search, syndication, API, and AI consumers.
+    Keep Discovery eligibility rules here so listing and metric
+    capabilities cannot drift apart.
     """
     from django.db.models import Count, Q
 
@@ -365,6 +366,18 @@ def get_public_hashtag_posts(hashtag):
                 & ~Q(image="")
             )
         )
+    )
+
+
+def get_public_hashtag_posts(hashtag, limit=None):
+    """
+    Return public, free hashtag posts eligible for public discovery surfaces.
+
+    This queryset is shared by hashtag feeds, Discovery Hubs, and future
+    search, syndication, API, and AI consumers.
+    """
+    queryset = (
+        _get_public_hashtag_post_queryset(hashtag)
         .select_related(
             "user",
             "user__profile",
@@ -377,3 +390,16 @@ def get_public_hashtag_posts(hashtag):
         )
         .order_by("-created_at")
     )
+
+    if limit is not None:
+        queryset = queryset[:limit]
+
+    return queryset
+
+
+def get_public_hashtag_post_count(hashtag):
+    """
+    Return the total number of public, free hashtag posts eligible
+    for public Discovery surfaces.
+    """
+    return _get_public_hashtag_post_queryset(hashtag).count()
