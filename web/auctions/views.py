@@ -34,6 +34,7 @@ from .services import (
 from .utils import get_system_wallet
 from .models import Event
 from businesses.models import BusinessUpdate
+from businesses.services import get_discovery_businesses
 from .ai_memory import touch_ai_creator_memory
 from .forms import DirectMessageForm, FeedPostForm, SignUpForm, UserProfileForm
 from datetime import timedelta
@@ -206,6 +207,8 @@ def discovery_hub_detail(request, slug):
     else:
         posts = FeedPost.objects.none()
 
+    businesses = get_discovery_businesses(hub)
+
     template_key = translation.template_name or "default"
     template_name = f"auctions/discovery/{template_key}.html"
 
@@ -218,7 +221,7 @@ def discovery_hub_detail(request, slug):
             "language": language,
             "hashtag": hashtag,
             "posts": posts,
-            "businesses": [],
+            "businesses": businesses,
         },
     )
 
