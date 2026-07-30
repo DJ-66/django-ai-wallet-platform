@@ -382,7 +382,10 @@ Never create industry-specific architecture when reusable capability architectur
 | Credits | ✅ |
 | Business Listings | ✅ |
 | Business Updates | ✅ |
-| Discovery Hub | ✅ |
+| Discovery Hub | ✅ Foundation / v2 Active |
+| Discovery Syndication | Planned |
+| Discovery AI | Foundation |
+| Shared Image Pipeline | ✅ Active |
 | AI Companions | ✅ |
 | Events | ✅ Foundation |
 | Capability Gates | ✅ Initial |
