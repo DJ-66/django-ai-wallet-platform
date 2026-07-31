@@ -1,0 +1,135 @@
+{% load i18n %}
+
+<script>
+(function () {
+    function formatAuctionTime(totalSeconds) {
+        totalSeconds = Math.max(
+            0,
+            Number.parseInt(totalSeconds || "0", 10)
+        );
+
+        const days = Math.floor(totalSeconds / 86400);
+        totalSeconds %= 86400;
+
+        const hours = Math.floor(totalSeconds / 3600);
+        totalSeconds %= 3600;
+
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        const parts = [];
+
+        if (days > 0) {
+            parts.push(days + "D");
+        }
+
+        if (hours > 0) {
+            parts.push(hours + "H");
+        }
+
+        if (minutes > 0) {
+            parts.push(minutes + "M");
+        }
+
+        parts.push(seconds + "S");
+
+        return parts.join(" ");
+    }
+
+    function updateAuctionCountdowns() {
+        document
+            .querySelectorAll(".countdown[data-seconds]")
+            .forEach(function (element) {
+                let seconds = Number.parseInt(
+                    element.dataset.seconds || "0",
+                    10
+                );
+
+                if (Number.isNaN(seconds)) {
+                    seconds = 0;
+                }
+
+                const card = element.closest(".auction-card");
+                const badge = card
+                    ? card.querySelector(".badge")
+                    : null;
+
+                if (seconds <= 0) {
+                    element.textContent = "{% trans 'Ended' %}";
+
+                    if (card) {
+                        card.classList.add("ended");
+                    }
+
+                    if (badge) {
+                        badge.textContent = "{% trans 'Ended' %}";
+                        badge.className = "badge ended";
+                    }
+
+                    return;
+                }
+
+                element.textContent = formatAuctionTime(seconds);
+
+                if (badge) {
+                    if (seconds < 60) {
+                        badge.textContent =
+                            "🔥🔥 {% trans 'Ending NOW' %}";
+                        badge.className = "badge hot";
+                    } else if (seconds < 300) {
+                        badge.textContent =
+                            "🔥 {% trans 'Ending Soon' %}";
+                        badge.className = "badge hot";
+                    } else {
+                        badge.textContent =
+                            "{% trans 'Live' %}";
+                        badge.className = "badge live";
+                    }
+                }
+
+                element.dataset.seconds = String(seconds - 1);
+            });
+    }
+
+    function initializeAuctionCards() {
+        document
+            .querySelectorAll(".auction-card")
+            .forEach(function (card) {
+                if (card.dataset.clickBound === "true") {
+                    return;
+                }
+
+                card.dataset.clickBound = "true";
+
+                card.addEventListener("click", function (event) {
+                    if (
+                        event.target.closest(".favorite-form") ||
+                        event.target.closest(".favorite-button") ||
+                        event.target.closest("button") ||
+                        event.target.closest("a")
+                    ) {
+                        return;
+                    }
+
+                    window.location.href = card.dataset.url;
+                });
+            });
+
+        updateAuctionCountdowns();
+
+        window.setInterval(
+            updateAuctionCountdowns,
+            1000
+        );
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializeAuctionCards
+        );
+    } else {
+        initializeAuctionCards();
+    }
+})();
+</script>
