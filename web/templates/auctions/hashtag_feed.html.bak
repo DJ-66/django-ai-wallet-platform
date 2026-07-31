@@ -129,7 +129,58 @@
 {% endif %}
 
     {% for post in posts %}
-        {% include "auctions/includes/_feed_post.html" with post=post %}
+        <div class="hashtag-post">
+           <strong>
+  <a href="{% url 'public_profile_root' post.user.username %}" class="post-author-link">
+    @{{ post.user.username }}
+  </a>
+</strong>
+         {% if post.title %}
+    <h3 class="feed-post-title">{{ post.title }}</h3>
+{% endif %}
+
+{% if post.is_paid and request.user != post.user and post.id not in unlocked_post_ids %}
+    <div class="locked-post-card">
+
+        {% if post.image %}
+            <div class="premium-preview">
+                <img src="{{ post.image.url }}" class="feed-image premium-blur">
+                <div class="premium-overlay">
+                    🔒 {% trans "Premium Content" %}
+                </div>
+            </div>
+        {% endif %}
+
+        <p class="locked-post-title">
+            🔒 {% trans "Premium content locked" %}
+        </p>
+
+        <p class="locked-post-price">
+            {% trans "Unlock media for" %} {{ post.unlock_price }} {% trans "credits" %}
+        </p>
+
+        <form method="post" action="{% url 'unlock_feed_post' post.id %}">
+            {% csrf_token %}
+            <button type="submit" class="auth-primary-btn">
+                {% trans "Unlock Post" %}
+            </button>
+        </form>
+
+    </div>
+{% else %}
+    <p>{{ post.content|link_hashtags|linebreaksbr }}</p>
+     {% include "auctions/includes/_post_media.html" with post=post %}
+
+{% endif %}
+
+<div class="post-actions">
+    <a href="{% url 'post_detail' post.id %}" class="view-post-link">
+        View post →
+
+    </a>
+</div>
+            
+        </div>
     {% empty %}
         <div class="hashtag-card">
             No posts found.
@@ -138,7 +189,6 @@
 
 </div>
 
-{% include "auctions/includes/_feed_post_scripts.html" %}
 {% include "auctions/includes/_auction_card_scripts.html" %}
 
 {% endblock %}
