@@ -50,17 +50,18 @@
         >
     {% endif %}
 
-{% endif %}
+{% if auction_page.object_list %}
+<section class="hashtag-auctions-section">
+    <div class="discovery-section-heading discovery-section-heading-row">
+        <div>
+            <h2>Live Auctions in #{{ hashtag.name }}</h2>
 
-{% if hashtag.name == "auctions" and auction_page.object_list %}
-    <div class="auction-page-intro">
-        <h2>Live Auctions in #auctions</h2>
-
-        <p>
-            Platform auctions tagged
-            <strong>#auctions</strong>,
-            ordered by ending soonest.
-        </p>
+            <p>
+                Platform auctions tagged
+                <strong>#{{ hashtag.name }}</strong>,
+                ordered by ending soonest.
+            </p>
+        </div>
 
         <a
             class="discovery-section-cta"
@@ -69,7 +70,13 @@
             Explore Auction Discovery
         </a>
     </div>
-{% endif %}
+
+    <div class="auction-grid">
+        {% for auction in auction_page %}
+            {% include "auctions/includes/_auction_card.html" with auction=auction %}
+        {% endfor %}
+    </div>
+ {% endif %}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
 
@@ -92,6 +99,26 @@
 </div>
 
 {% if auction_page.object_list %}
+<section class="hashtag-auctions-section">
+    <div class="discovery-section-heading discovery-section-heading-row">
+        <div>
+            <h2>Live Auctions in #{{ hashtag.name }}</h2>
+
+            <p>
+                Platform auctions tagged
+                <strong>#{{ hashtag.name }}</strong>,
+                ordered by ending soonest.
+            </p>
+        </div>
+
+        <a
+            class="discovery-section-cta"
+            href="{% url 'discovery_hub_detail' slug='auctions' %}?lang=en"
+        >
+            Explore Auction Discovery
+        </a>
+    </div>
+
     <div class="auction-grid">
         {% for auction in auction_page %}
             {% include "auctions/includes/_auction_card.html" with auction=auction %}
@@ -188,7 +215,5 @@
     {% endfor %}
 
 </div>
-
-{% include "auctions/includes/_auction_card_scripts.html" %}
 
 {% endblock %}

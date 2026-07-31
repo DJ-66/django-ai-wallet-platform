@@ -203,9 +203,21 @@
         flex-direction: column;
     }
 
-    .discovery-hero-actions,
-    .discovery-primary-cta {
+    .discovery-hero-actions {
         width: 100%;
+    }
+
+    .discovery-hero-actions .discovery-primary-cta {
+        width: auto;
+        min-width: 190px;
+        max-width: 100%;
+        margin-inline: auto;
+    }
+
+    .discovery-hero-body .discovery-primary-cta,
+    .discovery-empty-state .discovery-primary-cta {
+        width: auto;
+        max-width: 100%;
     }
 }
 
@@ -312,18 +324,15 @@
         </a>
 
             {% endif %}
-        </div>
-    </section>
-<section class="discovery-auctions-section">
-    <div class="discovery-section-heading discovery-section-heading-row">
-        <div>
-            <h2>Live Auctions Ending Soon</h2>
 
-            <p>
-                Explore live FANZ auctions connected to the
-                {{ translation.title }} community.
-            </p>
-        </div>
+        {% if hub.slug == "auctions" %}
+    <div class="auction-page-intro">
+        <h2>Live Auctions Ending Soon</h2>
+
+        <p>
+            Explore live FANZ auctions connected to the
+            Auctions community.
+        </p>
 
         <a
             class="discovery-section-cta"
@@ -332,9 +341,31 @@
             Explore All Auctions
         </a>
     </div>
+{% endif %}
+<div class="business-page-intro">
+    <h2>Businesses to Discover</h2>
+
+    <p>
+        Find businesses connected to the
+        {{ translation.title }} community.
+    </p>
+
+    <a
+        class="discovery-section-cta"
+        href="{% url 'businesses:create' %}"
+    >
+        List Your Business
+    </a>
+</div>
+        </div>
+    </section>
+  <br>
+
+    {% if hub.slug == "auctions" %}
+    <section class="discovery-auctions-section">
 
     {% if auction_page.object_list %}
-        <div class="discovery-auction-grid">
+    <div class="discovery-auction-grid">
             {% for auction in auction_page %}
                 {% include "auctions/includes/_auction_card.html" with auction=auction %}
             {% endfor %}
@@ -376,51 +407,13 @@
                 community will appear here automatically.
             </p>
         </div>
-    {% endif %}
+{% endif %}
 </section>
+{% endif %}
 
-    <section class="discovery-posts-section">
-     <!--   <div class="discovery-section-heading">
-            <div>
-                <h2>
-                    Fresh from the {{ translation.title }} Community
-                </h2>
-
-                {% if hashtag %}
-                    <p>
-                        Discover public stories, photos, and updates
-                        shared with
-                        <strong>#{{ hashtag.name }}</strong>.
-                    </p>
-                {% endif %}
-            </div>
-        </div> -->
-
-    <!--    <div class="discovery-post-list">
-            {% for post in posts %}
-                {% include "auctions/includes/_feed_post.html" with post=post %}
-            {% empty %}
-                <div class="discovery-empty-state">
-                    <h3>Be the first to contribute</h3>
-                    <p>
-                        No public posts have been shared in this
-                        Discovery Hub yet.
-                    </p>
-
-                    {% if hashtag %}
-                        <p>
-                            Create a free public post using
-                            <strong>#{{ hashtag.name }}</strong>
-                            and it will appear here automatically.
-                        </p>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div> -->
-    </section>
-
-    <section class="discovery-businesses-section">
-        <div class="discovery-section-heading discovery-section-heading-row">
+<section class="discovery-businesses-section">
+   
+ <!--    <div class="discovery-section-heading discovery-section-heading-row">
             <div>
                 <h2>Businesses to Discover</h2>
 
@@ -437,6 +430,30 @@
                 List Your Business
             </a>
         </div>
+-->
+{% if posts %}
+<section class="discovery-posts-section">
+    <div class="discovery-section-heading">
+        <h2>
+            Fresh from the {{ translation.title }} Community
+        </h2>
+
+        {% if hashtag %}
+            <p>
+                Public stories, photos, and updates shared with
+                <strong>#{{ hashtag.name }}</strong>.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="discovery-post-list">
+        {% for post in posts %}
+            {% include "auctions/includes/_feed_post.html" with post=post %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+<!--  stop here -->
 
         {% if businesses %}
             <div class="discovery-business-grid">
@@ -555,4 +572,5 @@
     </section>
 
 </div>
+{% include "auctions/includes/_auction_card_scripts.html" %}
 {% endblock %}
