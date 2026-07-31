@@ -342,6 +342,8 @@
         </a>
     </div>
 {% endif %}
+
+{% if hub.slug == "discover-fanz" %}
 <div class="business-page-intro">
     <h2>Businesses to Discover</h2>
 
@@ -357,6 +359,8 @@
         List Your Business
     </a>
 </div>
+{% endif %}
+
         </div>
     </section>
   <br>
@@ -413,24 +417,6 @@
 
 <section class="discovery-businesses-section">
    
- <!--    <div class="discovery-section-heading discovery-section-heading-row">
-            <div>
-                <h2>Businesses to Discover</h2>
-
-                <p>
-                    Find businesses connected to the
-                    {{ translation.title }} community.
-                </p>
-            </div>
-
-            <a
-                class="discovery-section-cta"
-                href="{% url 'businesses:create' %}"
-            >
-                List Your Business
-            </a>
-        </div>
--->
 {% if posts %}
 <section class="discovery-posts-section">
     <div class="discovery-section-heading">
@@ -453,7 +439,7 @@
     </div>
 </section>
 {% endif %}
-<!--  stop here -->
+
 
         {% if businesses %}
             <div class="discovery-business-grid">
@@ -480,7 +466,7 @@
         {% endif %}
     </section>
         <section class="discovery-metrics">
-
+     {% if hub.slug == "discover-fanz" %}
     <div class="discovery-metric-card">
         <span class="discovery-metric-value">
             {{ metrics.posts }}
@@ -489,6 +475,7 @@
             Community Posts
         </span>
     </div>
+    {% endif %}
 
     <div class="discovery-metric-card">
         <span class="discovery-metric-value">
@@ -507,7 +494,7 @@
             Upcoming Events
         </span>
     </div>
-
+{% if hub.slug == "auctions" %}
 <div class="discovery-metric-card">
     <span class="discovery-metric-value">
         {{ metrics.auctions }}
@@ -516,6 +503,7 @@
         Live Auctions
     </span>
 </div>
+ {% endif %}
 </section>
     <section class="discovery-events-section">
         <div class="discovery-section-heading discovery-section-heading-row">
@@ -572,5 +560,6 @@
     </section>
 
 </div>
+{% include "auctions/includes/_feed_post_scripts.html" %}
 {% include "auctions/includes/_auction_card_scripts.html" %}
 {% endblock %}
