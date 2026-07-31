@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from .models import Notification, Conversation, DirectMessage
 from datetime import timedelta
+from django.db.models import BooleanField, Exists, OuterRef, Subquery, Value
 from django.db import transaction
 from django.utils import timezone
 from django.utils.html import strip_tags
@@ -8,7 +9,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Auction, Bid, BidWallet
+from .models import Auction, Bid
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from .utils import get_system_wallet
@@ -224,6 +225,68 @@ def close_auction(auction_id):
         auction.save(update_fields=["winner_email_sent"])
 
     return auction
+
+
+def prepare_auction_cards(auctions, user, now=None):
+    """
+    Prepare auctions for reusable card rendering.
+
+    Adds countdown, favorite, and high-bidder presentation data
+    without issuing separate queries for every auction.
+    """
+    from django.utils import timezone
+
+    from .models import Bid, FavoriteAuction
+
+    if now is None:
+        now = timezone.now()
+
+    latest_bid_user = (
+        Bid.objects
+        .filter(auction_id=OuterRef("pk"))
+        .order_by("-created_at")
+        .values("user_id")[:1]
+    )
+
+    auctions = auctions.annotate(
+        last_bid_user_id=Subquery(latest_bid_user),
+    )
+
+    if user.is_authenticated:
+        favorite = FavoriteAuction.objects.filter(
+            user=user,
+            auction_id=OuterRef("pk"),
+        )
+
+        auctions = auctions.annotate(
+            is_favorited=Exists(favorite),
+        )
+    else:
+        auctions = auctions.annotate(
+            is_favorited=Value(
+                False,
+                output_field=BooleanField(),
+            ),
+        )
+
+    prepared_auctions = list(auctions)
+
+    for auction in prepared_auctions:
+        remaining = (
+            auction.ends_at - now
+        ).total_seconds()
+
+        auction.seconds_remaining = max(
+            0,
+            int(remaining),
+        )
+
+        auction.is_high_bidder = bool(
+            user.is_authenticated
+            and auction.last_bid_user_id == user.id
+        )
+
+    return prepared_auctions
 
 
 def calculate_node_commission(node, package):
