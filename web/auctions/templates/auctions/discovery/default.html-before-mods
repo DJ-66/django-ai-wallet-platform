@@ -290,30 +290,56 @@
                 </p>
             {% endif %}
 
-            {% if hashtag %}
-                        <p>
-                            Create a free public post using
-                            <strong>#{{ hashtag.name }}</strong>
-                            and it will appear here automatically.
-                        </p>
-            {% endif %}
-
             {% if translation.button_url and translation.button_text %}
                 <a href="{{ translation.button_url }}" class="discovery-cta">
                     {{ translation.button_text }}
                 </a>
             {% else %}
-
-                  <a
-            class="discovery-primary-cta"
-            href="{% url 'businesses:create' %}"
-        >
-            List Your Business
-        </a>
-
+                <a href="{% url 'discovery_home' %}?lang={{ language }}" class="discovery-cta">
+                    Start Exploring
+                </a>
             {% endif %}
         </div>
     </section>
+    <section class="discovery-metrics">
+
+    <div class="discovery-metric-card">
+        <span class="discovery-metric-value">
+            {{ metrics.posts }}
+        </span>
+        <span class="discovery-metric-label">
+            Community Posts
+        </span>
+    </div>
+
+    <div class="discovery-metric-card">
+        <span class="discovery-metric-value">
+            {{ metrics.businesses }}
+        </span>
+        <span class="discovery-metric-label">
+            Business Profiles
+        </span>
+    </div>
+
+    <div class="discovery-metric-card">
+        <span class="discovery-metric-value">
+            {{ metrics.events }}
+        </span>
+        <span class="discovery-metric-label">
+            Upcoming Events
+        </span>
+    </div>
+
+<div class="discovery-metric-card">
+    <span class="discovery-metric-value">
+        {{ metrics.auctions }}
+    </span>
+    <span class="discovery-metric-label">
+        Live Auctions
+    </span>
+</div>
+</section>
+
 <section class="discovery-auctions-section">
     <div class="discovery-section-heading discovery-section-heading-row">
         <div>
@@ -378,9 +404,17 @@
         </div>
     {% endif %}
 </section>
+    <div class="discovery-hero-actions">
+        <a
+            class="discovery-primary-cta"
+            href="{% url 'businesses:create' %}"
+        >
+            List Your Business
+        </a>
+    </div>
 
     <section class="discovery-posts-section">
-     <!--   <div class="discovery-section-heading">
+        <div class="discovery-section-heading">
             <div>
                 <h2>
                     Fresh from the {{ translation.title }} Community
@@ -394,9 +428,9 @@
                     </p>
                 {% endif %}
             </div>
-        </div> -->
+        </div>
 
-    <!--    <div class="discovery-post-list">
+        <div class="discovery-post-list">
             {% for post in posts %}
                 {% include "auctions/includes/_feed_post.html" with post=post %}
             {% empty %}
@@ -416,7 +450,7 @@
                     {% endif %}
                 </div>
             {% endfor %}
-        </div> -->
+        </div>
     </section>
 
     <section class="discovery-businesses-section">
@@ -462,44 +496,7 @@
             </div>
         {% endif %}
     </section>
-        <section class="discovery-metrics">
 
-    <div class="discovery-metric-card">
-        <span class="discovery-metric-value">
-            {{ metrics.posts }}
-        </span>
-        <span class="discovery-metric-label">
-            Community Posts
-        </span>
-    </div>
-
-    <div class="discovery-metric-card">
-        <span class="discovery-metric-value">
-            {{ metrics.businesses }}
-        </span>
-        <span class="discovery-metric-label">
-            Business Profiles
-        </span>
-    </div>
-
-    <div class="discovery-metric-card">
-        <span class="discovery-metric-value">
-            {{ metrics.events }}
-        </span>
-        <span class="discovery-metric-label">
-            Upcoming Events
-        </span>
-    </div>
-
-<div class="discovery-metric-card">
-    <span class="discovery-metric-value">
-        {{ metrics.auctions }}
-    </span>
-    <span class="discovery-metric-label">
-        Live Auctions
-    </span>
-</div>
-</section>
     <section class="discovery-events-section">
         <div class="discovery-section-heading discovery-section-heading-row">
             <div>

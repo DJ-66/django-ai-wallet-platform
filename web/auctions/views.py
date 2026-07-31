@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
+from django.core.paginator import Paginator
 from django.db import models, transaction
 from django.db.models import Case, IntegerField, Q, Sum, Value, When, Count
 from django.http import JsonResponse, Http404
@@ -28,11 +29,15 @@ from django.views.decorators.http import require_POST
 from .discovery_services import (
     get_discovery_events,
     get_discovery_metrics,
+    get_live_discovery_auctions,
+    get_live_hashtag_auctions,
+    get_live_platform_auction_count,
 )
 from .services import (
     close_auction,
     get_public_hashtag_posts,
     place_bid,
+    prepare_auction_cards,
     send_digital_delivery_message,
 )
 from .utils import get_system_wallet
@@ -77,6 +82,22 @@ def hashtag_feed(request, tag_name):
 
     posts = get_public_hashtag_posts(hashtag)
 
+    auction_queryset = get_live_hashtag_auctions(hashtag)
+
+    auction_paginator = Paginator(
+        auction_queryset,
+        24,
+    )
+
+    auction_page = auction_paginator.get_page(
+        request.GET.get("auction_page")
+    )
+
+    auction_page.object_list = prepare_auction_cards(
+        auction_page.object_list,
+        request.user,
+    )
+
     trending_hashtags = (
         Hashtag.objects
         .exclude(id=hashtag.id)
@@ -90,7 +111,7 @@ def hashtag_feed(request, tag_name):
             PostUnlock.objects.filter(user=request.user)
             .values_list("post_id", flat=True)
         )
-
+    live_auction_count = get_live_platform_auction_count()
 
     return render(
         request,
@@ -98,7 +119,9 @@ def hashtag_feed(request, tag_name):
         {
             "hashtag": hashtag,
             "posts": posts,
+            "auction_page": auction_page,
             "trending_hashtags": trending_hashtags,
+            "live_auction_count": live_auction_count,
             "total_hashtags": total_hashtags,
             "unlocked_post_ids": unlocked_post_ids,
 
@@ -214,11 +237,26 @@ def discovery_hub_detail(request, slug):
     businesses = get_discovery_businesses(hub)
     events = get_discovery_events(hub)
 
+    auction_queryset = get_live_discovery_auctions(hub)
+
+    auction_paginator = Paginator(
+        auction_queryset,
+        24,
+    )
+
+    auction_page = auction_paginator.get_page(
+        request.GET.get("auction_page")
+    )
+
+    auction_page.object_list = prepare_auction_cards(
+        auction_page.object_list,
+        request.user,
+    )
+
     metrics = get_discovery_metrics(
         hub,
         hashtag=hashtag,
     )
-
     template_key = translation.template_name or "default"
     template_name = f"auctions/discovery/{template_key}.html"
 
@@ -234,7 +272,7 @@ def discovery_hub_detail(request, slug):
             "businesses": businesses,
             "events": events,
             "metrics": metrics,
-
+            "auction_page": auction_page,
         },
     )
 

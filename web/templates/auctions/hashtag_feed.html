@@ -10,6 +10,12 @@
     <div class="hashtag-card">
         <h3>🔥 {{ total_hashtags }} Hashtags on FANZ</h3>
         <div class="hashtag-chip-row">
+            <a
+        class="hashtag-chip"
+        href="{% url 'discovery_hub_detail' slug='auctions' %}?lang=en"
+        >
+        #auctions ({{ live_auction_count }})
+        </a>
             {% for tag in trending_hashtags %}
                 <a href="{% url 'hashtag_feed' tag.name %}" class="hashtag-chip">
                     #{{ tag.name }} ({{ tag.usage_count }})
@@ -64,6 +70,63 @@
     
 
 </div>
+
+{% if auction_page.object_list %}
+<section class="hashtag-auctions-section">
+    <div class="discovery-section-heading discovery-section-heading-row">
+        <div>
+            <h2>Live Auctions in #{{ hashtag.name }}</h2>
+
+            <p>
+                Platform auctions tagged
+                <strong>#{{ hashtag.name }}</strong>,
+                ordered by ending soonest.
+            </p>
+        </div>
+
+        <a
+            class="discovery-section-cta"
+            href="{% url 'discovery_hub_detail' slug='auctions' %}?lang=en"
+        >
+            Explore Auction Discovery
+        </a>
+    </div>
+
+    <div class="auction-grid">
+        {% for auction in auction_page %}
+            {% include "auctions/includes/_auction_card.html" with auction=auction %}
+        {% endfor %}
+    </div>
+
+    {% if auction_page.paginator.num_pages > 1 %}
+        <nav
+            class="discovery-pagination"
+            aria-label="Auction pagination"
+        >
+            {% if auction_page.has_previous %}
+                <a
+                    href="?auction_page={{ auction_page.previous_page_number }}"
+                >
+                    ← Previous
+                </a>
+            {% endif %}
+
+            <span>
+                Page {{ auction_page.number }}
+                of {{ auction_page.paginator.num_pages }}
+            </span>
+
+            {% if auction_page.has_next %}
+                <a
+                    href="?auction_page={{ auction_page.next_page_number }}"
+                >
+                    Next →
+                </a>
+            {% endif %}
+        </nav>
+    {% endif %}
+</section>
+{% endif %}
 
     {% for post in posts %}
         <div class="hashtag-post">

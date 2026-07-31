@@ -1,3 +1,4 @@
+from .hashtags import sync_auction_hashtags
 from django.contrib import admin
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -64,6 +65,19 @@ class AuctionAdmin(admin.ModelAdmin):
             change,
         )
 
+    def save_related(self, request, form, formsets, change):
+        """
+        Save admin many-to-many relationships first, then derive the
+        auction's Discovery hashtags from its title.
+        """
+        super().save_related(
+            request,
+            form,
+            formsets,
+            change,
+        )
+
+        sync_auction_hashtags(form.instance)
 
     def response_add(self, request, obj, post_url_continue=None):
         self.message_user(

@@ -45,6 +45,7 @@ class Auction(models.Model):
 
     title = models.CharField(max_length=200)
     digital_item = models.ForeignKey(DigitalItem, on_delete=models.PROTECT)
+    hashtags = models.ManyToManyField("Hashtag", related_name="auctions", blank=True,)
     video = models.FileField(upload_to="auction_videos/", blank=True, null=True)
     image = models.ImageField(upload_to="auction_images/", blank=True, null=True)
     image_2 = models.ImageField(upload_to="auction_images/", blank=True, null=True)

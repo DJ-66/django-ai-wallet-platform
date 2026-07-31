@@ -1,7 +1,9 @@
 from django.utils import timezone
 from businesses.services import get_discovery_business_count
-from .models import Event
+from .models import Auction, Event
 from .services import get_public_hashtag_post_count
+from .models import Auction, Event, Hashtag
+
 
 def _get_discovery_event_queryset(hub):
     """
@@ -53,6 +55,59 @@ def get_discovery_event_count(hub):
     """
     return _get_discovery_event_queryset(hub).count()
 
+def get_live_hashtag_auctions(hashtag):
+    """
+    Return live platform auctions assigned to a hashtag.
+
+    Results are ordered by ending soonest to reinforce scarcity.
+    """
+    now = timezone.now()
+
+    return (
+        Auction.objects
+        .filter(
+            hashtags=hashtag,
+            status="live",
+            starts_at__lte=now,
+            ends_at__gt=now,
+        )
+        .prefetch_related(
+            "hashtags",
+            "media",
+        )
+        .order_by(
+            "ends_at",
+            "pk",
+        )
+        .distinct()
+    )
+
+
+def get_live_discovery_auctions(hub):
+    """
+    Return live platform auctions syndicated to a Discovery Hub.
+    """
+    hashtag_name = hub.hashtag.lstrip("#").strip().lower()
+
+    hashtag = (
+        Hashtag.objects
+        .filter(name=hashtag_name)
+        .first()
+    )
+
+    if hashtag is None:
+        return Auction.objects.none()
+
+    return get_live_hashtag_auctions(hashtag)
+
+
+def get_live_discovery_auction_count(hub):
+    """
+    Return the number of live platform auctions syndicated to a
+    Discovery Hub.
+    """
+    return get_live_discovery_auctions(hub).count()
+
 def get_discovery_metrics(hub, hashtag=None):
     """
     Return live metrics for a Discovery Hub using shared capabilities.
@@ -67,4 +122,18 @@ def get_discovery_metrics(hub, hashtag=None):
         ),
         "businesses": get_discovery_business_count(hub),
         "events": get_discovery_event_count(hub),
+        "auctions": get_live_discovery_auction_count(hub),
+
     }
+
+def get_live_platform_auction_count():
+    """
+    Return the total number of currently live platform auctions.
+    """
+    now = timezone.now()
+
+    return Auction.objects.filter(
+        status="live",
+        starts_at__lte=now,
+        ends_at__gt=now,
+    ).count()
