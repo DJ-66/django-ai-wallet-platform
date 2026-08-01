@@ -12,6 +12,7 @@ from .import_services import (
     import_business_record,
     import_business_records,
     normalize_business_record,
+    resolve_discovery_hub,
 )
 from .models import BusinessListing
 import csv
@@ -20,9 +21,33 @@ from pathlib import Path
 
 from django.core.management import call_command
 
+def create_standard_discovery_hubs():
+    from auctions.models import DiscoveryHub
+
+    hubs = {}
+
+    for slug, title in (
+        ("restaurants", "Restaurants"),
+        ("real-estate", "Real Estate"),
+        ("services", "Services"),
+    ):
+        hub, _created = DiscoveryHub.objects.get_or_create(
+            slug=slug,
+            defaults={
+                "hashtag": slug,
+                "title": title,
+                "is_active": True,
+            },
+        )
+        hubs[slug] = hub
+
+    return hubs
 
 
 class BusinessImportServiceTests(TestCase):
+    def setUp(self):
+        self.discovery_hubs = create_standard_discovery_hubs()
+
     def make_record(self, **overrides):
         values = {
             "name": "  Café Paraná  ",
@@ -163,7 +188,43 @@ class BusinessImportServiceTests(TestCase):
         self.assertEqual(len(result.errors), 1)
 
 
+    def test_resolver_maps_restaurant_to_restaurants_hub(self):
+        from auctions.models import DiscoveryHub
+
+        hub = DiscoveryHub.objects.get(slug="restaurants")
+
+        resolved = resolve_discovery_hub(
+            BusinessListing.INDUSTRY_RESTAURANT
+        )
+
+        self.assertEqual(resolved, hub)
+
+    def test_explicit_hub_slug_overrides_industry_mapping(self):
+        from auctions.models import DiscoveryHub
+
+        default_hub = DiscoveryHub.objects.get(slug="restaurants")
+
+        override_hub = DiscoveryHub.objects.create(
+            hashtag="coffee",
+            slug="coffee",
+            title="Coffee",
+            is_active=True,
+        )
+
+        resolved = resolve_discovery_hub(
+            BusinessListing.INDUSTRY_RESTAURANT,
+            explicit_slug="coffee",
+        )
+
+        self.assertNotEqual(resolved, default_hub)
+        self.assertEqual(resolved, override_hub)
+
+
+
 class BusinessCSVImportTests(TestCase):
+    def setUp(self):
+        self.discovery_hubs = create_standard_discovery_hubs()
+
     def write_csv(self, rows, fieldnames=None):
         if fieldnames is None:
             fieldnames = [
