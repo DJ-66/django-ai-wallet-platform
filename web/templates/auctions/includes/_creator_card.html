@@ -1,0 +1,73 @@
+{% load i18n %}
+
+<article class="creator-card">
+    <div class="creator-card-header">
+        <a
+            href="{% url 'public_profile_root' creator.username %}"
+            class="creator-card-avatar-link"
+        >
+            {% if creator.profile.avatar %}
+                <img
+                    src="{{ creator.profile.avatar.url }}"
+                    alt="{{ creator.profile.display_name|default:creator.username }}"
+                    class="creator-card-avatar"
+                >
+            {% else %}
+                <div class="creator-card-avatar-fallback">
+                    {{ creator.username|first|upper }}
+                </div>
+            {% endif %}
+        </a>
+
+        <div class="creator-card-identity">
+            <h3 class="creator-card-name">
+                <a href="{% url 'public_profile_root' creator.username %}">
+                    {{ creator.profile.display_name|default:creator.username }}
+                </a>
+
+                {% if creator.profile.is_official %}
+                    <span title="{% trans 'Official creator' %}">💎</span>
+                {% elif creator.profile.is_verified %}
+                    <span title="{% trans 'Verified creator' %}">✔️</span>
+                {% endif %}
+            </h3>
+
+            <p class="creator-card-username">
+                @{{ creator.username }}
+            </p>
+
+            {% if creator.profile.is_ai_creator or creator.profile.is_ai_influencer %}
+                <span class="seller-badge ai-creator-badge">
+                    🤖 {% trans "AI Influencer" %}
+                </span>
+            {% endif %}
+        </div>
+        </div>
+             {% if creator.profile.bio %}
+            <p class="creator-card-bio">
+            {{ creator.profile.bio|truncatechars:140 }}
+            </p>
+            {% endif %}
+   
+
+    <div class="creator-card-stats">
+        <span>
+            ⭐ {{ creator.profile.fan_count }}
+            {% trans "Fanz" %}
+        </span>
+
+        <span>
+            📝 {{ creator.latest_discovery_post_at|date:"M j, Y" }}
+        </span>
+    </div>
+
+    <div class="creator-card-actions">
+        <a
+            href="{% url 'public_profile_root' creator.username %}"
+            class="discovery-section-cta"
+        >
+            {% trans "Connect with" %} @{{ creator.username }}
+        </a>
+    </div>
+</article>
+

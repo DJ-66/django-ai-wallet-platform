@@ -1,9 +1,58 @@
 from django.utils import timezone
 from businesses.services import get_discovery_business_count
-from .models import Auction, Event
-from .services import get_public_hashtag_post_count
-from .models import Auction, Event, Hashtag
+from django.contrib.auth import get_user_model
+from django.db.models import Max, Q
 
+from .models import Auction, Event, FeedPost, Hashtag
+from .services import get_public_hashtag_post_count
+
+User = get_user_model()
+
+def get_discovery_creators(hub, limit=8):
+    """
+    Return creators with recent public posts connected to a Discovery Hub.
+
+    Creators are derived automatically from the hub hashtag and ordered by
+    their most recent relevant post.
+    """
+    hashtag_name = hub.hashtag.lstrip("#").strip().lower()
+
+    hashtag = (
+        Hashtag.objects
+        .filter(name=hashtag_name)
+        .first()
+    )
+
+    if hashtag is None:
+        return User.objects.none()
+
+    queryset = (
+        User.objects
+        .filter(
+            feedpost__hashtags=hashtag,
+            feedpost__is_public=True,
+        )
+        .select_related("profile")
+        .annotate(
+            latest_discovery_post_at=Max(
+                "feedpost__created_at",
+                filter=Q(
+                    feedpost__hashtags=hashtag,
+                    feedpost__is_public=True,
+                ),
+            )
+        )
+        .order_by(
+            "-latest_discovery_post_at",
+            "username",
+        )
+        .distinct()
+    )
+
+    if limit is not None:
+        queryset = queryset[:limit]
+
+    return queryset
 
 def _get_discovery_event_queryset(hub):
     """
@@ -108,6 +157,69 @@ def get_live_discovery_auction_count(hub):
     """
     return get_live_discovery_auctions(hub).count()
 
+
+def _get_discovery_creator_queryset(hub):
+    """
+    Build the shared queryset for creators with public posts connected
+    to a Discovery Hub.
+
+    Keep creator eligibility rules here so listings and metrics cannot
+    drift apart.
+    """
+    hashtag_name = hub.hashtag.lstrip("#").strip().lower()
+
+    hashtag = (
+        Hashtag.objects
+        .filter(name=hashtag_name)
+        .first()
+    )
+
+    if hashtag is None:
+        return User.objects.none()
+
+    return (
+        User.objects
+        .filter(
+            feedpost__hashtags=hashtag,
+            feedpost__is_public=True,
+        )
+        .select_related("profile")
+        .annotate(
+            latest_discovery_post_at=Max(
+                "feedpost__created_at",
+                filter=Q(
+                    feedpost__hashtags=hashtag,
+                    feedpost__is_public=True,
+                ),
+            ),
+        )
+        .order_by(
+            "-latest_discovery_post_at",
+            "username",
+        )
+        .distinct()
+    )
+
+
+def get_discovery_creators(hub, limit=8):
+    """
+    Return creators with recent public posts connected to a Discovery Hub.
+    """
+    queryset = _get_discovery_creator_queryset(hub)
+
+    if limit is not None:
+        queryset = queryset[:limit]
+
+    return queryset
+
+
+def get_discovery_creator_count(hub):
+    """
+    Return the number of creators with public posts connected to a
+    Discovery Hub.
+    """
+    return _get_discovery_creator_queryset(hub).count()
+
 def get_discovery_metrics(hub, hashtag=None):
     """
     Return live metrics for a Discovery Hub using shared capabilities.
@@ -120,6 +232,7 @@ def get_discovery_metrics(hub, hashtag=None):
             if hashtag is not None
             else 0
         ),
+        "creators": get_discovery_creator_count(hub),
         "businesses": get_discovery_business_count(hub),
         "events": get_discovery_event_count(hub),
         "auctions": get_live_discovery_auction_count(hub),
