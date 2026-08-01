@@ -57,6 +57,38 @@ class BusinessListing(models.Model):
     is_claimed = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    source_name = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text=(
+            "Name of the external source that supplied this listing."
+        ),
+    )
+
+    source_url = models.URLField(
+        blank=True,
+        help_text="Original public source URL for this listing.",
+    )
+
+    source_external_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=(
+            "Business identifier assigned by the external source."
+        ),
+    )
+
+    is_imported = models.BooleanField(
+        default=False,
+        db_index=True,
+    )
+
+    last_imported_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
     discovery_hub = models.ForeignKey(
         "auctions.DiscoveryHub",
         on_delete=models.SET_NULL,
@@ -72,6 +104,19 @@ class BusinessListing(models.Model):
         ordering = ["name"]
         verbose_name = "Business Listing"
         verbose_name_plural = "Business Listings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=(
+                    "source_name",
+                    "source_external_id",
+                ),
+                condition=(
+                    models.Q(source_name__gt="")
+                    & models.Q(source_external_id__gt="")
+                ),
+                name="unique_business_external_source",
+            ),
+        ]
 
     @property
     def google_maps_url(self):

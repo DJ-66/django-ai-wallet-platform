@@ -16,13 +16,16 @@ class BusinessListingAdmin(admin.ModelAdmin):
         "city",
         "country",
         "is_claimed",
+        "is_imported",
         "is_active",
         "created_at",
     )
     list_filter = (
         "industry",
         "is_claimed",
+        "is_imported",
         "is_active",
+        "source_name",
         "country",
         "city",
     )
@@ -33,6 +36,9 @@ class BusinessListingAdmin(admin.ModelAdmin):
         "country",
         "email",
         "phone",
+        "source_name",
+        "source_external_id",
+        "source_url",
     )
     prepopulated_fields = {
         "slug": ("name",),
@@ -42,6 +48,7 @@ class BusinessListingAdmin(admin.ModelAdmin):
         "discovery_hub",
     )
     readonly_fields = (
+        "last_imported_at",
         "created_at",
         "updated_at",
     )
@@ -85,6 +92,18 @@ class BusinessListingAdmin(admin.ModelAdmin):
                     "owner",
                     "is_claimed",
                     "is_active",
+                ),
+            },
+        ),
+        (
+            _("Import provenance"),
+            {
+                "fields": (
+                    "is_imported",
+                    "source_name",
+                    "source_external_id",
+                    "source_url",
+                    "last_imported_at",
                 ),
             },
         ),
