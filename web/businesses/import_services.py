@@ -43,6 +43,13 @@ ENCARNACION_IMPORT_REGION = BusinessImportRegion(
 )
 
 
+DISCOVERY_HUB_BY_INDUSTRY = {
+    BusinessListing.INDUSTRY_RESTAURANT: "restaurants",
+    BusinessListing.INDUSTRY_REAL_ESTATE: "real-estate",
+    BusinessListing.INDUSTRY_LAW_FIRM: "services",
+}
+
+
 @dataclass(frozen=True)
 class BusinessImportRecord:
     name: str
@@ -224,14 +231,22 @@ def normalize_business_record(
     )
 
 
-def resolve_discovery_hub(slug):
+def resolve_discovery_hub(industry, explicit_slug=""):
     """
-    Resolve an optional active Discovery Hub by slug.
+    Resolve an active Discovery Hub for an imported business.
+
+    An explicit slug overrides the default industry mapping. This keeps
+    normal imports simple while allowing exceptional listings to target
+    a different compatible Discovery Hub.
     """
-    slug = _collapse_whitespace(slug).lower()
+    explicit_slug = _collapse_whitespace(explicit_slug).lower()
+
+    slug = explicit_slug or DISCOVERY_HUB_BY_INDUSTRY.get(industry, "")
 
     if not slug:
-        return None
+        raise BusinessImportValidationError(
+            f"no Discovery Hub mapping configured for industry: {industry}"
+        )
 
     hub = DiscoveryHub.objects.filter(
         slug=slug,
@@ -259,7 +274,8 @@ def import_business_record(
     """
     normalized = normalize_business_record(record, region=region)
     discovery_hub = resolve_discovery_hub(
-        normalized.discovery_hub_slug
+        normalized.industry,
+        explicit_slug=normalized.discovery_hub_slug,
     )
     imported_at = timezone.now()
 
