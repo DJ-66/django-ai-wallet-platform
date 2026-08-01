@@ -31,3 +31,4 @@ backup-*.sql.gz
 # Don's push *.save
 *.save
 
+web/businesses/import_data/
