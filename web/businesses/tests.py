@@ -1,4 +1,9 @@
+import csv
+import tempfile
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase
 
 from .import_services import (
@@ -9,6 +14,12 @@ from .import_services import (
     normalize_business_record,
 )
 from .models import BusinessListing
+import csv
+import tempfile
+from pathlib import Path
+
+from django.core.management import call_command
+
 
 
 class BusinessImportServiceTests(TestCase):
@@ -150,3 +161,176 @@ class BusinessImportServiceTests(TestCase):
         self.assertEqual(result.failed, 1)
         self.assertEqual(result.processed, 2)
         self.assertEqual(len(result.errors), 1)
+
+
+class BusinessCSVImportTests(TestCase):
+    def write_csv(self, rows, fieldnames=None):
+        if fieldnames is None:
+            fieldnames = [
+                "name",
+                "industry",
+                "source_external_id",
+                "description",
+                "city",
+                "country",
+                "website_url",
+                "phone",
+                "email",
+                "source_url",
+                "discovery_hub_slug",
+            ]
+
+        temporary_file = tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="",
+            suffix=".csv",
+            delete=False,
+        )
+
+        with temporary_file:
+            writer = csv.DictWriter(
+                temporary_file,
+                fieldnames=fieldnames,
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+
+        self.addCleanup(
+            Path(temporary_file.name).unlink,
+            missing_ok=True,
+        )
+
+        return temporary_file.name
+
+    def test_csv_command_creates_business(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Restaurante Costanera",
+                    "industry": "restaurant",
+                    "source_external_id": "rest-001",
+                    "city": "Encarnacion",
+                    "country": "PY",
+                }
+            ]
+        )
+
+        call_command(
+            "import_businesses_csv",
+            csv_path,
+            source_name="encarnacion-test",
+        )
+
+        business = BusinessListing.objects.get(
+            source_name="encarnacion-test",
+            source_external_id="rest-001",
+        )
+
+        self.assertEqual(
+            business.name,
+            "Restaurante Costanera",
+        )
+        self.assertEqual(
+            business.city,
+            "Encarnación",
+        )
+        self.assertFalse(business.is_claimed)
+        self.assertTrue(business.is_imported)
+
+    def test_csv_command_dry_run_rolls_back(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Dry Run Restaurant",
+                    "industry": "restaurant",
+                    "source_external_id": "dry-001",
+                }
+            ]
+        )
+
+        call_command(
+            "import_businesses_csv",
+            csv_path,
+            source_name="encarnacion-test",
+            dry_run=True,
+        )
+
+        self.assertFalse(
+            BusinessListing.objects.filter(
+                source_name="encarnacion-test",
+                source_external_id="dry-001",
+            ).exists()
+        )
+
+    def test_csv_command_rejects_outside_region(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Asuncion Restaurant",
+                    "industry": "restaurant",
+                    "source_external_id": "outside-001",
+                    "city": "Asunción",
+                    "country": "Paraguay",
+                }
+            ]
+        )
+
+        call_command(
+            "import_businesses_csv",
+            csv_path,
+            source_name="encarnacion-test",
+        )
+
+        self.assertFalse(
+            BusinessListing.objects.filter(
+                source_external_id="outside-001",
+            ).exists()
+        )
+
+    def test_csv_command_updates_existing_import(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Original Restaurant",
+                    "industry": "restaurant",
+                    "source_external_id": "update-001",
+                }
+            ]
+        )
+
+        call_command(
+            "import_businesses_csv",
+            csv_path,
+            source_name="encarnacion-test",
+        )
+
+        updated_csv_path = self.write_csv(
+            [
+                {
+                    "name": "Updated Restaurant",
+                    "industry": "restaurant",
+                    "source_external_id": "update-001",
+                    "phone": "+595 981 123 456",
+                }
+            ]
+        )
+
+        call_command(
+            "import_businesses_csv",
+            updated_csv_path,
+            source_name="encarnacion-test",
+        )
+
+        business = BusinessListing.objects.get(
+            source_external_id="update-001",
+        )
+
+        self.assertEqual(
+            business.name,
+            "Updated Restaurant",
+        )
+        self.assertEqual(
+            business.phone,
+            "+595 981 123 456",
+        )
