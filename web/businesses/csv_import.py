@@ -1,16 +1,18 @@
 import csv
 from pathlib import Path
 
+from .category_normalizer import normalize_category
 from .import_services import BusinessImportRecord
 
 
 REQUIRED_COLUMNS = {
     "name",
-    "industry",
     "source_external_id",
 }
 
 OPTIONAL_COLUMNS = {
+    "industry",
+    "category",
     "description",
     "city",
     "country",
@@ -119,9 +121,25 @@ def read_business_csv(path, source_name):
             if not any(values.values()):
                 continue
 
+            industry = values.get("industry", "")
+            category = values.get("category", "")
+
+            if not industry and category:
+                industry = normalize_category(category) or ""
+
+            if not industry:
+                if category:
+                    raise BusinessCSVError(
+                        f"Row {row_number}: unknown category: {category}"
+                    )
+
+                raise BusinessCSVError(
+                    f"Row {row_number}: industry or category is required"
+                )
+
             record = BusinessImportRecord(
                 name=values.get("name", ""),
-                industry=values.get("industry", ""),
+                industry=industry,
                 source_name=source_name,
                 source_external_id=values.get(
                     "source_external_id",

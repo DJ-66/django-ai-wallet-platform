@@ -15,11 +15,11 @@ from .import_services import (
     resolve_discovery_hub,
 )
 from .models import BusinessListing
-import csv
-import tempfile
-from pathlib import Path
+from .category_normalizer import (
+    normalize_category,
+    normalize_category_key,
+)
 
-from django.core.management import call_command
 
 def create_standard_discovery_hubs():
     from auctions.models import DiscoveryHub
@@ -349,6 +349,8 @@ class BusinessCSVImportTests(TestCase):
             ).exists()
         )
 
+
+
     def test_csv_command_updates_existing_import(self):
         csv_path = self.write_csv(
             [
@@ -394,4 +396,148 @@ class BusinessCSVImportTests(TestCase):
         self.assertEqual(
             business.phone,
             "+595 981 123 456",
+        )
+
+    def test_csv_command_accepts_spanish_category(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Café Español",
+                    "category": "Cafetería",
+                    "source_external_id": "category-001",
+                }
+            ],
+            fieldnames=[
+                "name",
+                "category",
+                "source_external_id",
+            ],
+        )
+
+        call_command(
+            "import_businesses_csv",
+            csv_path,
+            source_name="encarnacion-category-test",
+        )
+
+        business = BusinessListing.objects.get(
+            source_external_id="category-001",
+        )
+
+        self.assertEqual(
+            business.industry,
+            BusinessListing.INDUSTRY_RESTAURANT,
+        )
+        self.assertEqual(
+            business.discovery_hub.slug,
+            "restaurants",
+        )
+
+    def test_csv_command_accepts_portuguese_category(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Imóveis Paraná",
+                    "category": "Imobiliária",
+                    "source_external_id": "category-002",
+                }
+            ],
+            fieldnames=[
+                "name",
+                "category",
+                "source_external_id",
+            ],
+        )
+
+        call_command(
+            "import_businesses_csv",
+            csv_path,
+            source_name="encarnacion-category-test",
+        )
+
+        business = BusinessListing.objects.get(
+            source_external_id="category-002",
+        )
+
+        self.assertEqual(
+            business.industry,
+            BusinessListing.INDUSTRY_REAL_ESTATE,
+        )
+        self.assertEqual(
+            business.discovery_hub.slug,
+            "real-estate",
+        )
+
+    def test_csv_command_rejects_unknown_category(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Unknown Business",
+                    "category": "Tienda de tecnología",
+                    "source_external_id": "category-003",
+                }
+            ],
+            fieldnames=[
+                "name",
+                "category",
+                "source_external_id",
+            ],
+        )
+
+        with self.assertRaisesMessage(
+            Exception,
+            "unknown category",
+        ):
+            call_command(
+                "import_businesses_csv",
+                csv_path,
+                source_name="encarnacion-category-test",
+            )
+
+class BusinessCategoryNormalizerTests(TestCase):
+    def test_normalizes_case_whitespace_and_accents(self):
+        self.assertEqual(
+            normalize_category_key("  CAFETERÍA  "),
+            "cafeteria",
+        )
+
+    def test_maps_english_restaurant_category(self):
+        self.assertEqual(
+            normalize_category("Coffee Shop"),
+            BusinessListing.INDUSTRY_RESTAURANT,
+        )
+
+    def test_maps_spanish_restaurant_category(self):
+        self.assertEqual(
+            normalize_category("Churrasquería"),
+            BusinessListing.INDUSTRY_RESTAURANT,
+        )
+
+    def test_maps_spanish_law_category(self):
+        self.assertEqual(
+            normalize_category("Estudio Jurídico"),
+            BusinessListing.INDUSTRY_LAW_FIRM,
+        )
+
+    def test_maps_portuguese_law_category(self):
+        self.assertEqual(
+            normalize_category("Escritório de Advocacia"),
+            BusinessListing.INDUSTRY_LAW_FIRM,
+        )
+
+    def test_maps_spanish_real_estate_category(self):
+        self.assertEqual(
+            normalize_category("Inmobiliaria"),
+            BusinessListing.INDUSTRY_REAL_ESTATE,
+        )
+
+    def test_maps_portuguese_real_estate_category(self):
+        self.assertEqual(
+            normalize_category("Corretor de Imóveis"),
+            BusinessListing.INDUSTRY_REAL_ESTATE,
+        )
+
+    def test_unknown_category_returns_none(self):
+        self.assertIsNone(
+            normalize_category("Tienda de tecnología")
         )
