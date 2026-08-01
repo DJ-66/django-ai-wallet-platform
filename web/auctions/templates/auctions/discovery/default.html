@@ -276,6 +276,190 @@
     font-weight: 700;
 }
 
+.discovery-creators-section {
+    margin-top: 2rem;
+}
+
+.creator-card-grid {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(240px, 1fr)
+    );
+    gap: 1rem;
+}
+
+.creator-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1.25rem;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
+    text-align: center;
+}
+
+.creator-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 0.8rem;
+}
+
+.creator-card-avatar-link {
+    display: block;
+    text-decoration: none;
+}
+
+.creator-card-avatar,
+.creator-card-avatar-fallback {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+}
+
+.creator-card-avatar {
+    display: block;
+    object-fit: cover;
+    border: 4px solid rgba(91, 53, 255, 0.18);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+.creator-card-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+        135deg,
+        #5b35ff,
+        #a855f7
+    );
+    color: #fff;
+    font-size: 3rem;
+    font-weight: 800;
+}
+
+.creator-card-identity {
+    width: 92%;
+    min-width: 0;
+}
+
+.creator-card-name {
+    margin: 0 0 0.25rem;
+    font-size: 1.25rem;
+    line-height: 1.25;
+}
+
+.creator-card-name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.creator-card-name a:hover {
+    text-decoration: underline;
+}
+
+.creator-card-username {
+    margin: 0 0 0.6rem;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.creator-card-bio {
+    margin: 0.65rem auto 0;
+    width: 92%;
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.creator-card-stats {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 92%;
+    gap: 0.75rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    color: #555;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.creator-card-actions {
+    width: 92%;
+    margin-top: auto;
+}
+
+.creator-card-actions .discovery-section-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .creator-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .creator-card-avatar,
+    .creator-card-avatar-fallback {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+.discovery-section-heading {
+    margin-bottom: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.discovery-section-heading h2 {
+    margin: 0 0 0.35rem;
+    color: #111;
+}
+
+.discovery-section-heading p {
+    margin: 0;
+    color: #555;
+    line-height: 1.5;
+}
+
+.discovery-section-heading .discovery-section-cta {
+    display: inline-flex;
+    margin-top: 0.9rem;
+}
+
+.creator-card-bio {
+    min-height: 95px;
+    max-height: 95px;
+    overflow: hidden;
+}
+
+.creator-card {
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
+}
+
+.creator-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px rgba(0,0,0,.16);
+}
+
 </style>
 
 <div class="discovery-detail-wrap">
@@ -363,8 +547,8 @@
 
         </div>
     </section>
-  <br>
-
+<!--  <br> -->
+ 
     {% if hub.slug == "auctions" %}
     <section class="discovery-auctions-section">
 
@@ -439,7 +623,25 @@
     </div>
 </section>
 {% endif %}
+{% if creators %}
+<section class="discovery-creators-section">
+    <div class="discovery-section-heading">
+        <h2>Meet Fanz Creators</h2>
 
+        <p>
+            Connect with Fanz Creators of the
+            {{ translation.title }} community.
+        </p>
+    </div>
+
+    <div class="creator-card-grid">
+        {% for creator in creators %}
+            {% include "auctions/includes/_creator_card.html" with creator=creator %}
+        {% endfor %}
+    </div>
+    <br>
+</section>
+{% endif %}
 
         {% if businesses %}
             <div class="discovery-business-grid">
@@ -476,6 +678,15 @@
         </span>
     </div>
     {% endif %}
+    <div class="discovery-metric-card">
+    <span class="discovery-metric-value">
+        {{ metrics.creators }}
+    </span>
+
+    <span class="discovery-metric-label">
+        Active Creators
+    </span>
+    </div>
 
     <div class="discovery-metric-card">
         <span class="discovery-metric-value">

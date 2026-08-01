@@ -32,6 +32,7 @@ from .discovery_services import (
     get_live_discovery_auctions,
     get_live_hashtag_auctions,
     get_live_platform_auction_count,
+    get_discovery_creators,
 )
 from .services import (
     close_auction,
@@ -236,6 +237,7 @@ def discovery_hub_detail(request, slug):
 
     businesses = get_discovery_businesses(hub)
     events = get_discovery_events(hub)
+    creators = get_discovery_creators(hub)
 
     auction_queryset = get_live_discovery_auctions(hub)
 
@@ -273,6 +275,7 @@ def discovery_hub_detail(request, slug):
             "events": events,
             "metrics": metrics,
             "auction_page": auction_page,
+            "creators": creators,
         },
     )
 
