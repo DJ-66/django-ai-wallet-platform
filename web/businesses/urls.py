@@ -17,6 +17,11 @@ urlpatterns = [
         name="my_businesses",
     ),
     path(
+        "<slug:slug>/grow/",
+        views.grow_business,
+        name="grow",
+    ),
+    path(
         "<slug:slug>/edit/",
         views.business_edit,
         name="edit",
