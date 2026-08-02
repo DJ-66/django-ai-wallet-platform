@@ -229,6 +229,24 @@ def my_businesses(request):
     )
 
 @login_required
+def grow_business(request, slug):
+    business = get_object_or_404(
+        BusinessListing,
+        slug=slug,
+        owner=request.user,
+        is_active=True,
+    )
+
+    return render(
+        request,
+        "businesses/grow_business.html",
+        {
+            "business": business,
+        },
+    )
+
+
+@login_required
 def business_edit(request, slug):
     business = get_object_or_404(
         BusinessListing,

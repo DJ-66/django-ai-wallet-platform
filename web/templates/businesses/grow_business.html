@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Grow {{ business.name }}{% endblock %}
+
+{% block content %}
+
+<section class="grow-business-page">
+
+    <div class="grow-business-header">
+        <p class="grow-business-eyebrow">Business Growth Center</p>
+
+        <h1>🚀 Grow {{ business.name }}</h1>
+
+        <p>
+            Share your business, build your FANZ community,
+            and discover new ways to reach local customers.
+        </p>
+    </div>
+
+    <div class="grow-business-grid">
+
+        <article class="grow-business-card">
+            <div class="grow-business-card-icon">📣</div>
+
+            <h2>Marketing Assets</h2>
+
+            <p>
+                Create ready-to-share graphics for WhatsApp,
+                social media, tables, windows, and printed materials.
+            </p>
+
+            <span class="grow-business-coming-soon">
+                Coming Soon
+            </span>
+        </article>
+
+        <article class="grow-business-card">
+            <div class="grow-business-card-icon">📱</div>
+
+            <h2>QR & Referral Tools</h2>
+
+            <p>
+                Share your business referral QR code,
+                reward new members, and grow your FANZ community.
+            </p>
+
+            <span class="grow-business-coming-soon">
+                Coming Soon
+            </span>
+        </article>
+
+        <article class="grow-business-card">
+            <div class="grow-business-card-icon">📈</div>
+
+            <h2>Business Growth</h2>
+
+            <p>
+                Track fan growth, referral activity,
+                QR scans, and business engagement.
+            </p>
+
+            <span class="grow-business-coming-soon">
+                Coming Soon
+            </span>
+        </article>
+
+        <article class="grow-business-card">
+            <div class="grow-business-card-icon">🎁</div>
+
+            <h2>FANZ Special Offers</h2>
+
+            <p>
+                Discover future offers for printing,
+                photography, promotions, and business services.
+            </p>
+
+            <span class="grow-business-coming-soon">
+                Coming Soon
+            </span>
+        </article>
+
+    </div>
+
+    <div class="grow-business-footer">
+        <a
+            class="business-action business-action--my-biz"
+            href="{% url 'businesses:my_businesses' %}">
+            ← Back to My Businesses
+        </a>
+    </div>
+
+</section>
+
+{% endblock %}
