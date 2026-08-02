@@ -20,20 +20,28 @@
 
     <div class="grow-business-grid">
 
-        <article class="grow-business-card">
-            <div class="grow-business-card-icon">📣</div>
+        <section class="grow-business-feature">
 
-            <h2>Marketing Assets</h2>
+    <div class="grow-business-feature-heading">
+        <div class="grow-business-card-icon">📣</div>
 
-            <p>
-                Create ready-to-share graphics for WhatsApp,
-                social media, tables, windows, and printed materials.
+        <div>
+            <p class="grow-business-eyebrow">
+                Ready to Share
             </p>
 
-            <span class="grow-business-coming-soon">
-                Coming Soon
-            </span>
-        </article>
+            <h2>Your First Marketing Asset</h2>
+
+            <p>
+                A personalized referral card for
+                {{ business.name }}.
+            </p>
+        </div>
+    </div>
+
+    {% include "businesses/includes/marketing_asset_referral_card.html" %}
+
+</section>
 
         <article class="grow-business-card">
             <div class="grow-business-card-icon">📱</div>

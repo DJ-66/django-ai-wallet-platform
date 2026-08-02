@@ -1,3 +1,4 @@
+from auctions.wallet_setup import provision_user_wallet
 import traceback
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -237,11 +238,25 @@ def grow_business(request, slug):
         is_active=True,
     )
 
+    wallet = provision_user_wallet(request.user)
+
+    referral_url = (
+        f"{request.scheme}://{request.get_host()}"
+        f"/auctions/signup/?ref={wallet.referral_code}"
+    )
+
+    referral_qr_url = (
+        f"/media/qr_codes/ref_{wallet.referral_code}.png"
+    )
+
     return render(
         request,
         "businesses/grow_business.html",
         {
             "business": business,
+            "wallet": wallet,
+            "referral_url": referral_url,
+            "referral_qr_url": referral_qr_url,
         },
     )
 
