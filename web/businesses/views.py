@@ -1,5 +1,6 @@
 from auctions.wallet_setup import provision_user_wallet
 import traceback
+from urllib.parse import quote
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from datetime import timedelta
@@ -249,6 +250,19 @@ def grow_business(request, slug):
         f"/media/qr_codes/ref_{wallet.referral_code}.png"
     )
 
+    whatsapp_message = (
+    f"{business.name}\n\n"
+    f"Join our FANZ community Today\n\n"
+    f"And we both get 50 FREE Credits!\n\n"
+    f"Tap link to get started\n\n"
+    f"{referral_url}"
+    )
+
+    whatsapp_share_url = (
+        "https://wa.me/?text="
+        f"{quote(whatsapp_message)}"
+    )
+
     return render(
         request,
         "businesses/grow_business.html",
@@ -257,6 +271,8 @@ def grow_business(request, slug):
             "wallet": wallet,
             "referral_url": referral_url,
             "referral_qr_url": referral_qr_url,
+            "whatsapp_share_url": whatsapp_share_url,
+
         },
     )
 

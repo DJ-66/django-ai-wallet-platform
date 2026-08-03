@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
-
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/business-growth.css' %}?v=16">
+{% endblock %}
 {% block title %}Grow {{ business.name }}{% endblock %}
 
 {% block content %}
@@ -10,11 +14,11 @@
     <div class="grow-business-header">
         <p class="grow-business-eyebrow">Business Growth Center</p>
 
-        <h1>🚀 Grow {{ business.name }}</h1>
+        <h1>🚀 {{ business.name }}</h1>
 
         <p>
             Share your business, build your FANZ community,
-            and discover new ways to reach local customers.
+            and reach more local customers.
         </p>
     </div>
 
@@ -23,19 +27,12 @@
         <section class="grow-business-feature">
 
     <div class="grow-business-feature-heading">
-        <div class="grow-business-card-icon">📣</div>
-
         <div>
-            <p class="grow-business-eyebrow">
-                Ready to Share
-            </p>
-
             <h2>Your First Marketing Asset</h2>
-
-            <p>
-                A personalized referral card for
-                {{ business.name }}.
-            </p>
+            <ul>
+                <li><p>You Both Get 50 Free Credits.</p></li>
+                <li><p>Your Business Gains More Fanz (Authority).</p></li>
+            </ul>
         </div>
     </div>
 
@@ -100,4 +97,68 @@
 
 </section>
 
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const copyButton = document.querySelector(
+        "[data-copy-referral-link]"
+    );
+
+    const printButton = document.querySelector(
+        "[data-print-growth-asset]"
+    );
+
+    if (copyButton) {
+        copyButton.addEventListener("click", async function () {
+            const referralLink = copyButton.dataset.copyReferralLink;
+            const originalText = copyButton.textContent.trim();
+
+            try {
+                await navigator.clipboard.writeText(referralLink);
+
+                copyButton.textContent = "Copied ✓";
+                copyButton.classList.add("is-copied");
+
+                window.setTimeout(function () {
+                    copyButton.textContent = originalText;
+                    copyButton.classList.remove("is-copied");
+                }, 1800);
+            } catch (error) {
+                const temporaryInput = document.createElement("input");
+
+                temporaryInput.value = referralLink;
+                temporaryInput.setAttribute("readonly", "");
+                temporaryInput.style.position = "absolute";
+                temporaryInput.style.left = "-9999px";
+
+                document.body.appendChild(temporaryInput);
+                temporaryInput.select();
+
+                const copied = document.execCommand("copy");
+
+                temporaryInput.remove();
+
+                if (copied) {
+                    copyButton.textContent = "Copied ✓";
+                    copyButton.classList.add("is-copied");
+                } else {
+                    copyButton.textContent = "Copy failed";
+                }
+
+                window.setTimeout(function () {
+                    copyButton.textContent = originalText;
+                    copyButton.classList.remove("is-copied");
+                }, 1800);
+            }
+        });
+    }
+
+    if (printButton) {
+        printButton.addEventListener("click", function () {
+            window.print();
+        });
+    }
+});
+</script>
 {% endblock %}
