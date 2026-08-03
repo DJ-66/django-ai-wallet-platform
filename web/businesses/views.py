@@ -1,7 +1,9 @@
 import os
+from urllib.parse import quote, urlencode
+from django.conf import settings
+from auctions.qr_utils import make_branded_referral_qr
 from auctions.wallet_setup import provision_user_wallet
 import traceback
-from urllib.parse import quote
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from datetime import timedelta
@@ -242,23 +244,55 @@ def grow_business(request, slug):
 
     wallet = provision_user_wallet(request.user)
 
+    referral_query = urlencode(
+    {
+        "ref": wallet.referral_code,
+        "business": business.slug,
+    }
+    )
+
     referral_url = (
         f"{request.scheme}://{request.get_host()}"
-        f"/auctions/signup/?ref={wallet.referral_code}"
+        f"/auctions/signup/?{referral_query}"
     )
 
-    referral_qr_path = (
-        f"media/qr_codes/ref_{wallet.referral_code}.png"
+    referral_qr_filename = (
+        f"qr_codes/business_ref_"
+        f"{business.pk}_{wallet.referral_code}.png"
     )
 
-    referral_qr_version = (
-        int(os.path.getmtime(referral_qr_path))
-        if os.path.exists(referral_qr_path)
-        else 1
+    referral_qr_path = os.path.join(
+        settings.MEDIA_ROOT,
+        referral_qr_filename,
+    )
+
+    os.makedirs(
+        os.path.dirname(referral_qr_path),
+        exist_ok=True,
+    )
+
+    expected_qr_url = referral_url
+
+    regenerate_qr = not os.path.exists(referral_qr_path)
+
+    if not regenerate_qr:
+        # Regenerate when the campaign URL has changed.
+        # The current implementation safely overwrites the image
+        # whenever this Growth Center is loaded.
+        regenerate_qr = True
+
+    if regenerate_qr:
+        qr_image = make_branded_referral_qr(
+            expected_qr_url
+        )
+        qr_image.save(referral_qr_path)
+
+    referral_qr_version = int(
+        os.path.getmtime(referral_qr_path)
     )
 
     referral_qr_url = (
-        f"/media/qr_codes/ref_{wallet.referral_code}.png"
+        f"{settings.MEDIA_URL}{referral_qr_filename}"
         f"?v={referral_qr_version}"
     )
 

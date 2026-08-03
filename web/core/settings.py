@@ -200,3 +200,21 @@ AUCTION_DURATION_DAYS = int(
 
 # Password reset: after user sets a new password, log them in automatically.
 ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}

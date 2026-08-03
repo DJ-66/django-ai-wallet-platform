@@ -1,6 +1,9 @@
+import random
+import os
 import json
 import random
 import secrets
+from businesses.models import BusinessListing
 from decimal import Decimal
 from .models import Hashtag, PostUnlock
 from .hashtags import sync_post_hashtags
@@ -27,6 +30,9 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
+from businesses.services import (
+    process_business_referral_activation,
+)
 from .discovery_services import (
     get_discovery_events,
     get_discovery_metrics,
@@ -759,13 +765,26 @@ def send_activation_email(request, user):
 
     subject = "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
 
-    html_content = render_to_string("auctions/account_activation_email.html", {
-        "user": user,
-        "domain": current_site.domain,
-        "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-        "token": default_token_generator.make_token(user),
-        "protocol": "https" if request.is_secure() else "http",
-    })
+    html_content = render_to_string(
+        "auctions/account_activation_email.html",
+        {
+            "user": user,
+            "domain": current_site.domain,
+            "uid": urlsafe_base64_encode(
+                force_bytes(user.pk)
+            ),
+            "token": default_token_generator.make_token(user),
+            "protocol": (
+                "https"
+                if request.is_secure()
+                else "http"
+            ),
+            "referral_business_slug": request.session.get(
+                "referral_business_slug",
+                "",
+            ),
+        },
+    )
 
     text_content = strip_tags(html_content)
 
@@ -780,50 +799,136 @@ def send_activation_email(request, user):
 
 def signup_view(request):
     ref_code = request.GET.get("ref")
+    referral_business_slug = request.GET.get("business")
 
     if ref_code:
-        # store temporarily in session
         request.session["referral_code"] = ref_code
+
+    if referral_business_slug:
+        request.session[
+            "referral_business_slug"
+        ] = referral_business_slug
 
     if request.method == "POST":
         form = SignUpForm(request.POST)
+
         if form.is_valid():
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data["password"])  # ✅ HASH PASSWORD
+            user.set_password(
+                form.cleaned_data["password"]
+            )
             user.is_active = False
             user.save()
 
-            NodeProfile.objects.get_or_create(user=user)
+            NodeProfile.objects.get_or_create(
+                user=user
+            )
 
-            wallet, _ = BidWallet.objects.get_or_create(user=user)
+            wallet, _ = BidWallet.objects.get_or_create(
+                user=user
+            )
 
+            ref_code = (
+                request.session.pop(
+                    "referral_code",
+                    None,
+                )
+                or request.GET.get("ref")
+            )
 
-
-            ref_code = request.session.pop("referral_code", None) or request.GET.get("ref")
+            referral_business_slug = (
+                request.session.pop(
+                    "referral_business_slug",
+                    None,
+                )
+                or request.GET.get("business")
+            )
 
             if ref_code:
-                referrer_wallet = BidWallet.objects.filter(referral_code=ref_code).first()
+                referrer_wallet = (
+                    BidWallet.objects
+                    .select_related("user")
+                    .filter(
+                        referral_code=ref_code
+                    )
+                    .first()
+                )
 
-                if referrer_wallet and referrer_wallet.user != user and wallet.referred_by is None:
-                    wallet.referred_by = referrer_wallet.user
-                    referrer_node = NodeProfile.objects.filter(user=referrer_wallet.user).first()
+                if (
+                    referrer_wallet
+                    and referrer_wallet.user != user
+                    and wallet.referred_by is None
+                ):
+                    wallet.referred_by = (
+                        referrer_wallet.user
+                    )
+
+                    referrer_node = (
+                        NodeProfile.objects.filter(
+                            user=referrer_wallet.user
+                        ).first()
+                    )
 
                     if referrer_node:
-                        wallet.source_node = referrer_node
+                        wallet.source_node = (
+                            referrer_node
+                        )
 
-                    wallet.save(update_fields=["referred_by", "source_node"])
+                    update_fields = [
+                        "referred_by",
+                        "source_node",
+                    ]
 
-            send_activation_email(request, user)
+                    if referral_business_slug:
+                        referral_business = (
+                            BusinessListing.objects.filter(
+                                slug=referral_business_slug,
+                                owner=referrer_wallet.user,
+                                is_active=True,
+                            ).first()
+                        )
 
-            return render(request, "auctions/check_your_email.html", {"email": user.email})
+                        if referral_business:
+                            wallet.pending_referral_business = (
+                                referral_business
+                            )
+                            update_fields.append(
+                                "pending_referral_business"
+                            )
+
+                    wallet.save(
+                        update_fields=update_fields
+                    )
+
+            send_activation_email(
+                request,
+                user
+            )
+
+            return render(
+                request,
+                "auctions/check_your_email.html",
+                {
+                    "email": user.email,
+                },
+            )
+
     else:
-        form = SignUpForm(request.POST)
+        form = SignUpForm()
 
-    return render(request, "account/signup.html", {"form": form})
+    return render(
+        request,
+        "account/signup.html",
+        {
+            "form": form,
+        },
+    )
 
 def activate_view(request, uidb64, token):
     try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
+        uid = force_str(
+            urlsafe_base64_decode(uidb64)
+        )
         user = User.objects.get(pk=uid)
     except Exception:
         user = None
@@ -832,22 +937,38 @@ def activate_view(request, uidb64, token):
         login(
             request,
             user,
-            backend="django.contrib.auth.backends.ModelBackend"
+            backend=(
+                "django.contrib.auth.backends."
+                "ModelBackend"
+            ),
         )
+
         messages.success(
             request,
-            "✅ Your FANZ account is already active."
+            "✅ Your FANZ account is already active.",
         )
+
         return redirect("auction_list")
 
-    if user is not None and default_token_generator.check_token(user, token):
-
-        # Activate account
+    if (
+        user is not None
+        and default_token_generator.check_token(
+            user,
+            token,
+        )
+    ):
+        # ---------------------------------------------------
+        # ACTIVATE ACCOUNT
+        # ---------------------------------------------------
         user.is_active = True
-        user.save()
+        user.save(update_fields=["is_active"])
 
-        # Wallet
-        wallet, _ = BidWallet.objects.get_or_create(user=user)
+        # ---------------------------------------------------
+        # WALLET
+        # ---------------------------------------------------
+        wallet, _ = BidWallet.objects.get_or_create(
+            user=user
+        )
 
         # ---------------------------------------------------
         # SIGNUP BONUS
@@ -855,7 +976,13 @@ def activate_view(request, uidb64, token):
         if not wallet.signup_bonus_given:
             wallet.credits += 50
             wallet.signup_bonus_given = True
-            wallet.save(update_fields=["credits", "signup_bonus_given"])
+
+            wallet.save(
+                update_fields=[
+                    "credits",
+                    "signup_bonus_given",
+                ]
+            )
 
             WalletTransaction.objects.create(
                 sender=None,
@@ -868,55 +995,86 @@ def activate_view(request, uidb64, token):
         # ---------------------------------------------------
         # REFERRAL BONUS
         # ---------------------------------------------------
-        if wallet.referred_by and not wallet.referral_bonus_given:
-
-            referrer_wallet, _ = BidWallet.objects.get_or_create(
-                user=wallet.referred_by
+        if (
+            wallet.referred_by
+            and not wallet.referral_bonus_given
+        ):
+            referrer_wallet, _ = (
+                BidWallet.objects.get_or_create(
+                    user=wallet.referred_by
+                )
             )
 
             referrer_wallet.credits += 50
-            referrer_wallet.save(update_fields=["credits"])
+            referrer_wallet.save(
+                update_fields=["credits"]
+            )
 
             WalletTransaction.objects.create(
                 sender=None,
                 receiver=referrer_wallet,
                 amount=50,
                 transaction_type="commission",
-                reference=f"Referral bonus for {user.username}",
+                reference=(
+                    f"Referral bonus for {user.username}"
+                ),
             )
 
             wallet.referral_bonus_given = True
-            wallet.save(update_fields=["referral_bonus_given"])
+            wallet.save(
+                update_fields=[
+                    "referral_bonus_given",
+                ]
+            )
+
+        # ---------------------------------------------------
+        # AUTO-FOLLOW REFERRAL BUSINESS
+        # ---------------------------------------------------
+        process_business_referral_activation(
+            user=user,
+            wallet=wallet,
+        )
 
         # ---------------------------------------------------
         # PAY CODE
         # ---------------------------------------------------
         if not wallet.pay_code:
             wallet.pay_code = generate_referral_code()
-            wallet.save(update_fields=["pay_code"])
+            wallet.save(
+                update_fields=["pay_code"]
+            )
 
         # ---------------------------------------------------
         # REFERRAL CODE
         # ---------------------------------------------------
         if not wallet.referral_code:
-            wallet.referral_code = generate_referral_code()
-            wallet.save(update_fields=["referral_code"])
+            wallet.referral_code = (
+                generate_referral_code()
+            )
+            wallet.save(
+                update_fields=["referral_code"]
+            )
 
         # ---------------------------------------------------
         # WALLET QR
         # ---------------------------------------------------
-        qr_path = f"media/qr_codes/{wallet.wallet_code}.png"
+        qr_path = (
+            f"media/qr_codes/"
+            f"{wallet.wallet_code}.png"
+        )
 
         if not os.path.exists(qr_path):
-
             payment_url = (
-                f"https://fanz.to/auctions/pay/"
+                "https://fanz.to/auctions/pay/"
                 f"{wallet.pay_code}/"
             )
 
             img = qrcode.make(payment_url)
 
-            os.makedirs(os.path.dirname(qr_path), exist_ok=True)
+            os.makedirs(
+                os.path.dirname(qr_path),
+                exist_ok=True,
+            )
 
             img.save(qr_path)
 
@@ -924,40 +1082,63 @@ def activate_view(request, uidb64, token):
         # REFERRAL QR
         # ---------------------------------------------------
         ref_qr_path = (
-            f"media/qr_codes/ref_{wallet.referral_code}.png"
+            "media/qr_codes/"
+            f"ref_{wallet.referral_code}.png"
         )
 
         if not os.path.exists(ref_qr_path):
-
             referral_url = (
                 "https://fanz.to/auctions/signup/"
                 f"?ref={wallet.referral_code}"
             )
 
-            img = make_branded_referral_qr(referral_url)
+            img = make_branded_referral_qr(
+                referral_url
+            )
 
-            os.makedirs(os.path.dirname(ref_qr_path), exist_ok=True)
+            os.makedirs(
+                os.path.dirname(ref_qr_path),
+                exist_ok=True,
+            )
+
             img.save(ref_qr_path)
 
-        # Cleanup session
-        if "referral_code" in request.session:
-            del request.session["referral_code"]
+        # ---------------------------------------------------
+        # SESSION CLEANUP
+        # ---------------------------------------------------
+        request.session.pop(
+            "referral_code",
+            None,
+        )
 
+        request.session.pop(
+            "referral_business_slug",
+            None,
+        )
+
+        # ---------------------------------------------------
+        # LOGIN AND REDIRECT
+        # ---------------------------------------------------
         login(
             request,
             user,
-            backend="django.contrib.auth.backends.ModelBackend"
+            backend=(
+                "django.contrib.auth.backends."
+                "ModelBackend"
+            ),
         )
 
         messages.success(
             request,
-            "🎉 Account activated successfully!"
+            "🎉 Account activated successfully!",
         )
 
         return redirect("auction_list")
 
-    return render(request,"activation_invalid.html")
-
+    return render(
+        request,
+        "activation_invalid.html",
+    )
 
 @login_required
 def pay_user(request, wallet_code):
