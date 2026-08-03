@@ -6,6 +6,7 @@ from .models import Hashtag, PostUnlock
 from .hashtags import sync_post_hashtags
 import qrcode
 import requests
+from .qr_utils import make_branded_referral_qr
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -933,7 +934,7 @@ def activate_view(request, uidb64, token):
                 f"?ref={wallet.referral_code}"
             )
 
-            img = qrcode.make(referral_url)
+            img = make_branded_referral_qr(referral_url)
 
             os.makedirs(os.path.dirname(ref_qr_path), exist_ok=True)
             img.save(ref_qr_path)

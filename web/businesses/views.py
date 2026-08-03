@@ -1,3 +1,4 @@
+import os
 from auctions.wallet_setup import provision_user_wallet
 import traceback
 from urllib.parse import quote
@@ -246,8 +247,19 @@ def grow_business(request, slug):
         f"/auctions/signup/?ref={wallet.referral_code}"
     )
 
+    referral_qr_path = (
+        f"media/qr_codes/ref_{wallet.referral_code}.png"
+    )
+
+    referral_qr_version = (
+        int(os.path.getmtime(referral_qr_path))
+        if os.path.exists(referral_qr_path)
+        else 1
+    )
+
     referral_qr_url = (
         f"/media/qr_codes/ref_{wallet.referral_code}.png"
+        f"?v={referral_qr_version}"
     )
 
     whatsapp_message = (

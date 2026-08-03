@@ -3,11 +3,35 @@
 {% block extra_css %}
 <link
     rel="stylesheet"
-    href="{% static 'css/business-growth.css' %}?v=16">
+    href="{% static 'css/business-growth.css' %}?v=19">
 {% endblock %}
 {% block title %}Grow {{ business.name }}{% endblock %}
 
 {% block content %}
+<div
+    id="growth-download-toast"
+    class="growth-download-toast"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    hidden>
+    <span class="growth-download-toast__icon" aria-hidden="true">
+        ✓
+    </span>
+
+    <span class="growth-download-toast__message">
+        Campaign image downloaded successfully.
+    </span>
+
+    <button
+        type="button"
+        class="growth-download-toast__close"
+        aria-label="Close notification"
+        data-close-growth-download-toast>
+        ×
+    </button>
+</div>
+
 
 <section class="grow-business-page">
 
@@ -99,6 +123,8 @@
 
 {% endblock %}
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const copyButton = document.querySelector(
@@ -108,6 +134,81 @@ document.addEventListener("DOMContentLoaded", function () {
     const printButton = document.querySelector(
         "[data-print-growth-asset]"
     );
+
+    const downloadButton = document.getElementById(
+        "download-growth-asset"
+    );
+
+    const preview = document.getElementById(
+        "campaign-download-preview"
+    );
+
+    const downloadStatus = document.getElementById(
+        "growth-download-status"
+    );
+
+    const downloadToast = document.getElementById(
+        "growth-download-toast"
+    );
+
+    const downloadToastClose = document.querySelector(
+        "[data-close-growth-download-toast]"
+    );
+
+    let downloadToastTimer = null;
+
+
+    function hideDownloadToast() {
+    if (!downloadToast) {
+        return;
+    }
+
+    downloadToast.classList.remove("is-visible");
+
+    window.setTimeout(function () {
+        if (!downloadToast.classList.contains("is-visible")) {
+            downloadToast.hidden = true;
+        }
+    }, 300);
+}
+
+    function showDownloadToast(message) {
+        if (!downloadToast) {
+            return;
+        }
+
+        const messageElement = downloadToast.querySelector(
+            ".growth-download-toast__message"
+        );
+
+        if (messageElement && message) {
+            messageElement.textContent = message;
+        }
+
+        if (downloadToastTimer) {
+            window.clearTimeout(downloadToastTimer);
+        }
+
+        downloadToast.hidden = false;
+
+        window.requestAnimationFrame(function () {
+            downloadToast.classList.add("is-visible");
+        });
+
+        downloadToastTimer = window.setTimeout(function () {
+            hideDownloadToast();
+        }, 3000);
+    }
+
+    if (downloadToastClose) {
+        downloadToastClose.addEventListener("click", function () {
+            if (downloadToastTimer) {
+                window.clearTimeout(downloadToastTimer);
+            }
+
+            hideDownloadToast();
+        });
+    }
 
     if (copyButton) {
         copyButton.addEventListener("click", async function () {
@@ -157,6 +258,151 @@ document.addEventListener("DOMContentLoaded", function () {
     if (printButton) {
         printButton.addEventListener("click", function () {
             window.print();
+        });
+    }
+
+    if (downloadButton && preview) {
+        downloadButton.addEventListener("click", async function () {
+            const originalText = downloadButton.textContent.trim();
+
+            downloadButton.disabled = true;
+            downloadButton.textContent = "Creating PNG…";
+
+            if (downloadStatus) {
+                downloadStatus.textContent =
+                    "Preparing your campaign image…";
+            }
+
+            try {
+                if (typeof window.html2canvas !== "function") {
+                    throw new Error("html2canvas did not load.");
+                }
+
+                const images = Array.from(
+                    preview.querySelectorAll("img")
+                );
+
+                await Promise.all(
+                    images.map(function (image) {
+                        if (
+                            image.complete &&
+                            image.naturalWidth > 0
+                        ) {
+                            return Promise.resolve();
+                        }
+
+                        return new Promise(function (resolve) {
+                            image.addEventListener(
+                                "load",
+                                resolve,
+                                { once: true }
+                            );
+
+                            image.addEventListener(
+                                "error",
+                                resolve,
+                                { once: true }
+                            );
+                        });
+                    })
+                );
+
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                }
+
+                const canvas = await window.html2canvas(
+                    preview,
+                    {
+                        scale: 2,
+                        backgroundColor: null,
+                        useCORS: true,
+                        logging: false,
+                        imageTimeout: 15000
+                    }
+                );
+
+                const blob = await new Promise(
+                    function (resolve, reject) {
+                        canvas.toBlob(function (result) {
+                            if (result) {
+                                resolve(result);
+                            } else {
+                                reject(
+                                    new Error(
+                                        "PNG creation returned no image."
+                                    )
+                                );
+                            }
+                        }, "image/png");
+                    }
+                );
+
+                const rawSlug =
+                    preview.dataset.businessSlug ||
+                    "business";
+
+                const safeSlug = rawSlug
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "");
+
+                const filename =
+                    "fanz-" +
+                    safeSlug +
+                    "-growth-campaign.png";
+
+                const objectUrl =
+                    URL.createObjectURL(blob);
+
+                const link =
+                    document.createElement("a");
+
+                link.href = objectUrl;
+                link.download = filename;
+
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+
+                window.setTimeout(function () {
+                    URL.revokeObjectURL(objectUrl);
+                }, 1000);
+
+                if (downloadStatus) {
+                    downloadStatus.textContent =
+                        "Campaign PNG downloaded.";
+                }
+
+                downloadButton.textContent = "✓ Downloaded";
+
+                showDownloadToast(
+                    "Success! Your campaign image has been downloaded."
+                );
+
+                } catch (error) {
+                console.error(
+                    "Growth campaign PNG download failed:",
+                    error
+                );
+
+                if (downloadStatus) {
+                    downloadStatus.textContent =
+                        "We could not create the PNG. Please try again.";
+                }
+            } finally {
+                downloadButton.disabled = false;
+
+                if (downloadButton.textContent === "✓ Downloaded") {
+                    window.setTimeout(function () {
+                        downloadButton.textContent = originalText;
+                    }, 1800);
+                } else {
+                    downloadButton.textContent = originalText;
+                }
+            }
         });
     }
 });

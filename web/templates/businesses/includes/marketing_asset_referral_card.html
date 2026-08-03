@@ -1,6 +1,9 @@
 <article class="growth-asset">
-
-    <div class="growth-asset-preview">
+    
+    <div
+    id="campaign-download-preview"
+    class="growth-asset-preview"
+    data-business-slug="{{ business.slug }}">
 
     <p class="campaign-ready-title">
         📣 READY TO SHARE
@@ -67,9 +70,19 @@
     WhatsApp
     </a>
 
-    <button type="button" disabled>
-        Download
+    <button
+    type="button"
+    id="download-growth-asset"
+    class="growth-asset-action">
+    Download PNG
     </button>
+ 
+    <p
+    id="download-status"
+    class="growth-download-status"
+    aria-live="polite">
+    </p>
+
     <button
     type="button"
     class="growth-asset-action growth-asset-action--print"
