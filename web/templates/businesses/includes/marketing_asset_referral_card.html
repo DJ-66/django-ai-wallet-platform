@@ -2,21 +2,17 @@
 
     <div class="growth-asset-preview">
 
-        <div class="growth-asset-brand">
-            FANZ
-        </div>
+    <p class="campaign-ready-title">
+        📣 READY TO SHARE
+    </p>
 
-        <p class="growth-asset-kicker">
-            We Gift You
-        </p>
+    <p class="campaign-gift-title">
+        WE GIFT YOU
+    </p>
 
-        <h2 class="growth-asset-credit">
-            50 FREE CREDITS
-        </h2>
-
-        <p class="growth-asset-copy">
-            Join FANZ through {{ business.name }}
-        </p>
+    <h2 class="growth-asset-credit">
+        50 FREE CREDITS
+    </h2>
 
         <div class="growth-asset-qr">
             <img
@@ -28,23 +24,22 @@
             {{ business.name }}
         </h3>
 
-        <p class="growth-asset-footer">
+        <h2 class="growth-asset-footer">
             Join FANZ • Get 50 Credits
-        </p>
+        </h2>
 
         <p class="growth-asset-domain">
-            fanz.to
+            Fanz.to
         </p>
 
-    </div>
+     </div>
 
     <div class="growth-asset-details">
 
-        <h2>Your Referral Card</h2>
+        <h2>Referral Campaign</h2>
 
         <p>
-            Share this card with customers to invite them to FANZ
-            and help grow your community.
+            Share this card with customers and invite them into your FANZ community.
         </p>
 
         <div class="growth-asset-link">
@@ -56,22 +51,33 @@
         </div>
 
         <div class="growth-asset-actions">
-            <button type="button" disabled>
-                WhatsApp
-            </button>
 
-            <button type="button" disabled>
-                Telegram
-            </button>
+    <button
+        type="button"
+        class="growth-asset-action growth-asset-action--copy"
+        data-copy-referral-link="{{ referral_url }}">
+        Copy Link
+    </button>
 
-            <button type="button" disabled>
-                Download
-            </button>
+    <a
+    class="growth-asset-action growth-asset-action--whatsapp"
+    href="{{ whatsapp_share_url }}"
+    target="_blank"
+    rel="noopener">
+    WhatsApp
+    </a>
 
-            <button type="button" disabled>
-                Print
-            </button>
-        </div>
+    <button type="button" disabled>
+        Download
+    </button>
+    <button
+    type="button"
+    class="growth-asset-action growth-asset-action--print"
+    data-print-growth-asset>
+    Print
+</button>
+
+</div>
 
         <p class="growth-asset-note">
             Sharing and download tools are coming next.

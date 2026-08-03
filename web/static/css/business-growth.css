@@ -1,0 +1,621 @@
+/* Grow My Business */
+
+.grow-business-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+}
+
+.grow-business-header {
+    margin-bottom: 2rem;
+    padding: 2rem;
+    border: 1px solid rgba(124, 58, 237, 0.18);
+    border-radius: 24px;
+     background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 18px 45px rgba(76, 29, 149, 0.08);
+}
+
+.grow-business-eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6d28d9;
+}
+
+.grow-business-header h1 {
+    margin: 0 0 0.75rem;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.05;
+}
+
+.grow-business-header p:last-child {
+    max-width: 760px;
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.65;
+}
+
+.grow-business-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.grow-business-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 260px;
+    padding: 1.5rem;
+    border: 1px solid rgba(124, 58, 237, 0.16);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 14px 35px rgba(76, 29, 149, 0.08);
+}
+
+.grow-business-card-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+    background: rgba(124, 58, 237, 0.1);
+    font-size: 1.8rem;
+}
+
+.grow-business-card h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.45rem;
+}
+
+.grow-business-card p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.grow-business-coming-soon {
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(124, 58, 237, 0.1);
+    color: #6d28d9;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.grow-business-footer {
+    margin-top: 2rem;
+}
+
+@media (max-width: 760px) {
+    .grow-business-page {
+        padding: 1rem 0.75rem 3rem;
+    }
+
+    .grow-business-header {
+        padding: 1.4rem;
+        border-radius: 18px;
+    }
+
+    .grow-business-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .grow-business-card {
+        min-height: 230px;
+        padding: 1.25rem;
+    }
+}
+
+.business-action {
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Primary business growth CTA */
+
+.business-action--grow {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 58px;
+    padding: 0.9rem 1.25rem;
+    border-color: transparent;
+    background: linear-gradient(
+        135deg,
+        #7c3aed,
+        #2563eb
+    );
+    color: #fff;
+    font-weight: 800;
+    box-shadow: 0 10px 24px rgba(109, 40, 217, 0.22);
+}
+
+.business-action--grow:hover,
+.business-action--grow:focus {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(109, 40, 217, 0.3);
+}
+
+
+/* Growth Asset: referral campaign */
+
+.grow-business-feature {
+    grid-column: 1 / -1;
+    padding: 1.5rem;
+    border: 1px solid rgba(124, 58, 237, 0.16);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 14px 35px rgba(76, 29, 149, 0.08);
+}
+
+.grow-business-feature-heading {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.grow-business-feature-heading h2 {
+    margin: 0.2rem 0 0.5rem;
+}
+
+.grow-business-feature-heading p:last-child {
+    margin: 0;
+}
+
+.growth-asset {
+    display: grid;
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.growth-asset-preview {
+    overflow: hidden;
+    padding: 1.2rem;
+    border-radius: 24px;
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(236, 72, 153, 0.28),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at bottom left,
+            rgba(37, 99, 235, 0.24),
+            transparent 38%
+        ),
+        linear-gradient(
+            145deg,
+            #090414,
+            #16082c 58%,
+            #0b1026
+        );
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.3);
+}
+
+.growth-asset-brand {
+    margin-bottom: 1.25rem;
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+}
+
+.growth-asset-kicker {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.growth-asset-credit {
+    margin: 0.35rem 0 0.8rem;
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    line-height: 0.98;
+    color: #f472b6;
+}
+
+.growth-asset-copy {
+    margin: 0 auto 1.1rem;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+.growth-asset-qr {
+    width: min(100%, 300px);
+    margin: 0 auto 1.2rem;
+    padding: 1rem;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow:
+        0 0 0 4px rgba(168, 85, 247, 0.35),
+        0 15px 40px rgba(168, 85, 247, 0.28);
+}
+
+.growth-asset-qr img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.growth-asset-business {
+    margin: 0.4rem 0;
+    font-size: 1.5rem;
+}
+
+.growth-asset-header-1 {
+    float: left;
+    font-size: 30px;
+    font-weight: 800;
+    color: #fde047;
+    margin-bottom: 1rem;
+}
+
+.growth-asset-footer {
+    margin: 0.3rem 0;
+    font-weight: 800;
+    color: #fde047;
+}
+
+.growth-asset-domain {
+    margin: 0.9rem 0 0;
+    font-size: 1.15rem;
+    font-weight: 900;
+}
+
+.growth-asset-details {
+    padding: 1.25rem;
+    border-radius: 20px;
+    background: rgba(124, 58, 237, 0.06);
+}
+
+.growth-asset-details h2 {
+    margin-top: 0;
+}
+
+.growth-asset-link input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.growth-asset-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.growth-asset-actions button {
+    min-height: 48px;
+    border: 0;
+    border-radius: 12px;
+    font-weight: 800;
+}
+
+.growth-asset-actions button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.growth-asset-note {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    opacity: 0.75;
+}
+
+@media (max-width: 800px) {
+    .growth-asset {
+        grid-template-columns: 1fr;
+    }
+
+    .grow-business-feature {
+        padding: 1rem;
+    }
+
+    .growth-asset-preview {
+        padding: 1.2rem;
+    }
+}
+
+.growth-asset-actions .growth-asset-action {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: #fff;
+    cursor: pointer;
+    opacity: 1;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+}
+
+.growth-asset-actions .growth-asset-action:hover,
+.growth-asset-actions .growth-asset-action:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(109, 40, 217, 0.24);
+}
+
+.growth-asset-actions .growth-asset-action.is-copied {
+    background: linear-gradient(135deg, #059669, #16a34a);
+}
+
+.growth-asset-actions a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 800;
+    box-sizing: border-box;
+}
+
+.growth-asset-action--whatsapp {
+    background: #25d366;
+    color: #fff;
+}
+
+.growth-asset-action--whatsapp:hover,
+.growth-asset-action--whatsapp:focus {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(37, 211, 102, 0.25);
+}
+
+/* Mobile Growth Asset adjustments */
+
+@media (max-width: 768px) {
+
+    .growth-asset {
+        grid-template-columns: 1fr;
+    }
+
+    .grow-business-feature {
+        padding: 1rem;
+    }
+
+    .growth-asset-preview {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 1.2rem;
+        text-align: center;
+    }
+
+    .growth-asset-credit {
+        font-size: 2.2rem;
+        line-height: 1;
+    }
+
+    .growth-asset-copy {
+        max-width: 90%;
+        font-size: 0.9rem;
+    }
+
+    .growth-asset-qr {
+        width: 80%;
+        max-width: 240px;
+        margin: 1rem auto;
+        box-sizing: border-box;
+    }
+
+    .growth-asset-qr img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .growth-asset-business {
+        max-width: 90%;
+        font-size: 1.2rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .growth-asset-footer {
+        max-width: 90%;
+        font-size: 0.95rem;
+        line-height: 1.35;
+    }
+
+    .growth-asset-domain {
+        font-size: 1rem;
+    }
+
+    .growth-asset-details {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .growth-asset-link input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .growth-asset-actions {
+        grid-template-columns: 1fr;
+    }
+}
+.growth-asset-header-1 {
+    float: left;
+    font-size: 25px;
+    font-weight: 800;
+    color: #fde047;
+    margin-bottom: 1rem;
+}
+
+/* Growth asset heading alignment fix */
+
+.growth-asset-heading {
+    display: block;
+    width: 100%;
+    margin: 0 0 0.65rem;
+    padding: 0;
+    text-align: center;
+}
+
+.growth-asset-header-1,
+.growth-asset-kicker {
+    position: static;
+    float: none;
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
+    text-align: center;
+    transform: none;
+    white-space: nowrap;
+}
+
+.growth-asset-header-1 {
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    color: #fde047;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.growth-asset-kicker {
+    margin-top: 0;
+    margin-bottom: 0.35rem;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+}
+
+/* Referral campaign headline — isolated from older asset rules */
+
+.campaign-ready-title,
+.campaign-gift-title,
+.campaign-credit-title {
+    position: static;
+    display: block;
+    float: none;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    text-align: center;
+    transform: none;
+    box-sizing: border-box;
+}
+
+.campaign-ready-title {
+    margin: 0 0 1.1rem;
+    color: #fde047;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1.15;
+    white-space: normal;
+}
+
+.campaign-gift-title {
+    margin: 0 0 0.35rem;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.campaign-credit-title {
+    margin: 0 0 1rem;
+    color: #f472b6;
+    font-size: clamp(2.4rem, 5vw, 3.4rem);
+    font-weight: 900;
+    line-height: 0.98;
+    overflow-wrap: normal;
+    word-break: normal;
+}
+
+@media (max-width: 768px) {
+    .campaign-ready-title {
+        font-size: 1.05rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .campaign-gift-title {
+        font-size: 0.9rem;
+    }
+
+    .campaign-credit-title {
+        font-size: 25px;
+        line-height: 1;
+        color: #fde047;
+    }
+}
+
+.growth-asset-credit {
+    margin: 0.35rem 0 0.8rem;
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    line-height: 0.98;
+    color: #f472b6;
+}
+
+/* Print the marketing asset only */
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .growth-asset-preview,
+    .growth-asset-preview * {
+        visibility: visible !important;
+    }
+
+    .growth-asset-preview {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 390px;
+        max-width: none;
+        margin: 0;
+        box-shadow: none;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    @page {
+        margin: 12mm;
+    }
+}
+.growth-asset-action--print {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: #fff;
+    cursor: pointer;
+    opacity: 1;
+}
+
+.growth-asset-action--print:hover,
+.growth-asset-action--print:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(109, 40, 217, 0.24);
+}
+
+
+/* end_css */
