@@ -1,0 +1,128 @@
+import math
+
+import qrcode
+from PIL import Image, ImageDraw
+
+
+def _star_points(
+    center_x,
+    center_y,
+    outer_radius,
+    inner_radius,
+    points=5,
+):
+    """Return polygon points for a centered five-point star."""
+    coordinates = []
+
+    for index in range(points * 2):
+        angle = (
+            -math.pi / 2
+            + index * math.pi / points
+        )
+
+        radius = (
+            outer_radius
+            if index % 2 == 0
+            else inner_radius
+        )
+
+        coordinates.append(
+            (
+                center_x + math.cos(angle) * radius,
+                center_y + math.sin(angle) * radius,
+            )
+        )
+
+    return coordinates
+
+
+def make_branded_referral_qr(data):
+    """
+    Create a high-error-correction referral QR with
+    a FANZ-style center badge.
+    """
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=12,
+        border=4,
+    )
+
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    qr_image = qr.make_image(
+        fill_color="black",
+        back_color="white",
+    ).convert("RGBA")
+
+    qr_width, qr_height = qr_image.size
+
+    # Keep the full badge near 20% of QR width.
+    badge_size = int(qr_width * 0.20)
+
+    # Ensure the badge size is even for clean centering.
+    if badge_size % 2:
+        badge_size += 1
+
+    badge = Image.new(
+        "RGBA",
+        (badge_size, badge_size),
+        (0, 0, 0, 0),
+    )
+
+    draw = ImageDraw.Draw(badge)
+
+    center = badge_size / 2
+
+    # White outer circle protects the logo from QR modules.
+    draw.ellipse(
+        (
+            0,
+            0,
+            badge_size - 1,
+            badge_size - 1,
+        ),
+        fill=(255, 255, 255, 255),
+    )
+
+    outer_padding = max(4, int(badge_size * 0.10))
+
+    # Purple FANZ-style circle.
+    draw.ellipse(
+        (
+            outer_padding,
+            outer_padding,
+            badge_size - outer_padding - 1,
+            badge_size - outer_padding - 1,
+        ),
+        fill=(124, 58, 237, 255),
+    )
+
+    star_outer_radius = badge_size * 0.29
+    star_inner_radius = star_outer_radius * 0.45
+
+    star = _star_points(
+        center,
+        center,
+        star_outer_radius,
+        star_inner_radius,
+    )
+
+    # Gold star.
+    draw.polygon(
+        star,
+        fill=(253, 224, 71, 255),
+    )
+
+    position = (
+        (qr_width - badge_size) // 2,
+        (qr_height - badge_size) // 2,
+    )
+
+    qr_image.alpha_composite(
+        badge,
+        dest=position,
+    )
+
+    return qr_image.convert("RGB")

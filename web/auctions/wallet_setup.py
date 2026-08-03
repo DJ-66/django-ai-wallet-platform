@@ -3,7 +3,7 @@ import qrcode
 import secrets
 import string
 from django.conf import settings
-
+from .qr_utils import make_branded_referral_qr
 from .models import BidWallet, WalletTransaction
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -134,7 +134,7 @@ def provision_user_wallet(user, referral_code=None):
             f"?ref={wallet.referral_code}"
         )
 
-        img = qrcode.make(referral_url)
+        img = make_branded_referral_qr(referral_url)
 
         os.makedirs(os.path.dirname(ref_qr_path), exist_ok=True)
 
