@@ -236,6 +236,15 @@ class BidWallet(models.Model):
         on_delete=models.SET_NULL,
         related_name="referred_users"
     )
+
+    pending_referral_business = models.ForeignKey(
+        "businesses.BusinessListing",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pending_referral_wallets",
+    )
+
     referral_bonus_given = models.BooleanField(default=False)
 
     source_node = models.ForeignKey(

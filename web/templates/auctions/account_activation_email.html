@@ -36,10 +36,17 @@
 </p>
 
 <p>
-  <a href="{{ protocol }}://{{ domain }}{% url 'activate' uid token %}"
-     style="display:inline-block;padding:12px 20px;background:#16a34a;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">
+<!--  <a
+    href="{{ protocol }}://{{ domain }}{% url 'activate' uid token %}{% if referral_business_slug %}?business={{ referral_business_slug|urlencode }}{% endif %}"
+    style="display:inline-block;padding:12px 20px;background:#16a34a;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">
     Activate My FANZ Account
   </a>
+-->
+<a
+  href="{{ protocol }}://{{ domain }}{% url 'activate' uid token %}"
+  style="display:inline-block;padding:12px 20px;background:#16a34a;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">
+  Activate My FANZ Account
+</a>
 </p>
 
 <p>
