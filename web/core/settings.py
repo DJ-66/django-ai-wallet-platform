@@ -131,11 +131,12 @@ DATABASES = {
 
 USE_I18N = True
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "es"
 
 LANGUAGES = [
-    ("en", "English"),
     ("es", "Español"),
+    ("en", "English"),
+    ("pt", "Português"),
 ]
 
 LOCALE_PATHS = [
