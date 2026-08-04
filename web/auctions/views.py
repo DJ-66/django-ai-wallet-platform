@@ -1,4 +1,3 @@
-import random
 import os
 import json
 import random
@@ -778,10 +777,6 @@ def send_activation_email(request, user):
                 "https"
                 if request.is_secure()
                 else "http"
-            ),
-            "referral_business_slug": request.session.get(
-                "referral_business_slug",
-                "",
             ),
         },
     )
