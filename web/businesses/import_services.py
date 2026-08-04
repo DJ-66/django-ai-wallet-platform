@@ -58,6 +58,7 @@ class BusinessImportRecord:
     source_external_id: str
 
     description: str = ""
+    address: str = ""
     city: str = ""
     country: str = ""
     website_url: str = ""
@@ -213,6 +214,7 @@ def normalize_business_record(
         source_name=source_name,
         source_external_id=source_external_id,
         description=_collapse_whitespace(record.description),
+        address=_collapse_whitespace(record.address),
         city=city,
         country=country,
         website_url=_normalize_url(
@@ -294,6 +296,7 @@ def import_business_record(
             name=normalized.name,
             industry=normalized.industry,
             description=normalized.description,
+            address=normalized.address,
             city=normalized.city,
             country=normalized.country,
             website_url=normalized.website_url,
@@ -307,6 +310,7 @@ def import_business_record(
             source_url=normalized.source_url,
             source_external_id=normalized.source_external_id,
             is_imported=True,
+            is_community=True,
             last_imported_at=imported_at,
         )
         return "created", business
@@ -314,11 +318,13 @@ def import_business_record(
     if business.is_claimed or business.owner_id is not None:
         business.source_url = normalized.source_url
         business.is_imported = True
+        business.is_community = True
         business.last_imported_at = imported_at
         business.save(
             update_fields=[
                 "source_url",
                 "is_imported",
+                "is_community",
                 "last_imported_at",
                 "updated_at",
             ]
@@ -328,6 +334,7 @@ def import_business_record(
     business.name = normalized.name
     business.industry = normalized.industry
     business.description = normalized.description
+    business.address = normalized.address
     business.city = normalized.city
     business.country = normalized.country
     business.website_url = normalized.website_url
@@ -336,6 +343,7 @@ def import_business_record(
     business.discovery_hub = discovery_hub
     business.source_url = normalized.source_url
     business.is_imported = True
+    business.is_community = True
     business.is_active = True
     business.last_imported_at = imported_at
     business.save(
@@ -343,6 +351,7 @@ def import_business_record(
             "name",
             "industry",
             "description",
+            "address",
             "city",
             "country",
             "website_url",
@@ -351,6 +360,7 @@ def import_business_record(
             "discovery_hub",
             "source_url",
             "is_imported",
+            "is_community",
             "is_active",
             "last_imported_at",
             "updated_at",

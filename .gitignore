@@ -28,7 +28,10 @@ venv/
 backup-*.sql
 backup-*.sql.gz
 
-# Don's push *.save
+# Don't push *.save
 *.save
 
 web/businesses/import_data/
+
+# Local import datasets .csv
+web/imports/

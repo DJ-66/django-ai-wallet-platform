@@ -18,6 +18,7 @@ class BusinessListing(models.Model):
 
     name = models.CharField(max_length=255)
     slug = models.SlugField(
+    max_length=255,
     unique=True,
     blank=True,
     )
@@ -39,6 +40,11 @@ class BusinessListing(models.Model):
         ),
     )
 
+    address = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Full public street address for this business.",
+    )
     city = models.CharField(max_length=120, blank=True)
     country = models.CharField(max_length=120, blank=True)
 
@@ -67,6 +73,7 @@ class BusinessListing(models.Model):
     )
 
     source_url = models.URLField(
+        max_length=1000,
         blank=True,
         help_text="Original public source URL for this listing.",
     )
@@ -82,6 +89,14 @@ class BusinessListing(models.Model):
     is_imported = models.BooleanField(
         default=False,
         db_index=True,
+    )
+
+    is_community = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "Marks this listing as a reusable community business template."
+        ),
     )
 
     last_imported_at = models.DateTimeField(
@@ -120,8 +135,12 @@ class BusinessListing(models.Model):
 
     @property
     def google_maps_url(self):
+        if self.source_url:
+            return self.source_url
+
         location_parts = [
             self.name,
+            self.address,
             self.city,
             self.country,
         ]
