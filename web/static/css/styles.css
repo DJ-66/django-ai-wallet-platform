@@ -6795,6 +6795,48 @@ body.feed-upload-guide-open {
     display: block;
  }
 
+@media (max-width: 600px) {
+    .business-discovery-card__link {
+        width: 60%;
+        margin-inline: auto;
+        text-align: center;
+    }
+}
 
+
+
+.discovery-business-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(91, 53, 255, 0.28);
+    box-shadow: 0 13px 32px rgba(25, 18, 58, 0.13);
+}
+
+.discovery-business-card .business-card {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.discovery-business-card .business-card-body {
+    padding: 0;
+}
+
+.discovery-business-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(240px, 1fr));
+    column-gap: 1.5rem;
+    row-gap: 1.75rem;
+}
+
+.discovery-business-card {
+    width: 100%;
+    padding: 1.15rem;
+    border: 1px solid rgba(91, 53, 255, 0.16);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 8px 24px rgba(25, 18, 58, 0.09);
+    box-sizing: border-box;
+}
 
 /* end_css */

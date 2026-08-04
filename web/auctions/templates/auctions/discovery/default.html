@@ -644,11 +644,13 @@
 {% endif %}
 
         {% if businesses %}
-            <div class="discovery-business-grid">
-                {% for business in businesses %}
-                    {% include "businesses/_business_card.html" with business=business %}
-                {% endfor %}
-            </div>
+    <div class="discovery-business-grid">
+        {% for business in businesses %}
+            <article class="discovery-business-card">
+                {% include "businesses/_business_card.html" with business=business %}
+            </article>
+        {% endfor %}
+    </div>
         {% else %}
             <div class="discovery-empty-state">
                 <h3>Does your business belong here?</h3>
