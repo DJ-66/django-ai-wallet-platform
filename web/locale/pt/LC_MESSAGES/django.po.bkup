@@ -3,19 +3,20 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-05 03:25+0000\n"
+"POT-Creation-Date: 2026-08-04 22:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: pt_BR\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: auctions/forms.py:49
 msgid "Event title..."
@@ -27,7 +28,7 @@ msgstr ""
 
 #: auctions/forms.py:70
 msgid "Event location..."
-msgstr "Local do evento..."
+msgstr ""
 
 #: auctions/forms.py:107
 msgid "End time cannot be earlier than start time."
@@ -55,7 +56,7 @@ msgstr ""
 
 #: auctions/forms.py:198
 msgid "Post title..."
-msgstr "Título da postagem..."
+msgstr ""
 
 #: auctions/forms.py:204
 msgid "What's happening?"
@@ -92,7 +93,7 @@ msgstr ""
 #: auctions/forms.py:466 templates/businesses/business_detail.html:142
 #: templates/businesses/business_detail.html:323
 msgid "Website"
-msgstr "Site"
+msgstr ""
 
 #: auctions/forms.py:475
 msgid "Featured link 1 label"
@@ -186,11 +187,11 @@ msgstr ""
 
 #: auctions/templates/auctions/inbox.html:64
 msgid "No conversations yet."
-msgstr "Ainda não há conversas."
+msgstr ""
 
 #: businesses/admin.py:79 templates/businesses/business_detail.html:300
 msgid "Contact"
-msgstr "Contato"
+msgstr ""
 
 #: businesses/admin.py:89
 msgid "Ownership and status"
@@ -204,21 +205,9 @@ msgstr ""
 msgid "Dates"
 msgstr ""
 
-#: businesses/models.py:14
-msgid "Real Estate"
-msgstr "Imobiliária"
-
-#: businesses/models.py:15
-msgid "Restaurant"
-msgstr "Restaurante"
-
-#: businesses/models.py:16
-msgid "Law Firm"
-msgstr "Escritório de advocacia"
-
 #: businesses/models.py:34
 msgid "Business hero image"
-msgstr "Empresa em Destaque"
+msgstr ""
 
 #: businesses/models.py:39
 msgid "Upload a wide image that represents your business."
@@ -398,7 +387,7 @@ msgstr ""
 
 #: templates/auction_list.html:7
 msgid "Live Auctions"
-msgstr "Leilões ao Vivo"
+msgstr ""
 
 #: templates/auction_list.html:8
 msgid "Bid with credits. Auctions ending soon extend 15s with new bid"
@@ -452,7 +441,7 @@ msgstr ""
 
 #: templates/auctions/ai/companion_list.html:48
 msgid "Visit Profile"
-msgstr "Visitar perfil"
+msgstr ""
 
 #: templates/auctions/ai/companion_list.html:53
 msgid "credit per message"
@@ -487,7 +476,7 @@ msgstr ""
 
 #: templates/auctions/feed_home.html:12
 msgid "Community Feed"
-msgstr "Feed da Comunidade"
+msgstr ""
 
 #: templates/auctions/feed_home.html:29
 msgid "Your post could not be published."
@@ -519,7 +508,7 @@ msgstr ""
 
 #: templates/auctions/feed_home.html:110
 msgid "No files selected"
-msgstr "Nenhum arquivo selecionado"
+msgstr ""
 
 #: templates/auctions/feed_home.html:122
 msgid "Public Post"
@@ -615,7 +604,7 @@ msgstr ""
 
 #: templates/auctions/includes/_business_update.html:20
 msgid "Business Update"
-msgstr "Atualização sobre os negócios"
+msgstr ""
 
 #: templates/auctions/includes/_business_update.html:21
 #: templates/auctions/includes/_event.html:30
@@ -636,7 +625,6 @@ msgid "Verified creator"
 msgstr ""
 
 #: templates/auctions/includes/_creator_card.html:56
-#: templates/businesses/_business_stats.html:12
 msgid "Fanz"
 msgstr ""
 
@@ -754,7 +742,7 @@ msgstr ""
 
 #: templates/auctions/notifications.html:12
 msgid "Notifications"
-msgstr "Notificações"
+msgstr ""
 
 #: templates/auctions/notifications.html:42
 msgid "No notifications yet."
@@ -775,12 +763,12 @@ msgstr ""
 #: templates/auctions/public_profile.html:132
 #: templates/businesses/business_detail.html:157
 msgid "Unfan"
-msgstr "Deixar de Seguir"
+msgstr ""
 
 #: templates/auctions/public_profile.html:134
 #: templates/businesses/business_detail.html:160
 msgid "Become a Fan"
-msgstr "Tornar-se Fã"
+msgstr ""
 
 #: templates/auctions/public_profile.html:142
 #: templates/businesses/business_detail.html:132
@@ -815,7 +803,7 @@ msgstr ""
 
 #: templates/auctions/public_profile.html:245
 msgid "Seller"
-msgstr "Vendedora"
+msgstr ""
 
 #: templates/auctions/public_profile.html:266
 msgid "DM Seller"
@@ -844,7 +832,7 @@ msgstr ""
 
 #: templates/auctions/public_profile.html:636
 msgid "No public posts yet."
-msgstr "Ainda não há publicações públicas."
+msgstr ""
 
 #: templates/auctions/wallet.html:7
 msgid "My Wallet"
@@ -879,18 +867,6 @@ msgstr ""
 #: templates/auctions/wallet.html:60
 msgid "Recent Activity"
 msgstr ""
-
-#: templates/base.html:25
-msgid "Feed"
-msgstr "Feed"
-
-#: templates/base.html:27
-msgid "Auctions"
-msgstr "Leilões"
-
-#: templates/base.html:28
-msgid "AI"
-msgstr "IA"
 
 #: templates/base.html:69
 msgid "Spanish"
@@ -932,86 +908,17 @@ msgstr ""
 msgid "QR code for this page"
 msgstr ""
 
-#: templates/base.html:191
-msgid "Profile"
-msgstr "Perfil"
-
-#: templates/base.html:195 templates/businesses/_business_stats.html:21
-msgid "Events"
-msgstr "Eventos"
-
-#: templates/base.html:201
-msgid "Sign up"
-msgstr "Inscrever-se"
-
-#: templates/businesses/_business_card.html:6
-#, python-format
-msgid ""
-"\n"
-"        View %(name)s\n"
-"        "
-msgstr ""
-
-#: templates/businesses/_business_card.html:20
-msgid "Business Profile"
-msgstr "Perfil da Empresa"
-
-#: templates/businesses/_business_card.html:33
 #: templates/businesses/business_detail.html:48
 msgid "Claimed"
-msgstr "Reivindicado"
-
-#: templates/businesses/_business_card.html:37
-msgid "Community Profile"
-msgstr "Perfil da Comunidade"
-
-#: templates/businesses/_business_card.html:73
-#, python-format
-msgid ""
-"\n"
-"                %(fan_count)s fan\n"
-"                "
-msgid_plural ""
-"\n"
-"                %(fan_count)s fans\n"
-"                "
-msgstr[0] ""
-msgstr[1] ""
-
-#: templates/businesses/_business_card.html:84
-msgid "View Business Profile"
-msgstr "Ver perfil da empresa"
-
-#: templates/businesses/_business_stats.html:3
-#, python-format
-msgid ""
-"\n"
-"View events for %(name)s\n"
 msgstr ""
-
-#: templates/businesses/_business_stats.html:8
-msgid "Business activity"
-msgstr "Atividade empresarial"
-
-#: templates/businesses/_business_stats.html:26
-msgid "Updates"
-msgstr "Atualizações"
-
-#: templates/businesses/business_detail.html:27
-msgid "List my business on FANZ"
-msgstr "Liste minha empresa no FANZ"
-
-#: templates/businesses/business_detail.html:31
-msgid "List your business free on FANZ"
-msgstr "Cadastre sua empresa gratuitamente na FANZ"
 
 #: templates/businesses/business_detail.html:52
 msgid "Community Listing"
-msgstr "Perfil da Comunidade"
+msgstr ""
 
 #: templates/businesses/business_detail.html:80
 msgid "Part of a FANZ Discovery Community"
-msgstr "Faz parte de uma Comunidade Discovery da FANZ"
+msgstr ""
 
 #: templates/businesses/business_detail.html:89
 msgid ""
@@ -1020,50 +927,42 @@ msgid ""
 "events, auctions, and creators.\n"
 "                           "
 msgstr ""
-"\n"
-"                           Explore publicações, empresas, eventos, leilões e "
-"criadores relacionados a esta comunidade.\n"
-"                           "
 
 #: templates/businesses/business_detail.html:99
 msgid "Explore Community"
-msgstr "Explorar Comunidade"
+msgstr ""
 
 #: templates/businesses/business_detail.html:112
 msgid "Call"
-msgstr "Ligar"
+msgstr ""
 
 #: templates/businesses/business_detail.html:124
 msgid "Directions"
-msgstr "Como Chegar"
+msgstr ""
 
 #: templates/businesses/business_detail.html:169
 msgid "Business Spotlight"
-msgstr "Empresa em Destaque"
+msgstr ""
 
 #: templates/businesses/business_detail.html:182
 msgid "Gallery"
-msgstr "Galeria"
+msgstr ""
 
 #: templates/businesses/business_detail.html:189
 msgid "Add Photos"
-msgstr "Adicionar Fotos"
-
-#: templates/businesses/business_detail.html:202
-msgid "Delete the selected gallery images? This cannot be undone."
 msgstr ""
 
 #: templates/businesses/business_detail.html:221
 msgid "Select"
-msgstr "Selecionar"
+msgstr ""
 
 #: templates/businesses/business_detail.html:257
 msgid "Delete Selected"
-msgstr "Excluir Selecionados"
+msgstr ""
 
 #: templates/businesses/business_detail.html:269
 msgid "No gallery photos yet."
-msgstr "Ainda não há fotos na galeria."
+msgstr ""
 
 #: templates/businesses/business_detail.html:274
 msgid ""
@@ -1072,34 +971,30 @@ msgid ""
 "recent work.\n"
 "         "
 msgstr ""
-"\n"
-"         Adicione fotos da sua empresa, produtos, localização, cardápio, "
-"equipe ou trabalhos recentes.\n"
-"         "
 
 #: templates/businesses/business_detail.html:288
 msgid "Recent Updates"
-msgstr "Atualizações Recentes"
+msgstr ""
 
 #: templates/businesses/business_detail.html:305
 msgid "Phone"
-msgstr "Telefone"
+msgstr ""
 
 #: templates/businesses/business_detail.html:314
 msgid "Email"
-msgstr "E-mail"
+msgstr ""
 
 #: templates/businesses/business_detail.html:330
 msgid "Visit Website"
-msgstr "Visitar Site"
+msgstr ""
 
 #: templates/businesses/business_detail.html:336
 msgid "Contact information has not been added yet."
-msgstr "As informações de contato ainda não foram adicionadas."
+msgstr ""
 
 #: templates/businesses/business_detail.html:341
 msgid "Is this your business?"
-msgstr "Esta empresa é sua?"
+msgstr ""
 
 #: templates/businesses/business_detail.html:344
 msgid ""
@@ -1108,15 +1003,11 @@ msgid ""
 "updates, create events, and grow your community.\n"
 "     "
 msgstr ""
-"\n"
-"     Cadastre sua empresa gratuitamente na FANZ. Alcance clientes da sua "
-"região, publique atualizações, crie eventos e fortaleça sua comunidade.\n"
-"     "
 
 #: templates/businesses/business_detail.html:353
 msgid "List My Business on FANZ"
-msgstr "Cadastrar Minha Empresa na FANZ"
+msgstr ""
 
 #: templates/businesses/business_detail.html:357
 msgid "Free Forever."
-msgstr "Grátis para Sempre."
+msgstr ""

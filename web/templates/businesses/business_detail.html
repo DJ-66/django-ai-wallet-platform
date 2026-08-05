@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load i18n %}
 {% block title %}
 {{ business.name }} | FANZ
 {% endblock %}
@@ -24,11 +24,11 @@
   <a
     href="{% url 'businesses:create' %}?community={{ business.slug|urlencode }}"
     class="business-unclaimed-hero"
-    aria-label="List my business on FANZ"
+    aria-label="{% trans 'List my business on FANZ' %}"
   >
     <img
       src="{% static 'img/businesses/unclaimed-business-hero.webp' %}"
-      alt="List your business free on FANZ"
+      alt="{% trans 'List your business free on FANZ' %}"
       loading="eager"
     >
   </a>
@@ -45,11 +45,12 @@
 
         {% if business.is_claimed %}
             <span class="business-status business-status--claimed">
-                Claimed
+                {% trans "Claimed" %}
             </span>
         {% else %}
             <span class="business-status business-status--unclaimed">
-                Community Listing
+                {% trans "Community Listing" %}
+
             </span>
         {% endif %}
 
@@ -76,7 +77,8 @@
                 <section class="business-discovery-card">
                     <div class="business-discovery-card__content">
                         <span class="business-discovery-card__eyebrow">
-                            Part of a FANZ Discovery Community
+                            {% trans "Part of a FANZ Discovery Community" %}
+
                         </span>
 
                         <h2>
@@ -84,8 +86,9 @@
                         </h2>
 
                         <p>
-                            Explore related community posts, businesses,
-                            events, auctions, and creators.
+                           {% blocktrans %}
+                           Explore related community posts, businesses, events, auctions, and creators.
+                           {% endblocktrans %}
                         </p>
                     </div>
 
@@ -93,7 +96,7 @@
                         class="business-discovery-card__link"
                         href="{% url 'discovery_hub_detail' business.discovery_hub.slug %}"
                     >
-                        Explore Community
+                        {% trans "Explore Community" %}
                     </a>
                 </section>
             {% endif %}
@@ -106,7 +109,8 @@
         href="tel:{{ business.phone }}"
         class="business-action business-action--call"
       >
-        📞 Call
+        📞 {% trans "Call" %}
+
       </a>
     {% endif %}
 
@@ -117,7 +121,7 @@
           target="_blank"
           rel="noopener noreferrer"
         >
-          📍 Directions
+          📍 {% trans "Directions" %}
         </a>
       {% endif %}
      {% if business.owner and request.user != business.owner %}
@@ -125,7 +129,7 @@
      href="{% url 'start_conversation' business.owner.username %}?message={{ business.name|urlencode }}%20business%20inquiry"
      class="business-action business-action--message"
      >
-    💬 Message
+    💬  {% trans "Message" %}
     </a>
     {% endif %}
     {% if business.website_url %}
@@ -135,7 +139,8 @@
         target="_blank"
         rel="noopener noreferrer"
       >
-        🌐 Website
+        🌐 {% trans "Website" %}
+
       </a>
     {% endif %}
 
@@ -149,9 +154,11 @@
       class="business-community__button"
     >
       {% if is_fan %}
-        ⭐ Unfan
+        ⭐ {% trans "Unfan" %}
+
       {% else %}
-        ⭐ Become a Fan
+        ⭐ {% trans "Become a Fan" %}
+
       {% endif %}
     </a>
   </section>
@@ -159,7 +166,8 @@
      {% if featured_update %}
   <section class="business-updates business-updates--featured">
     <div class="business-updates__header">
-      <h2>🌟 Business Spotlight</h2>
+      <h2>🌟 {% trans "Business Spotlight" %}
+</h2>
     </div>
 
     <div class="business-updates__list">
@@ -171,14 +179,15 @@
 <section class="business-gallery">
 
   <div class="business-gallery__header">
-    <h2>🖼 Gallery</h2>
+    <h2>🖼  {% trans "Gallery" %}</h2>
 
     {% if request.user == business.owner %}
       <a
         href="{% url 'businesses:upload_media' business.slug %}"
         class="business-gallery__upload-link"
       >
-        📷 Add Photos
+        📷 {% trans "Add Photos" %}
+
       </a>
     {% endif %}
   </div>
@@ -190,7 +199,7 @@
         method="post"
         action="{% url 'businesses:delete_media' business.slug %}"
         class="business-gallery-manage-form"
-        onsubmit="return confirm('Delete the selected gallery images? This cannot be undone.');"
+        onsubmit="return confirm('{% trans "Delete the selected gallery images? This cannot be undone." %}');"
       >
         {% csrf_token %}
     {% endif %}
@@ -209,7 +218,7 @@
                     value="{{ media.pk }}"
                     aria-label="Select gallery image for deletion"
                   >
-                  <span>Select</span>
+                  <span>{% trans "Select" %}</span>
                 </label>
               {% endif %}
 
@@ -245,7 +254,8 @@
             type="submit"
             class="business-gallery__delete-button"
           >
-            🗑 Delete Selected
+            🗑  {% trans "Delete Selected" %}
+
           </button>
         </div>
       </form>
@@ -256,12 +266,14 @@
     {% if request.user == business.owner %}
       <div class="business-gallery__empty">
         <p>
-          No gallery photos yet.
+          {% trans "No gallery photos yet." %}
+
         </p>
 
         <p>
-          Add photos of your business, products, location,
-          menu, staff, or recent work.
+         {% blocktrans %}
+         Add photos of your business, products, location, menu, staff, or recent work.
+         {% endblocktrans %}
         </p>
       </div>
     {% endif %}
@@ -273,7 +285,7 @@
 {% if updates %}
   <section class="business-updates">
     <div class="business-updates__header">
-      <h2>Recent Updates</h2>
+      <h2>{% trans "Recent Updates" %}</h2>
     </div>
 
     <div class="business-updates__list">
@@ -285,12 +297,12 @@
 {% endif %}
 <br>
          <section class="business-contact">
-  <h2>Contact</h2>
+  <h2>{% trans "Contact" %}</h2>
 
   {% if business.phone or business.email or business.website_url %}
     <dl>
       {% if business.phone %}
-        <dt>Phone</dt>
+        <dt>{% trans "Phone" %}</dt>
         <dd>
           <a href="tel:{{ business.phone }}">
             {{ business.phone }}
@@ -299,7 +311,7 @@
       {% endif %}
 
       {% if business.email %}
-        <dt>Email</dt>
+        <dt>{% trans "Email" %}</dt>
         <dd>
           <a href="mailto:{{ business.email }}">
             {{ business.email }}
@@ -308,40 +320,41 @@
       {% endif %}
 
       {% if business.website_url %}
-        <dt>Website</dt>
+        <dt>{% trans "Website" %}</dt>
         <dd>
           <a
             href="{{ business.website_url }}"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Visit website
+            {% trans "Visit Website" %} 
           </a>
         </dd>
       {% endif %}
     </dl>
   {% else %}
-    <p>Contact information has not been added yet.</p>
+    <p>{% trans "Contact information has not been added yet." %}</p>
   {% endif %}
 </section>
 {% if not business.is_claimed %}
   <section class="business-claim">
-    <h2>Is this your business?</h2>
+    <h2>{% trans "Is this your business?" %}</h2>
 
     <p>
-      List your business on FANZ for free. Reach local customers,
-      publish updates, create events, and grow your community.
+     {% blocktrans %}
+     List your business on FANZ for free. Reach local customers, publish updates, create events, and grow your community.
+     {% endblocktrans %}
     </p>
 
     <a
       href="{% url 'businesses:create' %}?community={{ business.slug|urlencode }}"
       class="business-claim__button"
     >
-      🚀 List My Business on FANZ
+      🚀 {% trans "List My Business on FANZ" %}
     </a>
 
     <p class="business-claim__note">
-      Free forever.
+      {% trans "Free Forever." %}
     </p>
   </section>
 {% endif %}

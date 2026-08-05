@@ -16,6 +16,7 @@ def home(request):
     lang = request.GET.get("lang") or get_language_from_request(request)
 
     is_spanish = lang and lang.startswith("es")
+    is_portuguese = lang and lang.startswith("pt")
 
     if is_spanish:
         title_line = "Economía de Creadores ✦ Amigos IA ✦ Subastas de Centavos"
@@ -26,6 +27,20 @@ def home(request):
         signup = "Registrarse"
         login = "Iniciar sesión"
         html_lang = "es"
+
+    elif is_portuguese:
+        title_line = (
+            "Economia dos Criadores ✦ Amigos de IA ✦ "
+            "Leilões de Centavos"
+        )
+        create = "Criar."
+        connect = "Conectar."
+        monetize = "Monetizar!"
+        feed = "Explorar Feed"
+        signup = "Cadastrar-se"
+        login = "Entrar"
+        html_lang = "pt"
+
     else:
         title_line = "Creator Economy ✦ AI Friends ✦ Penny Auctions"
         create = "Create."
@@ -40,6 +55,8 @@ def home(request):
 <!DOCTYPE html>
 <html lang="{html_lang}">
 <head>
+<meta name="google" content="notranslate">
+<meta name="robots" content="notranslate">
   <title>Fanz.to</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon"
@@ -97,13 +114,26 @@ def home(request):
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 3'%3E%3Cpath fill='%23d52b1e' d='M0 0h5v1H0z'/%3E%3Cpath fill='%23fff' d='M0 1h5v1H0z'/%3E%3Cpath fill='%2300338e' d='M0 2h5v1H0z'/%3E%3C/svg%3E");
 }}
 
+.flag-br {{
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 504'%3E%3Crect width='720' height='504' fill='%23009c3b'/%3E%3Cpath d='M360 42 678 252 360 462 42 252Z' fill='%23ffdf00'/%3E%3Ccircle cx='360' cy='252' r='92' fill='%23002776'/%3E%3C/svg%3E");
+}}
+
 </style>
 </head>
 <body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#0f1020;color:white;">
   <div class="lang-pills">
-    <a href="/?lang=en" class="lang-pill"><span class="flag-svg flag-us"></span> EN</a>
-    <a href="/?lang=es" class="lang-pill"><span class="flag-svg flag-py"></span> ES</a>
-  </div>
+  <a href="/?lang=es" class="lang-pill">
+    <span class="flag-svg flag-py"></span> ES
+  </a>
+
+  <a href="/?lang=pt" class="lang-pill">
+    <span class="flag-svg flag-br"></span> PT
+  </a>
+
+  <a href="/?lang=en" class="lang-pill">
+    <span class="flag-svg flag-us"></span> EN
+  </a>
+</div>
 
   <div class="hero-logo">
       <span class="hero-emoji">🤩</span>
