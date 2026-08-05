@@ -11,9 +11,9 @@ class BusinessListing(models.Model):
     INDUSTRY_LAW_FIRM = "law_firm"
 
     INDUSTRY_CHOICES = [
-        (INDUSTRY_REAL_ESTATE, "Real Estate"),
-        (INDUSTRY_RESTAURANT, "Restaurant"),
-        (INDUSTRY_LAW_FIRM, "Law Firm"),
+        (INDUSTRY_REAL_ESTATE, _("Real Estate")),
+        (INDUSTRY_RESTAURANT, _("Restaurant")),
+        (INDUSTRY_LAW_FIRM, _("Law Firm")),
     ]
 
     name = models.CharField(max_length=255)

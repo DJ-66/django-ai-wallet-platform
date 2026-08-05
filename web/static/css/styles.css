@@ -65,6 +65,10 @@ h1 {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 3'%3E%3Cpath fill='%23d52b1e' d='M0 0h5v1H0z'/%3E%3Cpath fill='%23fff' d='M0 1h5v1H0z'/%3E%3Cpath fill='%2300338e' d='M0 2h5v1H0z'/%3E%3C/svg%3E");
 }
 
+.flag-br {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 504'%3E%3Crect width='720' height='504' fill='%23009c3b'/%3E%3Cpath d='M360 42 678 252 360 462 42 252Z' fill='%23ffdf00'/%3E%3Ccircle cx='360' cy='252' r='92' fill='%23002776'/%3E%3C/svg%3E");
+}
+
 
 .feed-compose-card {
     width: 100%;
@@ -6837,6 +6841,48 @@ body.feed-upload-guide-open {
     background: rgba(255, 255, 255, 0.94);
     box-shadow: 0 8px 24px rgba(25, 18, 58, 0.09);
     box-sizing: border-box;
+}
+
+.language-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.lang-btn--compact,
+.lang-current {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+}
+
+.lang-current {
+    background: #ffffff;
+    font-weight: 800;
+    box-shadow: 0 3px 10px rgba(31, 20, 60, 0.1);
+}
+
+.lang-btn--compact {
+    border: 1px solid rgba(91, 53, 255, 0.16);
+    background: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+}
+
+@media (max-width: 640px) {
+    .language-switcher {
+        gap: 0.2rem;
+    }
+
+    .lang-btn--compact,
+    .lang-current {
+        min-width: 1.8rem;
+        height: 1.8rem;
+        padding: 0.15rem 0.3rem;
+    }
 }
 
 /* end_css */

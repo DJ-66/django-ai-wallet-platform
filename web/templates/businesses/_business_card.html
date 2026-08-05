@@ -1,8 +1,11 @@
+{% load i18n %}
 <article class="business-profile-card">
     <a
         class="business-profile-card__image-link"
         href="{% url 'businesses:detail' business.slug %}"
-        aria-label="View {{ business.name }}"
+        {% blocktrans with name=business.name asvar view_business_label %}
+        View {{ name }}
+        {% endblocktrans %}
     >
         {% if business.hero_image %}
             <img
@@ -14,7 +17,7 @@
         {% else %}
             <div class="business-profile-card__image-placeholder">
                 <span aria-hidden="true">🏪</span>
-                <span>Business Profile</span>
+                <span>{% trans "Business Profile" %}</span>
             </div>
         {% endif %}
     </a>
@@ -27,11 +30,11 @@
 
             {% if business.is_claimed %}
                 <span class="business-profile-card__status">
-                    ✓ Claimed
+                    ✓ {% trans "Claimed" %}
                 </span>
             {% else %}
                 <span class="business-profile-card__status">
-                    Community Profile
+                    {% trans "Community Profile" %}
                 </span>
             {% endif %}
         </div>
@@ -67,15 +70,18 @@
         <div class="business-profile-card__footer">
             <span class="business-profile-card__fans">
                 <span aria-hidden="true">⭐</span>
-                {{ business.fans.count }}
-                fan{{ business.fans.count|pluralize }}
+                {% blocktrans count fan_count=business.fans.count %}
+                {{ fan_count }} fan
+                {% plural %}
+                {{ fan_count }} fans
+                {% endblocktrans %}
             </span>
 
             <a
                 class="business-profile-card__link"
                 href="{% url 'businesses:detail' business.slug %}"
             >
-                View Business Profile
+                {% trans "View Business Profile" %}
             </a>
         </div>
     </div>

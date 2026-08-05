@@ -4,13 +4,14 @@
 {% load auction_extras %}
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
-<meta name="google" content="notranslate">
 <head>
+<meta name="google" content="notranslate">
+<meta name="robots" content="notranslate">
   <title>Fanz.to</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=344">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=346">
   {% block extra_css %}{% endblock %}
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
@@ -21,10 +22,10 @@
 <header class="site-header">
 
   <nav>
-     <a href="{% url 'feed_home' %}" class="nav-link nav-icon-link"><span class="nav-emoji">🗨️🤔</span> Feed</a>
+     <a href="{% url 'feed_home' %}" class="nav-link nav-icon-link"><span class="nav-emoji">🗨️🤔</span> {% trans "Feed" %}</a>
      
-     <a href="/auctions/" class="nav-link nav-icon-link"><span class="nav-emoji">🎁</span> Penny Auctions</a>
-     <a href="/ai/" class="nav-link nav-icon-link"><span class="nav-emoji">🤖</span> AI</a>    
+     <a href="/auctions/" class="nav-link nav-icon-link"><span class="nav-emoji">🎁</span> {% trans "Auctions" %}</a>
+     <a href="/ai/" class="nav-link nav-icon-link"><span class="nav-emoji">🤖</span> {% trans "AI" %}</a>    
      {% if user.is_authenticated %}
     
     <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link nav-icon-link"><span class="nav-emoji">💰
@@ -50,21 +51,68 @@
      <span class="nav-emoji">🔔</span> {{ unread_notification_count }}
     </a>
 
-    <form action="{% url 'set_language' %}" method="post" class="language-switcher">
+{% get_current_language as CURRENT_LANGUAGE %}
+
+<form
+    action="{% url 'set_language' %}"
+    method="post"
+    class="language-switcher"
+>
     {% csrf_token %}
-    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+    <input
+        name="next"
+        type="hidden"
+        value="{{ request.get_full_path }}"
+    >
 
-    <button type="submit" name="language" value="en" class="lang-btn">
-        <span class="flag-svg flag-us"></span>
-        EN
-    </button>
+    {% if CURRENT_LANGUAGE == "es" %}
+        <span class="lang-current" aria-label="{% trans 'Spanish' %}">
+            ES
+        </span>
+    {% else %}
+        <button
+            type="submit"
+            name="language"
+            value="es"
+            class="lang-btn lang-btn--compact"
+            aria-label="{% trans 'Switch to Spanish' %}"
+        >
+            <span class="flag-svg flag-py"></span>
+        </button>
+    {% endif %}
 
-    <button type="submit" name="language" value="es" class="lang-btn">
-        <span class="flag-svg flag-py"></span>
-        ES
-    </button>
+    {% if CURRENT_LANGUAGE == "pt" %}
+        <span class="lang-current" aria-label="{% trans 'Portuguese' %}">
+            PT
+        </span>
+    {% else %}
+        <button
+            type="submit"
+            name="language"
+            value="pt"
+            class="lang-btn lang-btn--compact"
+            aria-label="{% trans 'Switch to Portuguese' %}"
+        >
+            <span class="flag-svg flag-br"></span>
+        </button>
+    {% endif %}
+
+    {% if CURRENT_LANGUAGE == "en" %}
+        <span class="lang-current" aria-label="{% trans 'English' %}">
+            EN
+        </span>
+    {% else %}
+        <button
+            type="submit"
+            name="language"
+            value="en"
+            class="lang-btn lang-btn--compact"
+            aria-label="{% trans 'Switch to English' %}"
+        >
+            <span class="flag-svg flag-us"></span>
+        </button>
+    {% endif %}
 </form>
-
 </nav>
 
 </header>
@@ -140,17 +188,17 @@
 <footer class="site-footer">
 {% if user.is_authenticated %}
   <a href="{% url 'public_profile_root' request.user.username %}" class="nav-link">
-    👤 Profile
+    👤 {% trans "Profile" %}
 </a>
 
 <a href="{% url 'event_list' %}" class="nav-link">
-    📅 Events
+    📅 {% trans "Events" %}
 </a> 
  {% else %}
 
 
     <a href="{% url 'signup' %}" class="nav-signup">
-    Sign up
+    {% trans "Sign up" %}
   </a>
 {% endif %}
   <div class="footer-left">
@@ -171,7 +219,7 @@
     {% else %}
 
       <a href="{% url 'account_login' %}" class="footer-login">
-        🔐 Login
+        🔐 {% trans "Login" %}
       </a>
 
     {% endif %}

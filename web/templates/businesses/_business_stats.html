@@ -1,22 +1,29 @@
-<div class="business-card-stats" aria-label="Business activity">
+{% load i18n %}
 
-  <div class="business-card-stat">
-    <strong>{{ fan_count }}</strong>
-    <span>⭐ Fans</span>
-  </div>
+{% blocktrans with name=business.name asvar business_events_label %}
+View events for {{ name }}
+{% endblocktrans %}
 
-  <a
-  href="{% url 'event_list' %}?business={{ business.slug|urlencode }}"
-  class="business-card-stat business-card-stat--link"
-  aria-label="View events for {{ business.name }}"
-  >
-  <strong>{{ event_count }}</strong>
-  <span>📅 Events</span>
-  </a>
+<div class="business-card-stats"
+     aria-label="{% trans 'Business activity' %}">
 
-  <div class="business-card-stat">
-    <strong>{{ update_count }}</strong>
-    <span>📢 Updates</span>
-  </div>
+    <div class="business-card-stat">
+        <strong>{{ fan_count }}</strong>
+        <span>⭐ {% trans "Fanz" %}</span>
+    </div>
+
+    <a
+        href="{% url 'event_list' %}?business={{ business.slug|urlencode }}"
+        class="business-card-stat business-card-stat--link"
+        aria-label="{{ business_events_label }}"
+    >
+        <strong>{{ event_count }}</strong>
+        <span>📅 {% trans "Events" %}</span>
+    </a>
+
+    <div class="business-card-stat">
+        <strong>{{ update_count }}</strong>
+        <span>📢 {% trans "Updates" %}</span>
+    </div>
 
 </div>
