@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-05 03:25+0000\n"
+"POT-Creation-Date: 2026-08-06 21:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr "Título do evento..."
 
 #: auctions/forms.py:55
 msgid "Describe the event..."
-msgstr ""
+msgstr "Descreva o evento..."
 
 #: auctions/forms.py:70
 msgid "Event location..."
@@ -31,27 +31,27 @@ msgstr "Local do evento..."
 
 #: auctions/forms.py:107
 msgid "End time cannot be earlier than start time."
-msgstr ""
+msgstr "O horário de término não pode ser anterior ao horário de início."
 
 #: auctions/forms.py:154 templates/auctions/feed_home.html:213
 msgid "Images"
-msgstr ""
+msgstr "Imagens"
 
 #: auctions/forms.py:155 templates/auctions/feed_home.html:225
 msgid "Videos"
-msgstr ""
+msgstr "Vídeos"
 
 #: auctions/forms.py:156 templates/auctions/feed_home.html:237
 msgid "Audio"
-msgstr ""
+msgstr "Áudio"
 
 #: auctions/forms.py:157
 msgid "PDF (Max 1)"
-msgstr ""
+msgstr "PDF (Máx. 1)"
 
 #: auctions/forms.py:169
 msgid "Media type"
-msgstr ""
+msgstr "Tipo de mídia"
 
 #: auctions/forms.py:198
 msgid "Post title..."
@@ -59,35 +59,35 @@ msgstr "Título da postagem..."
 
 #: auctions/forms.py:204
 msgid "What's happening?"
-msgstr ""
+msgstr "O que está acontecendo?"
 
 #: auctions/forms.py:459
 msgid "Display name"
-msgstr ""
+msgstr "Nome de exibição"
 
 #: auctions/forms.py:460
 msgid "Bio"
-msgstr ""
+msgstr "Biografia"
 
 #: auctions/forms.py:461
 msgid "Avatar"
-msgstr ""
+msgstr "Avatar"
 
 #: auctions/forms.py:462
 msgid "Banner"
-msgstr ""
+msgstr "Bandeira"
 
 #: auctions/forms.py:463
 msgid "Payment QR Code"
-msgstr ""
+msgstr "Código QR de pagamento"
 
 #: auctions/forms.py:464
 msgid "Payment instructions"
-msgstr ""
+msgstr "Instruções de pagamento"
 
 #: auctions/forms.py:465 businesses/admin.py:69
 msgid "Location"
-msgstr ""
+msgstr "Localização"
 
 #: auctions/forms.py:466 templates/businesses/business_detail.html:142
 #: templates/businesses/business_detail.html:323
@@ -96,93 +96,93 @@ msgstr "Site"
 
 #: auctions/forms.py:475
 msgid "Featured link 1 label"
-msgstr ""
+msgstr "Rótulo do link em destaque 1"
 
 #: auctions/forms.py:476
 msgid "Featured link 1 URL"
-msgstr ""
+msgstr "URL do link em destaque 1"
 
 #: auctions/forms.py:477
 msgid "Featured link 2 label"
-msgstr ""
+msgstr "Rótulo do link em destaque 2"
 
 #: auctions/forms.py:478
 msgid "Featured link 2 URL"
-msgstr ""
+msgstr "URL do link em destaque 2"
 
 #: auctions/forms.py:479
 msgid "Featured link 3 label"
-msgstr ""
+msgstr "Rótulo do link em destaque 3"
 
 #: auctions/forms.py:480
 msgid "Featured link 3 URL"
-msgstr ""
+msgstr "URL do link em destaque 3"
 
 #: auctions/forms.py:516
 msgid "QR image file is too large. Maximum size is 10 MB."
-msgstr ""
+msgstr "O arquivo de imagem QR é muito grande. O tamanho máximo é de 10 MB."
 
 #: auctions/forms.py:527
 msgid "Upload a valid QR image file."
-msgstr ""
+msgstr "Envie um arquivo de imagem QR válido."
 
 #: auctions/forms.py:532
 msgid "Supported QR image formats are JPG, PNG, and WebP."
-msgstr ""
+msgstr "Os formatos de imagem QR suportados são JPG, PNG e WebP."
 
 #: auctions/forms.py:545
 msgid "Write a message..."
-msgstr ""
+msgstr "Escreva uma mensagem..."
 
 #: auctions/templates/auctions/conversation_detail.html:10
 msgid "Conversation with"
-msgstr ""
+msgstr "Conversa com"
 
 #: auctions/templates/auctions/conversation_detail.html:33
 msgid "(Read)"
-msgstr ""
+msgstr "(Ler)"
 
 #: auctions/templates/auctions/conversation_detail.html:35
 msgid "(Sent)"
-msgstr ""
+msgstr "(Enviado)"
 
 #: auctions/templates/auctions/conversation_detail.html:41
 #: auctions/templates/auctions/inbox.html:39
 msgid "No messages yet."
-msgstr ""
+msgstr "Nenhuma mensagem ainda."
 
 #: auctions/templates/auctions/conversation_detail.html:55
 msgid "Send"
-msgstr ""
+msgstr "Enviar"
 
 #: auctions/templates/auctions/conversation_detail.html:64
 #: auctions/templates/auctions/inbox.html:53
 msgid "Remove this conversation from your inbox?"
-msgstr ""
+msgstr "Remover esta conversa da sua caixa de entrada?"
 
 #: auctions/templates/auctions/conversation_detail.html:67
 msgid "Delete Conversation"
-msgstr ""
+msgstr "Excluir conversa"
 
 #: auctions/templates/auctions/conversation_detail.html:72
 msgid "Back to Inbox"
-msgstr ""
+msgstr "Voltar para a caixa de entrada"
 
 #: auctions/templates/auctions/inbox.html:6
 msgid "Inbox"
-msgstr ""
+msgstr "Caixa de entrada"
 
 #: auctions/templates/auctions/inbox.html:27
 msgid "You're a Winner! — Download link inside."
-msgstr ""
+msgstr "Você é um vencedor! — Link para download aqui dentro."
 
 #: auctions/templates/auctions/inbox.html:34
 msgid "messages"
-msgstr ""
+msgstr "mensagens"
 
 #: auctions/templates/auctions/inbox.html:45
 msgid "Open"
-msgstr ""
+msgstr "Abrir"
 
 #: auctions/templates/auctions/inbox.html:64
 msgid "No conversations yet."
@@ -194,15 +194,93 @@ msgstr "Contato"
 
 #: businesses/admin.py:89
 msgid "Ownership and status"
-msgstr ""
+msgstr "Propriedade e status"
 
 #: businesses/admin.py:99
 msgid "Import provenance"
-msgstr ""
+msgstr "Procedência da importação"
 
 #: businesses/admin.py:111
 msgid "Dates"
+msgstr "Datas"
+
+#: businesses/forms.py:44
+msgid "I accept the FANZ Terms of Service"
+msgstr "Aceito os Termos de Serviço da FANZ."
+
+#: businesses/forms.py:47
+msgid ""
+"You must accept the FANZ Terms of Service before creating your business."
 msgstr ""
+"Você deve aceitar os Termos de Serviço da FANZ antes de criar sua empresa."
+
+#: businesses/forms.py:74
+msgid "Name"
+msgstr "Nome"
+
+#: businesses/forms.py:75
+msgid "Industry"
+msgstr "Categoria"
+
+#: businesses/forms.py:76
+msgid "Description"
+msgstr "Descrição"
+
+#: businesses/forms.py:77
+msgid "Business cover image"
+msgstr "Imagem de capa da empresa"
+
+#: businesses/forms.py:78 businesses/forms.py:109
+msgid "City"
+msgstr "Cidade"
+
+#: businesses/forms.py:79 businesses/forms.py:115
+msgid "Country"
+msgstr "País"
+
+#: businesses/forms.py:80
+msgid "Website URL"
+msgstr "URL do site"
+
+#: businesses/forms.py:81 templates/businesses/business_detail.html:305
+msgid "Phone"
+msgstr "Telefone"
+
+#: businesses/forms.py:82 templates/businesses/business_detail.html:314
+msgid "Email"
+msgstr "E-mail"
+
+#: businesses/forms.py:88
+msgid "Business name"
+msgstr "Nome da empresa"
+
+#: businesses/forms.py:96
+msgid "Tell people about your business, services, and what makes it special."
+msgstr ""
+"Conte às pessoas sobre sua empresa, seus serviços e o que a torna especial."
+
+#: businesses/forms.py:127
+msgid "Business phone"
+msgstr "Telefone da empresa"
+
+#: businesses/forms.py:133
+msgid "Business email"
+msgstr "E-mail da empres"
+
+#: businesses/forms.py:174 templates/businesses/business_update_form.html:38
+msgid "Update title"
+msgstr "Atualizar título"
+
+#: businesses/forms.py:181
+msgid ""
+"Share news, specials, announcements, or anything happening at your business."
+msgstr ""
+"Compartilhe novidades, ofertas especiais, comunicados ou qualquer coisa que "
+"esteja acontecendo na sua empresa."
+
+#: businesses/forms.py:281
+msgid "You may upload a maximum of 8 images at once."
+msgstr "Você pode enviar no máximo 8 imagens de uma só vez."
 
 #: businesses/models.py:14
 msgid "Real Estate"
@@ -220,80 +298,83 @@ msgstr "Escritório de advocacia"
 msgid "Business hero image"
 msgstr "Empresa em Destaque"
 
-#: businesses/models.py:39
+#: businesses/models.py:38
 msgid "Upload a wide image that represents your business."
 msgstr ""
+"Faça o upload de uma imagem em formato largo que represente a sua empresa."
 
 #: core/image_utils.py:155
 msgid "Image file is too large. Maximum size is 40 MB."
-msgstr ""
+msgstr "O arquivo de imagem é muito grande. O tamanho máximo é de 40 MB."
 
 #: core/image_utils.py:169
 msgid "Upload a valid image file."
-msgstr ""
+msgstr "Envie um arquivo de imagem válido."
 
 #: core/image_utils.py:174
 msgid "Supported image formats are JPG, PNG, WebP, and AVIF."
-msgstr ""
+msgstr "Os formatos de imagem suportados são JPG, PNG, WebP e AVIF."
 
 #: templates/404.html:7
 msgid "Page not found"
-msgstr ""
+msgstr "Página não encontrada"
 
 #: templates/404.html:10
 msgid ""
 "The page you are looking for does not exist, may have moved, or the link may "
 "be incorrect."
 msgstr ""
+"A página que você procura não existe, pode ter sido movida ou o link pode "
+"estar incorreto."
 
 #: templates/404.html:14
 msgid "Go to Feed"
-msgstr ""
+msgstr "Ir para o feed"
 
 #: templates/404.html:20
 msgid "Back Home"
-msgstr ""
+msgstr "De volta para casa"
 
 #: templates/account/password_reset_from_key.html:10
 msgid "Set New Password"
-msgstr ""
+msgstr "Definir nova senha"
 
 #: templates/account/password_reset_from_key.html:13
 msgid "Choose a new password for your account."
-msgstr ""
+msgstr "Escolha uma nova senha para sua conta."
 
 #: templates/account/password_reset_from_key.html:18
 msgid "This password reset link is invalid or has already been used."
-msgstr ""
+msgstr "Este link de redefinição de senha é inválido ou já foi utilizado."
 
 #: templates/account/password_reset_from_key.html:22
 msgid "Request New Link"
-msgstr ""
+msgstr "Solicitar novo link"
 
 #: templates/account/password_reset_from_key.html:30
 msgid "Update Password"
-msgstr ""
+msgstr "Atualizar senha"
 
 #: templates/account/password_reset_from_key_done.html:10
 msgid "Password Updated"
-msgstr ""
+msgstr "Senha atualizada"
 
 #: templates/account/password_reset_from_key_done.html:13
 msgid "Your password has been changed successfully."
-msgstr ""
+msgstr "Sua senha foi alterada com sucesso."
 
 #: templates/account/password_reset_from_key_done.html:17
 msgid "Sign In"
-msgstr ""
+msgstr "Entrar"
 
 #: templates/auction_detail.html:11
 msgid "Status"
-msgstr ""
+msgstr "estado"
 
 #: templates/auction_detail.html:12
 #: templates/auctions/includes/_auction_card.html:48
 msgid "Current Bid"
-msgstr ""
+msgstr "Lance atual"
 
 #: templates/auction_detail.html:12 templates/auction_detail.html:38
 #: templates/auction_detail.html:209
@@ -302,12 +383,12 @@ msgstr ""
 #: templates/auctions/public_profile.html:369
 #: templates/auctions/public_profile.html:489
 msgid "credits"
-msgstr ""
+msgstr "créditos"
 
 #: templates/auction_detail.html:13
 #: templates/auctions/includes/_auction_card.html:58
 msgid "Ends In"
-msgstr ""
+msgstr "Termina em"
 
 #: templates/auction_detail.html:30
 msgid "Bid Now!"
@@ -315,66 +396,67 @@ msgstr ""
 
 #: templates/auction_detail.html:38
 msgid "Buy Now!"
-msgstr ""
+msgstr "Dê seu lance agora!"
 
 #: templates/auction_detail.html:45
 #: templates/auctions/includes/_auction_card.html:101
 msgid "High Bidder"
-msgstr ""
+msgstr "Licitante com o lance mais alto"
 
 #: templates/auction_detail.html:57
 #: templates/auctions/includes/_auction_card.html:91
 msgid "Watching"
-msgstr ""
+msgstr "Assistindo"
 
 #: templates/auction_detail.html:59
 #: templates/auctions/includes/_auction_card.html:93
 msgid "Watch"
-msgstr ""
+msgstr "Assistir"
 
 #: templates/auction_detail.html:107
 msgid "No image"
-msgstr ""
+msgstr "Sem imagem"
 
 #: templates/auction_detail.html:129
 msgid "Auction image"
-msgstr ""
+msgstr "Imagem do leilão"
 
 #: templates/auction_detail.html:137
 msgid "Image 2"
-msgstr ""
+msgstr "Imagem 2"
 
 #: templates/auction_detail.html:149 templates/auction_detail.html:169
 msgid "Play auction video"
-msgstr ""
+msgstr "Reproduzir vídeo do leilão"
 
 #: templates/auction_detail.html:160 templates/auction_detail.html:180
 msgid "Video"
-msgstr ""
+msgstr "Vídeo"
 
 #: templates/auction_detail.html:204
 msgid "Buy Now"
-msgstr ""
+msgstr "Comprar agora"
 
 #: templates/auction_detail.html:207
 msgid "Buy"
-msgstr ""
+msgstr "Comprar"
 
 #: templates/auction_detail.html:208
 msgid "now for"
-msgstr ""
+msgstr "agora, quanto a"
 
 #: templates/auction_detail.html:224
 msgid "Approve"
-msgstr ""
+msgstr "Aprovar"
 
 #: templates/auction_detail.html:232
+#: templates/businesses/business_update_form.html:130
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
 #: templates/auction_detail.html:331
 msgid "Your browser does not support the video tag."
-msgstr ""
+msgstr "Seu navegador não suporta a tag de vídeo."
 
 #: templates/auction_detail.html:353 templates/auction_list.html:44
 msgid "D"
@@ -394,7 +476,7 @@ msgstr ""
 
 #: templates/auction_detail.html:372
 msgid "Auction Ended"
-msgstr ""
+msgstr "Leilão Encerrado"
 
 #: templates/auction_list.html:7
 msgid "Live Auctions"
@@ -403,52 +485,54 @@ msgstr "Leilões ao Vivo"
 #: templates/auction_list.html:8
 msgid "Bid with credits. Auctions ending soon extend 15s with new bid"
 msgstr ""
+"Dê lances com créditos. Leilões prestes a encerrar são prorrogados em 15 "
+"segundos a cada novo lance."
 
 #: templates/auction_list.html:24
 msgid "No live auctions right now"
-msgstr ""
+msgstr "Não há leilões ao vivo no momento."
 
 #: templates/auction_list.html:25
 msgid "Check back soon for new auctions."
-msgstr ""
+msgstr "Volte em breve para conferir novos leilões."
 
 #: templates/auction_list.html:65
 #: templates/auctions/includes/_auction_card.html:32
 #: templates/auctions/includes/_auction_card_scripts.html:77
 msgid "Ending NOW"
-msgstr ""
+msgstr "Terminando AGORA"
 
 #: templates/auction_list.html:68
 #: templates/auctions/includes/_auction_card.html:36
 #: templates/auctions/includes/_auction_card_scripts.html:81
 msgid "Ending Soon"
-msgstr ""
+msgstr "Termina em breve"
 
 #: templates/auction_list.html:71
 #: templates/auctions/includes/_auction_card.html:40
 #: templates/auctions/includes/_auction_card_scripts.html:85
 msgid "Live"
-msgstr ""
+msgstr "Ao vivo"
 
 #: templates/auction_list.html:77 templates/auction_list.html:84
 #: templates/auctions/includes/_auction_card_scripts.html:58
 #: templates/auctions/includes/_auction_card_scripts.html:65
 msgid "Ended"
-msgstr ""
+msgstr "Encerrada"
 
 #: templates/auctions/ai/companion_list.html:9
 msgid "AI Friends"
-msgstr ""
+msgstr "Amigos de IA"
 
 #: templates/auctions/ai/companion_list.html:39
 msgid "Deluxe Creator"
-msgstr ""
+msgstr "Criador Deluxe"
 
 #: templates/auctions/ai/companion_list.html:41
 #: templates/auctions/includes/_creator_card.html:41
 #: templates/auctions/public_profile.html:53
 msgid "AI Influencer"
-msgstr ""
+msgstr "Influenciador de IA"
 
 #: templates/auctions/ai/companion_list.html:48
 msgid "Visit Profile"
@@ -462,28 +546,29 @@ msgstr[1] ""
 
 #: templates/auctions/ai/companion_list.html:66
 msgid "No AI creators available yet."
-msgstr ""
+msgstr "Ainda não há criadores de IA disponíveis."
 
 #: templates/auctions/edit_profile.html:11
 #: templates/auctions/public_profile.html:292
 msgid "Edit Profile"
-msgstr ""
+msgstr "Editar perfil"
 
 #: templates/auctions/edit_profile.html:21
 msgid "Notification Sounds"
-msgstr ""
+msgstr "Sons de notificação"
 
 #: templates/auctions/edit_profile.html:39
 msgid "I accept"
-msgstr ""
+msgstr "aceito"
 
 #: templates/auctions/edit_profile.html:41 templates/auctions/terms.html:7
+#: templates/businesses/business_form.html:64
 msgid "Terms of Service"
-msgstr ""
+msgstr "Termos de Serviço"
 
 #: templates/auctions/edit_profile.html:47
 msgid "Save Profile"
-msgstr ""
+msgstr "Salvar perfil"
 
 #: templates/auctions/feed_home.html:12
 msgid "Community Feed"
@@ -491,31 +576,31 @@ msgstr "Feed da Comunidade"
 
 #: templates/auctions/feed_home.html:29
 msgid "Your post could not be published."
-msgstr ""
+msgstr "Sua publicação não pôde ser publicada."
 
 #: templates/auctions/feed_home.html:35
 msgid "See FANZ Upload Guide for best results"
-msgstr ""
+msgstr "Consulte o Guia de Upload do FANZ para obter os melhores resultados."
 
 #: templates/auctions/feed_home.html:45
 msgid "Fanz Upload Guide"
-msgstr ""
+msgstr "Guia de Upload do Fanz"
 
 #: templates/auctions/feed_home.html:65
 msgid "Media Type"
-msgstr ""
+msgstr "Tipo de mídia"
 
 #: templates/auctions/feed_home.html:69
 msgid "FANZ Smart Upload"
-msgstr ""
+msgstr "Upload Inteligente FANZ"
 
 #: templates/auctions/feed_home.html:80
 msgid "Upload Guide"
-msgstr ""
+msgstr "Guia de Upload"
 
 #: templates/auctions/feed_home.html:100
 msgid "Choose Images"
-msgstr ""
+msgstr "Escolher imagem"
 
 #: templates/auctions/feed_home.html:110
 msgid "No files selected"
@@ -523,97 +608,110 @@ msgstr "Nenhum arquivo selecionado"
 
 #: templates/auctions/feed_home.html:122
 msgid "Public Post"
-msgstr ""
+msgstr "Postagem pública"
 
 #: templates/auctions/feed_home.html:123
 msgid "Visible to the FANZ community"
-msgstr ""
+msgstr "Visível para a comunidade FANZ"
 
 #: templates/auctions/feed_home.html:135
 msgid "Paid / Locked Post"
-msgstr ""
+msgstr "Postagem paga / bloqueada"
 
 #: templates/auctions/feed_home.html:136
 msgid "Require credits to unlock"
-msgstr ""
+msgstr "Requer créditos para desbloquear"
 
 #: templates/auctions/feed_home.html:147
 msgid "Unlock Price"
-msgstr ""
+msgstr "Desbloquear preço"
 
 #: templates/auctions/feed_home.html:154
 msgid "Credits"
-msgstr ""
+msgstr "Créditos"
 
 #: templates/auctions/feed_home.html:166
 msgid "Publish Post"
-msgstr ""
+msgstr "Publicar postagem"
 
 #: templates/auctions/feed_home.html:189
 msgid "Close upload guide"
-msgstr ""
+msgstr "Fechar guia de upload"
 
 #: templates/auctions/feed_home.html:199
 msgid "FANZ Upload Guide"
-msgstr ""
+msgstr "Guia de Upload do FANZ"
 
 #: templates/auctions/feed_home.html:203
 msgid ""
 "FANZ Smart Upload helps you publish faster by choosing sensible Premium "
 "settings based on the media you select."
 msgstr ""
+"O FANZ Smart Upload ajuda você a publicar mais rápido ao escolher opções "
+"Premium adequadas.configurações com base na mídia que você selecionar."
 
 #: templates/auctions/feed_home.html:216
 msgid ""
 "Selecting 4–8 images automatically enables Premium and suggests a minimum "
 "unlock price of 250 credits."
 msgstr ""
+"Selecionar de 4 a 8 imagens ativa automaticamente o Premium e sugere um "
+"mínimo.Preço de desbloqueio de 250 créditos."
 
 #: templates/auctions/feed_home.html:228
 msgid ""
 "Video automatically enables Premium and suggests at least 1 credit. "
 "Selecting 2–8 videos suggests 250 credits."
 msgstr ""
+"O vídeo ativa automaticamente o Premium e sugere pelo menos 1 "
+"crédito.Selecionar de 2 a 8 vídeos sugere 250 créditos."
 
 #: templates/auctions/feed_home.html:240
 msgid ""
 "Audio file automatically enables Premium and suggests at least 1 credit. "
 "Selecting 2–8 audio files suggests 250 credits."
 msgstr ""
+"O arquivo de áudio ativa automaticamente o Premium e sugere pelo menos 1 "
+"crédito.Selecionar de 2 a 8 arquivos de áudio indica 250 créditos."
 
 #: templates/auctions/feed_home.html:249
 msgid "PDFs"
-msgstr ""
+msgstr "PDFs"
 
 #: templates/auctions/feed_home.html:252
 msgid ""
 "PDF automatically enables Premium and suggests at least 1 credit. - (Max: 1 "
 "PDF per post)"
 msgstr ""
+"O PDF ativa automaticamente o Premium e sugere pelo menos 1 crédito. – "
+"(Máx.: 1 PDF por postagem)"
 
 #: templates/auctions/feed_home.html:260
 msgid "You remain in control"
-msgstr ""
+msgstr "Você mantém o controle."
 
 #: templates/auctions/feed_home.html:264
 msgid ""
 "FANZ never lowers an unlock price you have already entered. You may always "
 "increase the price."
 msgstr ""
+"O FANZ nunca reduz um preço de desbloqueio que você já tenha definido. Você "
+"pode sempre aumentar o preço."
 
 #: templates/auctions/feed_home.html:273
 msgid "Got It"
-msgstr ""
+msgstr "Entendi"
 
 #: templates/auctions/feed_home.html:293
 msgid "No community activity yet."
-msgstr ""
+msgstr "Ainda não há atividade na comunidade."
 
 #: templates/auctions/includes/_auction_card.html:74
 msgid "View Auction Details"
-msgstr ""
+msgstr "Ver detalhes do leilão"
 
 #: templates/auctions/includes/_business_update.html:20
+#: templates/businesses/business_update_form.html:10
 msgid "Business Update"
 msgstr "Atualização sobre os negócios"
 
@@ -621,44 +719,45 @@ msgstr "Atualização sobre os negócios"
 #: templates/auctions/includes/_event.html:30
 #: templates/auctions/includes/_feed_post.html:25
 msgid "ago"
-msgstr ""
+msgstr "atrás"
 
 #: templates/auctions/includes/_business_update.html:46
+#: templates/businesses/my_businesses.html:79
 msgid "View Business"
-msgstr ""
+msgstr "Ver empresa"
 
 #: templates/auctions/includes/_creator_card.html:29
 msgid "Official creator"
-msgstr ""
+msgstr "Criador oficial"
 
 #: templates/auctions/includes/_creator_card.html:31
 msgid "Verified creator"
-msgstr ""
+msgstr "Criador verificado"
 
 #: templates/auctions/includes/_creator_card.html:56
 #: templates/businesses/_business_stats.html:12
 msgid "Fanz"
-msgstr ""
+msgstr "Fanz"
 
 #: templates/auctions/includes/_creator_card.html:69
 msgid "Connect with"
-msgstr ""
+msgstr "Conecte-se com"
 
 #: templates/auctions/includes/_event.html:29
 msgid "Event"
-msgstr ""
+msgstr "Evento"
 
 #: templates/auctions/includes/_event.html:73
 msgid "View Event"
-msgstr ""
+msgstr "Ver evento"
 
 #: templates/auctions/includes/_feed_post.html:24
 msgid "Created by"
-msgstr ""
+msgstr "Criado por"
 
 #: templates/auctions/includes/_feed_post.html:30
 msgid "Private"
-msgstr ""
+msgstr "Privada"
 
 #: templates/auctions/includes/_feed_post.html:77
 #: templates/auctions/includes/_feed_post.html:93
@@ -666,25 +765,25 @@ msgstr ""
 #: templates/auctions/public_profile.html:356
 #: templates/auctions/public_profile.html:476
 msgid "Premium Content"
-msgstr ""
+msgstr "Conteúdo Premium"
 
 #: templates/auctions/includes/_feed_post.html:101
 #: templates/auctions/public_profile.html:363
 #: templates/auctions/public_profile.html:483
 msgid "Premium content locked"
-msgstr ""
+msgstr "Conteúdo premium bloqueado"
 
 #: templates/auctions/includes/_feed_post.html:105
 #: templates/auctions/public_profile.html:367
 #: templates/auctions/public_profile.html:487
 msgid "Unlock media for"
-msgstr ""
+msgstr "Desbloquear mídia para"
 
 #: templates/auctions/includes/_feed_post.html:123
 #: templates/auctions/public_profile.html:381
 #: templates/auctions/public_profile.html:500
 msgid "Unlock Post"
-msgstr ""
+msgstr "Desbloquear postagem"
 
 #: templates/auctions/includes/_feed_post.html:177
 #: templates/auctions/includes/_feed_post.html:186
@@ -693,64 +792,64 @@ msgstr ""
 #: templates/auctions/public_profile.html:538
 #: templates/auctions/public_profile.html:547
 msgid "Tip"
-msgstr ""
+msgstr "Dica"
 
 #: templates/auctions/includes/_feed_post.html:208
 #: templates/auctions/public_profile.html:560
 msgid "Share"
-msgstr ""
+msgstr "Compartilhar"
 
 #: templates/auctions/includes/_feed_post.html:254
 #: templates/auctions/public_profile.html:606
 msgid "Reply..."
-msgstr ""
+msgstr "Responder..."
 
 #: templates/auctions/includes/_feed_post.html:274
 #: templates/auctions/public_profile.html:626
 msgid "Write a comment..."
-msgstr ""
+msgstr "Escreva um comentário..."
 
 #: templates/auctions/includes/_feed_post.html:275
 #: templates/auctions/public_profile.html:627
 msgid "Comment"
-msgstr ""
+msgstr "Comentário"
 
 #: templates/auctions/includes/_feed_post_scripts.html:83
 msgid "Tip failed."
-msgstr ""
+msgstr "A dica falhou."
 
 #: templates/auctions/includes/_feed_post_scripts.html:89
 msgid "Tipped"
-msgstr ""
+msgstr "Gorjeta dada"
 
 #: templates/auctions/includes/_feed_post_scripts.html:134
 msgid "Comment failed."
-msgstr ""
+msgstr "Falha ao enviar o comentário."
 
 #: templates/auctions/includes/_feed_post_scripts.html:173
 #: templates/auctions/public_profile.html:656
 msgid "Copied"
-msgstr ""
+msgstr "Copiada"
 
 #: templates/auctions/includes/_post_media.html:36
 msgid "View Video"
-msgstr ""
+msgstr "Ver vídeo"
 
 #: templates/auctions/includes/_post_media.html:50
 msgid "Play Audio"
-msgstr ""
+msgstr "Reproduzir áudio"
 
 #: templates/auctions/includes/_post_media.html:61
 msgid "Open PDF"
-msgstr ""
+msgstr "Abrir PDF"
 
 #: templates/auctions/includes/_post_media.html:70
 msgid "items"
-msgstr ""
+msgstr "Unid"
 
 #: templates/auctions/notifications.html:8
 msgid "Back"
-msgstr ""
+msgstr "Voltar"
 
 #: templates/auctions/notifications.html:12
 msgid "Notifications"
@@ -758,19 +857,19 @@ msgstr "Notificações"
 
 #: templates/auctions/notifications.html:42
 msgid "No notifications yet."
-msgstr ""
+msgstr "Nenhuma notificação ainda."
 
 #: templates/auctions/public_profile.html:79
 msgid "Tips"
-msgstr ""
+msgstr "Pontas"
 
 #: templates/auctions/public_profile.html:84
 msgid "Unlocks"
-msgstr ""
+msgstr "Desbloqueia"
 
 #: templates/auctions/public_profile.html:91
 msgid "Total"
-msgstr ""
+msgstr "Total"
 
 #: templates/auctions/public_profile.html:132
 #: templates/businesses/business_detail.html:157
@@ -785,20 +884,20 @@ msgstr "Tornar-se Fã"
 #: templates/auctions/public_profile.html:142
 #: templates/businesses/business_detail.html:132
 msgid "Message"
-msgstr ""
+msgstr "Mensagem"
 
 #: templates/auctions/public_profile.html:149 templates/wallet/pay.html:11
 #: templates/wallet/pay.html:47
 msgid "Send Credits"
-msgstr ""
+msgstr "Enviar créditos"
 
 #: templates/auctions/public_profile.html:227
 msgid "Credit Seller"
-msgstr ""
+msgstr "Vendedor de Crédito"
 
 #: templates/auctions/public_profile.html:229
 msgid "Buy Credits From Creator"
-msgstr ""
+msgstr "Comprar créditos do criador"
 
 #: templates/auctions/public_profile.html:232
 msgid ""
@@ -811,7 +910,7 @@ msgstr ""
 
 #: templates/auctions/public_profile.html:240
 msgid "View Payment QR"
-msgstr ""
+msgstr "Ver QR de pagamento"
 
 #: templates/auctions/public_profile.html:245
 msgid "Seller"
@@ -819,28 +918,28 @@ msgstr "Vendedora"
 
 #: templates/auctions/public_profile.html:266
 msgid "DM Seller"
-msgstr ""
+msgstr "Vendedor via DM"
 
 #: templates/auctions/public_profile.html:287
 msgid "Share Profile"
-msgstr ""
+msgstr "Compartilhar perfil"
 
 #: templates/auctions/public_profile.html:305
 msgid "Featured Post"
-msgstr ""
+msgstr "Postagem em destaque"
 
 #: templates/auctions/public_profile.html:398
 msgid "Unpin"
-msgstr ""
+msgstr "Dunpinelete"
 
 #: templates/auctions/public_profile.html:409
 #: templates/auctions/public_profile.html:443
 msgid "Delete"
-msgstr ""
+msgstr "Excluir"
 
 #: templates/auctions/public_profile.html:432
 msgid "Pin"
-msgstr ""
+msgstr "Alfinete"
 
 #: templates/auctions/public_profile.html:636
 msgid "No public posts yet."
@@ -848,37 +947,41 @@ msgstr "Ainda não há publicações públicas."
 
 #: templates/auctions/wallet.html:7
 msgid "My Wallet"
-msgstr ""
+msgstr "Minha carteira"
 
 #: templates/auctions/wallet.html:9
 msgid "Credits:"
-msgstr ""
+msgstr "Créditos:"
 
 #: templates/auctions/wallet.html:14
 msgid "Invite friends"
-msgstr ""
+msgstr "Convide amigos"
 
 #: templates/auctions/wallet.html:15
 msgid ""
 "Earn +50 credits when someone signs up with your link and activates their "
 "account."
 msgstr ""
+"Ganhe 50 créditos extras quando alguém se cadastrar pelo seu link e ativar a "
+"conta."
 
 #: templates/auctions/wallet.html:29 templates/auctions/wallet.html:52
 msgid "Copy"
-msgstr ""
+msgstr "Cópia"
 
 #: templates/auctions/wallet.html:37
 msgid "Receive Credits"
-msgstr ""
+msgstr "Receber créditos"
 
 #: templates/auctions/wallet.html:38
 msgid "Share this wallet link so other activated users can send you credits."
 msgstr ""
+"Compartilhe este link da carteira para que outros usuários ativos possam lhe "
+"enviar créditos."
 
 #: templates/auctions/wallet.html:60
 msgid "Recent Activity"
-msgstr ""
+msgstr "Atividade recente"
 
 #: templates/base.html:25
 msgid "Feed"
@@ -894,43 +997,43 @@ msgstr "IA"
 
 #: templates/base.html:69
 msgid "Spanish"
-msgstr ""
+msgstr "Espanhola"
 
 #: templates/base.html:78
 msgid "Switch to Spanish"
-msgstr ""
+msgstr "Mudar para espanhol"
 
 #: templates/base.html:85
 msgid "Portuguese"
-msgstr ""
+msgstr "Português"
 
 #: templates/base.html:94
 msgid "Switch to Portuguese"
-msgstr ""
+msgstr "Mudar para português"
 
 #: templates/base.html:101
 msgid "English"
-msgstr ""
+msgstr "Inglês"
 
 #: templates/base.html:110
 msgid "Switch to English"
-msgstr ""
+msgstr "Mudar para inglês"
 
 #: templates/base.html:123
 msgid "Show QR code for this page"
-msgstr ""
+msgstr "Mostrar código QR desta página"
 
 #: templates/base.html:150
 msgid "Close"
-msgstr ""
+msgstr "Fechar"
 
 #: templates/base.html:156
 msgid "Scan this page"
-msgstr ""
+msgstr "Digitalize esta página"
 
 #: templates/base.html:162
 msgid "QR code for this page"
-msgstr ""
+msgstr "Código QR para esta página"
 
 #: templates/base.html:191
 msgid "Profile"
@@ -943,6 +1046,10 @@ msgstr "Eventos"
 #: templates/base.html:201
 msgid "Sign up"
 msgstr "Inscrever-se"
+
+#: templates/base.html:222
+msgid "Login"
+msgstr "Conecte-se"
 
 #: templates/businesses/_business_card.html:6
 #, python-format
@@ -996,6 +1103,40 @@ msgstr "Atividade empresarial"
 #: templates/businesses/_business_stats.html:26
 msgid "Updates"
 msgstr "Atualizações"
+
+#: templates/businesses/_business_update_card.html:27
+msgid "Delete this update? This cannot be undone."
+msgstr "Excluir esta atualização? Isso não pode ser desfeito."
+
+#: templates/businesses/_business_update_card.html:40
+#: templates/businesses/_business_update_card.html:41
+msgid "Delete update"
+msgstr "Excluir atualização"
+
+#: templates/businesses/_business_update_card.html:55
+msgid "FANZ Update"
+msgstr "Atualização da FANZ"
+
+#: templates/businesses/_business_update_card.html:74
+#, python-format
+msgid ""
+"\n"
+"      %(fan_count)s fan\n"
+"    "
+msgid_plural ""
+"\n"
+"      %(fan_count)s fans\n"
+"    "
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/businesses/_business_update_card.html:83
+msgid "Comments are coming in a future update."
+msgstr ""
+
+#: templates/businesses/_business_update_card.html:85
+msgid "Comments soon"
+msgstr "Comentários em breve"
 
 #: templates/businesses/business_detail.html:27
 msgid "List my business on FANZ"
@@ -1052,6 +1193,7 @@ msgstr "Adicionar Fotos"
 #: templates/businesses/business_detail.html:202
 msgid "Delete the selected gallery images? This cannot be undone."
 msgstr ""
+"Excluir as imagens selecionadas da galeria? Esta ação não pode ser desfeita."
 
 #: templates/businesses/business_detail.html:221
 msgid "Select"
@@ -1080,14 +1222,6 @@ msgstr ""
 #: templates/businesses/business_detail.html:288
 msgid "Recent Updates"
 msgstr "Atualizações Recentes"
-
-#: templates/businesses/business_detail.html:305
-msgid "Phone"
-msgstr "Telefone"
-
-#: templates/businesses/business_detail.html:314
-msgid "Email"
-msgstr "E-mail"
 
 #: templates/businesses/business_detail.html:330
 msgid "Visit Website"
@@ -1120,3 +1254,152 @@ msgstr "Cadastrar Minha Empresa na FANZ"
 #: templates/businesses/business_detail.html:357
 msgid "Free Forever."
 msgstr "Grátis para Sempre."
+
+#: templates/businesses/business_form.html:10
+#, python-format
+msgid ""
+"\n"
+"          Edit %(name)s\n"
+"        "
+msgstr ""
+
+#: templates/businesses/business_form.html:16
+msgid "Update your business details, hero image, and contact information."
+msgstr ""
+"Atualize os dados, a imagem de capa e as informações de contato da sua "
+"empresa."
+
+#: templates/businesses/business_form.html:22
+msgid "We Found Your Business!"
+msgstr "Encontramos sua empresa!"
+
+#: templates/businesses/business_form.html:25
+#, python-format
+msgid ""
+"We've already created a community listing for %(name)s. Review the "
+"information below and make any changes you'd like."
+msgstr ""
+"Já criamos um perfil da comunidade para %(name)s. Revise as informações "
+"abaixo e faça as alterações que desejar."
+
+#: templates/businesses/business_form.html:32
+msgid "Welcome to the FANZ Business Community!"
+msgstr "Boas-vindas à comunidade empresarial da FANZ!"
+
+#: templates/businesses/business_form.html:36
+msgid "Promote Your Business for FREE"
+msgstr "Promova sua empresa GRÁTIS"
+
+#: templates/businesses/business_form.html:39
+msgid ""
+"List your business on FANZ, add your details, upload a hero image, and "
+"connect with your customers in the FANZ business community."
+msgstr ""
+"Cadastre sua empresa na FANZ, adicione seus dados, envie uma imagem de capa "
+"e conecte-se com seus clientes na comunidade empresarial da FANZ."
+
+#: templates/businesses/business_form.html:58
+msgid "I accept the FANZ"
+msgstr "Aceito os"
+
+#: templates/businesses/business_form.html:122
+msgid "Save Changes"
+msgstr "Salvar alterações"
+
+#: templates/businesses/business_form.html:124
+msgid "Complete My Business"
+msgstr "Concluir o cadastro da minha empresa"
+
+#: templates/businesses/business_form.html:126
+msgid "List My Business"
+msgstr "Cadastrar minha empresa"
+
+#: templates/businesses/business_update_form.html:13
+#: templates/businesses/business_update_form.html:123
+#: templates/businesses/my_businesses.html:90
+msgid "Publish Update"
+msgstr "Publicar atualização"
+
+#: templates/businesses/business_update_form.html:16
+msgid ""
+"Share news, specials, announcements, or anything happening at "
+"<strong>%(business_name)s</strong>."
+msgstr ""
+"Compartilhe notícias, ofertas especiais, anúncios ou quaisquer atualizações "
+"de <strong>%(business_name)</strong>."
+
+#: templates/businesses/business_update_form.html:52
+msgid "What’s happening?"
+msgstr "O que está acontecendo?"
+
+#: templates/businesses/business_update_form.html:66
+msgid "Update image"
+msgstr "Atualizar imagem"
+
+#: templates/businesses/business_update_form.html:74
+msgid "Choose an Image"
+msgstr "Escolha uma imagem"
+
+#: templates/businesses/business_update_form.html:80
+#: templates/businesses/business_update_form.html:82
+#: templates/businesses/widgets/business_image_input.html:57
+#: templates/businesses/widgets/business_image_input.html:59
+msgid "No image selected"
+msgstr "Nenhuma imagem selecionada"
+
+#: templates/businesses/business_update_form.html:89
+msgid ""
+"Optional. JPEG, PNG, or WebP. Your image will be optimized, converted to "
+"WebP, and branded by FANZ."
+msgstr ""
+"Opcional. JPEG, PNG ou WebP. Sua imagem será otimizada, convertida paraWebP "
+"e receberá a marca da FANZ."
+
+#: templates/businesses/business_update_form.html:107
+msgid "Pin this update to the top of my business page"
+msgstr "Fixe esta atualização no topo da minha página comercial."
+
+#: templates/businesses/my_businesses.html:4
+#: templates/businesses/my_businesses.html:11
+msgid "My Businesses"
+msgstr "Meus Negócios"
+
+#: templates/businesses/my_businesses.html:14
+msgid ""
+"Manage your businesses, publish updates, create events, and grow your "
+"community."
+msgstr ""
+"Gerencie seus negócios, publique atualizações,crie eventos e faça sua "
+"comunidade crescer."
+
+#: templates/businesses/my_businesses.html:26
+msgid "Add Business"
+msgstr "Adicionar empresa"
+
+#: templates/businesses/my_businesses.html:73
+msgid "Create Event"
+msgstr "Criar evento"
+
+#: templates/businesses/my_businesses.html:85
+msgid "Edit Business"
+msgstr "Editar empresa"
+
+#: templates/businesses/my_businesses.html:95
+msgid "Grow My Business"
+msgstr "Fazer minha empresa crescer"
+
+#: templates/businesses/widgets/business_image_input.html:8
+msgid "Current image:"
+msgstr "Imagem atual:"
+
+#: templates/businesses/widgets/business_image_input.html:31
+msgid "Remove current image"
+msgstr "Remover imagem atual"
+
+#: templates/businesses/widgets/business_image_input.html:48
+msgid "Choose a new image"
+msgstr "Escolha uma nova imagem"
+
+#: templates/businesses/widgets/business_image_input.html:50
+msgid "Choose Image"
+msgstr "Escolha uma imagem"

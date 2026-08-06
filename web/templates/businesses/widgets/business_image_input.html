@@ -1,0 +1,63 @@
+{% load i18n %}
+
+<div class="business-image-widget">
+
+  {% if widget.is_initial %}
+    <div class="business-image-widget__current">
+      <span class="business-image-widget__current-label">
+        {% trans "Current image:" %}
+      </span>
+
+      <a
+        href="{{ widget.value.url }}"
+        target="_blank"
+        rel="noopener"
+        class="business-image-widget__current-link"
+      >
+        {{ widget.value.name }}
+      </a>
+    </div>
+
+    {% if not widget.required %}
+      <label
+        for="{{ widget.checkbox_id }}"
+        class="business-image-widget__clear"
+      >
+        <input
+          type="checkbox"
+          name="{{ widget.checkbox_name }}"
+          id="{{ widget.checkbox_id }}"
+        >
+        <span>{% trans "Remove current image" %}</span>
+      </label>
+    {% endif %}
+  {% endif %}
+
+  <div class="business-image-widget__chooser">
+    <input
+      type="{{ widget.type }}"
+      name="{{ widget.name }}"
+      {% include "django/forms/widgets/attrs.html" %}
+    >
+
+    <label
+      for="{{ widget.attrs.id }}"
+      class="custom-file-button"
+    >
+      {% if widget.is_initial %}
+        {% trans "Choose a new image" %}
+      {% else %}
+        {% trans "Choose Image" %}
+      {% endif %}
+    </label>
+
+    <span
+      class="custom-file-name"
+      data-file-name
+      data-empty-text="{% trans 'No image selected' %}"
+    >
+      {% trans "No image selected" %}
+    </span>
+  </div>
+
+</div>

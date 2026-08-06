@@ -1,11 +1,32 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}My Businesses{% endblock %}
+{% block title %}{% trans "My Businesses" %}{% endblock %}
+
 
 {% block content %}
 
-<h1>My Businesses</h1>
+<section class="my-businesses-hero">
+    <div class="my-businesses-hero__content">
+        <h1>{% trans "My Businesses" %}</h1>
+
+        <p>
+            {% blocktrans trimmed %}
+                Manage your businesses, publish updates, create events,
+                and grow your community.
+            {% endblocktrans %}
+        </p>
+    </div>
+
+    <div class="my-businesses-hero__actions">
+        <a
+            class="my-businesses-hero__button"
+            href="{% url 'businesses:create' %}"
+        >
+            ＋ {% trans "Add Business" %}
+        </a>
+    </div>
+</section>
 
 <div class="business-grid">
 
@@ -49,29 +70,29 @@
             <a
             class="business-action business-action--my-biz"
             href="{% url 'create_event' %}?business={{ business.pk }}">
-            Create Event
+            {% trans "Create Event" %}
             </a>
 
             <a
             class="business-action business-action--my-biz"
             href="{% url 'businesses:detail' business.slug %}">
-            View Business
+            {% trans "View Business" %}
             </a>
 
            <a
            class="business-action business-action--my-biz"
            href="{% url 'businesses:edit' business.slug %}">
-           Edit Business
+           {% trans "Edit Business" %}
            </a>
            <a
           class="business-action business-action--my-biz"
           href="{% url 'businesses:publish_update' business.slug %}">
-          Publish Biz Update
+          {% trans "Publish Update" %}
           </a>
           <a
           class="business-action business-action--my-biz business-action--grow"
           href="{% url 'businesses:grow' business.slug %}">
-          🚀 Grow My Business →
+          🚀 {% trans "Grow My Business" %}→
           </a>
         </div>
 

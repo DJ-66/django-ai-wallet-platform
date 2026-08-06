@@ -35,9 +35,7 @@ class BusinessListing(models.Model):
         upload_to="businesses/hero_images/",
         blank=True,
         null=True,
-        help_text=_(
-            "Upload a wide image that represents your business."
-        ),
+        help_text=_("Upload a wide image that represents your business."),
     )
 
     address = models.CharField(

@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load i18n %}
-
 {% block content %}
 <section class="business-update-form-page">
   <div class="business-update-form-card">
@@ -8,15 +7,14 @@
     <header class="business-update-form-header">
       <span class="business-update-form-badge">
         📣 {% trans "Business Update" %}
+
       </span>
 
       <h1>{% trans "Publish Update" %}</h1>
 
       <p>
-        {% blocktrans trimmed with business_name=business.name %}
-          Share news, specials, announcements, or anything happening at
-          <strong>{{ business_name }}</strong>.
-        {% endblocktrans %}
+        Share news, specials, announcements, or anything happening at
+        <strong>{{ business.name }}</strong>.
       </p>
     </header>
 
@@ -35,7 +33,8 @@
 
       <div class="business-update-form-field">
         <label for="{{ form.title.id_for_label }}">
-          {% trans "Update title" %}
+            {% trans "Update title" %}
+
         </label>
 
         {{ form.title }}
@@ -50,6 +49,7 @@
       <div class="business-update-form-field">
         <label for="{{ form.body.id_for_label }}">
           {% trans "What’s happening?" %}
+
         </label>
 
         {{ form.body }}
@@ -62,9 +62,7 @@
       </div>
 
       <div class="business-update-form-field">
-        <label for="{{ form.image.id_for_label }}">
-          {% trans "Update image" %}
-        </label>
+        <label>{% trans "Update image" %}</label>
 
         <div class="business-update-upload">
           <label
@@ -77,7 +75,6 @@
           <span
             id="business-update-file-name"
             class="business-update-upload-name"
-            data-empty-text="{% trans 'No image selected' %}"
           >
             {% trans "No image selected" %}
           </span>
@@ -85,34 +82,32 @@
           {{ form.image }}
         </div>
 
-        <p class="business-update-form-help">
-          {% blocktrans trimmed %}
-            Optional. JPEG, PNG, or WebP. Your image will be optimized,
-            converted to WebP, and branded by FANZ.
-          {% endblocktrans %}
-        </p>
-
+         <p class="business-update-form-help">
+         {% blocktrans trimmed %}
+             Optional. JPEG, PNG, or WebP. Your image will be optimized,
+             converted to WebP, and branded by FANZ.
+         {% endblocktrans %}
+         </p>
+        
         {% if form.image.errors %}
           <div class="business-update-form-errors">
             {{ form.image.errors }}
           </div>
         {% endif %}
-      </div>
 
-      <div class="business-update-form-field">
-        <label class="business-update-checkbox">
-          {{ form.is_featured }}
+        <div class="business-update-form-field">
+    <label class="business-update-checkbox">
+        {{ form.is_featured }}
+        <span>📌 {% trans "Pin this update to the top of my business page" %}
+</span>
+    </label>
 
-          <span>
-            📌 {% trans "Pin this update to the top of my business page" %}
-          </span>
-        </label>
-
-        {% if form.is_featured.errors %}
-          <div class="business-update-form-errors">
+    {% if form.is_featured.errors %}
+        <div class="business-update-form-errors">
             {{ form.is_featured.errors }}
-          </div>
-        {% endif %}
+        </div>
+    {% endif %}
+</div>
       </div>
 
       <div class="business-update-form-actions">
@@ -140,7 +135,6 @@
     const fileInput = document.getElementById(
       "{{ form.image.id_for_label }}"
     );
-
     const fileName = document.getElementById(
       "business-update-file-name"
     );
