@@ -1,9 +1,12 @@
 from django import forms
-
+from django.forms.widgets import ClearableFileInput
+from django.utils.translation import gettext_lazy as _
 from core.image_utils import process_fanz_image_upload
 
 from .models import BusinessListing, BusinessUpdate, BusinessMedia
 
+class BusinessImageInput(ClearableFileInput):
+    template_name = "businesses/widgets/business_image_input.html"
 
 class BusinessListingAdminForm(forms.ModelForm):
     class Meta:
@@ -38,14 +41,15 @@ class BusinessListingAdminForm(forms.ModelForm):
 class BusinessListingForm(forms.ModelForm):
     tos_accepted = forms.BooleanField(
         required=True,
-        label="I accept the FANZ Terms of Service",
+        label=_("I accept the FANZ Terms of Service"),
         error_messages={
-            "required": (
+            "required": _(
                 "You must accept the FANZ Terms of Service "
                 "before creating your business."
             ),
         },
     )
+
     def __init__(self, *args, **kwargs):
         is_edit = kwargs.pop("is_edit", False)
         super().__init__(*args, **kwargs)
@@ -66,31 +70,49 @@ class BusinessListingForm(forms.ModelForm):
             "phone",
             "email",
         ]
+        labels = {
+            "name": _("Name"),
+            "industry": _("Industry"),
+            "description": _("Description"),
+            "hero_image": _("Business cover image"),
+            "city": _("City"),
+            "country": _("Country"),
+            "website_url": _("Website URL"),
+            "phone": _("Phone"),
+            "email": _("Email"),
+        }
+
         widgets = {
             "name": forms.TextInput(
                 attrs={
-                    "placeholder": "Business name",
+                    "placeholder": _("Business name"),
                     "autocomplete": "organization",
                 }
             ),
             "description": forms.Textarea(
                 attrs={
                     "rows": 6,
-                    "placeholder": (
+                    "placeholder": _(
                         "Tell people about your business, services, "
                         "and what makes it special."
                     ),
                 }
             ),
+             "hero_image": BusinessImageInput(
+                 attrs={
+                 "accept": "image/*,.jpg,.jpeg,.png,.webp,.avif",
+                }
+            ),
+
             "city": forms.TextInput(
                 attrs={
-                    "placeholder": "City",
+                    "placeholder": _("City"),
                     "autocomplete": "address-level2",
                 }
             ),
             "country": forms.TextInput(
                 attrs={
-                    "placeholder": "Country",
+                    "placeholder": _("Country"),
                     "autocomplete": "country-name",
                 }
             ),
@@ -102,13 +124,13 @@ class BusinessListingForm(forms.ModelForm):
             ),
             "phone": forms.TextInput(
                 attrs={
-                    "placeholder": "Business phone",
+                    "placeholder": _("Business phone"),
                     "autocomplete": "tel",
                 }
             ),
             "email": forms.EmailInput(
                 attrs={
-                    "placeholder": "Business email",
+                    "placeholder": _("Business email"),
                     "autocomplete": "email",
                 }
             ),
@@ -137,7 +159,6 @@ class BusinessListingForm(forms.ModelForm):
             quality=90,
         )
 
-
 class BusinessUpdateForm(forms.ModelForm):
     class Meta:
         model = BusinessUpdate
@@ -150,13 +171,13 @@ class BusinessUpdateForm(forms.ModelForm):
         widgets = {
             "title": forms.TextInput(
                 attrs={
-                    "placeholder": "Update title",
+                    "placeholder": _("Update title"),
                 }
             ),
             "body": forms.Textarea(
                 attrs={
                     "rows": 6,
-                    "placeholder": (
+                    "placeholder": _(
                         "Share news, specials, announcements, "
                         "or anything happening at your business."
                     ),
@@ -257,7 +278,7 @@ class BusinessMediaForm(forms.ModelForm):
 
         if len(images) > 8:
             raise forms.ValidationError(
-                "You may upload a maximum of 8 images at once."
+                _("You may upload a maximum of 8 images at once.")
             )
 
         processed_images = []

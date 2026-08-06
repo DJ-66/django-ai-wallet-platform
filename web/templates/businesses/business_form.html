@@ -1,33 +1,45 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
 <section class="event-form-page">
   <div class="event-form-card">
 
     {% if is_edit %}
-      <h1>Edit {{ business.name }}</h1>
+      <h1>
+        {% blocktrans with name=business.name %}
+          Edit {{ name }}
+        {% endblocktrans %}
+      </h1>
 
       <p>
-        Update your business details, hero image, and contact information.
+        {% blocktrans trimmed %}
+          Update your business details, hero image, and contact information.
+        {% endblocktrans %}
       </p>
 
     {% elif community_business %}
-      <h1>🎉 We Found Your Business!</h1>
+      <h1>🎉 {% trans "We Found Your Business!" %}</h1>
 
       <p>
-        We've already created a community listing for
-        <strong>{{ community_business.name }}</strong>.
-        Review the information below and make any changes you'd like.
+        {% blocktrans trimmed with name=community_business.name %}
+          We've already created a community listing for {{ name }}.
+          Review the information below and make any changes you'd like.
+        {% endblocktrans %}
       </p>
 
-      <p>🌟 Welcome to the FANZ Business Community!</p>
+      <p>
+        🌟 {% trans "Welcome to the FANZ Business Community!" %}
+      </p>
 
     {% else %}
-      <h1>Promote Your Business for FREE</h1>
+      <h1>{% trans "Promote Your Business for FREE" %}</h1>
 
       <p>
-        List your business on FANZ, add your details, upload a hero image,
-        and connect with your customers in the FANZ business community.
+        {% blocktrans trimmed %}
+          List your business on FANZ, add your details, upload a hero image,
+          and connect with your customers in the FANZ business community.
+        {% endblocktrans %}
       </p>
     {% endif %}
 
@@ -43,13 +55,13 @@
               {{ field }}
 
               <span>
-                I accept the FANZ
+                {% trans "I accept the FANZ" %}
                 <a
                   href="{% url 'terms' %}"
                   target="_blank"
                   rel="noopener"
                 >
-                  Terms of Service
+                  {% trans "Terms of Service" %}
                 </a>.
               </span>
             </label>
@@ -62,36 +74,82 @@
           </div>
 
         {% else %}
-          <div class="event-form-field">
-            {{ field.label_tag }}
-            {{ field }}
 
-            {% if field.help_text %}
-              <p class="event-form-help">
-                {{ field.help_text }}
-              </p>
-            {% endif %}
+  {% if field.name == "hero_image" %}
+  <div class="event-form-field">
+    {{ field.label_tag }}
 
-            {% for error in field.errors %}
-              <p class="event-form-error">
-                {{ error }}
-              </p>
-            {% endfor %}
-          </div>
-        {% endif %}
+    {{ field }}
+
+    {% if field.help_text %}
+      <p class="event-form-help">
+        {{ field.help_text }}
+      </p>
+    {% endif %}
+
+    {% for error in field.errors %}
+      <p class="event-form-error">
+        {{ error }}
+      </p>
+    {% endfor %}
+  </div>
+
+  {% else %}
+    <div class="event-form-field">
+      {{ field.label_tag }}
+      {{ field }}
+
+      {% if field.help_text %}
+        <p class="event-form-help">
+          {{ field.help_text }}
+        </p>
+      {% endif %}
+
+      {% for error in field.errors %}
+        <p class="event-form-error">
+          {{ error }}
+        </p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+{% endif %}
+
       {% endfor %}
 
       <button type="submit" class="event-form-submit">
         {% if is_edit %}
-          Save Changes
+          {% trans "Save Changes" %}
         {% elif community_business %}
-          Complete My Business
+          {% trans "Complete My Business" %}
         {% else %}
-          List My Business
+          {% trans "List My Business" %}
         {% endif %}
       </button>
     </form>
 
   </div>
 </section>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".custom-file-field").forEach((wrapper) => {
+        const input = wrapper.querySelector('input[type="file"]');
+        const output = wrapper.querySelector("[data-file-name]");
+
+        if (!input || !output) {
+            return;
+        }
+
+        input.addEventListener("change", () => {
+            const file = input.files && input.files[0];
+
+            output.textContent = file
+                ? file.name
+                : output.dataset.emptyText;
+        });
+    });
+});
+</script>
+
+
 {% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="event-form-page">
+  <div class="event-form-card">
+
+    {% if is_edit %}
+      <h1>Edit {{ business.name }}</h1>
+
+      <p>
+        Update your business details, hero image, and contact information.
+      </p>
+
+    {% elif community_business %}
+      <h1>🎉 We Found Your Business!</h1>
+
+      <p>
+        We've already created a community listing for
+        <strong>{{ community_business.name }}</strong>.
+        Review the information below and make any changes you'd like.
+      </p>
+
+      <p>🌟 Welcome to the FANZ Business Community!</p>
+
+    {% else %}
+      <h1>Promote Your Business for FREE</h1>
+
+      <p>
+        List your business on FANZ, add your details, upload a hero image,
+        and connect with your customers in the FANZ business community.
+      </p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {{ form.non_field_errors }}
+
+      {% for field in form %}
+        {% if field.name == "tos_accepted" %}
+          <div class="event-form-field business-tos-field">
+            <label class="tos-check" for="{{ field.id_for_label }}">
+              {{ field }}
+
+              <span>
+                I accept the FANZ
+                <a
+                  href="{% url 'terms' %}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Terms of Service
+                </a>.
+              </span>
+            </label>
+
+            {% for error in field.errors %}
+              <p class="event-form-error">
+                {{ error }}
+              </p>
+            {% endfor %}
+          </div>
+
+        {% else %}
+          <div class="event-form-field">
+            {{ field.label_tag }}
+            {{ field }}
+
+            {% if field.help_text %}
+              <p class="event-form-help">
+                {{ field.help_text }}
+              </p>
+            {% endif %}
+
+            {% for error in field.errors %}
+              <p class="event-form-error">
+                {{ error }}
+              </p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <button type="submit" class="event-form-submit">
+        {% if is_edit %}
+          Save Changes
+        {% elif community_business %}
+          Complete My Business
+        {% else %}
+          List My Business
+        {% endif %}
+      </button>
+    </form>
+
+  </div>
+</section>
+{% endblock %}

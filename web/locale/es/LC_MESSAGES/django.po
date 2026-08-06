@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-05 03:25+0000\n"
+"POT-Creation-Date: 2026-08-06 21:07+0000\n"
 "PO-Revision-Date: 2026-08-05 HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE ES <LL@li.org>\n"
@@ -206,6 +206,84 @@ msgstr "Procedencia de la importación"
 msgid "Dates"
 msgstr "Fechas"
 
+#: businesses/forms.py:44
+msgid "I accept the FANZ Terms of Service"
+msgstr "Acepto los Términos de servicio de FANZ."
+
+#: businesses/forms.py:47
+msgid ""
+"You must accept the FANZ Terms of Service before creating your business."
+msgstr ""
+
+#: businesses/forms.py:74
+msgid "Name"
+msgstr "Nombre"
+
+#: businesses/forms.py:75
+msgid "Industry"
+msgstr "Categoría"
+
+#: businesses/forms.py:76
+msgid "Description"
+msgstr "Descripción"
+
+#: businesses/forms.py:77
+msgid "Business cover image"
+msgstr "Imagen de portada del negocio"
+
+#: businesses/forms.py:78 businesses/forms.py:109
+msgid "City"
+msgstr "Ciudad"
+
+#: businesses/forms.py:79 businesses/forms.py:115
+msgid "Country"
+msgstr "País"
+
+#: businesses/forms.py:80
+msgid "Website URL"
+msgstr "URL del sitio web"
+
+#: businesses/forms.py:81 templates/businesses/business_detail.html:305
+msgid "Phone"
+msgstr "Teléfono"
+
+#: businesses/forms.py:82 templates/businesses/business_detail.html:314
+msgid "Email"
+msgstr "Correo electrónico"
+
+#: businesses/forms.py:88
+msgid "Business name"
+msgstr "Nombre del negocio"
+
+#: businesses/forms.py:96
+msgid "Tell people about your business, services, and what makes it special."
+msgstr ""
+"Cuéntales a las personas sobre tu negocio, tus servicios y lo que lo hace "
+"especial."
+
+#: businesses/forms.py:127
+msgid "Business phone"
+msgstr "Teléfono del negocio"
+
+#: businesses/forms.py:133
+msgid "Business email"
+msgstr "Correo electrónico del negocio"
+
+#: businesses/forms.py:174 templates/businesses/business_update_form.html:38
+msgid "Update title"
+msgstr "Registrarse Actualizar título"
+
+#: businesses/forms.py:181
+msgid ""
+"Share news, specials, announcements, or anything happening at your business."
+msgstr ""
+"Comparte noticias, ofertas especiales, anuncios o cualquier novedad de tu "
+"negocio."
+
+#: businesses/forms.py:281
+msgid "You may upload a maximum of 8 images at once."
+msgstr "Puede subir un máximo de 8 imágenes a la vez."
+
 #: businesses/models.py:14
 msgid "Real Estate"
 msgstr "Inmobiliaria"
@@ -222,7 +300,7 @@ msgstr "Estudio jurídico"
 msgid "Business hero image"
 msgstr "Imagen destacada de negocios"
 
-#: businesses/models.py:39
+#: businesses/models.py:38
 msgid "Upload a wide image that represents your business."
 msgstr "Sube una imagen apaisada que represente tu negocio."
 
@@ -375,6 +453,7 @@ msgid "Approve"
 msgstr "Aprobar"
 
 #: templates/auction_detail.html:232
+#: templates/businesses/business_update_form.html:130
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -487,6 +566,7 @@ msgid "I accept"
 msgstr "Acepto"
 
 #: templates/auctions/edit_profile.html:41 templates/auctions/terms.html:7
+#: templates/businesses/business_form.html:64
 msgid "Terms of Service"
 msgstr "Términos del servicio"
 
@@ -636,6 +716,7 @@ msgid "View Auction Details"
 msgstr "Ver detalles de la subasta"
 
 #: templates/auctions/includes/_business_update.html:20
+#: templates/businesses/business_update_form.html:10
 msgid "Business Update"
 msgstr "Actualización empresarial"
 
@@ -646,6 +727,7 @@ msgid "ago"
 msgstr "atrás"
 
 #: templates/auctions/includes/_business_update.html:46
+#: templates/businesses/my_businesses.html:79
 msgid "View Business"
 msgstr "Ver negocio"
 
@@ -973,6 +1055,10 @@ msgstr "Eventos"
 msgid "Sign up"
 msgstr "Inscribirse"
 
+#: templates/base.html:222
+msgid "Login"
+msgstr ""
+
 #: templates/businesses/_business_card.html:6
 #, python-format
 msgid ""
@@ -1026,6 +1112,41 @@ msgstr "Actividad empresarial"
 #: templates/businesses/_business_stats.html:26
 msgid "Updates"
 msgstr "Actualizaciones"
+
+#: templates/businesses/_business_update_card.html:27
+msgid "Delete this update? This cannot be undone."
+msgstr ""
+
+#: templates/businesses/_business_update_card.html:40
+#: templates/businesses/_business_update_card.html:41
+msgid "Delete update"
+msgstr "Eliminar actualización"
+
+#: templates/businesses/_business_update_card.html:55
+msgid "FANZ Update"
+msgstr "Actualización de FANZ"
+
+#: templates/businesses/_business_update_card.html:74
+#, python-format
+msgid ""
+"\n"
+"      %(fan_count)s fan\n"
+"    "
+msgid_plural ""
+"\n"
+"      %(fan_count)s fans\n"
+"    "
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: templates/businesses/_business_update_card.html:83
+msgid "Comments are coming in a future update."
+msgstr "Los comentarios llegarán en una futura actualización."
+
+#: templates/businesses/_business_update_card.html:85
+msgid "Comments soon"
+msgstr "Comentarios próximamente"
 
 #: templates/businesses/business_detail.html:27
 msgid "List my business on FANZ"
@@ -1106,14 +1227,6 @@ msgstr ""
 msgid "Recent Updates"
 msgstr "Actualizaciones recientes"
 
-#: templates/businesses/business_detail.html:305
-msgid "Phone"
-msgstr "Teléfono"
-
-#: templates/businesses/business_detail.html:314
-msgid "Email"
-msgstr "Correo electrónico"
-
 #: templates/businesses/business_detail.html:330
 msgid "Visit Website"
 msgstr "Visitar el sitio web"
@@ -1144,3 +1257,153 @@ msgstr "Registrar mi negocio en FANZ"
 #: templates/businesses/business_detail.html:357
 msgid "Free Forever."
 msgstr "Gratis para siempre."
+
+#: templates/businesses/business_form.html:10
+#, python-format
+msgid ""
+"\n"
+"          Edit %(name)s\n"
+"        "
+msgstr ""
+
+#: templates/businesses/business_form.html:16
+msgid "Update your business details, hero image, and contact information."
+msgstr ""
+"Actualiza los datos, la imagen de portada y la información de contacto de tu "
+"negocio."
+
+#: templates/businesses/business_form.html:22
+msgid "We Found Your Business!"
+msgstr "¡Encontramos tu negocio!"
+
+#: templates/businesses/business_form.html:25
+#, python-format
+msgid ""
+"We've already created a community listing for %(name)s. Review the "
+"information below and make any changes you'd like."
+msgstr ""
+"Ya creamos un perfil comunitario para %(name)s. Revisa la información a "
+"continuación y realiza los cambios que desees."
+
+#: templates/businesses/business_form.html:32
+msgid "Welcome to the FANZ Business Community!"
+msgstr "¡Te damos la bienvenida a la comunidad empresarial de FANZ!"
+
+#: templates/businesses/business_form.html:36
+msgid "Promote Your Business for FREE"
+msgstr "Promociona tu negocio GRATIS"
+
+#: templates/businesses/business_form.html:39
+msgid ""
+"List your business on FANZ, add your details, upload a hero image, and "
+"connect with your customers in the FANZ business community."
+msgstr ""
+"Publica tu negocio en FANZ, añade tus datos, sube una imagen de portada y "
+"conecta con tus clientes en la comunidad empresarial de FANZ."
+
+#: templates/businesses/business_form.html:58
+msgid "I accept the FANZ"
+msgstr "Acepto los"
+
+#: templates/businesses/business_form.html:122
+msgid "Save Changes"
+msgstr "Guardar cambios"
+
+#: templates/businesses/business_form.html:124
+msgid "Complete My Business"
+msgstr "Completar mi negocio"
+
+#: templates/businesses/business_form.html:126
+msgid "List My Business"
+msgstr "Registrar mi negocio"
+
+#: templates/businesses/business_update_form.html:13
+#: templates/businesses/business_update_form.html:123
+#: templates/businesses/my_businesses.html:90
+msgid "Publish Update"
+msgstr "Publicar actualización"
+
+#: templates/businesses/business_update_form.html:16
+#, python-format
+msgid ""
+"Share news, specials, announcements, or anything happening at "
+"<strong>%(business_name)s</strong>."
+msgstr ""
+"Comparte noticias, ofertas especiales, anuncios o cualquier novedad de "
+"<strong>%(business_name)s</strong>."
+
+#: templates/businesses/business_update_form.html:52
+msgid "What’s happening?"
+msgstr "lo que está sucediendo"
+
+#: templates/businesses/business_update_form.html:66
+msgid "Update image"
+msgstr "Actualizar imagen"
+
+#: templates/businesses/business_update_form.html:74
+msgid "Choose an Image"
+msgstr "Elige una imagen"
+
+#: templates/businesses/business_update_form.html:80
+#: templates/businesses/business_update_form.html:82
+#: templates/businesses/widgets/business_image_input.html:57
+#: templates/businesses/widgets/business_image_input.html:59
+msgid "No image selected"
+msgstr "Ninguna imagen seleccionada"
+
+#: templates/businesses/business_update_form.html:89
+msgid ""
+"Optional. JPEG, PNG, or WebP. Your image will be optimized, converted to "
+"WebP, and branded by FANZ."
+msgstr ""
+"Opcional. JPEG, PNG o WebP. Tu imagen se optimizará, se convertirá a WebP y "
+"llevará la marca de FANZ."
+
+#: templates/businesses/business_update_form.html:107
+msgid "Pin this update to the top of my business page"
+msgstr "Fija esta actualización en la parte superior de mi página de empresa."
+
+#: templates/businesses/my_businesses.html:4
+#: templates/businesses/my_businesses.html:11
+msgid "My Businesses"
+msgstr "Minhas Empresas"
+
+#: templates/businesses/my_businesses.html:14
+msgid ""
+"Manage your businesses, publish updates, create events, and grow your "
+"community."
+msgstr ""
+"Gestiona tus negocios, publica actualizaciones,crea eventos y haz crecer tu "
+"comunidad."
+
+#: templates/businesses/my_businesses.html:26
+msgid "Add Business"
+msgstr "Agregar negocio"
+
+#: templates/businesses/my_businesses.html:73
+msgid "Create Event"
+msgstr "Crear evento"
+
+#: templates/businesses/my_businesses.html:85
+msgid "Edit Business"
+msgstr "Editar negocio"
+
+#: templates/businesses/my_businesses.html:95
+msgid "Grow My Business"
+msgstr "Hacer crecer mi negocio"
+
+#: templates/businesses/widgets/business_image_input.html:8
+msgid "Current image:"
+msgstr "Imagen actual:"
+
+#: templates/businesses/widgets/business_image_input.html:31
+msgid "Remove current image"
+msgstr "Eliminar la imagen actual"
+
+#: templates/businesses/widgets/business_image_input.html:48
+msgid "Choose a new image"
+msgstr "Elige una nueva imagen"
+
+#: templates/businesses/widgets/business_image_input.html:50
+msgid "Choose Image"
+msgstr "Elegir imagen"

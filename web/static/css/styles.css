@@ -6885,4 +6885,255 @@ body.feed-upload-guide-open {
     }
 }
 
+.custom-file-field {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #d9dce8;
+    border-radius: 10px;
+    background: #fff;
+}
+
+/*
+.custom-file-field input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+*/
+
+.custom-file-field input[type="file"] {
+    display: none !important;
+}
+
+.custom-file-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0.55rem 0.85rem;
+    border-radius: 8px;
+    background: #1556b8;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.custom-file-name {
+    min-width: 0;
+    overflow: hidden;
+    color: #555;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.my-businesses-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+
+    margin: 0 0 2rem;
+    margin-bottom: 2.5rem;
+    padding: 1.75rem 2rem;
+
+    border: 1px solid rgba(91, 53, 255, 0.12);
+    border-radius: 24px;
+
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 28px rgba(31, 20, 60, 0.08);
+}
+
+.my-businesses-hero__content {
+    min-width: 0;
+}
+
+.my-businesses-hero h1 {
+    margin: 0 0 0.5rem;
+}
+
+.my-businesses-hero p {
+    max-width: 42rem;
+    margin: 0;
+    color: #5e596b;
+    line-height: 1.55;
+}
+
+.my-businesses-hero__actions {
+    flex: 0 0 auto;
+    align-self: center;
+}
+
+.my-businesses-hero__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 46px;
+    padding: 0.75rem 1.2rem;
+
+    border-radius: 999px;
+    background: #111;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 800;
+
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.my-businesses-hero__button:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 11px 28px rgba(0, 0, 0, 0.21);
+}
+
+@media (max-width: 640px) {
+    .my-businesses-hero {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 1.4rem;
+    }
+
+    .my-businesses-hero__actions,
+    .my-businesses-hero__button {
+        width: 100%;
+    }
+}
+
+/* Business form image upload — prevent translated labels from overflowing */
+.business-form-card input[type="file"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/*
+Django ClearableFileInput renders text, links, checkbox,
+labels, and the native file input together.
+Allow the content to wrap safely in every language.
+*/
+.business-form-card .business-image-upload,
+.business-form-card .clearable-file-input {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Native Django image field container */
+.business-form-card p:has(input[type="file"]),
+.business-form-card div:has(> input[type="file"]) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Keep the file chooser from forcing the card wider */
+.business-form-card input[type="file"]::file-selector-button {
+  white-space: normal;
+  max-width: 100%;
+  padding: 0.65rem 0.9rem;
+  line-height: 1.2;
+}
+
+/* Mobile and narrower cards */
+@media (max-width: 700px) {
+  .business-form-card input[type="file"] {
+    display: block;
+    width: 100%;
+    margin-top: 0.75rem;
+  }
+
+  .business-form-card input[type="file"]::file-selector-button {
+    display: block;
+    width: auto;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Business image widget overrides the generic event upload styles */
+.event-form-field .business-image-widget__chooser input[type="file"] {
+    position: absolute !important;
+    display: block !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+/* Keep the clear-image checkbox compact */
+.event-form-field .business-image-widget__clear {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    width: fit-content !important;
+    margin: 0 !important;
+}
+
+.event-form-field .business-image-widget__clear input[type="checkbox"] {
+    display: inline-block !important;
+    position: static !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.event-form-field .business-image-widget__clear span {
+    display: inline !important;
+}
+
+/* Business image widget overrides the generic event upload styles */
+.event-form-field .business-image-widget__chooser input[type="file"] {
+    position: absolute !important;
+    display: block !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+/* Keep the clear-image checkbox compact */
+.event-form-field .business-image-widget__clear {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    width: fit-content !important;
+    margin: 0 !important;
+}
+
+.event-form-field .business-image-widget__clear input[type="checkbox"] {
+    display: inline-block !important;
+    position: static !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.event-form-field .business-image-widget__clear span {
+    display: inline !important;
+}
+
 /* end_css */

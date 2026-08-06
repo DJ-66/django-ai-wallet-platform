@@ -1,3 +1,4 @@
+{% load i18n %}
 <article class="business-update-card">
 
   <header class="business-update-card__header">
@@ -23,25 +24,26 @@
     </time>
 
     {% if request.user == update.business.owner %}
-      <form
-        method="post"
-        action="{% url 'businesses:delete_update' update.business.slug update.pk %}"
-        class="business-update-card__delete-form"
-        onsubmit="return confirm('Delete this update? This cannot be undone.');"
-      >
-        {% csrf_token %}
+  {% trans "Delete this update? This cannot be undone." as delete_update_confirm %}
 
-        <button
-          type="submit"
-          class="business-update-card__delete"
-          aria-label="Delete update"
-          title="Delete update"
-        >
-          🗑️
-        </button>
+  <form
+    method="post"
+    action="{% url 'businesses:delete_update' update.business.slug update.pk %}"
+    class="business-update-card__delete-form"
+    onsubmit="return confirm('{{ delete_update_confirm|escapejs }}');"
+  >
+    {% csrf_token %}
 
-      </form>
-    {% endif %}
+    <button
+      type="submit"
+      class="business-update-card__delete"
+      aria-label="{% trans 'Delete update' %}"
+      title="{% trans 'Delete update' %}"
+    >
+      🗑️
+    </button>
+  </form>
+{% endif %}
 
   </div>
 
@@ -50,7 +52,7 @@
   {% if update.image %}
     <div class="business-update-card__media">
       <span class="business-update-card__ribbon">
-        📣 FANZ Update
+        📣 {% trans "FANZ Update" %}
       </span>
 
       <img
@@ -67,20 +69,25 @@
   </div>
 
   <footer class="business-update-card__footer">
-    <span class="business-update-card__stat">
-      ⭐ {{ fan_count }} fan{{ fan_count|pluralize }}
-    </span>
+  <span class="business-update-card__stat">
+    ⭐
+    {% blocktrans count fan_count=fan_count %}
+      {{ fan_count }} fan
+    {% plural %}
+      {{ fan_count }} fans
+    {% endblocktrans %}
+  </span>
 
-    <span
-      class="business-update-card__stat business-update-card__stat--future"
-      title="Comments are coming in a future update."
-    >
-      💬 Comments soon
-    </span>
+  <span
+    class="business-update-card__stat business-update-card__stat--future"
+    title="{% trans 'Comments are coming in a future update.' %}"
+  >
+    💬 {% trans "Comments soon" %}
+  </span>
 
-    <span class="business-update-card__stat">
-      📅 {{ update.created_at|date:"M j" }}
-    </span>
-  </footer>
+  <span class="business-update-card__stat">
+    📅 {{ update.created_at|date:"M j" }}
+  </span>
+</footer>
 
 </article>
