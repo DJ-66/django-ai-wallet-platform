@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-06 21:07+0000\n"
+"POT-Creation-Date: 2026-08-06 22:08+0000\n"
 "PO-Revision-Date: 2026-08-05 HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE ES <LL@li.org>\n"
@@ -552,6 +552,14 @@ msgstr[2] "créditos por mensaje"
 msgid "No AI creators available yet."
 msgstr "Aún no hay creadores de IA disponibles."
 
+#: templates/auctions/discovery_hub.html:9
+msgid "Explore"
+msgstr ""
+
+#: templates/auctions/discovery_hub.html:17
+msgid "Coming Soon"
+msgstr "Próximamente"
+
 #: templates/auctions/edit_profile.html:11
 #: templates/auctions/public_profile.html:292
 msgid "Edit Profile"
@@ -710,6 +718,94 @@ msgstr "Entiendo"
 #: templates/auctions/feed_home.html:293
 msgid "No community activity yet."
 msgstr "Aún no hay actividad en la comunidad."
+
+#: templates/auctions/hashtag_feed.html:15
+#, python-format
+msgid ""
+"\n"
+"                %(count)s Hashtag on FANZ\n"
+"            "
+msgid_plural ""
+"\n"
+"                %(count)s Hashtags on FANZ\n"
+"            "
+msgstr[0] ""
+"\n"
+"%(count)s hashtag en FANZ"
+msgstr[1] ""
+"\n"
+"%(count)s hashtags en FANZ"
+
+#: templates/auctions/hashtag_feed.html:39
+msgid "No trending hashtags yet."
+msgstr "Aún no hay hashtags populares."
+
+#: templates/auctions/hashtag_feed.html:56
+#: templates/auctions/hashtag_feed.html:64
+msgid "50 free credits on Fanz.to"
+msgstr "50 créditos gratis en Fanz.to"
+
+#: templates/auctions/hashtag_feed.html:78
+msgid "Live Auctions in #auctions"
+msgstr "Subastas en vivo en #auctions"
+
+#: templates/auctions/hashtag_feed.html:82
+msgid ""
+"Platform auctions tagged <strong>#auctions</strong>, ordered by ending "
+"soonest."
+msgstr ""
+"Subastas de la plataforma etiquetadas con <strong>#auctions</strong>, "
+"ordenadas por las que finalizan primero."
+
+#: templates/auctions/hashtag_feed.html:93
+msgid "Explore Auction Discovery"
+msgstr "Explorar subastas"
+
+#: templates/auctions/hashtag_feed.html:110
+#, python-format
+msgid ""
+"\n"
+"                    %(count)s post tagged\n"
+"                "
+msgid_plural ""
+"\n"
+"                    %(count)s posts tagged\n"
+"                "
+msgstr[0] ""
+"\n"
+"                    %(count)s publicación etiquetada\n"
+"                "
+msgstr[1] ""
+"\n"
+"                    %(count)s publicaciones etiquetadas\n"
+"                "
+
+#: templates/auctions/hashtag_feed.html:143
+msgid "Auction pagination"
+msgstr "Paginación de subastas"
+
+#: templates/auctions/hashtag_feed.html:150
+msgid "Previous"
+msgstr "Anterior"
+
+#: templates/auctions/hashtag_feed.html:156
+#, python-format
+msgid ""
+"\n"
+"                        Page %(current)s of %(total)s\n"
+"                    "
+msgstr ""
+"\n"
+"                        Página %(current)s de %(total)s\n"
+"                    "
+
+#: templates/auctions/hashtag_feed.html:166
+msgid "Next"
+msgstr "Siguiente"
+
+#: templates/auctions/hashtag_feed.html:180
+msgid "No posts found."
+msgstr "No se encontraron publicaciones."
 
 #: templates/auctions/includes/_auction_card.html:74
 msgid "View Auction Details"
@@ -1066,6 +1162,9 @@ msgid ""
 "        View %(name)s\n"
 "        "
 msgstr ""
+"\n"
+"        Ver %(name)s\n"
+"        "
 
 #: templates/businesses/_business_card.html:20
 msgid "Business Profile"
@@ -1091,8 +1190,17 @@ msgid_plural ""
 "                %(fan_count)s fans\n"
 "                "
 msgstr[0] ""
+"\n"
+"                %(fan_count)s fan\n"
+"                "
 msgstr[1] ""
+"\n"
+"                %(fan_count)s fans\n"
+"                "
 msgstr[2] ""
+"\n"
+"                %(fan_count)s fans\n"
+"                "
 
 #: templates/businesses/_business_card.html:84
 msgid "View Business Profile"
@@ -1104,6 +1212,8 @@ msgid ""
 "\n"
 "View events for %(name)s\n"
 msgstr ""
+"\n"
+"Ver eventos de %(name)s\n"
 
 #: templates/businesses/_business_stats.html:8
 msgid "Business activity"
@@ -1137,8 +1247,17 @@ msgid_plural ""
 "      %(fan_count)s fans\n"
 "    "
 msgstr[0] ""
+"\n"
+"      %(fan_count)s fan\n"
+"    "
 msgstr[1] ""
+"\n"
+"      %(fan_count)s fans\n"
+"    "
 msgstr[2] ""
+"\n"
+"      %(fan_count)s fans\n"
+"    "
 
 #: templates/businesses/_business_update_card.html:83
 msgid "Comments are coming in a future update."
@@ -1220,8 +1339,9 @@ msgid ""
 "         "
 msgstr ""
 "\n"
-"Añade fotos de tu negocio, productos, ubicación, menú, personal o trabajos "
-"recientes."
+"         Añade fotos de tu negocio, productos, ubicación, menú, personal o "
+"trabajos recientes.\n"
+"         "
 
 #: templates/businesses/business_detail.html:288
 msgid "Recent Updates"
@@ -1265,6 +1385,9 @@ msgid ""
 "          Edit %(name)s\n"
 "        "
 msgstr ""
+"\n"
+"          Editar %(name)s\n"
+"        "
 
 #: templates/businesses/business_form.html:16
 msgid "Update your business details, hero image, and contact information."
@@ -1407,3 +1530,4 @@ msgstr "Elige una nueva imagen"
 #: templates/businesses/widgets/business_image_input.html:50
 msgid "Choose Image"
 msgstr "Elegir imagen"
+

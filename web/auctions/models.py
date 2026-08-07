@@ -1059,6 +1059,7 @@ class DiscoveryHubTranslation(models.Model):
     LANGUAGE_CHOICES = [
         ("en", "English"),
         ("es", "Spanish"),
+        ("pt", "Portuguese"),
     ]
 
     hub = models.ForeignKey(

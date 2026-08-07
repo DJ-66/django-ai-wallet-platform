@@ -189,7 +189,10 @@ def discovery_hub(request):
 
 
 def discovery_home(request):
-    language = request.GET.get("lang", "en")
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
 
     translations = (
         DiscoveryHubTranslation.objects
@@ -212,7 +215,10 @@ def discovery_home(request):
     )
 
 def discovery_hub_detail(request, slug):
-    language = request.GET.get("lang", "en")
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
 
     hub = (
         DiscoveryHub.objects
