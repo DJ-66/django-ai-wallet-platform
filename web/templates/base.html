@@ -113,6 +113,45 @@
         </button>
     {% endif %}
 </form>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const languageForm = document.querySelector(".language-switcher");
+
+    if (!languageForm) {
+        return;
+    }
+
+    const nextInput = languageForm.querySelector('input[name="next"]');
+
+    languageForm.addEventListener("submit", function (event) {
+        const submitter = event.submitter;
+
+        if (!submitter || !nextInput) {
+            return;
+        }
+
+        const language = submitter.value;
+
+        if (!language) {
+            return;
+        }
+
+        const url = new URL(
+            nextInput.value,
+            window.location.origin
+        );
+
+        if (url.pathname.startsWith("/auctions/discover/")) {
+            url.searchParams.set("lang", language);
+
+            nextInput.value =
+                url.pathname +
+                url.search +
+                url.hash;
+        }
+    });
+});
+</script>
 </nav>
 
 </header>

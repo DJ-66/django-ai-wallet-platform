@@ -2,141 +2,198 @@
 {% load hashtag_tags %}
 {% load i18n %}
 {% load static %}
+
 {% block content %}
 
+{% get_current_language as LANGUAGE_CODE %}
 
 <div class="hashtag-page">
 
     <div class="hashtag-card">
-        <h3>🔥 {{ total_hashtags }} Hashtags on FANZ</h3>
+        <h3>
+            🔥
+            {% blocktrans count count=total_hashtags %}
+                {{ count }} Hashtag on FANZ
+            {% plural %}
+                {{ count }} Hashtags on FANZ
+            {% endblocktrans %}
+        </h3>
+
         <div class="hashtag-chip-row">
             <a
-        class="hashtag-chip"
-        href="{% url 'discovery_hub_detail' slug='auctions' %}?lang=en"
-        >
-        #auctions ({{ live_auction_count }})
-        </a>
+                class="hashtag-chip"
+                href="{% url 'discovery_hub_detail' slug='auctions' %}?lang={{ LANGUAGE_CODE }}"
+            >
+                #auctions ({{ live_auction_count }})
+            </a>
+
             {% for tag in trending_hashtags %}
-                <a href="{% url 'hashtag_feed' tag.name %}" class="hashtag-chip">
+                <a
+                    href="{% url 'hashtag_feed' tag.name %}"
+                    class="hashtag-chip"
+                >
                     #{{ tag.name }} ({{ tag.usage_count }})
                 </a>
             {% empty %}
-                <span>No trending hashtags yet.</span>
+                <span>
+                    {% trans "No trending hashtags yet." %}
+                </span>
             {% endfor %}
         </div>
     </div>
 
-    <div class="hashtag-card">
-       <h2 class="hashtag-title">#{{ hashtag.name }}</h2>
 
-{% if hashtag.name == "discover_fanz" %}
-    {% get_current_language as LANGUAGE_CODE %}
+    <div class="hashtag-card">
+        <h2 class="hashtag-title">
+            #{{ hashtag.name }}
+        </h2>
+
+        {% if hashtag.name == "discover_fanz" %}
 
     {% if LANGUAGE_CODE == "es" %}
         <img
             src="{% static 'auctions/img/ES-50-FREE.webp' %}"
-            alt="50 créditos gratis en Fanz.to"
+            alt="{% trans '50 free credits on Fanz.to' %}"
             class="discover-fanz-banner-img"
             width="686"
             height="936"
         >
+
+    {% elif LANGUAGE_CODE == "pt" %}
+        <img
+            src="{% static 'auctions/img/PT-50-FREE.webp' %}"
+            alt="{% trans '50 free credits on Fanz.to' %}"
+            class="discover-fanz-banner-img"
+            width="686"
+            height="936"
+        >
+
     {% else %}
         <img
             src="{% static 'auctions/img/EN-50-FREE.webp' %}"
-            alt="Fifty Free Credits on Fanz.to"
+            alt="{% trans '50 free credits on Fanz.to' %}"
             class="discover-fanz-banner-img"
             width="686"
             height="930"
         >
+
     {% endif %}
 
 {% endif %}
 
-{% if hashtag.name == "auctions" and auction_page.object_list %}
-    <div class="auction-page-intro">
-        <h2>Live Auctions in #auctions</h2>
 
-        <p>
-            Platform auctions tagged
-            <strong>#auctions</strong>,
-            ordered by ending soonest.
-        </p>
+        {% if hashtag.name == "auctions" and auction_page.object_list %}
+            <div class="auction-page-intro">
 
-        <a
-            class="discovery-section-cta"
-            href="{% url 'discovery_hub_detail' slug='auctions' %}?lang=en"
-        >
-            Explore Auction Discovery
-        </a>
-    </div>
-{% endif %}
+                <h2>
+                    {% trans "Live Auctions in #auctions" %}
+                </h2>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                <p>
+                    {% blocktrans trimmed %}
+                        Platform auctions tagged
+                        <strong>#auctions</strong>,
+                        ordered by ending soonest.
+                    {% endblocktrans %}
+                </p>
 
-    <p style="margin:0;">
-        {{ hashtag.usage_count }} posts tagged
-    </p>
-
-    <a
-        class="feed-like-btn telegram-share-btn"
-        href="https://t.me/share/url?text=%23{{ hashtag.name|urlencode }}%20on%20FANZ&url={{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
-        target="_blank"
-        rel="noopener noreferrer"
-    >
-        📲 Telegram
-    </a>
-
-</div>
-    
-
-</div>
-
-{% if auction_page.object_list %}
-    <div class="auction-grid">
-        {% for auction in auction_page %}
-            {% include "auctions/includes/_auction_card.html" with auction=auction %}
-        {% endfor %}
-    </div>
-
-    {% if auction_page.paginator.num_pages > 1 %}
-        <nav
-            class="discovery-pagination"
-            aria-label="Auction pagination"
-        >
-            {% if auction_page.has_previous %}
                 <a
-                    href="?auction_page={{ auction_page.previous_page_number }}"
+                    class="discovery-section-cta"
+                    href="{% url 'discovery_hub_detail' slug='auctions' %}?lang={{ LANGUAGE_CODE }}"
                 >
-                    ← Previous
+                    {% trans "Explore Auction Discovery" %}
                 </a>
-            {% endif %}
 
-            <span>
-                Page {{ auction_page.number }}
-                of {{ auction_page.paginator.num_pages }}
-            </span>
+            </div>
+        {% endif %}
 
-            {% if auction_page.has_next %}
-                <a
-                    href="?auction_page={{ auction_page.next_page_number }}"
-                >
-                    Next →
-                </a>
-            {% endif %}
-        </nav>
+
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-top:10px;
+            "
+        >
+
+            <p style="margin:0;">
+                {% blocktrans count count=hashtag.usage_count %}
+                    {{ count }} post tagged
+                {% plural %}
+                    {{ count }} posts tagged
+                {% endblocktrans %}
+            </p>
+
+            <a
+                class="feed-like-btn telegram-share-btn"
+                href="https://t.me/share/url?text=%23{{ hashtag.name|urlencode }}%20on%20FANZ&url={{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                📲 Telegram
+            </a>
+
+        </div>
+
+    </div>
+
+
+    {% if auction_page.object_list %}
+
+        <div class="auction-grid">
+            {% for auction in auction_page %}
+                {% include "auctions/includes/_auction_card.html" with auction=auction %}
+            {% endfor %}
+        </div>
+
+
+        {% if auction_page.paginator.num_pages > 1 %}
+            <nav
+                class="discovery-pagination"
+                aria-label="{% trans 'Auction pagination' %}"
+            >
+
+                {% if auction_page.has_previous %}
+                    <a
+                        href="?auction_page={{ auction_page.previous_page_number }}&lang={{ LANGUAGE_CODE }}"
+                    >
+                        ← {% trans "Previous" %}
+                    </a>
+                {% endif %}
+
+
+                <span>
+                    {% blocktrans with current=auction_page.number total=auction_page.paginator.num_pages %}
+                        Page {{ current }} of {{ total }}
+                    {% endblocktrans %}
+                </span>
+
+
+                {% if auction_page.has_next %}
+                    <a
+                        href="?auction_page={{ auction_page.next_page_number }}&lang={{ LANGUAGE_CODE }}"
+                    >
+                        {% trans "Next" %} →
+                    </a>
+                {% endif %}
+
+            </nav>
+        {% endif %}
+
     {% endif %}
-</section>
-{% endif %}
+
 
     {% for post in posts %}
         {% include "auctions/includes/_feed_post.html" with post=post %}
     {% empty %}
         <div class="hashtag-card">
-            No posts found.
+            {% trans "No posts found." %}
         </div>
     {% endfor %}
 
 </div>
+
 
 {% include "auctions/includes/_feed_post_scripts.html" %}
 {% include "auctions/includes/_auction_card_scripts.html" %}

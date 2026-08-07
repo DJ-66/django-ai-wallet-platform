@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-06 21:07+0000\n"
+"POT-Creation-Date: 2026-08-06 22:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -548,6 +548,14 @@ msgstr[1] ""
 msgid "No AI creators available yet."
 msgstr "Ainda não há criadores de IA disponíveis."
 
+#: templates/auctions/discovery_hub.html:9
+msgid "Explore"
+msgstr ""
+
+#: templates/auctions/discovery_hub.html:17
+msgid "Coming Soon"
+msgstr "em breve"
+
 #: templates/auctions/edit_profile.html:11
 #: templates/auctions/public_profile.html:292
 msgid "Edit Profile"
@@ -705,6 +713,90 @@ msgstr "Entendi"
 #: templates/auctions/feed_home.html:293
 msgid "No community activity yet."
 msgstr "Ainda não há atividade na comunidade."
+
+#: templates/auctions/hashtag_feed.html:15
+#, python-format
+msgid ""
+"\n"
+"                %(count)s Hashtag on FANZ\n"
+"            "
+msgid_plural ""
+"\n"
+"                %(count)s Hashtags on FANZ\n"
+"            "
+msgstr[0] ""
+"\n"
+"                %(count)s hashtag no FANZ\n"
+"            "
+msgstr[1] ""
+"\n"
+"                %(count)s hashtags no FANZ\n"
+"            "
+
+#: templates/auctions/hashtag_feed.html:39
+msgid "No trending hashtags yet."
+msgstr "Ainda não há hashtags populares."
+
+#: templates/auctions/hashtag_feed.html:56
+#: templates/auctions/hashtag_feed.html:64
+msgid "50 free credits on Fanz.to"
+msgstr "50 créditos grátis no Fanz.to"
+
+#: templates/auctions/hashtag_feed.html:78
+msgid "Live Auctions in #auctions"
+msgstr "Leilões ao vivo em #auctions"
+
+#: templates/auctions/hashtag_feed.html:82
+msgid ""
+"Platform auctions tagged <strong>#auctions</strong>, ordered by ending "
+"soonest."
+msgstr ""
+"Leilões da plataforma marcados com <strong>#auctions</strong>, ordenados "
+"pelos que terminam primeiro."
+
+#: templates/auctions/hashtag_feed.html:93
+msgid "Explore Auction Discovery"
+msgstr "Explorar leilões"
+
+#: templates/auctions/hashtag_feed.html:110
+#, python-format
+msgid ""
+"\n"
+"                    %(count)s post tagged\n"
+"                "
+msgid_plural ""
+"\n"
+"                    %(count)s posts tagged\n"
+"                "
+msgstr[0] ""
+"\n"
+"                    %(count)s publicação marcada\n"
+"                "
+msgstr[1] ""
+"\n"
+"                    %(count)s publicações marcadas\n"
+"                "
+
+#: templates/auctions/hashtag_feed.html:143
+msgid "Auction pagination"
+msgstr "Paginação de leilões"
+
+#: templates/auctions/hashtag_feed.html:150
+msgid "Previous"
+msgstr "Anterior"
+
+#: templates/auctions/hashtag_feed.html:156
+#, python-format
+msgid "Page %(current)s of %(total)s"
+msgstr "Página %(current)s de %(total)s"
+
+#: templates/auctions/hashtag_feed.html:166
+msgid "Next"
+msgstr "Próxima"
+
+#: templates/auctions/hashtag_feed.html:180
+msgid "No posts found."
+msgstr "Nenhuma publicação encontrada."
 
 #: templates/auctions/includes/_auction_card.html:74
 msgid "View Auction Details"
@@ -1058,6 +1150,9 @@ msgid ""
 "        View %(name)s\n"
 "        "
 msgstr ""
+"\n"
+"        Ver %(name)s\n"
+"        "
 
 #: templates/businesses/_business_card.html:20
 msgid "Business Profile"
@@ -1083,7 +1178,13 @@ msgid_plural ""
 "                %(fan_count)s fans\n"
 "                "
 msgstr[0] ""
+"\n"
+"                %(fan_count)s fã\n"
+"                "
 msgstr[1] ""
+"\n"
+"                %(fan_count)s fãs\n"
+"                "
 
 #: templates/businesses/_business_card.html:84
 msgid "View Business Profile"
@@ -1095,6 +1196,8 @@ msgid ""
 "\n"
 "View events for %(name)s\n"
 msgstr ""
+"\n"
+"Ver eventos de %(name)s\n"
 
 #: templates/businesses/_business_stats.html:8
 msgid "Business activity"
@@ -1128,7 +1231,13 @@ msgid_plural ""
 "      %(fan_count)s fans\n"
 "    "
 msgstr[0] ""
+"\n"
+"      %(fan_count)s fã\n"
+"    "
 msgstr[1] ""
+"\n"
+"      %(fan_count)s fãs\n"
+"    "
 
 #: templates/businesses/_business_update_card.html:83
 msgid "Comments are coming in a future update."
@@ -1262,6 +1371,9 @@ msgid ""
 "          Edit %(name)s\n"
 "        "
 msgstr ""
+"\n"
+"          Editar %(name)s\n"
+"        "
 
 #: templates/businesses/business_form.html:16
 msgid "Update your business details, hero image, and contact information."
@@ -1321,12 +1433,13 @@ msgid "Publish Update"
 msgstr "Publicar atualização"
 
 #: templates/businesses/business_update_form.html:16
+#, python-format
 msgid ""
 "Share news, specials, announcements, or anything happening at "
 "<strong>%(business_name)s</strong>."
 msgstr ""
-"Compartilhe notícias, ofertas especiais, anúncios ou quaisquer atualizações "
-"de <strong>%(business_name)</strong>."
+"Compartilhe notícias, promoções, anúncios ou qualquer novidade de "
+"<strong>%(business_name)s</strong>."
 
 #: templates/businesses/business_update_form.html:52
 msgid "What’s happening?"
