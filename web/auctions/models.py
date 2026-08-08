@@ -35,6 +35,56 @@ class DigitalItem(models.Model):
     def __str__(self):
         return self.title
 
+class DigitalItemTranslation(models.Model):
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("es", "Spanish"),
+        ("pt", "Portuguese"),
+    ]
+
+    digital_item = models.ForeignKey(
+        DigitalItem,
+        on_delete=models.CASCADE,
+        related_name="translations",
+    )
+
+    language = models.CharField(
+        max_length=10,
+        choices=LANGUAGE_CHOICES,
+    )
+
+    title = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    file = models.FileField(
+        upload_to="digital_item_translations/",
+        blank=True,
+        null=True,
+    )
+
+    delivery_url = models.URLField(
+        blank=True,
+    )
+
+    class Meta:
+        unique_together = (
+            "digital_item",
+            "language",
+        )
+        ordering = [
+            "digital_item_id",
+            "language",
+        ]
+
+    def __str__(self):
+        return f"{self.digital_item.title} ({self.language})"
+
 
 class Auction(models.Model):
     STATUS_CHOICES = [
@@ -98,6 +148,55 @@ class Auction(models.Model):
     def __str__(self):
         return self.title
 
+class AuctionTranslation(models.Model):
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("es", "Spanish"),
+        ("pt", "Portuguese"),
+    ]
+
+    auction = models.ForeignKey(
+        Auction,
+        on_delete=models.CASCADE,
+        related_name="translations",
+    )
+
+    language = models.CharField(
+        max_length=10,
+        choices=LANGUAGE_CHOICES,
+    )
+
+    title = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    hero_image = models.ImageField(
+        upload_to="auction_translations/",
+        blank=True,
+        null=True,
+    )
+
+    use_language_hero = models.BooleanField(
+        default=False,
+    )
+
+    class Meta:
+        unique_together = (
+            "auction",
+            "language",
+        )
+        ordering = [
+            "auction_id",
+            "language",
+        ]
+
+    def __str__(self):
+        return f"{self.auction.title} ({self.language})"
 
 class AuctionMedia(models.Model):
     MEDIA_TYPE_IMAGE = "image"

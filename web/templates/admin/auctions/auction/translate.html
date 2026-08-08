@@ -1,0 +1,101 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<h1>{% trans "Translate Auction" %}</h1>
+
+<p>
+    <strong>{% trans "Original auction:" %}</strong>
+    {{ auction.title }}
+</p>
+
+<p>
+    {% blocktrans trimmed %}
+        Add optional localized auction content below.
+        Empty fields will fall back to the original auction.
+    {% endblocktrans %}
+</p>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% for language_code, language_name, form, translation in forms_by_language %}
+
+        <fieldset
+            class="module aligned"
+            style="margin-bottom: 28px; padding: 20px;"
+        >
+
+            <h2>
+                {{ language_name }}
+                ({{ language_code|upper }})
+            </h2>
+
+            <div class="form-row">
+                {{ form.title.errors }}
+
+                <label for="{{ form.title.id_for_label }}">
+                    {% trans "Title" %}
+                </label>
+
+                {{ form.title }}
+            </div>
+
+            <div class="form-row">
+                {{ form.description.errors }}
+
+                <label for="{{ form.description.id_for_label }}">
+                    {% trans "Auction context / description" %}
+                </label>
+
+                {{ form.description }}
+            </div>
+
+            <div class="form-row">
+                {{ form.hero_image.errors }}
+
+                <label for="{{ form.hero_image.id_for_label }}">
+                    {% trans "Language hero image" %}
+                </label>
+
+                {{ form.hero_image }}
+
+                <p class="help">
+                    {% blocktrans trimmed %}
+                        Optional. Upload an image specifically for visitors using this language.
+                    {% endblocktrans %}
+                </p>
+            </div>
+
+            <div class="form-row">
+                {{ form.use_language_hero.errors }}
+
+                <label for="{{ form.use_language_hero.id_for_label }}">
+                    {{ form.use_language_hero }}
+                    {% trans "Use this image for visitors using this language" %}
+                </label>
+            </div>
+
+        </fieldset>
+
+    {% endfor %}
+
+    <div class="submit-row">
+        <input
+            type="submit"
+            value="{% trans 'Save Translations' %}"
+            class="default"
+        >
+
+        <a
+            href="{% url 'admin:auctions_auction_change' auction.pk %}"
+            class="button"
+        >
+            {% trans "Back to Auction" %}
+        </a>
+    </div>
+
+</form>
+
+{% endblock %}

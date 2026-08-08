@@ -227,7 +227,12 @@ def close_auction(auction_id):
     return auction
 
 
-def prepare_auction_cards(auctions, user, now=None):
+def prepare_auction_cards(
+    auctions,
+    user,
+    now=None,
+    language=None,
+):
     """
     Prepare auctions for reusable card rendering.
 
@@ -268,24 +273,61 @@ def prepare_auction_cards(auctions, user, now=None):
                 output_field=BooleanField(),
             ),
         )
+    if language:
+        language = str(language).lower().split("-")[0]
 
+        if language not in ("en", "es", "pt"):
+            language = "en"
+
+        auctions = auctions.prefetch_related(
+            "translations",
+        )
     prepared_auctions = list(auctions)
 
     for auction in prepared_auctions:
         remaining = (
             auction.ends_at - now
         ).total_seconds()
-
         auction.seconds_remaining = max(
             0,
             int(remaining),
         )
-
         auction.is_high_bidder = bool(
             user.is_authenticated
             and auction.last_bid_user_id == user.id
         )
 
+        # Canonical fallbacks.
+        auction.display_title = auction.title
+        auction.display_description = ""
+        auction.localized_hero_image = None
+
+        if language:
+            translation = next(
+                (
+                    item
+                    for item in auction.translations.all()
+                    if item.language == language
+                ),
+                None,
+            )
+
+            if translation:
+                if translation.title:
+                     auction.display_title = translation.title
+
+                if translation.description:
+                    auction.display_description = (
+                        translation.description
+                    )
+
+                if (
+                    translation.use_language_hero
+                    and translation.hero_image
+                ):
+                    auction.localized_hero_image = (
+                        translation.hero_image
+                    )
     return prepared_auctions
 
 

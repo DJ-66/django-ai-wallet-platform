@@ -1,0 +1,116 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<h1>
+    {% trans "Translate Digital Item" %}
+</h1>
+
+<p>
+    <strong>{% trans "Original item:" %}</strong>
+    {{ item.title }}
+</p>
+
+<p>
+    {% blocktrans trimmed %}
+        Add optional localized content below.
+        Empty fields will fall back to the original digital item.
+    {% endblocktrans %}
+</p>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% for language_code, language_name, form, translation in forms_by_language %}
+
+        <fieldset
+            class="module aligned"
+            style="
+                margin-bottom: 28px;
+                padding: 20px;
+            "
+        >
+
+            <h2>
+                {{ language_name }}
+                ({{ language_code|upper }})
+            </h2>
+
+            <div class="form-row">
+                {{ form.title.errors }}
+
+                <label for="{{ form.title.id_for_label }}">
+                    {% trans "Title" %}
+                </label>
+
+                {{ form.title }}
+            </div>
+
+            <div class="form-row">
+                {{ form.description.errors }}
+
+                <label for="{{ form.description.id_for_label }}">
+                    {% trans "Description" %}
+                </label>
+
+                {{ form.description }}
+            </div>
+
+            <div class="form-row">
+                {{ form.file.errors }}
+
+                <label for="{{ form.file.id_for_label }}">
+                    {% trans "Localized download file" %}
+                </label>
+
+                {{ form.file }}
+
+                <p class="help">
+                    {% blocktrans trimmed %}
+                        Optional. Leave empty to use the original digital item's file.
+                    {% endblocktrans %}
+                </p>
+            </div>
+
+            <div class="form-row">
+                {{ form.delivery_url.errors }}
+
+                <label for="{{ form.delivery_url.id_for_label }}">
+                    {% trans "Localized delivery URL" %}
+                </label>
+
+                {{ form.delivery_url }}
+
+                <p class="help">
+                    {% blocktrans trimmed %}
+                        Optional. Leave empty to use the original delivery URL.
+                    {% endblocktrans %}
+                </p>
+            </div>
+
+        </fieldset>
+
+    {% endfor %}
+
+    <div class="submit-row">
+
+        <input
+            type="submit"
+            value="{% trans 'Save Translations' %}"
+            class="default"
+        >
+
+        <a
+            href="{% url 'admin:auctions_digitalitem_change' item.pk %}"
+            class="button"
+        >
+            {% trans "Back to Digital Item" %}
+        </a>
+
+    </div>
+
+</form>
+
+{% endblock %}
+

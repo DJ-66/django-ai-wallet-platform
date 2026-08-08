@@ -59,25 +59,17 @@ def sync_post_hashtags(post):
     affected_tags = set(old_tags + tags)
 
     for tag in affected_tags:
-        tag.usage_count = (
-            tag.posts.count()
-            + tag.auctions.count()
-        )
+        tag.usage_count = tag.posts.count()
         tag.save(update_fields=["usage_count"])
 
 
-def sync_auction_hashtags(auction, hashtag_text=""):
+def sync_auction_hashtags(auction):
     """
-    Assign explicit auction hashtags.
+    Assign hashtags found in the auction title.
 
-    If no explicit hashtags are supplied, fall back to hashtags
-    found in the auction title. Auctions with no hashtags at all
-    are assigned to #auctions.
+    Auctions without an explicit hashtag are assigned to #auctions.
     """
-    names = extract_hashtag_names(hashtag_text)
-
-    if not names:
-        names = extract_hashtag_names(auction.title)
+    names = extract_hashtag_names(auction.title)
 
     if not names:
         default_hub = (
@@ -91,16 +83,5 @@ def sync_auction_hashtags(auction, hashtag_text=""):
             else "auctions"
         ]
 
-    old_tags = list(auction.hashtags.all())
     tags = get_or_create_hashtags(names)
-
     auction.hashtags.set(tags)
-
-    affected_tags = set(old_tags + tags)
-
-    for tag in affected_tags:
-        tag.usage_count = (
-            tag.posts.count()
-            + tag.auctions.count()
-        )
-        tag.save(update_fields=["usage_count"])

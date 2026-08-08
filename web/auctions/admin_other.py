@@ -2,10 +2,17 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
+from django.urls import path
+from django.utils.translation import gettext_lazy as _
+
 from .admin_forms import (
+    DigitalItemTranslationForm,
     DiscoveryHubAdminForm,
     DiscoveryHubTranslationAdminForm,
 )
+
 from .models import (
     AICreatorMemory,
     AICompanion,
@@ -15,6 +22,7 @@ from .models import (
     Bid,
     BidWallet,
     DigitalItem,
+    DigitalItemTranslation,
     DiscoveryHub,
     DiscoveryHubTranslation,
     Event,
@@ -31,7 +39,149 @@ class NotificationSoundAdmin(admin.ModelAdmin):
 
 @admin.register(DigitalItem)
 class DigitalItemAdmin(admin.ModelAdmin):
-    list_display = ("title",)
+    list_display = (
+        "title",
+        "translate_link",
+    )
+
+    change_form_template = (
+        "admin/auctions/digitalitem/change_form.html"
+    )
+
+    @admin.display(description=_("Translations"))
+    def translate_link(self, obj):
+        from django.utils.html import format_html
+        from django.urls import reverse
+
+        url = reverse(
+            "admin:auctions_digitalitem_translate",
+            args=[obj.pk],
+        )
+
+        return format_html(
+            '<a href="{}">{}</a>',
+            url,
+            _("Translate / Localize"),
+        )
+
+    def get_urls(self):
+        urls = super().get_urls()
+
+        custom_urls = [
+            path(
+                "<int:item_id>/translate/",
+                self.admin_site.admin_view(
+                    self.translate_view
+                ),
+                name="auctions_digitalitem_translate",
+            ),
+        ]
+
+        return custom_urls + urls
+
+    def translate_view(self, request, item_id):
+        item = get_object_or_404(
+            DigitalItem,
+            pk=item_id,
+        )
+
+        if not self.has_change_permission(request, item):
+            self.message_user(
+                request,
+                _("You do not have permission to modify this digital item."),
+                level="error",
+            )
+            return redirect(
+                "admin:auctions_digitalitem_changelist"
+            )
+
+        language_choices = (
+            DigitalItemTranslation.LANGUAGE_CHOICES
+        )
+
+        forms_by_language = []
+
+        for language_code, language_name in language_choices:
+            translation = (
+                DigitalItemTranslation.objects
+                .filter(
+                    digital_item=item,
+                    language=language_code,
+                )
+                .first()
+            )
+
+            form = DigitalItemTranslationForm(
+                request.POST or None,
+                request.FILES or None,
+                instance=translation,
+                prefix=language_code,
+            )
+
+            forms_by_language.append(
+                (
+                    language_code,
+                    language_name,
+                    form,
+                    translation,
+                )
+            )
+
+        if request.method == "POST":
+            all_valid = all(
+                form.is_valid()
+                for _, _, form, _ in forms_by_language
+            )
+
+            if all_valid:
+                for (
+                    language_code,
+                    _language_name,
+                    form,
+                    translation,
+                ) in forms_by_language:
+
+                    has_content = any(
+                        [
+                            form.cleaned_data.get("title"),
+                            form.cleaned_data.get("description"),
+                            form.cleaned_data.get("file"),
+                            form.cleaned_data.get("delivery_url"),
+                        ]
+                    )
+
+                    if translation or has_content:
+                        obj = form.save(commit=False)
+
+                        obj.digital_item = item
+                        obj.language = language_code
+                        obj.save()
+
+                self.message_user(
+                    request,
+                    _("Digital item translations saved."),
+                    level="success",
+                )
+
+                return redirect(
+                    "admin:auctions_digitalitem_translate",
+                    item_id=item.pk,
+                )
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": _("Translate Digital Item"),
+            "original": item,
+            "item": item,
+            "forms_by_language": forms_by_language,
+            "opts": self.model._meta,
+        }
+
+        return TemplateResponse(
+            request,
+            "admin/auctions/digitalitem/translate.html",
+            context,
+        )
 
 
 @admin.register(Bid)
