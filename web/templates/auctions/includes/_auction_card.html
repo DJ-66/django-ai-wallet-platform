@@ -4,13 +4,22 @@
      id="auction-{{ auction.id }}"
      data-url="{% url 'auction_detail' auction.id %}">
 
+    {% if auction.localized_hero_image %}
+    <div class="image-wrap">
+        <img
+            class="auction-thumb"
+            src="{{ auction.localized_hero_image.url }}"
+            alt="{{ auction.display_title }}"
+        >
+    </div>
+{% else %}
     {% with hero=auction.hero_media %}
         {% if hero %}
             <div class="image-wrap">
                 <img
                     class="auction-thumb"
                     src="{{ hero.file.url }}"
-                    alt="{{ auction.title }}"
+                    alt="{{ auction.display_title }}"
                 >
             </div>
         {% elif auction.image %}
@@ -18,14 +27,15 @@
                 <img
                     class="auction-thumb"
                     src="{{ auction.image.url }}"
-                    alt="{{ auction.title }}"
+                    alt="{{ auction.display_title }}"
                 >
             </div>
         {% endif %}
     {% endwith %}
+{% endif %}
 
     <div class="auction-card-top">
-        <h2>{{ auction.title }}</h2>
+        <h2>{{ auction.display_title }}</h2>
 
         {% if auction.seconds_remaining < 60 %}
             <span class="badge hot">
@@ -68,7 +78,7 @@
 
     <div class="auction-footer">
         <a
-            href="{% url 'auction_detail' auction.id %}"
+            href="{% url 'auction_detail' auction.id %}?lang={{ LANGUAGE }}"
             class="auction-view-link"
         >
             {% trans "View Auction Details" %} →

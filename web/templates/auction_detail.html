@@ -7,12 +7,20 @@
 <div class="auction-detail-panel">
 
   <div class="auction-stats">
-    <h1>{{ auction.title }}</h1>
+    <h1>{{ auction_title }}</h1>
     <p><strong>{% trans "Status" %}: </strong> <span style="color:#0b5ed7;font-weight:650"> {{ auction.status }}</span></p>
     <p><strong>{% trans "Current Bid" %}: </strong> <span style="color:#0b5ed7;font-weight:650"> {{ auction.current_price|floatformat:0 }} {% trans "credits" %}</span></p>
     <p><strong>{% trans "Ends In" %}: </strong>
       <span id="countdown" style="color:#0b5ed7;font-size:.75rem;font-weight:650" data-seconds="{{ seconds_remaining }}"></span>
     </p>
+
+<!-- below here -->
+{% if auction_description %}
+    <div class="auction-localized-description">
+        {{ auction_description|linebreaks }}
+    </div>
+{% endif %}
+<!-- above here -->
 
     {% if auction.status == "live" %}
 
@@ -62,7 +70,7 @@
 
 <a
     class="auction-action-btn telegram-share-btn"
-    href="https://t.me/share/url?url={{ request.scheme }}://{{ request.get_host }}{% url 'auction_detail' auction.id %}&text={{ auction.title|urlencode }}"
+    href="https://t.me/share/url?url={{ request.scheme }}://{{ request.get_host }}{% url 'auction_detail' auction.id %}&text={{ auction_title|urlencode }}"
     target="_blank"
     rel="noopener noreferrer"
 >
@@ -83,31 +91,39 @@
 
 <div class="auction-gallery">
 
-  <div
+<div
   class="gallery-main"
   id="mainAuctionMedia"
-  {% if hero_media %}
+
+  {% if localized_hero_image %}
+    data-current-image-src="{{ localized_hero_image.url }}"
+  {% elif hero_media %}
     data-current-image-src="{{ hero_media.file.url }}"
   {% elif auction.image %}
     data-current-image-src="{{ auction.image.url }}"
   {% endif %}
 >
-    {% if hero_media %}
+    {% if localized_hero_image %}
+      <img
+        src="{{ localized_hero_image.url }}"
+        alt="{{ auction_title }}"
+      >
+    {% elif hero_media %}
       <img
         src="{{ hero_media.file.url }}"
-        alt="{{ auction.title }}"
+        alt="{{ auction_title }}"
       >
     {% elif auction.image %}
       <img
         src="{{ auction.image.url }}"
-        alt="{{ auction.title }}"
+        alt="{{ auction_title }}"
       >
     {% else %}
       <div class="image-placeholder">
         {% trans "No image" %}
       </div>
     {% endif %}
-  </div>
+</div>
 
 <div
   class="gallery-thumbs"
@@ -189,9 +205,9 @@
 
 
   <div class="digital-item-description">
-    <h2>{{ auction.digital_item.title }}</h2>
+    <h2>{{ digital_item_title }}</h2>
     <div class="auction-description">
-  {{ auction.digital_item.description|linebreaks }}
+  {{ digital_item_description|linebreaks }}
 </div>
   </div>
 <br>
@@ -204,7 +220,7 @@
     <h2>💰 {% trans "Buy Now" %}</h2>
 
     <p>
-      {% trans "Buy" %} <strong>{{ auction.title }}</strong>
+      {% trans "Buy" %} <strong>{{ auction_title }}</strong>
       {% trans "now for" %}
       <strong>{{ buy_now_price|floatformat:0 }} {% trans "credits" %}</strong>
     </p>

@@ -55,6 +55,8 @@ from .ai_memory import touch_ai_creator_memory
 from .forms import DirectMessageForm, FeedPostForm, SignUpForm, UserProfileForm
 from datetime import timedelta
 from .models import (
+    AuctionTranslation,
+    DigitalItemTranslation,
     AICompanion,
     AIConversation,
     AIMessage,
@@ -481,28 +483,21 @@ def auction_list(request):
         status="live"
     ).order_by("ends_at")
 
-    for auction in auctions:
-        remaining = (auction.ends_at - now).total_seconds()
-        auction.seconds_remaining = max(0, int(remaining))
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
 
-        last_bid = auction.bids.order_by("-created_at").first()
-
-        auction.is_high_bidder = (
-            request.user.is_authenticated
-            and last_bid
-            and last_bid.user == request.user
-        )
-
-        auction.is_favorited = (
-            request.user.is_authenticated
-            and FavoriteAuction.objects.filter(
-                user=request.user,
-                auction=auction
-            ).exists()
-        )
+    auctions = prepare_auction_cards(
+        auctions,
+        request.user,
+        now=now,
+        language=language,
+    )
 
     return render(request, "auction_list.html", {
-        "auctions": auctions
+        "auctions": auctions,
+        "language": language,
     })
 
 def auction_detail(request, auction_id):
@@ -545,6 +540,71 @@ def auction_detail(request, auction_id):
     gallery_media = auction.gallery_media()
     active_video = auction.active_video()
 
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+
+    language = str(language).lower().split("-")[0]
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    digital_item_translation = (
+        DigitalItemTranslation.objects
+        .filter(
+            digital_item=auction.digital_item,
+            language=language,
+        )
+        .first()
+    )
+
+    digital_item_title = auction.digital_item.title
+    digital_item_description = auction.digital_item.description
+    digital_item_file = auction.digital_item.file
+    digital_item_delivery_url = auction.digital_item.delivery_url
+
+    if digital_item_translation:
+        if digital_item_translation.title:
+            digital_item_title = digital_item_translation.title
+
+        if digital_item_translation.description:
+            digital_item_description = digital_item_translation.description
+
+        if digital_item_translation.file:
+            digital_item_file = digital_item_translation.file
+
+        if digital_item_translation.delivery_url:
+            digital_item_delivery_url = (
+                digital_item_translation.delivery_url
+            )
+
+    auction_translation = (
+        AuctionTranslation.objects
+        .filter(
+            auction=auction,
+            language=language,
+        )
+        .first()
+    )
+
+    auction_title = auction.title
+    auction_description = ""
+    localized_hero_image = None
+
+    if auction_translation:
+        if auction_translation.title:
+            auction_title = auction_translation.title
+
+        if auction_translation.description:
+            auction_description = auction_translation.description
+
+        if (
+            auction_translation.use_language_hero
+            and auction_translation.hero_image
+        ):
+            localized_hero_image = auction_translation.hero_image
+
     return render(request, "auction_detail.html", {
         "auction": auction,
         "wallet": wallet,
@@ -552,11 +612,22 @@ def auction_detail(request, auction_id):
         "is_high_bidder": is_high_bidder,
         "is_favorited": is_favorited,
         "buy_now_price": buy_now_price,
-
         "hero_media": hero_media,
         "gallery_media": gallery_media,
         "active_video": active_video,
+        "language": language,
+        "auction_translation": auction_translation,
+        "auction_title": auction_title,
+        "auction_description": auction_description,
+        "localized_hero_image": localized_hero_image,
+        "digital_item_translation": digital_item_translation,
+        "digital_item_title": digital_item_title,
+        "digital_item_description": digital_item_description,
+        "digital_item_file": digital_item_file,
+        "digital_item_delivery_url": digital_item_delivery_url,
+
     })
+
 
 def ensure_api_key(node):
     if not node.api_key:

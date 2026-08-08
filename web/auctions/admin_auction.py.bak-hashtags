@@ -4,19 +4,15 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.utils.html import format_html
-from .forms import process_fanz_image_upload
-from django.utils.translation import gettext_lazy as _
+
 from .admin_forms import (
     AuctionAdminForm,
     AuctionStudioImageUploadForm,
     AuctionStudioVideoUploadForm,
-    AuctionTranslationForm,
 )
-from .models import (
-    Auction,
-    AuctionMedia,
-    AuctionTranslation,
-)
+from .forms import process_fanz_image_upload
+from .models import Auction, AuctionMedia
+
 
 @admin.register(Auction)
 class AuctionAdmin(admin.ModelAdmin):
@@ -71,8 +67,8 @@ class AuctionAdmin(admin.ModelAdmin):
 
     def save_related(self, request, form, formsets, change):
         """
-        Save related auction data, then synchronize the auction's
-        Discovery hashtags.
+        Save admin many-to-many relationships first, then derive the
+        auction's Discovery hashtags from its title.
         """
         super().save_related(
             request,
@@ -81,10 +77,7 @@ class AuctionAdmin(admin.ModelAdmin):
             change,
         )
 
-        sync_auction_hashtags(
-            form.instance,
-            form.cleaned_data.get("hashtags_text", ""),
-        )
+        sync_auction_hashtags(form.instance)
 
     def response_add(self, request, obj, post_url_continue=None):
         self.message_user(
@@ -157,13 +150,7 @@ class AuctionAdmin(admin.ModelAdmin):
             ),
             name="auctions_auction_delete_video",
         ),
-        path(
-            "<int:auction_id>/translate/",
-            self.admin_site.admin_view(
-                self.translate_view
-            ),
-            name="auctions_auction_translate",
-        ),
+
 
         ]
 
@@ -535,102 +522,3 @@ class AuctionAdmin(admin.ModelAdmin):
             "admin:auctions_auction_change",
             auction.pk,
         )
-    def translate_view(self, request, auction_id):
-        auction = get_object_or_404(
-            Auction,
-            pk=auction_id,
-    )
-
-        if not self.has_change_permission(request, auction):
-            self.message_user(
-                request,
-                _("You do not have permission to modify this auction."),
-                level="error",
-            )
-            return redirect(
-                "admin:auctions_auction_changelist"
-            )
-        forms_by_language = []
-
-        for (
-            language_code,
-            language_name,
-        ) in AuctionTranslation.LANGUAGE_CHOICES:
-
-            translation = (
-                AuctionTranslation.objects
-                .filter(
-                    auction=auction,
-                    language=language_code,
-                )
-                .first()
-            )
-            form = AuctionTranslationForm(
-                request.POST or None,
-                request.FILES or None,
-                instance=translation,
-                prefix=language_code,
-            )
-            forms_by_language.append(
-                (
-                    language_code,
-                    language_name,
-                    form,
-                    translation,
-                )
-            )
-        if request.method == "POST":
-            all_valid = all(
-                form.is_valid()
-                for _, _, form, _ in forms_by_language
-            )
-
-            if all_valid:
-                for (
-                    language_code,
-                    _language_name,
-                    form,
-                    translation,
-                ) in forms_by_language:
-
-                    has_content = any(
-                        [
-                            form.cleaned_data.get("title"),
-                            form.cleaned_data.get("description"),
-                            form.cleaned_data.get("hero_image"),
-                            form.cleaned_data.get("use_language_hero"),
-                        ]
-                    )
-
-                    if translation or has_content:
-                        obj = form.save(commit=False)
-                        obj.auction = auction
-                        obj.language = language_code
-                        obj.save()
-
-                self.message_user(
-                    request,
-                    _("Auction translations saved."),
-                    level="success",
-                )
-
-                return redirect(
-                    "admin:auctions_auction_translate",
-                    auction_id=auction.pk,
-                )
-
-        context = {
-            **self.admin_site.each_context(request),
-            "title": _("Translate Auction"),
-            "original": auction,
-            "auction": auction,
-            "forms_by_language": forms_by_language,
-            "opts": self.model._meta,
-        }
-
-        return TemplateResponse(
-            request,
-            "admin/auctions/auction/translate.html",
-            context,
-        )
-

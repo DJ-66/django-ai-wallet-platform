@@ -182,7 +182,12 @@
         {% endif %}
 
     {% endif %}
-
+    {% if auction_page.object_list %}
+        <div
+            aria-hidden="true"
+            style="height: 12px;"
+        ></div>
+    {% endif %}
 
     {% for post in posts %}
         {% include "auctions/includes/_feed_post.html" with post=post %}

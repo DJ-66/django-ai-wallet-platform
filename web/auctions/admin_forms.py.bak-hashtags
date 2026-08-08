@@ -1,66 +1,14 @@
 from django import forms
-from django.utils.translation import gettext_lazy as _
+
 from .forms import process_fanz_image_upload
 from .models import (
     Auction,
-    AuctionTranslation,
-    DigitalItemTranslation,
     DiscoveryHub,
     DiscoveryHubTranslation,
 )
 
-class AuctionTranslationForm(forms.ModelForm):
-    class Meta:
-        model = AuctionTranslation
-        fields = (
-            "title",
-            "description",
-            "hero_image",
-            "use_language_hero",
-        )
-        widgets = {
-            "description": forms.Textarea(
-                attrs={
-                    "rows": 6,
-                }
-            ),
-        }
-
-    def clean_hero_image(self):
-        image = self.cleaned_data.get("hero_image")
-
-        # Only process a newly uploaded image.
-        # Existing translated hero images should not be processed
-        # and branded again every time the form is saved.
-        uploaded_image = self.files.get(
-            self.add_prefix("hero_image")
-        )
-
-        if not uploaded_image:
-            return image
-
-        return process_fanz_image_upload(
-            uploaded_image,
-            platform_footer=True,
-            max_width=1600,
-            max_height=2400,
-            quality=90,
-        )
 
 class AuctionAdminForm(forms.ModelForm):
-    hashtags_text = forms.CharField(
-        required=False,
-        label=_("Hashtags"),
-        help_text=_(
-            "Add multiple hashtags separated by spaces, for example: "
-            "#realestate #paraguay #investment"
-        ),
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": "#realestate #paraguay #investment",
-            }
-        ),
-    )
     starting_price = forms.DecimalField(
         min_value=1,
         max_digits=10,
@@ -94,20 +42,8 @@ class AuctionAdminForm(forms.ModelForm):
             "image_2",
             "video",
             "current_price",
-            "hashtags",
         )
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
-        if self.instance and self.instance.pk:
-            names = self.instance.hashtags.values_list(
-                "name",
-                flat=True,
-            )
-
-            self.fields["hashtags_text"].initial = " ".join(
-                f"#{name}" for name in names
-            )
     def _validate_whole_number(self, field_name):
         value = self.cleaned_data.get(field_name)
 
@@ -290,19 +226,3 @@ class DiscoveryHubTranslationAdminForm(forms.ModelForm):
         )
 
 
-class DigitalItemTranslationForm(forms.ModelForm):
-    class Meta:
-        model = DigitalItemTranslation
-        fields = (
-            "title",
-            "description",
-            "file",
-            "delivery_url",
-        )
-        widgets = {
-            "description": forms.Textarea(
-                attrs={
-                    "rows": 6,
-                }
-            ),
-        }
