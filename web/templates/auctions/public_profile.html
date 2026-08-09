@@ -95,11 +95,11 @@
         {% endif %}
 
         {% if request.user == profile_user %}
-            {% if profile.bio or profile.location or profile.website %}
+            {% if display_bio or profile.location or profile.website %}
                 <div class="profile-about-block">
-                    {% if profile.bio %}
+                    {% if display_bio %}
                         <p class="profile-bio">
-                            {{ profile.bio|linebreaksbr }}
+                            {{ display_bio|linebreaksbr }}
                         </p>
                     {% endif %}
 
@@ -150,11 +150,11 @@
             </a>
             
             
-            {% if profile.bio or profile.location or profile.website %}
+            {% if display_bio or profile.location or profile.website %}
                 <div class="profile-about-block">
-                    {% if profile.bio %}
+                    {% if display_bio %}
                         <p class="profile-bio">
-                            {{ profile.bio|linebreaksbr }}
+                            {{ display_bio|linebreaksbr }}
                         </p>
                     {% endif %}
 
@@ -250,9 +250,9 @@
                              alt="Payment QR Code"
                              class="payment-qr-image">
 
-                        {% if profile.bank_payment_notes %}
+                        {% if display_payment_notes %}
                             <div class="payment-notes">
-                                {{ profile.bank_payment_notes|linebreaksbr }}
+                        {{ display_payment_notes|linebreaksbr }}
                             </div>
                         {% endif %}
 
@@ -308,14 +308,22 @@
                     <div class="featured-post-body">
                     {% if post.title %}
                     <h3 class="feed-post-title">
-                    {{ post.title }}
+                    {{ post.display_title }}
                     </h3>
                    {% endif %}
 
    <div class="feed-content">
 
-{{ post.content|link_hashtags|linebreaksbr }}
-
+{{ post.display_content|link_hashtags|linebreaksbr }}
+{% if post.hashtags.all %}
+    <div class="post-tags">
+        {% for tag in post.hashtags.all %}
+            <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
+                #{{ tag.name }}
+            </a>
+        {% endfor %}
+    </div>
+{% endif %}
 {% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
 <div class="post-tags">
     <a href="{% url 'hashtag_feed' 'discover_fanz' %}">
@@ -399,6 +407,12 @@
             </button>
         </form>
 
+        <a
+        href="{% url 'translate_post' post.id %}?lang=en"
+        class="feed-like-btn">
+        🌐 {% trans "Translate / Localize" %}
+        </a>
+
         <form method="post" action="{% url 'delete_feed_post' post.id %}">
             {% csrf_token %}
             <button
@@ -421,7 +435,7 @@
         <div class="feed-post-card" id="post-{{ post.id }}">
 
     {% if post.title %}
-        <h3 class="feed-post-title">{{ post.title }}</h3>
+        <h3 class="feed-post-title">{{ post.display_title }}</h3>
     {% endif %}
 
     {% if request.user == post.user %}
@@ -432,6 +446,12 @@
                     📌 {% trans "Pin" %}
                 </button>
             </form>
+
+            <a
+            href="{% url 'translate_post' post.id %}?lang=en"
+            class="feed-like-btn">
+            🌐 {% trans "Translate / Localize" %}
+            </a>
 
             <form method="post" action="{% url 'delete_feed_post' post.id %}">
                 {% csrf_token %}
@@ -447,8 +467,16 @@
     {% endif %}
 
     <div class="feed-content">
-        {{ post.content|link_hashtags|linebreaksbr }}
-
+        {{ post.display_content|link_hashtags|linebreaksbr }}
+{% if post.hashtags.all %}
+    <div class="post-tags">
+        {% for tag in post.hashtags.all %}
+            <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
+                #{{ tag.name }}
+            </a>
+        {% endfor %}
+    </div>
+{% endif %}
         {% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
             <div class="post-tags">
                 <a href="{% url 'hashtag_feed' 'discover_fanz' %}">

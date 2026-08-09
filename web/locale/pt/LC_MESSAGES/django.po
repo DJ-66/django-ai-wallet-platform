@@ -999,6 +999,11 @@ msgid ""
 "                    guarantee, or reverse creator payment transactions.\n"
 "                    "
 msgstr ""
+"\n"
+"                    Os pagamentos são feitos diretamente entre os usuários. "
+"A Fanz.to não processa,\n"
+"                    garante nem reverte transações de pagamento a criadores.\n"
+"                    "
 
 #: templates/auctions/public_profile.html:240
 msgid "View Payment QR"

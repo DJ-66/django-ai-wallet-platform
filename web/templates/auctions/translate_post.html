@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<div class="profile-translate-wrap">
+
+    <h1>{% trans "Translate Post" %}</h1>
+
+    <p>
+        <strong>{% trans "Original post:" %}</strong>
+        {{ post.title|default:"—" }}
+    </p>
+
+    <p>
+        {% trans "Add optional localized versions of this post title and content." %}
+    </p>
+
+    <div class="language-tabs">
+        <a
+            href="{% url 'translate_post' post.id %}?lang=en"
+            class="{% if language == 'en' %}active{% endif %}">
+            English
+        </a>
+
+        <a
+            href="{% url 'translate_post' post.id %}?lang=es"
+            class="{% if language == 'es' %}active{% endif %}">
+            Español
+        </a>
+
+        <a
+            href="{% url 'translate_post' post.id %}?lang=pt"
+            class="{% if language == 'pt' %}active{% endif %}">
+            Português
+        </a>
+    </div>
+
+    <form method="post" class="profile-translate-form">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <div class="profile-translate-actions">
+            <button type="submit">
+                {% trans "Save Translation" %}
+            </button>
+
+            <a href="{% url 'post_detail' post.id %}">
+                {% trans "Back to Post" %}
+            </a>
+        </div>
+    </form>
+
+</div>
+
+<style>
+    .profile-translate-wrap {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .language-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0;
+    }
+
+    .language-tabs a {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid #ccc;
+        border-radius: 999px;
+        text-decoration: none;
+    }
+
+    .language-tabs a.active {
+        font-weight: 700;
+    }
+
+    .profile-translate-form input,
+    .profile-translate-form textarea {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .profile-translate-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+    }
+</style>
+
+{% endblock %}

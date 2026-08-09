@@ -812,6 +812,52 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.display_name or self.user.username
 
+
+class UserProfileTranslation(models.Model):
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("es", "Spanish"),
+        ("pt", "Portuguese"),
+    ]
+
+    profile = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="translations",
+    )
+
+    language = models.CharField(
+        max_length=2,
+        choices=LANGUAGE_CHOICES,
+    )
+
+    bio = models.TextField(
+        blank=True,
+    )
+
+    bank_payment_notes = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["profile", "language"],
+                name="unique_user_profile_translation_language",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.profile} [{self.language}]"
+
 class Hashtag(models.Model):
     name = models.CharField(max_length=50, unique=True)
     usage_count = models.PositiveIntegerField(default=0)
@@ -864,6 +910,56 @@ class FeedPost(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.content[:40]}"
+
+
+class FeedPostTranslation(models.Model):
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("es", "Spanish"),
+        ("pt", "Portuguese"),
+    ]
+
+    post = models.ForeignKey(
+        FeedPost,
+        on_delete=models.CASCADE,
+        related_name="translations",
+    )
+
+    language = models.CharField(
+        max_length=2,
+        choices=LANGUAGE_CHOICES,
+    )
+
+    title = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+    )
+
+    content = models.TextField(
+        max_length=2000,
+        blank=True,
+        default="",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["post", "language"],
+                name="unique_feed_post_translation_language",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.post_id} [{self.language}]"
 
 class FeedPostMedia(models.Model):
     MEDIA_TYPE_IMAGE = "image"

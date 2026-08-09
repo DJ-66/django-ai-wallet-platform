@@ -25,7 +25,11 @@ urlpatterns = [
     path("ai/chat/<int:conversation_id>/", views_ai.ai_conversation, name="ai_conversation"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
-
+    path(
+        "profile/translate/",
+        views.translate_profile,
+        name="translate_profile",
+    ),
     path(
     "events/",
     views_events.event_list,
@@ -71,10 +75,15 @@ urlpatterns = [
     "notifications/<int:notification_id>/delete/",
     views.delete_notification,
     name="delete_notification"
-),
+    ),
     path("u/<str:username>/", views.public_profile, name="public_profile"),
     path("feed/", views.feed_home, name="feed_home"),
     path("feed/post/<int:post_id>/", views.post_detail, name="post_detail"),
+    path(
+        "feed/post/<int:post_id>/translate/",
+        views.translate_post,
+        name="translate_post",
+    ),
     path("feed/post/<int:post_id>/pin/", views.toggle_pin_post, name="toggle_pin_post"),
     path("feed/post/<int:post_id>/delete/", views.delete_feed_post, name="delete_feed_post"),
     path("feed/post/<int:post_id>/comment/", views.add_post_comment, name="add_post_comment"),

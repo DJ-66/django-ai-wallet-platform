@@ -9,6 +9,15 @@
         <div class="auth-icon">👤</div>
 
         <h2>{% trans "Edit Profile" %}</h2>
+         <p>
+        <a href="{% url 'translate_profile' %}?lang=en">
+            🌐 {% trans "Translate / Localize Profile" %}
+        </a>
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="auth-form">
+        {% csrf_token %}
+        {{ form.as_p }}
 
         <form method="post" enctype="multipart/form-data" class="auth-form">
             {% csrf_token %}

@@ -1,3 +1,4 @@
+import secrets
 from django import forms
 from .models import FeedPost, FeedPostMedia
 from core.image_utils import process_fanz_image_upload
@@ -8,7 +9,9 @@ from .models import (
     DirectMessage,
     Event,
     FeedPost,
+    FeedPostTranslation,
     UserProfile,
+    UserProfileTranslation,
 )
 
 
@@ -177,7 +180,6 @@ class FeedPostForm(forms.ModelForm):
         }
     ),
 )
-
 
     def __init__(self, *args, **kwargs):
         self.current_username = kwargs.pop("current_username", None)
@@ -410,6 +412,33 @@ class FeedPostForm(forms.ModelForm):
 
         return cleaned_media
 
+class FeedPostTranslationForm(forms.ModelForm):
+    class Meta:
+        model = FeedPostTranslation
+        fields = [
+            "title",
+            "content",
+        ]
+
+        labels = {
+            "title": _("Title"),
+            "content": _("Content"),
+        }
+
+        widgets = {
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": _("Localized post title..."),
+                }
+            ),
+            "content": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "placeholder": _("Localized post content..."),
+                }
+            ),
+        }
+
 class SignUpForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
     password_confirm = forms.CharField(widget=forms.PasswordInput)
@@ -481,8 +510,46 @@ class UserProfileForm(forms.ModelForm):
 
 }
 
+class UserProfileTranslationForm(forms.ModelForm):
+    class Meta:
+        model = UserProfileTranslation
+        fields = [
+            "bio",
+            "bank_payment_notes",
+        ]
+
+        labels = {
+            "bio": _("Bio"),
+            "bank_payment_notes": _("Payment instructions"),
+        }
+
+        widgets = {
+            "bio": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                }
+            ),
+            "bank_payment_notes": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                }
+            ),
+        }
+
+
     def clean_avatar(self):
         image = self.cleaned_data.get("avatar")
+
+        if not image:
+            return image
+
+        user_id = getattr(
+            getattr(self.instance, "user", None),
+            "id",
+            "user",
+        )
+
+        token = secrets.token_hex(3)
 
         return process_fanz_image_upload(
             image,
@@ -490,10 +557,22 @@ class UserProfileForm(forms.ModelForm):
             max_width=600,
             max_height=600,
             quality=86,
+            output_name=f"avatar-{user_id}-{token}",
         )
 
     def clean_banner(self):
         image = self.cleaned_data.get("banner")
+
+        if not image:
+            return image
+
+        user_id = getattr(
+            getattr(self.instance, "user", None),
+            "id",
+            "user",
+        )
+
+        token = secrets.token_hex(3)
 
         return process_fanz_image_upload(
             image,
@@ -501,6 +580,7 @@ class UserProfileForm(forms.ModelForm):
             max_width=1800,
             max_height=700,
             quality=86,
+            output_name=f"banner-{user_id}-{token}",
         )
 
     def clean_bank_qr_image(self):
