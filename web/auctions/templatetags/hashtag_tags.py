@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 
 register = template.Library()
 
-HASHTAG_RE = re.compile(r"#([A-Za-z0-9_]{2,50})")
+HASHTAG_RE = re.compile(r"#([\w]{2,50})")
 
 
 @register.filter

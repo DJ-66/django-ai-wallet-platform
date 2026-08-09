@@ -1,0 +1,105 @@
+{% load i18n %}
+
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Translate Profile" %}</title>
+
+    <style>
+        .profile-translate-wrap {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .language-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .language-tabs a {
+            display: inline-block;
+            padding: 10px 16px;
+            border: 1px solid #ccc;
+            border-radius: 999px;
+            text-decoration: none;
+        }
+
+        .language-tabs a.active {
+            font-weight: 700;
+        }
+
+        .profile-translate-form p {
+            margin-bottom: 18px;
+        }
+
+        .profile-translate-form textarea {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .profile-translate-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="profile-translate-wrap">
+
+    <h1>{% trans "Translate Profile" %}</h1>
+
+    <p>
+        {% trans "Add optional localized versions of your bio and payment instructions." %}
+    </p>
+
+    <div class="language-tabs">
+        <a
+            href="{% url 'translate_profile' %}?lang=en"
+            class="{% if language == 'en' %}active{% endif %}">
+            English
+        </a>
+
+        <a
+            href="{% url 'translate_profile' %}?lang=es"
+            class="{% if language == 'es' %}active{% endif %}">
+            Español
+        </a>
+
+        <a
+            href="{% url 'translate_profile' %}?lang=pt"
+            class="{% if language == 'pt' %}active{% endif %}">
+            Português
+        </a>
+    </div>
+
+    <form method="post" class="profile-translate-form">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <div class="profile-translate-actions">
+            <button type="submit">
+                {% trans "Save Translation" %}
+            </button>
+
+            <a href="{% url 'edit_profile' %}">
+                {% trans "Back to Edit Profile" %}
+            </a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>
+

@@ -7136,4 +7136,31 @@ Allow the content to wrap safely in every language.
     display: inline !important;
 }
 
+.high-bidder-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+
+    max-width: 100%;
+    width: fit-content;
+
+    padding: 0.45rem 0.75rem;
+
+    font-size: 0.8rem;
+    line-height: 1.2;
+    text-align: center;
+
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .high-bidder-badge {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
 /* end_css */

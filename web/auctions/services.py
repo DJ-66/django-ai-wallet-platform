@@ -331,6 +331,48 @@ def prepare_auction_cards(
     return prepared_auctions
 
 
+def prepare_feed_posts(posts, language=None):
+    """
+    Prepare feed posts for localized presentation.
+
+    Adds display_title and display_content while preserving
+    canonical post fields as fallbacks.
+    """
+
+    if language:
+        language = str(language).lower().split("-")[0]
+
+        if language not in ("en", "es", "pt"):
+            language = "en"
+
+        posts = posts.prefetch_related("translations")
+
+    prepared_posts = list(posts)
+
+    for post in prepared_posts:
+        post.display_title = post.title
+        post.display_content = post.content
+
+        if language:
+            translation = next(
+                (
+                    item
+                    for item in post.translations.all()
+                    if item.language == language
+                ),
+                None,
+            )
+
+            if translation:
+                if translation.title:
+                    post.display_title = translation.title
+
+                if translation.content:
+                    post.display_content = translation.content
+
+    return prepared_posts
+
+
 def calculate_node_commission(node, package):
     """
     Returns commission amount in USD based on package price.

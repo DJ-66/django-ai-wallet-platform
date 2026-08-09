@@ -1,10 +1,7 @@
 import re
-
 from .models import DiscoveryHub, Hashtag
 
-
-HASHTAG_RE = re.compile(r"#([A-Za-z0-9_]{2,50})")
-
+HASHTAG_RE = re.compile(r"#([\w]{2,50})")
 
 def extract_hashtag_names(text):
     if not text:
@@ -22,7 +19,6 @@ def extract_hashtag_names(text):
 
     return names
 
-
 def get_or_create_hashtags(names):
     """
     Return Hashtag objects for normalized hashtag names.
@@ -35,9 +31,30 @@ def get_or_create_hashtags(names):
 
     return tags
 
-
 def sync_post_hashtags(post):
-    names = extract_hashtag_names(f"{post.title} {post.content}")
+    names = []
+    seen = set()
+
+    # Canonical post hashtags.
+    canonical_names = extract_hashtag_names(
+        f"{post.title} {post.content}"
+    )
+
+    for name in canonical_names:
+        if name not in seen:
+            names.append(name)
+            seen.add(name)
+
+    # Localized post hashtags.
+    for translation in post.translations.all():
+        translated_names = extract_hashtag_names(
+            f"{translation.title} {translation.content}"
+        )
+
+        for name in translated_names:
+            if name not in seen:
+                names.append(name)
+                seen.add(name)
 
     if not names:
         default_hub = (
@@ -45,6 +62,7 @@ def sync_post_hashtags(post):
             .filter(slug="discover-fanz", is_active=True)
             .first()
         )
+
         names = [
             default_hub.hashtag
             if default_hub

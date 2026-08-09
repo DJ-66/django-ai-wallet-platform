@@ -2,7 +2,7 @@
 
 <div class="auction-card"
      id="auction-{{ auction.id }}"
-     data-url="{% url 'auction_detail' auction.id %}">
+     data-url="{% url 'auction_detail' auction.id %}{% if language %}?lang={{ language }}{% endif %}">
 
     {% if auction.localized_hero_image %}
     <div class="image-wrap">

@@ -144,6 +144,7 @@ def process_fanz_image_upload(
     max_width=1600,
     max_height=2400,
     quality=90,
+    output_name=None,
 ):
     if not image:
         return image
@@ -199,8 +200,16 @@ def process_fanz_image_upload(
 
     output.seek(0)
 
-    original_name = os.path.splitext(image.name)[0]
-    new_name = f"{original_name}.webp"
+    if output_name:
+        base_name = os.path.splitext(
+            os.path.basename(output_name)
+        )[0]
+        new_name = f"{base_name}.webp"
+    else:
+        original_name = os.path.splitext(
+            os.path.basename(image.name)
+        )[0]
+        new_name = f"{original_name}.webp"
 
     return InMemoryUploadedFile(
         output,

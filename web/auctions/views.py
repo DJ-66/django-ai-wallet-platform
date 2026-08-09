@@ -46,14 +46,22 @@ from .services import (
     place_bid,
     prepare_auction_cards,
     send_digital_delivery_message,
+    prepare_feed_posts,
 )
 from .utils import get_system_wallet
 from .models import Event
 from businesses.models import BusinessUpdate
 from businesses.services import get_discovery_businesses
 from .ai_memory import touch_ai_creator_memory
-from .forms import DirectMessageForm, FeedPostForm, SignUpForm, UserProfileForm
 from datetime import timedelta
+from .forms import (
+    DirectMessageForm,
+    FeedPostForm,
+    FeedPostTranslationForm,
+    SignUpForm,
+    UserProfileForm,
+    UserProfileTranslationForm,
+)
 from .models import (
     AuctionTranslation,
     DigitalItemTranslation,
@@ -71,6 +79,7 @@ from .models import (
     Fan,
     FavoriteAuction,
     FeedPost,
+    FeedPostTranslation,
     FeedPostMedia,
     NodeProfile,
     Notification,
@@ -78,18 +87,25 @@ from .models import (
     PostLike,
     PostUnlock,
     UserProfile,
+    UserProfileTranslation,
     WalletTransaction,
     NotificationSound,
 )
 
 def hashtag_feed(request, tag_name):
-
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
     hashtag = get_object_or_404(
         Hashtag,
         name=tag_name.lower()
     )
 
-    posts = get_public_hashtag_posts(hashtag)
+    posts = prepare_feed_posts(
+        get_public_hashtag_posts(hashtag),
+        language=language,
+    )
 
     auction_queryset = get_live_hashtag_auctions(hashtag)
 
@@ -105,6 +121,7 @@ def hashtag_feed(request, tag_name):
     auction_page.object_list = prepare_auction_cards(
         auction_page.object_list,
         request.user,
+        language=language,
     )
 
     trending_hashtags = (
@@ -133,7 +150,7 @@ def hashtag_feed(request, tag_name):
             "live_auction_count": live_auction_count,
             "total_hashtags": total_hashtags,
             "unlocked_post_ids": unlocked_post_ids,
-
+            "language": language,
         }
     )
 
@@ -245,9 +262,12 @@ def discovery_hub_detail(request, slug):
     )
 
     if hashtag:
-        posts = get_public_hashtag_posts(hashtag)
+        posts = prepare_feed_posts(
+            get_public_hashtag_posts(hashtag),
+            language=language,
+        )
     else:
-        posts = FeedPost.objects.none()
+        posts = []
 
     businesses = get_discovery_businesses(hub)
     events = get_discovery_events(hub)
@@ -267,6 +287,7 @@ def discovery_hub_detail(request, slug):
     auction_page.object_list = prepare_auction_cards(
         auction_page.object_list,
         request.user,
+        language=language,
     )
 
     metrics = get_discovery_metrics(
@@ -636,6 +657,11 @@ def ensure_api_key(node):
 
 
 def feed_home(request):
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+
     if request.method == "POST":
         if not request.user.is_authenticated:
             return redirect("login")
@@ -717,6 +743,12 @@ def feed_home(request):
             "-created_at"
         )
     )
+
+    posts = prepare_feed_posts(
+        posts,
+        language=language,
+    )
+
     business_updates = (
         BusinessUpdate.objects
         .select_related(
@@ -803,6 +835,8 @@ def feed_home(request):
         "feed_items": feed_items,
         "unlocked_post_ids": unlocked_post_ids,
         "recent_notifications": recent_notifications,
+        "language": language,
+
     })
 
 
@@ -1457,6 +1491,66 @@ def edit_profile(request):
     )
 
 
+@login_required
+def translate_profile(request):
+    profile, _ = UserProfile.objects.get_or_create(
+        user=request.user
+    )
+
+    language = request.GET.get("lang", "en").lower()
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    translation, created = UserProfileTranslation.objects.get_or_create(
+        profile=profile,
+        language=language,
+    )
+
+    if created and language == "en":
+        translation.bio = profile.bio
+        translation.bank_payment_notes = profile.bank_payment_notes
+        translation.save(
+            update_fields=[
+                "bio",
+                "bank_payment_notes",
+            ]
+        )
+
+    if request.method == "POST":
+        form = UserProfileTranslationForm(
+            request.POST,
+            instance=translation,
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                "Profile translation saved."
+            )
+
+            return redirect(
+                f"{reverse('translate_profile')}?lang={language}"
+            )
+
+    else:
+        form = UserProfileTranslationForm(
+            instance=translation
+        )
+
+    return render(
+        request,
+        "auctions/translate_profile.html",
+        {
+            "profile": profile,
+            "translation": translation,
+            "form": form,
+            "language": language,
+        },
+    )
+
 def public_profile(request, username):
     profile_user = get_object_or_404(
         User,
@@ -1479,14 +1573,50 @@ def public_profile(request, username):
 
     profile, _ = UserProfile.objects.get_or_create(user=profile_user)
 
-    profile_posts = FeedPost.objects.select_related(
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+
+    language = str(language).lower().split("-")[0]
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    profile_translation = (
+        UserProfileTranslation.objects
+        .filter(
+            profile=profile,
+            language=language,
+        )
+        .first()
+    )
+
+    display_bio = profile.bio
+    display_payment_notes = profile.bank_payment_notes
+
+    if profile_translation:
+        if profile_translation.bio:
+            display_bio = profile_translation.bio
+
+        if profile_translation.bank_payment_notes:
+            display_payment_notes = profile_translation.bank_payment_notes
+
+    profile_posts_qs = FeedPost.objects.select_related(
         "user",
         "user__profile"
     ).filter(
         user=profile_user,
     ).order_by("-is_pinned", "-created_at")
 
-    premium_post_count = profile_posts.filter(is_paid=True).count()
+    premium_post_count = profile_posts_qs.filter(
+        is_paid=True
+    ).count()
+
+    profile_posts = prepare_feed_posts(
+        profile_posts_qs,
+        language=language,
+    )
 
     total_likes = sum(post.likes.count() for post in profile_posts)
 
@@ -1572,6 +1702,9 @@ def public_profile(request, username):
             "show_creator_earnings": show_creator_earnings,
             "is_fan": is_fan,
             "recent_notifications": recent_notifications,
+            "language": language,
+            "display_bio": display_bio,
+            "display_payment_notes": display_payment_notes,
         }
     )
 
@@ -1602,6 +1735,70 @@ def post_detail(request, post_id):
         }
     )
 
+
+@login_required
+def translate_post(request, post_id):
+    post = get_object_or_404(
+        FeedPost,
+        id=post_id,
+        user=request.user,
+    )
+
+    language = request.GET.get("lang", "en").lower()
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    translation, created = FeedPostTranslation.objects.get_or_create(
+        post=post,
+        language=language,
+    )
+
+    if created and language == "en":
+        translation.title = post.title
+        translation.content = post.content
+        translation.save(
+            update_fields=[
+                "title",
+                "content",
+            ]
+        )
+
+    if request.method == "POST":
+        form = FeedPostTranslationForm(
+            request.POST,
+            instance=translation,
+        )
+
+        if form.is_valid():
+            form.save()
+
+            sync_post_hashtags(post)
+
+            messages.success(
+                request,
+                "Post translation saved."
+            )
+
+            return redirect(
+                f"{reverse('translate_post', args=[post.id])}?lang={language}"
+            )
+
+    else:
+        form = FeedPostTranslationForm(
+            instance=translation,
+        )
+
+    return render(
+        request,
+        "auctions/translate_post.html",
+        {
+            "post": post,
+            "translation": translation,
+            "form": form,
+            "language": language,
+        },
+    )
 
 @login_required
 def toggle_post_like(request, post_id):
