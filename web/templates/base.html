@@ -11,13 +11,37 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=357">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=358">
   {% block extra_css %}{% endblock %}
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
 </svg>">
 </head>
+
 <body>
+{% if request.session.platform_original_user_id %}
+    <div class="platform-mode-banner">
+        <div>
+            ✨
+            {% trans "Platform mode" %}:
+            <strong>@{{ request.user.username }}</strong>
+        </div>
+
+        <form
+            method="post"
+            action="{% url 'return_from_platform_account' %}"
+        >
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="platform-return-btn"
+            >
+                ↩ {% trans "Return to DJ" %}
+            </button>
+        </form>
+    </div>
+{% endif %}
 
 <header class="site-header">
 

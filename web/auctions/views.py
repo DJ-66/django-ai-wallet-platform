@@ -61,6 +61,7 @@ from .forms import (
     SignUpForm,
     UserProfileForm,
     UserProfileTranslationForm,
+    PlatformAccountForm,
 )
 from .models import (
     AuctionTranslation,
@@ -1452,6 +1453,162 @@ def send_buy_now_email(auction, user, buy_now_price):
 
     email.attach_alternative(html_body, "text/html")
     email.send()
+
+
+@login_required
+def platform_accounts_dashboard(request):
+    if request.user.username.lower() != "dj":
+        raise Http404("Not found")
+
+    platform_accounts = (
+        UserProfile.objects
+        .select_related("user")
+        .filter(is_platform_account=True)
+        .order_by("user__username")
+    )
+
+    return render(
+        request,
+        "auctions/platform_accounts.html",
+        {
+            "platform_accounts": platform_accounts,
+        },
+    )
+
+
+@login_required
+def create_platform_account(request):
+    if request.user.username.lower() != "dj":
+        raise Http404("Not found")
+
+    if request.method == "POST":
+        form = PlatformAccountForm(request.POST)
+
+        if form.is_valid():
+            username = form.cleaned_data["username"]
+            display_name = form.cleaned_data["display_name"]
+
+            user = User(
+                username=username,
+                email=f"{username.lower()}@platform.invalid",
+                is_active=True,
+                is_staff=False,
+                is_superuser=False,
+            )
+
+            user.set_unusable_password()
+            user.save()
+
+            profile, _ = UserProfile.objects.get_or_create(
+                user=user
+            )
+
+            profile.display_name = display_name
+            profile.is_platform_account = True
+            profile.is_official = True
+
+            profile.save(
+                update_fields=[
+                    "display_name",
+                    "is_platform_account",
+                    "is_official",
+                ]
+            )
+
+            messages.success(
+                request,
+                f"Platform account @{username} created."
+            )
+
+            return redirect(
+                "platform_accounts_dashboard"
+            )
+
+    else:
+        form = PlatformAccountForm()
+
+    return render(
+        request,
+        "auctions/create_platform_account.html",
+        {
+            "form": form,
+        },
+    )
+
+@login_required
+@require_POST
+def login_as_platform_account(request, user_id):
+    if request.user.username.lower() != "dj":
+        raise Http404("Not found")
+
+    target_user = get_object_or_404(
+        User.objects.select_related("profile"),
+        id=user_id,
+        is_active=True,
+        profile__is_platform_account=True,
+    )
+
+    if target_user == request.user:
+        return redirect("platform_accounts_dashboard")
+
+    original_user_id = request.user.id
+
+    backend = settings.AUTHENTICATION_BACKENDS[0]
+
+    login(
+        request,
+        target_user,
+        backend=backend,
+    )
+
+    request.session["platform_original_user_id"] = original_user_id
+
+    messages.success(
+        request,
+        f"You are now using @{target_user.username}."
+    )
+
+    return redirect(
+        "public_profile_root",
+        username=target_user.username,
+    )
+
+@login_required
+@require_POST
+def return_from_platform_account(request):
+    original_user_id = request.session.get(
+        "platform_original_user_id"
+    )
+
+    if not original_user_id:
+        raise Http404("Not found")
+
+    original_user = get_object_or_404(
+        User,
+        id=original_user_id,
+        username__iexact="DJ",
+        is_active=True,
+    )
+
+    backend = settings.AUTHENTICATION_BACKENDS[0]
+
+    login(
+        request,
+        original_user,
+        backend=backend,
+    )
+
+    request.session.pop(
+        "platform_original_user_id",
+        None,
+    )
+
+    messages.success(
+        request,
+        "Returned to DJ."
+    )
+
+    return redirect("platform_accounts_dashboard")
 
 @login_required
 def edit_profile(request):

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<div class="platform-accounts-wrap">
+
+    <h1>✨ {% trans "Platform Accounts" %}</h1>
+
+    <p>
+        {% trans "FANZ-controlled platform identities." %}
+    </p>
+    <p>
+    <a
+        class="auth-primary-btn"
+        href="{% url 'create_platform_account' %}">
+        ➕ {% trans "Create Platform Account" %}
+    </a>
+    </p>
+    {% if platform_accounts %}
+
+        <div class="platform-account-list">
+
+            {% for profile in platform_accounts %}
+
+                <div class="platform-account-card">
+
+                    <div>
+                        <strong>
+                            ✨ {{ profile.display_name|default:profile.user.username }}
+                        </strong>
+
+                        <div>
+                            @{{ profile.user.username }}
+                        </div>
+                    </div>
+
+                    <div class="platform-account-actions">
+
+                        <a
+                            class="auth-primary-btn"
+                            href="{% url 'public_profile_root' profile.user.username %}">
+                            {% trans "View Profile" %}
+                        </a>
+                        {% if profile.user != request.user %}
+                       <form
+                       method="post"
+                       action="{% url 'login_as_platform_account' profile.user.id %}"
+                       style="display:inline;"
+                       >
+                      {% csrf_token %}
+
+                      <button
+                      type="submit"
+                      class="auth-primary-btn"
+                      onclick="return confirm('Login as @{{ profile.user.username }}?');"
+                      >
+                      🔑 {% trans "Login As" %}
+                      </button>
+                      </form>
+                      {% endif %}
+                      </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <p>
+            {% trans "No platform accounts yet." %}
+        </p>
+
+    {% endif %}
+
+</div>
+
+<style>
+    .platform-accounts-wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .platform-account-list {
+        display: grid;
+        gap: 16px;
+        margin-top: 24px;
+    }
+
+    .platform-account-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+    }
+
+    .platform-account-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+</style>
+
+{% endblock %}

@@ -26,20 +26,42 @@ urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path(
+        "platform/accounts/<int:user_id>/login-as/",
+        views.login_as_platform_account,
+        name="login_as_platform_account",
+    ),
+
+    path(
+        "platform/accounts/return/",
+        views.return_from_platform_account,
+        name="return_from_platform_account",
+    ),
+    path(
+        "platform/accounts/create/",
+        views.create_platform_account,
+        name="create_platform_account",
+    ),
+    path(
         "profile/translate/",
         views.translate_profile,
         name="translate_profile",
     ),
     path(
-    "events/",
-    views_events.event_list,
-    name="event_list",
+        "platform/accounts/",
+        views.platform_accounts_dashboard,
+        name="platform_accounts_dashboard",
     ),
 
     path(
-    "events/<int:event_id>/",
-    views_events.event_detail,
-    name="event_detail",
+        "events/",
+        views_events.event_list,
+        name="event_list",
+    ),
+
+    path(
+        "events/<int:event_id>/",
+        views_events.event_detail,
+        name="event_detail",
     ),
 
     path(
@@ -55,9 +77,9 @@ urlpatterns = [
     ),
 
     path(
-    "events/create/",
-    views_events.create_event,
-    name="create_event",
+        "events/create/",
+        views_events.create_event,
+        name="create_event",
     ),
 
     path("<str:username>/fan/", views.toggle_fan, name="toggle_fan"),

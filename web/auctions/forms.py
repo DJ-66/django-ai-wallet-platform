@@ -14,6 +14,29 @@ from .models import (
     UserProfileTranslation,
 )
 
+class PlatformAccountForm(forms.Form):
+    username = forms.CharField(
+        max_length=150,
+        label=_("Username"),
+    )
+
+    display_name = forms.CharField(
+        max_length=80,
+        required=False,
+        label=_("Display name"),
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data["username"].strip()
+
+        if User.objects.filter(
+            username__iexact=username
+        ).exists():
+            raise forms.ValidationError(
+                _("This username already exists.")
+            )
+
+        return username
 
 
 class EventForm(forms.ModelForm):
@@ -446,7 +469,82 @@ class SignUpForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ["username", "email", "password"]
+    
+    def clean_username(self):
+        username = self.cleaned_data.get("username", "").strip()
 
+        reserved_usernames = {
+            "admin",
+            "administrator",
+            "support",
+            "security",
+            "official",
+            "system",
+            "moderator",
+            "billing",
+            "auctions",
+            "discover",
+            "help",
+            "staff",
+            "fanzofficial",
+            "bitcoin",
+            "dogecoin",
+            "monero",
+            "medititation",
+            "ebook",
+            "author",
+            "coffee",
+            "dating",
+            "beachyoga",
+            "beach",
+            "Encarnacion",
+            "python",
+            "blockchain",
+            "memecoin",
+            "music",
+            "audio",
+            "t-shirt",
+            "tshirt",
+            "advertise",
+            "influencer",
+            "digitalnomad",
+            "horror",
+            "nudes",
+            "pizza",
+            "freelance",
+            "gtwilson",
+            "djjordan",
+            "watchparty",
+        }
+
+        normalized_username = username.lower()
+
+        # Reserve every 1–4 character handle for FANZ/platform use.
+        if len(username) <= 4:
+            raise forms.ValidationError(
+                _(
+                    "Usernames with 4 characters or fewer are reserved "
+                    "for FANZ platform accounts."
+                )
+            )
+
+        # Reserve important longer platform/system handles.
+        if normalized_username in reserved_usernames:
+            raise forms.ValidationError(
+                _("This username is reserved for FANZ platform use.")
+            )
+
+        # Prevent case variations such as News / NEWS / news.
+        if User.objects.filter(
+            username__iexact=username
+        ).exists():
+            raise forms.ValidationError(
+                _("This username is already taken.")
+            )
+
+        return username
+
+    
     def clean_email(self):
         email = self.cleaned_data.get("email", "").strip().lower()
 
