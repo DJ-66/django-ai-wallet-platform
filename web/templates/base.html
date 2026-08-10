@@ -165,16 +165,14 @@ document.addEventListener("DOMContentLoaded", function () {
             window.location.origin
         );
 
-        if (url.pathname.startsWith("/auctions/discover/")) {
-            url.searchParams.set("lang", language);
+        url.searchParams.set("lang", language);
 
-            nextInput.value =
-                url.pathname +
-                url.search +
-                url.hash;
-        }
+        nextInput.value =
+            url.pathname +
+            url.search +
+            url.hash;
+        });
     });
-});
 </script>
 </nav>
 
