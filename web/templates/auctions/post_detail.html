@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load hashtag_tags %}
-
+{% load i18n %}
 {% block content %}
 
 <div class="feed-card">
@@ -10,7 +10,7 @@
    <div class="post-detail-info-card">
     <div class="post-detail-meta">
         <a
-            href="{% url 'public_profile_root' post.user.username %}"
+            href="{% url 'public_profile_root' post.user.username %}?lang={{ language }}"
             class="post-author-link"
         >
             @{{ post.user.username }}
@@ -23,26 +23,30 @@
 
     {% if post.title %}
         <h1 class="post-detail-title">
-            {{ post.title }}
+            {{ post.display_title }}
         </h1>
     {% endif %}
 
     {% if post.content %}
         <div class="post-detail-content">
-            {{ post.content|linebreaksbr }}
+            {{ post.display_content|linebreaksbr }}
         </div>
     {% endif %}
 
-    {% if post.user.profile.bio %}
-        <div class="post-detail-bio">
-            <strong>About @{{ post.user.username }}</strong>
-            <p>{{ post.user.profile.bio|linebreaksbr }}</p>
-        </div>
-    {% endif %}
+    {% if display_bio %}
+    <div class="post-detail-bio">
+        <strong>
+            {% blocktrans with username=post.user.username %}
+                About @{{ username }}
+            {% endblocktrans %}
+        </strong>
+        <p>{{ display_bio|linebreaksbr }}</p>
+    </div>
+{% endif %}
 
     <div class="post-detail-tags">
         {% for tag in post.hashtags.all %}
-            <a href="{% url 'hashtag_feed' tag.name %}">
+            <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
                 #{{ tag.name }}
             </a>
         {% endfor %}
@@ -58,23 +62,24 @@
       <div class="premium-preview">
         <img src="{{ post.image.url }}" class="feed-image premium-blur">
         <div class="premium-overlay">
-          🔒 Premium Content
+          🔒 {% trans "Premium Content" %}
         </div>
       </div>
     {% endif %}
 
     <p class="locked-post-title">
-      🔒 Premium content locked
+      🔒 {% trans "Premium content locked" %}
     </p>
 
     <p class="locked-post-price">
-      Unlock media for {{ post.unlock_price }} credits
+      {% trans "Unlock media for" %} {{ post.unlock_price }} {% trans "credits" %}
     </p>
 
     <form method="post" action="{% url 'unlock_feed_post' post.id %}">
       {% csrf_token %}
       <button type="submit" class="auth-primary-btn">
-        Unlock Post
+        {% trans "Unlock Post" %}
+
       </button>
     </form>
 
@@ -102,14 +107,14 @@
             <div class="feed-video-wrap">
                 <video class="feed-video" controls preload="metadata">
                     <source src="{{ media.file.url }}">
-                    Your browser does not support video playback.
+                    {% trans "Your browser does not support video playback." %}
                 </video>
             </div>
 
         {% elif media.media_type == "audio" %}
             <audio controls preload="metadata" style="width:100%;">
                 <source src="{{ media.file.url }}">
-                Your browser does not support audio playback.
+                {% trans "Your browser does not support audio playback." %}
             </audio>
 
         {% elif media.media_type == "pdf" %}
@@ -119,7 +124,7 @@
                 rel="noopener noreferrer"
                 class="feed-pdf-link"
             >
-                📄 Open PDF
+                📄 {% trans "Open PDF" %}
             </a>
         {% endif %}
     {% endif %}
@@ -129,12 +134,12 @@
         href="{{ post.image.url }}"
         class="feed-image-link"
         data-fanz-lightbox
-        data-fanz-lightbox-caption="{{ post.title }}"
+        data-fanz-lightbox-caption="{{ post.display_title }}"
         data-fanz-lightbox-group="post-{{ post.id }}"
     >
         <img
             src="{{ post.image.url }}"
-            alt="{{ post.title }}"
+            alt="{{ post.display_title }}"
             class="feed-image"
             loading="lazy"
         >

@@ -1874,14 +1874,53 @@ def public_profile(request, username):
     )
 
 def post_detail(request, post_id):
-    post = get_object_or_404(
-        FeedPost.objects.select_related("user").prefetch_related(
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    ).lower().split("-")[0]
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    post_queryset = (
+        FeedPost.objects
+        .select_related("user")
+        .prefetch_related(
             "hashtags",
             "likes",
             "comments",
-        ),
-        id=post_id,
+            "translations",
+        )
+        .filter(id=post_id)
     )
+
+    prepared_posts = prepare_feed_posts(
+        post_queryset,
+        language=language,
+    )
+
+    if not prepared_posts:
+        raise Http404
+
+    post = prepared_posts[0]
+
+    profile, _ = UserProfile.objects.get_or_create(
+        user=post.user
+    )
+
+    profile_translation = (
+        UserProfileTranslation.objects
+        .filter(
+            profile=profile,
+            language=language,
+        )
+        .first()
+    )
+
+    display_bio = profile.bio
+
+    if profile_translation and profile_translation.bio:
+        display_bio = profile_translation.bio
 
     unlocked_post_ids = set()
 
@@ -1897,9 +1936,10 @@ def post_detail(request, post_id):
         {
             "post": post,
             "unlocked_post_ids": unlocked_post_ids,
+            "language": language,
+            "display_bio": display_bio,
         }
     )
-
 
 @login_required
 def translate_post(request, post_id):
