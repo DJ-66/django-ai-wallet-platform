@@ -24,8 +24,16 @@
         {% endif %}
 
         <h1>
-            {{ profile.display_name|default:profile_user.username }}
+             {% if profile.is_platform_account %}
+            <span
+                class="platform-account-badge"
+                title="{% trans 'FANZ Platform Account' %}"
+                aria-label="{% trans 'FANZ Platform Account' %}"
+            >✨</span>
+        {% endif %}
 
+            {{ profile.display_name|default:profile_user.username }}
+             
             {% if profile.is_official %}
                 <span title="Official creator">💎</span>
             {% elif profile.is_verified %}

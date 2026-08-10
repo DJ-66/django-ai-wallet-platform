@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<div class="platform-account-create-wrap">
+
+    <h1>✨ {% trans "Create Platform Account" %}</h1>
+
+    <p>
+        {% trans "Create a FANZ-controlled account without requiring a real email address or password." %}
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <div class="platform-account-actions">
+            <button type="submit" class="auth-primary-btn">
+                ✨ {% trans "Create Platform Account" %}
+            </button>
+
+            <a
+                class="auth-primary-btn"
+                href="{% url 'platform_accounts_dashboard' %}">
+                ← {% trans "Back to Platform Accounts" %}
+            </a>
+        </div>
+    </form>
+
+</div>
+
+<style>
+    .platform-account-create-wrap {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .platform-account-create-wrap input {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .platform-account-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+    }
+</style>
+
+{% endblock %}

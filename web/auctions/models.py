@@ -802,7 +802,10 @@ class UserProfile(models.Model):
 
     is_verified = models.BooleanField(default=False)
     is_official = models.BooleanField(default=False)
-    
+    is_platform_account = models.BooleanField(
+        default=False,
+        help_text="FANZ Platform Account.",
+    )
     is_ai_creator = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
