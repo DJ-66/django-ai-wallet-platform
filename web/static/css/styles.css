@@ -7187,4 +7187,89 @@ Allow the content to wrap safely in every language.
     font-weight: 700;
 }
 
+.platform-account-list {
+    display: grid;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.platform-account-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+
+    padding: 18px;
+
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 16px;
+
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.platform-account-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.platform-account-avatar,
+.platform-account-avatar-fallback {
+    width: 54px;
+    height: 54px;
+    flex: 0 0 54px;
+    border-radius: 50%;
+}
+
+.platform-account-avatar {
+    object-fit: cover;
+}
+
+.platform-account-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #f0f0f0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.platform-account-meta {
+    min-width: 0;
+}
+
+.platform-account-username {
+    margin-top: 3px;
+    font-size: 0.92rem;
+    opacity: 0.75;
+}
+
+.platform-account-type {
+    margin-top: 5px;
+    font-size: 0.82rem;
+    opacity: 0.75;
+}
+
+.platform-account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media (max-width: 700px) {
+    .platform-account-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .platform-account-actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+}
+
 /* end_css */
