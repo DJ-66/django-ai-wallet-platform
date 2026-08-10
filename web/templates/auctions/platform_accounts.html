@@ -25,15 +25,41 @@
 
                 <div class="platform-account-card">
 
-                    <div>
-                        <strong>
-                            ✨ {{ profile.display_name|default:profile.user.username }}
-                        </strong>
+                   <div class="platform-account-identity">
 
-                        <div>
-                            @{{ profile.user.username }}
-                        </div>
-                    </div>
+    {% if profile.avatar %}
+        <img
+            src="{{ profile.avatar.url }}"
+            alt="{{ profile.display_name|default:profile.user.username }}"
+            class="platform-account-avatar"
+        >
+    {% else %}
+        <div class="platform-account-avatar-fallback">
+            {{ profile.user.username|first|upper }}
+        </div>
+    {% endif %}
+
+    <div class="platform-account-meta">
+        <strong>
+            ✨ {{ profile.display_name|default:profile.user.username }}
+        </strong>
+
+        <div class="platform-account-username">
+            @{{ profile.user.username }}
+        </div>
+
+        {% if profile.is_ai_influencer %}
+            <div class="platform-account-type">
+                🤖 {% trans "AI Influencer" %}
+            </div>
+        {% else %}
+            <div class="platform-account-type">
+                ✨ {% trans "Platform Account" %}
+            </div>
+        {% endif %}
+    </div>
+
+</div>
 
                     <div class="platform-account-actions">
 
@@ -43,6 +69,48 @@
                             {% trans "View Profile" %}
                         </a>
                         {% if profile.user != request.user %}
+                       <form
+    method="post"
+    action="{% url 'login_as_platform_account' profile.user.id %}"
+    style="display:inline;"
+>
+    {% csrf_token %}
+
+    <input
+        type="hidden"
+        name="next"
+        value="edit_profile"
+    >
+
+    <button
+        type="submit"
+        class="auth-primary-btn"
+    >
+        ✏️ {% trans "Edit Profile" %}
+    </button>
+</form>
+
+<form
+    method="post"
+    action="{% url 'login_as_platform_account' profile.user.id %}"
+    style="display:inline;"
+>
+    {% csrf_token %}
+
+    <input
+        type="hidden"
+        name="next"
+        value="create_post"
+    >
+
+    <button
+        type="submit"
+        class="auth-primary-btn"
+    >
+        📝 {% trans "Create Post" %}
+    </button>
+</form>
+
                        <form
                        method="post"
                        action="{% url 'login_as_platform_account' profile.user.id %}"

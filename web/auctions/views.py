@@ -1568,6 +1568,14 @@ def login_as_platform_account(request, user_id):
         f"You are now using @{target_user.username}."
     )
 
+    next_url = request.POST.get("next")
+
+    if next_url == "edit_profile":
+        return redirect("edit_profile")
+
+    if next_url == "create_post":
+        return redirect("feed_home")
+
     return redirect(
         "public_profile_root",
         username=target_user.username,
