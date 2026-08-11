@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% load socialaccount %}
 
 {% block content %}
@@ -6,14 +7,16 @@
   <div class="auth-card">
     <div class="auth-icon">🔐</div>
 
-    <h1>Welcome back</h1>
+    <h1>{% trans "Welcome back" %}</h1>
+
     <p class="auth-subtitle">
-      Sign in to continue to auctions, AI companions, and your wallet.
+          {% trans "Sign in to continue to auctions, AI companions, and your wallet." %}
+
     </p>
 
     <a href="{% provider_login_url 'google' %}" class="google-login-btn">
       <span class="google-icon">G</span>
-      Continue with Google
+          {% trans "Continue with Google" %}
     </a>
 
     <div class="auth-divider"><span>or</span></div>
@@ -23,13 +26,13 @@
       {{ form.as_p }}
 
       <button type="submit" class="auth-primary-btn">
-        Sign In
+            {% trans "Sign In" %}
       </button>
     </form>
 
     <p class="auth-footer-text">
-      New here?
-      <a href="{% url 'account_signup' %}">Create an account</a>
+          {% trans "New here?" %}
+      <a href="{% url 'account_signup' %}">{% trans "Create an account" %}</a>
     </p>
   </div>
 </div>

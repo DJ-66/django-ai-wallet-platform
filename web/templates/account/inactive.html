@@ -3,18 +3,22 @@
 
 {% block content %}
 <div class="auth-card">
-    <h2>Account not active yet</h2>
+    <h2>{% trans "Account not active yet" %}</h2>
+
 
     <p>
-        Please check your email and click the FANZ activation link.
+       {% trans "Please check your email and click the FANZ activation link." %}
+
     </p>
 
     <p>
-        Once activated, you’ll receive your 50 FREE credits.
+      {% trans "Once activated, you’ll receive your 50 FREE credits." %}
+
     </p>
 
     <a href="{% url 'account_login' %}" class="auth-primary-btn">
-        Back to Login
+     {% trans "Back to Login" %}
+
     </a>
 </div>
 {% endblock %}

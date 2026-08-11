@@ -1,6 +1,10 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
-<h1>Check your email</h1>
-<p>We sent you an activation link. Click it to activate your account and receive 50 free credits.</p>
+<h1>{% trans "Check your email" %}</h1>
+
+<p>
+    {% trans "We sent you an activation link. Click it to activate your account and receive 50 free credits." %}
+</p>
 {% endblock %}

@@ -549,7 +549,9 @@ class SignUpForm(forms.ModelForm):
         email = self.cleaned_data.get("email", "").strip().lower()
 
         if User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError("An account with this email already exists.")
+            raise forms.ValidationError(
+                _("An account with this email already exists.")
+            )
 
         return email
 
