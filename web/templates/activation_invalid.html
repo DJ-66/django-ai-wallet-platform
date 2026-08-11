@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
-<h1>Activation link invalid</h1>
-<p>This activation link is invalid or expired.</p>
+<h1>{% trans "Activation link invalid" %}</h1>
+<p>{% trans "This activation link is invalid or expired." %}</p>
 {% endblock %}

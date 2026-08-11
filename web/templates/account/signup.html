@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load socialaccount %}
-
+{% load i18n %}
 {% block content %}
 
 <div class="auth-page">
@@ -11,15 +11,17 @@
             🚀
         </div>
 
-        <h2>Create Account</h2>
+        <h2>{% trans "Create Account" %}</h2>
 
         <p class="auth-subtitle">
-            Join the platform
+            {% trans "Join the platform" %}
+
         </p>
         
         <a href="{% provider_login_url 'google' %}" class="google-login-btn">
             <span class="google-icon">G</span>
-            Continue with Google
+             {% trans "Continue with Google" %}
+
         </a>
         <br>
 
@@ -28,18 +30,20 @@
             {{ form.as_p }}
 
             <button type="submit" class="auth-primary-btn">
-                Create Account
+              {% trans "Create Account" %}
             </button>
         </form>
 
         <div class="auth-divider">
-            OR
+           {% trans "OR" %}
+
         </div>
 
         <p style="margin-top:20px;">
-            Already have an account?
+                {% trans "Already have an account?" %}
+
             <a href="{% url 'account_login' %}">
-                Sign in
+                {% trans "Sign in" %}
             </a>
         </p>
 

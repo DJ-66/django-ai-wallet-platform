@@ -1,3 +1,4 @@
+from django.utils.translation import gettext as _, override
 import os
 import json
 import random
@@ -874,34 +875,52 @@ def wallet_view(request):
 def send_activation_email(request, user):
     current_site = get_current_site(request)
 
-    subject = "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
-
-    html_content = render_to_string(
-        "auctions/account_activation_email.html",
-        {
-            "user": user,
-            "domain": current_site.domain,
-            "uid": urlsafe_base64_encode(
-                force_bytes(user.pk)
-            ),
-            "token": default_token_generator.make_token(user),
-            "protocol": (
-                "https"
-                if request.is_secure()
-                else "http"
-            ),
-        },
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
     )
+
+    language = str(language).lower().split("-")[0]
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    with override(language):
+        subject = _(
+            "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
+        )
+
+        html_content = render_to_string(
+            "auctions/account_activation_email.html",
+            {
+                "user": user,
+                "domain": current_site.domain,
+                "uid": urlsafe_base64_encode(
+                    force_bytes(user.pk)
+                ),
+                "token": default_token_generator.make_token(user),
+                "protocol": (
+                    "https"
+                    if request.is_secure()
+                    else "http"
+                ),
+                "language": language,
+            },
+        )
 
     text_content = strip_tags(html_content)
 
     email = EmailMultiAlternatives(
         subject,
         text_content,
-        to=[user.email]
+        to=[user.email],
     )
 
-    email.attach_alternative(html_content, "text/html")
+    email.attach_alternative(
+        html_content,
+        "text/html",
+    )
+
     email.send()
 
 def signup_view(request):
@@ -1014,7 +1033,7 @@ def signup_view(request):
 
             return render(
                 request,
-                "auctions/check_your_email.html",
+                "signup_check_email.html",
                 {
                     "email": user.email,
                 },
