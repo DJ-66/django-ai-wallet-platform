@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-11 02:15-0300\n"
+"POT-Creation-Date: 2026-08-11 22:18-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -278,6 +278,10 @@ msgstr "Ainda não há conversas."
 #: auctions/views.py:890
 msgid "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
 msgstr "🎉 Bem-vindo ao FANZ — Resgate seus 50 créditos grátis"
+
+#: auctions/wallet_setup.py:32
+msgid "🎉 Welcome to FANZ — Your 50 FREE Credits Are Ready"
+msgstr "🎉 Bem-vindo à FANZ — Seus 50 créditos GRÁTIS estão prontos"
 
 #: businesses/admin.py:79 templates/businesses/business_detail.html:300
 msgid "Contact"
@@ -756,6 +760,7 @@ msgid "Ended"
 msgstr "Encerrada"
 
 #: templates/auctions/account_activation_email.html:8
+#: templates/auctions/welcome_email.html:7
 msgid "Welcome to FANZ"
 msgstr "Bem-vindo à FANZ"
 
@@ -812,11 +817,12 @@ msgstr "Ativar minha conta FANZ"
 
 #: templates/auctions/account_activation_email.html:49
 msgid "If the button does not work, copy and paste this link:"
-msgstr ""
+msgstr "Se o botão não funcionar, copie e cole este link:"
 
 #: templates/auctions/account_activation_email.html:61
+#: templates/auctions/welcome_email.html:44
 msgid "Welcome aboard,"
-msgstr ""
+msgstr "Bem-vindo a bordo,"
 
 #: templates/auctions/ai/companion_list.html:9
 msgid "AI Friends"
@@ -1263,71 +1269,55 @@ msgstr "Nenhuma notificação ainda."
 
 #: templates/auctions/platform_accounts.html:8
 msgid "Platform Accounts"
-msgstr ""
+msgstr "Contas da plataforma"
 
 #: templates/auctions/platform_accounts.html:11
 msgid "FANZ-controlled platform identities."
-msgstr ""
+msgstr "Identidades da plataforma controladas pela FANZ."
 
 #: templates/auctions/platform_accounts.html:57
 msgid "Platform Account"
-msgstr ""
+msgstr "Conta da plataforma"
 
 #: templates/auctions/platform_accounts.html:69
-#, fuzzy
-#| msgid "Visit Profile"
 msgid "View Profile"
-msgstr "Visitar perfil"
+msgstr "Ver perfil"
 
 #: templates/auctions/platform_accounts.html:110
-#, fuzzy
-#| msgid "Featured Post"
 msgid "Create Post"
-msgstr "Postagem em destaque"
+msgstr "Criar publicação"
 
 #: templates/auctions/platform_accounts.html:126
-#, fuzzy
-#| msgid "Login"
 msgid "Login As"
-msgstr "Conecte-se"
+msgstr "Entrar como"
 
 #: templates/auctions/platform_accounts.html:141
-#, fuzzy
-#| msgid "No public posts yet."
 msgid "No platform accounts yet."
-msgstr "Ainda não há publicações públicas."
+msgstr "Ainda não há contas da plataforma."
 
 #: templates/auctions/post_detail.html:39
-#, fuzzy, python-format
-#| msgid ""
-#| "\n"
-#| "          Edit %(name)s\n"
-#| "        "
+#, python-format
 msgid ""
 "\n"
 "                About @%(username)s\n"
 "            "
 msgstr ""
 "\n"
-"          Editar %(name)s\n"
-"        "
+"                Sobre @%(username)s\n"
+"            "
 
 #: templates/auctions/post_detail.html:110
-#, fuzzy
-#| msgid "Your browser does not support the video tag."
 msgid "Your browser does not support video playback."
-msgstr "Seu navegador não suporta a tag de vídeo."
+msgstr "Seu navegador não suporta a reprodução de vídeo."
 
 #: templates/auctions/post_detail.html:117
-#, fuzzy
-#| msgid "Your browser does not support the video tag."
 msgid "Your browser does not support audio playback."
-msgstr "Seu navegador não suporta a tag de vídeo."
+msgstr "Seu navegador não suporta a reprodução de áudio."
 
 #: templates/auctions/public_profile.html:30
 #: templates/auctions/public_profile.html:31
 msgid "FANZ Platform Account"
-msgstr ""
+msgstr "Conta na plataforma FANZ"
 
 #: templates/auctions/public_profile.html:87
 msgid "Tips"
@@ -1420,43 +1410,37 @@ msgstr "Ainda não há publicações públicas."
 
 #: templates/auctions/translate_post.html:8
 msgid "Translate Post"
-msgstr ""
+msgstr "Traduzir postagem"
 
 #: templates/auctions/translate_post.html:11
 msgid "Original post:"
-msgstr ""
+msgstr "Postagem original:"
 
 #: templates/auctions/translate_post.html:16
 msgid "Add optional localized versions of this post title and content."
-msgstr ""
+msgstr "Adicione versões localizadas opcionais do título e do conteúdo desta publicação."
 
 #: templates/auctions/translate_post.html:46
 #: templates/auctions/translate_profile.html:92
 msgid "Save Translation"
-msgstr ""
+msgstr "Traduzir perfil"
 
 #: templates/auctions/translate_post.html:50
-#, fuzzy
-#| msgid "Back to Inbox"
 msgid "Back to Post"
-msgstr "Voltar para a caixa de entrada"
+msgstr "Voltar para a postagem"
 
 #: templates/auctions/translate_profile.html:8
 #: templates/auctions/translate_profile.html:59
-#, fuzzy
-#| msgid "Save Profile"
 msgid "Translate Profile"
-msgstr "Salvar perfil"
+msgstr "Traduzir perfil"
 
 #: templates/auctions/translate_profile.html:62
 msgid "Add optional localized versions of your bio and payment instructions."
-msgstr ""
+msgstr "Adicione versões localizadas opcionais da sua biografia e das instruções de pagamento."
 
 #: templates/auctions/translate_profile.html:96
-#, fuzzy
-#| msgid "Edit Profile"
 msgid "Back to Edit Profile"
-msgstr "Editar perfil"
+msgstr "Voltar para Editar Perfil"
 
 #: templates/auctions/wallet.html:7
 msgid "My Wallet"
@@ -1490,13 +1474,58 @@ msgstr "Compartilhe este link da carteira para que outros usuários ativos possa
 msgid "Recent Activity"
 msgstr "Atividade recente"
 
+#: templates/auctions/welcome_email.html:11
+msgid "Your AI journey starts today."
+msgstr "Sua jornada com a IA começa hoje."
+
+#: templates/auctions/welcome_email.html:17
+#, python-format
+msgid "Hi %(username)s,"
+msgstr "Olá %(username)s,"
+
+#: templates/auctions/welcome_email.html:21
+msgid "Your FANZ account is ready! We've already added 50 FREE credits to your wallet."
+msgstr "Sua conta FANZ está pronta! Já adicionamos 50 créditos GRÁTIS à sua carteira."
+
+#: templates/auctions/welcome_email.html:25
+msgid "You're ready to:"
+msgstr "Você está pronto para:"
+
+#: templates/auctions/welcome_email.html:29
+msgid "Discover creators, businesses, and communities"
+msgstr "Descobrir criadores, empresas e comunidades"
+
+#: templates/auctions/welcome_email.html:30
+msgid "Explore AI-powered tools"
+msgstr "Explorar ferramentas com inteligência artificial"
+
+#: templates/auctions/welcome_email.html:31
+msgid "Connect through FANZ messaging"
+msgstr "Conectar-se através das mensagens da FANZ"
+
+#: templates/auctions/welcome_email.html:32
+msgid "Use your FANZ wallet"
+msgstr "Usar sua carteira FANZ"
+
+#: templates/auctions/welcome_email.html:33
+msgid "Grow your profile, business, or campaign"
+msgstr "Expandir seu perfil, negócio ou campanha"
+
+#: templates/auctions/welcome_email.html:39
+msgid "Start Exploring FANZ"
+msgstr "Começar a explorar a FANZ"
+
+#: templates/auctions/welcome_email.html:45
+msgid "The FANZ Team"
+msgstr "A equipe FANZ"
+
 #: templates/base.html:26
 msgid "Platform mode"
-msgstr ""
+msgstr "Modo de plataforma"
 
 #: templates/base.html:40
 msgid "Return to DJ"
-msgstr ""
+msgstr "Voltar para o DJ"
 
 #: templates/base.html:49
 msgid "Feed"
@@ -1910,6 +1939,14 @@ msgstr "Escolha uma nova imagem"
 #: templates/businesses/widgets/business_image_input.html:50
 msgid "Choose Image"
 msgstr "Escolha uma imagem"
+
+#: templates/emails/email_base.html:29
+msgid "IA Para Todos — AI for Everyone"
+msgstr "IA Para Todos — IA para Todos"
+
+#: templates/emails/email_base.html:32
+msgid "Helping creators, businesses, and communities grow with AI."
+msgstr "Ajudando criadores, empresas e comunidades a crescer com IA."
 
 #: templates/signup_check_email.html:5
 msgid "Check your email"

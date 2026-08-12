@@ -8,6 +8,8 @@ from .models import BidWallet, WalletTransaction
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.utils.translation import gettext as _, override
+
 
 SIGNUP_BONUS = 50
 REFERRAL_BONUS = 50
@@ -16,15 +18,27 @@ def generate_referral_code(length=10):
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
-def send_welcome_email(user):
+def send_welcome_email(user, language="en"):
     if not user.email:
         return
 
-    subject = "🎉 Welcome to FANZ — Your 50 FREE Credits Are Ready"
+    language = str(language).lower().split("-")[0]
 
-    html_content = render_to_string("auctions/welcome_email.html", {
-        "user": user,
-    })
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    with override(language):
+        subject = _(
+            "🎉 Welcome to FANZ — Your 50 FREE Credits Are Ready"
+        )
+
+        html_content = render_to_string(
+            "auctions/welcome_email.html",
+            {
+                "user": user,
+                "language": language,
+            },
+        )
 
     text_content = strip_tags(html_content)
 
@@ -33,10 +47,19 @@ def send_welcome_email(user):
         text_content,
         to=[user.email],
     )
-    email.attach_alternative(html_content, "text/html")
+
+    email.attach_alternative(
+        html_content,
+        "text/html",
+    )
+
     email.send(fail_silently=True)
 
-def provision_user_wallet(user, referral_code=None):
+def provision_user_wallet(
+    user,
+    referral_code=None,
+    language="en",
+):
 
     wallet, _ = BidWallet.objects.get_or_create(user=user)
 
@@ -73,7 +96,10 @@ def provision_user_wallet(user, referral_code=None):
             reference="Signup bonus",
         )
 
-        send_welcome_email(user)
+        send_welcome_email(
+            user,
+            language=language,
+        )
 
     # ---------------------------------------------------
     # REFERRAL BONUS
