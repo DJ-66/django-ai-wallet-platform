@@ -10,6 +10,7 @@ from .wallet_setup import provision_user_wallet
 @receiver(user_signed_up)
 def provision_wallet_for_new_user(request, user, **kwargs):
     referral_code = None
+    language = "en"
 
     if request:
         referral_code = (
@@ -17,9 +18,20 @@ def provision_wallet_for_new_user(request, user, **kwargs):
             or request.session.get("referral_code")
         )
 
+        language = request.GET.get(
+            "lang",
+            getattr(request, "LANGUAGE_CODE", "en"),
+        )
+
+    language = str(language).lower().split("-")[0]
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
     provision_user_wallet(
         user,
         referral_code=referral_code,
+        language=language,
     )
 
 

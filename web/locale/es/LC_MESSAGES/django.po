@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-11 02:15-0300\n"
+"POT-Creation-Date: 2026-08-11 22:18-0300\n"
 "PO-Revision-Date: 2026-08-05 HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE ES <LL@li.org>\n"
@@ -278,6 +278,10 @@ msgstr "conversación con"
 #: auctions/views.py:890
 msgid "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
 msgstr "🎉 Bienvenido a FANZ: Reclama tus 50 créditos gratis."
+
+#: auctions/wallet_setup.py:32
+msgid "🎉 Welcome to FANZ — Your 50 FREE Credits Are Ready"
+msgstr "🎉 Bienvenido a FANZ — Tus 50 créditos GRATIS están listos"
 
 #: businesses/admin.py:79 templates/businesses/business_detail.html:300
 msgid "Contact"
@@ -756,6 +760,7 @@ msgid "Ended"
 msgstr "Terminado"
 
 #: templates/auctions/account_activation_email.html:8
+#: templates/auctions/welcome_email.html:7
 msgid "Welcome to FANZ"
 msgstr "Bienvenido a FANZ"
 
@@ -815,6 +820,7 @@ msgid "If the button does not work, copy and paste this link:"
 msgstr "Si el botón no funciona, copia y pega este enlace:"
 
 #: templates/auctions/account_activation_email.html:61
+#: templates/auctions/welcome_email.html:44
 msgid "Welcome aboard,"
 msgstr "Bienvenido a bordo,"
 
@@ -1457,6 +1463,51 @@ msgstr "Comparte este enlace de billetera para que otros usuarios activados pued
 msgid "Recent Activity"
 msgstr "Actividad Reciente"
 
+#: templates/auctions/welcome_email.html:11
+msgid "Your AI journey starts today."
+msgstr "Tu viaje con la IA comienza hoy."
+
+#: templates/auctions/welcome_email.html:17
+#, python-format
+msgid "Hi %(username)s,"
+msgstr "Hola %(username)s,"
+
+#: templates/auctions/welcome_email.html:21
+msgid "Your FANZ account is ready! We've already added 50 FREE credits to your wallet."
+msgstr "¡Tu cuenta FANZ está lista! Ya hemos añadido 50 créditos GRATIS a tu billetera."
+
+#: templates/auctions/welcome_email.html:25
+msgid "You're ready to:"
+msgstr "Ya estás listo para:"
+
+#: templates/auctions/welcome_email.html:29
+msgid "Discover creators, businesses, and communities"
+msgstr "Descubrir creadores, empresas y comunidades"
+
+#: templates/auctions/welcome_email.html:30
+msgid "Explore AI-powered tools"
+msgstr "Explorar herramientas impulsadas por IA"
+
+#: templates/auctions/welcome_email.html:31
+msgid "Connect through FANZ messaging"
+msgstr "Conectarte a través de la mensajería de FANZ"
+
+#: templates/auctions/welcome_email.html:32
+msgid "Use your FANZ wallet"
+msgstr "Usar tu billetera FANZ"
+
+#: templates/auctions/welcome_email.html:33
+msgid "Grow your profile, business, or campaign"
+msgstr "Hacer crecer tu perfil, negocio o campaña"
+
+#: templates/auctions/welcome_email.html:39
+msgid "Start Exploring FANZ"
+msgstr "Comenzar a explorar FANZ"
+
+#: templates/auctions/welcome_email.html:45
+msgid "The FANZ Team"
+msgstr "El equipo de FANZ"
+
 #: templates/base.html:26
 msgid "Platform mode"
 msgstr "Modo plataforma"
@@ -1881,6 +1932,14 @@ msgstr "Elige una nueva imagen"
 #: templates/businesses/widgets/business_image_input.html:50
 msgid "Choose Image"
 msgstr "Elegir imagen"
+
+#: templates/emails/email_base.html:29
+msgid "IA Para Todos — AI for Everyone"
+msgstr "IA Para Todos — IA para Todos"
+
+#: templates/emails/email_base.html:32
+msgid "Helping creators, businesses, and communities grow with AI."
+msgstr "Ayudando a creadores, empresas y comunidades a crecer con IA."
 
 #: templates/signup_check_email.html:5
 msgid "Check your email"
