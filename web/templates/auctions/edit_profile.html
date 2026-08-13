@@ -9,56 +9,592 @@
         <div class="auth-icon">👤</div>
 
         <h2>{% trans "Edit Profile" %}</h2>
-         <p>
-        <a href="{% url 'translate_profile' %}?lang=en">
-            🌐 {% trans "Translate / Localize Profile" %}
-        </a>
-    </p>
 
-    <form method="post" enctype="multipart/form-data" class="auth-form">
-        {% csrf_token %}
-        {{ form.as_p }}
+<p>
+    <a href="{% url 'translate_profile' %}?lang=en">
+        🌐 {% trans "Translate / Localize Profile" %}
+    </a>
+</p>
 
-        <form method="post" enctype="multipart/form-data" class="auth-form">
-            {% csrf_token %}
-            {{ form.as_p }}
+<form method="post" enctype="multipart/form-data" class="auth-form">
+    {% csrf_token %}
+    {{ form.as_p }}
 
-            <hr>
+    <hr>
 
-            <div class="profile-setting-row">
-                <label for="notification-sounds-toggle">
-                    🔔 {% trans "Notification Sounds" %}
-                </label>
+    <div class="profile-setting-row">
+        <label for="notification-sounds-toggle">
+            🔔 {% trans "Notification Sounds" %}
+        </label>
 
-                <!--  <span id="notification-sounds-label">
-                    Enabled
-                </span> -->
+        <label class="switch">
+            <input
+                type="checkbox"
+                id="notification-sounds-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
 
-                <label class="switch">
-                    <input
-                        type="checkbox"
-                        id="notification-sounds-toggle">
-                    <span class="slider"></span>
-                </label>
-            </div>
+    <center>
+        <label class="tos-check">
+            <input type="checkbox" name="tos_accepted">
+            {% trans "I accept" %} Fanz.to
+            <a href="{% url 'terms' %}" target="_blank">
+                {% trans "Terms of Service" %}
+            </a>.
+        </label>
+    </center>
 
-            <center>
-                <label class="tos-check">
-                    <input type="checkbox" name="tos_accepted">
-                    {% trans "I accept" %} Fanz.to
-                    <a href="{% url 'terms' %}" target="_blank">
-                        {% trans "Terms of Service" %}
-                    </a>.
-                </label>
-            </center>
-
-            <button type="submit" class="auth-primary-btn">
-                {% trans "Save Profile" %}
-            </button>
-        </form>
+    <button type="submit" class="auth-primary-btn">
+        {% trans "Save Profile" %}
+    </button>
+</form>
     </div>
 </div>
+<div id="avatarCropModal" class="fanz-crop-modal" hidden>
+    <div class="fanz-crop-backdrop"></div>
 
+    <div class="fanz-crop-card">
+        <h3>{% trans "Crop Avatar" %}</h3>
+
+        <p>{% trans "Drag the image to position it. Use the slider to zoom." %}</p>
+
+        <div class="fanz-crop-stage">
+            <canvas
+                id="avatarCropCanvas"
+                width="500"
+                height="500">
+            </canvas>
+
+            <div class="fanz-crop-circle"></div>
+        </div>
+
+        <label for="avatarCropZoom">
+            {% trans "Zoom" %}
+        </label>
+
+        <input
+            id="avatarCropZoom"
+            type="range"
+            min="1"
+            max="3"
+            step="0.01"
+            value="1"
+        >
+
+        <div class="fanz-crop-actions">
+            <button
+                type="button"
+                id="avatarCropCancel"
+                class="auth-secondary-btn">
+                {% trans "Cancel" %}
+            </button>
+
+            <button
+                type="button"
+                id="avatarCropApply"
+                class="auth-primary-btn">
+                {% trans "Apply Crop" %}
+            </button>
+  <br><br>
+        </div>
+    </div>
+</div>
+<div id="bannerCropModal" class="fanz-crop-modal" hidden>
+    <div class="fanz-crop-backdrop"></div>
+
+    <div class="fanz-crop-card">
+        <h3>{% trans "Crop Banner" %}</h3>
+
+        <p>{% trans "Drag the image to position it. Use the slider to zoom." %}</p>
+
+        <div class="fanz-crop-stage fanz-crop-stage--banner">
+            <canvas
+                id="bannerCropCanvas"
+                width="900"
+                height="350">
+            </canvas>
+        </div>
+
+        <label for="bannerCropZoom">
+            {% trans "Zoom" %}
+        </label>
+
+        <input
+            id="bannerCropZoom"
+            type="range"
+            min="1"
+            max="3"
+            step="0.01"
+            value="1"
+        >
+
+        <div class="fanz-crop-actions">
+            <button
+                type="button"
+                id="bannerCropCancel"
+                class="auth-secondary-btn">
+                {% trans "Cancel" %}
+            </button>
+
+            <button
+                type="button"
+                id="bannerCropApply"
+                class="auth-primary-btn">
+                {% trans "Apply Crop" %}
+            </button>
+        </div>
+    </div>
+</div>
+<!-- Avatar Crop -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("id_avatar");
+    const modal = document.getElementById("avatarCropModal");
+    const canvas = document.getElementById("avatarCropCanvas");
+    const ctx = canvas.getContext("2d");
+    const zoomInput = document.getElementById("avatarCropZoom");
+    const applyBtn = document.getElementById("avatarCropApply");
+    const cancelBtn = document.getElementById("avatarCropCancel");
+    const backdrop = modal.querySelector(".fanz-crop-backdrop");
+
+    if (!fileInput || !modal || !canvas) {
+        return;
+    }
+
+    let image = null;
+    let originalFile = null;
+
+    let baseScale = 1;
+    let zoom = 1;
+
+    let offsetX = 0;
+    let offsetY = 0;
+
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    function draw() {
+        if (!image) return;
+
+        const scale = baseScale * zoom;
+
+        const width = image.width * scale;
+        const height = image.height * scale;
+
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        ctx.drawImage(
+            image,
+            offsetX - width / 2,
+            offsetY - height / 2,
+            width,
+            height
+        );
+    }
+
+    function centerImage() {
+        const scaleX =
+            canvas.width / image.width;
+
+        const scaleY =
+            canvas.height / image.height;
+
+        baseScale = Math.max(
+            scaleX,
+            scaleY
+        );
+
+        zoom = 1;
+        zoomInput.value = 1;
+
+        offsetX = canvas.width / 2;
+        offsetY = canvas.height / 2;
+
+        draw();
+    }
+
+    fileInput.addEventListener(
+        "change",
+        function () {
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            originalFile = file;
+
+            const objectUrl =
+                URL.createObjectURL(file);
+
+            image = new Image();
+
+            image.onload = function () {
+                centerImage();
+                modal.hidden = false;
+
+                URL.revokeObjectURL(
+                    objectUrl
+                );
+            };
+
+            image.src = objectUrl;
+        }
+    );
+
+    zoomInput.addEventListener(
+        "input",
+        function () {
+            zoom = Number(
+                zoomInput.value
+            );
+
+            draw();
+        }
+    );
+
+    canvas.addEventListener(
+        "pointerdown",
+        function (event) {
+            dragging = true;
+
+            lastX = event.clientX;
+            lastY = event.clientY;
+
+            canvas.setPointerCapture(
+                event.pointerId
+            );
+        }
+    );
+
+    canvas.addEventListener(
+        "pointermove",
+        function (event) {
+            if (!dragging) return;
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+            const scaleX =
+                canvas.width / rect.width;
+
+            const scaleY =
+                canvas.height / rect.height;
+
+            offsetX +=
+                (event.clientX - lastX)
+                * scaleX;
+
+            offsetY +=
+                (event.clientY - lastY)
+                * scaleY;
+
+            lastX = event.clientX;
+            lastY = event.clientY;
+
+            draw();
+        }
+    );
+
+    canvas.addEventListener(
+        "pointerup",
+        function () {
+            dragging = false;
+        }
+    );
+
+    function closeCropModal() {
+        modal.hidden = true;
+        fileInput.value = "";
+        image = null;
+        originalFile = null;
+    }
+
+    cancelBtn.addEventListener(
+        "click",
+        closeCropModal
+    );
+
+    if (backdrop) {
+        backdrop.addEventListener(
+            "click",
+            closeCropModal
+        );
+    }
+
+    applyBtn.addEventListener(
+        "click",
+        function () {
+            if (!image || !originalFile) {
+                return;
+            }
+
+            canvas.toBlob(
+                function (blob) {
+                    if (!blob) return;
+
+                    const croppedFile =
+                        new File(
+                            [blob],
+                            originalFile.name,
+                            {
+                                type: "image/jpeg",
+                                lastModified:
+                                    Date.now(),
+                            }
+                        );
+
+                    const transfer =
+                        new DataTransfer();
+
+                    transfer.items.add(
+                        croppedFile
+                    );
+
+                    fileInput.files =
+                        transfer.files;
+
+                    modal.hidden = true;
+                },
+                "image/jpeg",
+                0.92
+            );
+        }
+    );
+});
+</script>
+
+<!-- Banner Crop -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("id_banner");
+    const modal = document.getElementById("bannerCropModal");
+    const canvas = document.getElementById("bannerCropCanvas");
+    const ctx = canvas.getContext("2d");
+    const zoomInput = document.getElementById("bannerCropZoom");
+    const applyBtn = document.getElementById("bannerCropApply");
+    const cancelBtn = document.getElementById("bannerCropCancel");
+    const backdrop = modal.querySelector(".fanz-crop-backdrop");
+
+    if (!fileInput || !modal || !canvas) {
+        return;
+    }
+
+    let image = null;
+    let originalFile = null;
+
+    let baseScale = 1;
+    let zoom = 1;
+
+    let offsetX = 0;
+    let offsetY = 0;
+
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    function draw() {
+        if (!image) return;
+
+        const scale = baseScale * zoom;
+
+        const width = image.width * scale;
+        const height = image.height * scale;
+
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        ctx.drawImage(
+            image,
+            offsetX - width / 2,
+            offsetY - height / 2,
+            width,
+            height
+        );
+    }
+
+    function centerImage() {
+        const scaleX =
+            canvas.width / image.width;
+
+        const scaleY =
+            canvas.height / image.height;
+
+        baseScale = Math.max(
+            scaleX,
+            scaleY
+        );
+
+        zoom = 1;
+        zoomInput.value = 1;
+
+        offsetX = canvas.width / 2;
+        offsetY = canvas.height / 2;
+
+        draw();
+    }
+
+    function closeCropModal() {
+        modal.hidden = true;
+        fileInput.value = "";
+        image = null;
+        originalFile = null;
+    }
+
+    fileInput.addEventListener(
+        "change",
+        function () {
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            originalFile = file;
+
+            const objectUrl =
+                URL.createObjectURL(file);
+
+            image = new Image();
+
+            image.onload = function () {
+                centerImage();
+                modal.hidden = false;
+
+                URL.revokeObjectURL(
+                    objectUrl
+                );
+            };
+
+            image.src = objectUrl;
+        }
+    );
+
+    zoomInput.addEventListener(
+        "input",
+        function () {
+            zoom = Number(
+                zoomInput.value
+            );
+
+            draw();
+        }
+    );
+
+    canvas.addEventListener(
+        "pointerdown",
+        function (event) {
+            dragging = true;
+
+            lastX = event.clientX;
+            lastY = event.clientY;
+
+            canvas.setPointerCapture(
+                event.pointerId
+            );
+        }
+    );
+
+    canvas.addEventListener(
+        "pointermove",
+        function (event) {
+            if (!dragging) return;
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+            const scaleX =
+                canvas.width / rect.width;
+
+            const scaleY =
+                canvas.height / rect.height;
+
+            offsetX +=
+                (event.clientX - lastX)
+                * scaleX;
+
+            offsetY +=
+                (event.clientY - lastY)
+                * scaleY;
+
+            lastX = event.clientX;
+            lastY = event.clientY;
+
+            draw();
+        }
+    );
+
+    canvas.addEventListener(
+        "pointerup",
+        function () {
+            dragging = false;
+        }
+    );
+
+    cancelBtn.addEventListener(
+        "click",
+        closeCropModal
+    );
+
+    if (backdrop) {
+        backdrop.addEventListener(
+            "click",
+            closeCropModal
+        );
+    }
+
+    applyBtn.addEventListener(
+        "click",
+        function () {
+            if (!image || !originalFile) {
+                return;
+            }
+
+            canvas.toBlob(
+                function (blob) {
+                    if (!blob) return;
+
+                    const croppedFile =
+                        new File(
+                            [blob],
+                            originalFile.name,
+                            {
+                                type: "image/jpeg",
+                                lastModified:
+                                    Date.now(),
+                            }
+                        );
+
+                    const transfer =
+                        new DataTransfer();
+
+                    transfer.items.add(
+                        croppedFile
+                    );
+
+                    fileInput.files =
+                        transfer.files;
+
+                    modal.hidden = true;
+                },
+                "image/jpeg",
+                0.92
+            );
+        }
+    );
+});
+</script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const toggle = document.getElementById(

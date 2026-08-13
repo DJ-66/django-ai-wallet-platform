@@ -7272,4 +7272,96 @@ Allow the content to wrap safely in every language.
     }
 }
 
+.fanz-crop-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fanz-crop-modal[hidden] {
+    display: none !important;
+}
+
+.fanz-crop-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+}
+
+.fanz-crop-card {
+    position: relative;
+    z-index: 2;
+    width: min(92vw, 560px);
+    background: white;
+    border-radius: 18px;
+    padding: 22px;
+}
+
+.fanz-crop-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: #111;
+    margin: 16px 0;
+    touch-action: none;
+
+    border: 4px solid #ffffff;
+    border-radius: 8px;
+    box-shadow:
+        0 0 0 2px #111,
+        0 8px 24px rgba(0,0,0,.25);
+}
+
+#avatarCropCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+}
+
+#avatarCropCanvas:active {
+    cursor: grabbing;
+}
+
+.fanz-crop-circle {
+    position: absolute;
+    inset: 2%;
+    border: 3px dashed rgba(255,255,255,.9);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+#avatarCropZoom {
+    width: 100%;
+}
+
+.fanz-crop-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.fanz-crop-actions button {
+    flex: 1;
+}
+
+.fanz-crop-stage--banner {
+    aspect-ratio: 18 / 7;
+}
+
+#bannerCropCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+}
+
+#bannerCropCanvas:active {
+    cursor: grabbing;
+}
+
 /* end_css */
