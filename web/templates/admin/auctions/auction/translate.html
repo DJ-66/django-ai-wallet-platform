@@ -51,7 +51,27 @@
 
                 {{ form.description }}
             </div>
+<br>
+            <div class="form-row">
+    <label>
+        {% trans "Auction Hero Builder" %}
+    </label>
 
+    <button
+        type="button"
+        class="button fanz-hero-builder-open"
+        data-language="{{ language_code }}"
+        data-title-id="{{ form.title.id_for_label }}"
+        data-hero-id="{{ form.hero_image.id_for_label }}"
+        data-use-hero-id="{{ form.use_language_hero.id_for_label }}"
+    >
+        🎨 {% trans "Build Hero" %}
+    </button>
+
+    <p class="help">
+        {% trans "Create a portrait auction hero using up to 5 images." %}
+    </p>
+</div>
             <div class="form-row">
                 {{ form.hero_image.errors }}
 
@@ -97,5 +117,1206 @@
     </div>
 
 </form>
+<div
+    id="auctionHeroBuilder"
+    class="fanz-hero-modal"
+    hidden
+>
+    <div
+        class="fanz-hero-backdrop"
+        data-hero-close
+    ></div>
 
+    <div class="fanz-hero-card">
+
+        <div class="fanz-hero-header">
+            <div>
+                <h2 style="margin:0;">
+                    🎨 {% trans "Auction Hero Builder" %}
+                </h2>
+
+                <p style="margin:6px 0 0;">
+                    {% trans "Portrait 2:3 hero · up to 5 images" %}
+                </p>
+            </div>
+
+            <button
+                type="button"
+                class="button"
+                data-hero-close
+            >
+                ✕
+            </button>
+        </div>
+
+        <div class="fanz-hero-language">
+            {% trans "Language" %}:
+            <strong id="heroBuilderLanguage"></strong>
+        </div>
+
+        <div class="fanz-hero-title-preview">
+            <small>{% trans "Localized title" %}</small>
+            <strong id="heroBuilderTitle"></strong>
+        </div>
+
+        <div class="fanz-hero-image-picker">
+
+    <label for="heroBuilderImages">
+        <strong>
+            {% trans "Choose 1–5 images" %}
+        </strong>
+    </label>
+
+    <input
+        type="file"
+        id="heroBuilderImages"
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        multiple
+    >
+
+    <p class="help">
+        {% trans "The first image becomes the primary image." %}
+    </p>
+
+</div>
+
+<div class="fanz-hero-preview-wrap">
+
+    <canvas
+        id="heroBuilderCanvas"
+        width="1000"
+        height="1500"
+    ></canvas>
+
+</div>
+
+<div
+    id="heroBuilderImageCount"
+    class="fanz-hero-image-count"
+>
+    {% trans "No images selected" %}
+</div>
+
+<div
+    id="heroBuilderEditControls"
+    class="fanz-hero-edit-controls"
+    hidden
+>
+    <strong id="heroBuilderActiveLabel">
+        {% trans "Editing image" %} 1
+    </strong>
+
+    <label for="heroBuilderZoom">
+        {% trans "Zoom" %}
+    </label>
+
+    <input
+        id="heroBuilderZoom"
+        type="range"
+        min="1"
+        max="3"
+        step="0.01"
+        value="1"
+    >
+
+    <p class="help">
+        {% trans "Click an image in the collage, then drag it to reposition." %}
+    </p>
+</div>
+
+        <div class="fanz-hero-actions">
+            <button
+                type="button"
+                class="button"
+                data-hero-close
+            >
+                {% trans "Cancel" %}
+            </button>
+        </div>
+        <button
+    type="button"
+    id="heroBuilderApply"
+    class="button default"
+    >
+    {% trans "Apply Hero" %}
+    </button>
+
+    </div>
+</div>
+
+<style>
+
+.fanz-hero-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.fanz-hero-modal[hidden] {
+    display: none !important;
+}
+
+.fanz-hero-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .78);
+}
+
+.fanz-hero-card {
+    position: relative;
+    z-index: 2;
+    width: min(94vw, 760px);
+    max-height: 92vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--body-bg, #fff);
+}
+
+.fanz-hero-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.fanz-hero-language {
+    margin-top: 20px;
+}
+
+.fanz-hero-title-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 10px;
+}
+
+.fanz-hero-placeholder {
+    margin-top: 20px;
+    padding: 70px 20px;
+    text-align: center;
+    border: 2px dashed var(--border-color, #aaa);
+    border-radius: 12px;
+}
+
+.fanz-hero-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.fanz-hero-image-picker {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 10px;
+}
+
+.fanz-hero-image-picker input {
+    display: block;
+    margin-top: 12px;
+}
+
+.fanz-hero-preview-wrap {
+    margin: 20px auto 0;
+    width: min(100%, 500px);
+}
+
+#heroBuilderCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+
+    background: #111;
+    border: 3px solid #777;
+    border-radius: 10px;
+
+    box-sizing: border-box;
+}
+
+.fanz-hero-image-count {
+    margin-top: 10px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.fanz-hero-edit-controls {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 10px;
+}
+
+.fanz-hero-edit-controls label {
+    display: block;
+    margin-top: 12px;
+}
+
+#heroBuilderZoom {
+    width: 100%;
+    margin-top: 8px;
+}
+
+#heroBuilderCanvas {
+    cursor: grab;
+    touch-action: none;
+}
+
+#heroBuilderCanvas:active {
+    cursor: grabbing;
+}
+
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const modal =
+        document.getElementById("auctionHeroBuilder");
+
+    const languageDisplay =
+        document.getElementById("heroBuilderLanguage");
+
+    const titleDisplay =
+        document.getElementById("heroBuilderTitle");
+
+    const imageInput =
+        document.getElementById("heroBuilderImages");
+
+    const canvas =
+        document.getElementById("heroBuilderCanvas");
+
+    const imageCount =
+        document.getElementById("heroBuilderImageCount");
+
+    const ctx =
+        canvas ? canvas.getContext("2d") : null;
+
+    const applyHeroBtn =
+        document.getElementById("heroBuilderApply");
+
+    let heroImages = [];
+    let heroSlots = [];
+    let activeSlot = -1;
+
+    let heroDragging = false;
+    let heroLastX = 0;
+    let heroLastY = 0;
+
+    const zoomControl =
+        document.getElementById("heroBuilderZoom");
+
+    const editControls =
+        document.getElementById("heroBuilderEditControls");
+
+    const activeLabel =
+        document.getElementById("heroBuilderActiveLabel");
+
+    if (!modal) {
+        return;
+    }
+
+    document.querySelectorAll(
+        ".fanz-hero-builder-open"
+    ).forEach(function (button) {
+
+        button.addEventListener(
+            "click",
+            function () {
+                const language =
+                    button.dataset.language;
+
+                const titleInput =
+                    document.getElementById(
+                        button.dataset.titleId
+                    );
+
+                languageDisplay.textContent =
+                    language.toUpperCase();
+
+                titleDisplay.textContent =
+                    titleInput && titleInput.value
+                        ? titleInput.value
+                        : "{% trans 'No localized title yet' %}";
+
+                modal.dataset.language =
+                    language;
+
+                modal.dataset.heroId =
+                    button.dataset.heroId;
+
+                modal.dataset.useHeroId =
+                    button.dataset.useHeroId;
+
+                modal.hidden = false;
+                drawHeroPreview();
+            }
+        );
+    });
+
+    function closeBuilder() {
+        modal.hidden = true;
+    }
+
+    modal.querySelectorAll(
+        "[data-hero-close]"
+    ).forEach(function (element) {
+        element.addEventListener(
+            "click",
+            closeBuilder
+        );
+    });
+
+function clampImagePosition(item, slot) {
+    if (!item || !item.image) {
+        return;
+    }
+
+    const baseScale = Math.max(
+        slot.width / item.image.width,
+        slot.height / item.image.height
+    );
+
+    const scale =
+        baseScale * item.zoom;
+
+    const drawWidth =
+        item.image.width * scale;
+
+    const drawHeight =
+        item.image.height * scale;
+
+    const maxX =
+        Math.max(
+            0,
+            (drawWidth - slot.width) / 2
+        );
+
+    const maxY =
+        Math.max(
+            0,
+            (drawHeight - slot.height) / 2
+        );
+
+    item.offsetX = Math.max(
+        -maxX,
+        Math.min(maxX, item.offsetX)
+    );
+
+    item.offsetY = Math.max(
+        -maxY,
+        Math.min(maxY, item.offsetY)
+    );
+}
+
+
+function drawImageInSlot(
+    item,
+    slot,
+    isActive
+) {
+    if (!item || !item.image) {
+        return;
+    }
+
+    clampImagePosition(
+        item,
+        slot
+    );
+
+    const baseScale = Math.max(
+        slot.width / item.image.width,
+        slot.height / item.image.height
+    );
+
+    const scale =
+        baseScale * item.zoom;
+
+    const drawWidth =
+        item.image.width * scale;
+
+    const drawHeight =
+        item.image.height * scale;
+
+    const centerX =
+        slot.x +
+        slot.width / 2 +
+        item.offsetX;
+
+    const centerY =
+        slot.y +
+        slot.height / 2 +
+        item.offsetY;
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.rect(
+        slot.x,
+        slot.y,
+        slot.width,
+        slot.height
+    );
+
+    ctx.clip();
+
+    ctx.drawImage(
+        item.image,
+        centerX - drawWidth / 2,
+        centerY - drawHeight / 2,
+        drawWidth,
+        drawHeight
+    );
+
+    ctx.restore();
+
+    if (isActive) {
+        ctx.save();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 8;
+
+        ctx.strokeRect(
+            slot.x + 4,
+            slot.y + 4,
+            slot.width - 8,
+            slot.height - 8
+        );
+
+        ctx.restore();
+    }
+}
+
+function buildHeroSlots(
+    count,
+    top,
+    width,
+    height
+) {
+    const gap = 8;
+
+    if (count === 1) {
+        return [
+            {
+                x: 0,
+                y: top,
+                width: width,
+                height: height
+            }
+        ];
+    }
+
+    if (count === 2) {
+        const left =
+            Math.floor(width * 0.60);
+
+        return [
+            {
+                x: 0,
+                y: top,
+                width: left - gap / 2,
+                height: height
+            },
+            {
+                x: left + gap / 2,
+                y: top,
+                width: width - left - gap / 2,
+                height: height
+            }
+        ];
+    }
+
+    if (count === 3) {
+        const left =
+            Math.floor(width * 0.58);
+
+        const right =
+            width - left;
+
+        return [
+            {
+                x: 0,
+                y: top,
+                width: left - gap / 2,
+                height: height
+            },
+            {
+                x: left + gap / 2,
+                y: top,
+                width: right - gap / 2,
+                height: height / 2 - gap / 2
+            },
+            {
+                x: left + gap / 2,
+                y: top + height / 2 + gap / 2,
+                width: right - gap / 2,
+                height: height / 2 - gap / 2
+            }
+        ];
+    }
+
+    const upperHeight =
+        Math.floor(height * 0.62);
+
+    const lowerHeight =
+        height - upperHeight;
+
+    const left =
+        Math.floor(width * 0.55);
+
+    const right =
+        width - left;
+
+    const slots = [
+        {
+            x: 0,
+            y: top,
+            width: left - gap / 2,
+            height: upperHeight - gap / 2
+        },
+        {
+            x: left + gap / 2,
+            y: top,
+            width: right - gap / 2,
+            height: upperHeight / 2 - gap
+        },
+        {
+            x: left + gap / 2,
+            y: top + upperHeight / 2,
+            width: right - gap / 2,
+            height: upperHeight / 2 - gap / 2
+        }
+    ];
+
+    if (count === 4) {
+        slots.push({
+            x: 0,
+            y: top + upperHeight + gap / 2,
+            width: width,
+            height: lowerHeight - gap / 2
+        });
+
+        return slots;
+    }
+
+    slots.push(
+        {
+            x: 0,
+            y: top + upperHeight + gap / 2,
+            width: width / 2 - gap / 2,
+            height: lowerHeight - gap / 2
+        },
+        {
+            x: width / 2 + gap / 2,
+            y: top + upperHeight + gap / 2,
+            width: width / 2 - gap / 2,
+            height: lowerHeight - gap / 2
+        }
+    );
+
+    return slots;
+}
+
+function drawHeroPreview() {
+    if (!ctx) {
+        return;
+    }
+
+    const width =
+        canvas.width;
+
+    const height =
+        canvas.height;
+
+    const titleHeight = 210;
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    /*
+     * --------------------------
+     * LOCALIZED TITLE AREA
+     * --------------------------
+     */
+
+    ctx.fillStyle = "#ffffff";
+
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        titleHeight
+    );
+
+    const title =
+        titleDisplay.textContent.trim();
+
+    ctx.fillStyle = "#111111";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font =
+        "bold 42px Arial, sans-serif";
+
+    let displayTitle = title;
+
+    const maxTitleWidth =
+        width - 100;
+
+    while (
+        ctx.measureText(
+            displayTitle
+        ).width > maxTitleWidth &&
+        displayTitle.length > 20
+    ) {
+        displayTitle =
+            displayTitle.slice(
+                0,
+                -1
+            );
+    }
+
+    if (displayTitle !== title) {
+        displayTitle += "…";
+    }
+
+    ctx.fillText(
+        displayTitle,
+        width / 2,
+        78
+    );
+
+    /*
+     * --------------------------
+     * LOCALIZED CTA
+     * --------------------------
+     */
+
+    const language =
+        modal.dataset.language || "en";
+
+    const ctas = {
+        en: "AUCTION • BID NOW",
+        es: "SUBASTA • PUJA AHORA",
+        pt: "LEILÃO • DÊ SEU LANCE"
+    };
+
+    ctx.font =
+        "bold 28px Arial, sans-serif";
+
+    ctx.fillText(
+        ctas[language] || ctas.en,
+        width / 2,
+        150
+    );
+
+    /*
+     * --------------------------
+     * IMAGE AREA
+     * --------------------------
+     */
+
+    const imageHeight =
+        height - titleHeight;
+
+    ctx.fillStyle = "#222222";
+
+    ctx.fillRect(
+        0,
+        titleHeight,
+        width,
+        imageHeight
+    );
+
+    if (!heroImages.length) {
+        ctx.fillStyle = "#ffffff";
+
+        ctx.font =
+            "bold 32px Arial, sans-serif";
+
+        ctx.fillText(
+            "Choose up to 5 images",
+            width / 2,
+            titleHeight +
+                imageHeight / 2
+        );
+
+        heroSlots = [];
+
+        return;
+    }
+
+    /*
+     * buildHeroSlots() calculates the
+     * layout for 1, 2, 3, 4 or 5 images.
+     */
+
+    heroSlots =
+        buildHeroSlots(
+            heroImages.length,
+            titleHeight,
+            width,
+            imageHeight
+        );
+
+    /*
+     * Draw each image into its assigned
+     * crop slot.
+     */
+
+    heroImages.forEach(
+        function (item, index) {
+            const slot =
+                heroSlots[index];
+
+            if (!slot) {
+                return;
+            }
+
+            drawImageInSlot(
+                item,
+                slot,
+                index === activeSlot
+            );
+        }
+    );
+}
+
+
+if (imageInput) {
+    imageInput.addEventListener(
+        "change",
+        function () {
+            const files =
+                Array.from(
+                    imageInput.files
+                );
+
+            if (files.length > 5) {
+                alert(
+                    "Please select a maximum of 5 images."
+                );
+
+                imageInput.value = "";
+                heroImages = [];
+                heroSlots = [];
+                activeSlot = -1;
+
+                if (editControls) {
+                    editControls.hidden = true;
+                }
+
+                imageCount.textContent =
+                    "No images selected";
+
+                drawHeroPreview();
+
+                return;
+            }
+
+            if (!files.length) {
+                heroImages = [];
+                heroSlots = [];
+                activeSlot = -1;
+
+                if (editControls) {
+                    editControls.hidden = true;
+                }
+
+                imageCount.textContent =
+                    "No images selected";
+
+                drawHeroPreview();
+
+                return;
+            }
+
+            /*
+             * Preserve file-selection order.
+             */
+
+            const loadedImages =
+                new Array(files.length);
+
+            let loadedCount = 0;
+
+            files.forEach(
+                function (file, index) {
+                    const image =
+                        new Image();
+
+                    const objectUrl =
+                        URL.createObjectURL(
+                            file
+                        );
+
+                    image.onload =
+                        function () {
+                            loadedImages[index] = {
+                                image: image,
+                                file: file,
+                                zoom: 1,
+                                offsetX: 0,
+                                offsetY: 0
+                            };
+
+                            loadedCount += 1;
+
+                            URL.revokeObjectURL(
+                                objectUrl
+                            );
+
+                            if (
+                                loadedCount ===
+                                files.length
+                            ) {
+                                heroImages =
+                                    loadedImages;
+
+                                activeSlot = 0;
+
+                                imageCount.textContent =
+                                    files.length +
+                                    (
+                                        files.length === 1
+                                            ? " image selected"
+                                            : " images selected"
+                                    );
+
+                                if (
+                                    editControls
+                                ) {
+                                    editControls.hidden =
+                                        false;
+                                }
+
+                                if (
+                                    activeLabel
+                                ) {
+                                    activeLabel.textContent =
+                                        "Editing image 1";
+                                }
+
+                                if (
+                                    zoomControl
+                                ) {
+                                    zoomControl.value =
+                                        1;
+                                }
+
+                                drawHeroPreview();
+                            }
+                        };
+
+                    image.src =
+                        objectUrl;
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * --------------------------------
+ * FIND CLICKED COLLAGE SLOT
+ * --------------------------------
+ */
+
+function findHeroSlot(x, y) {
+    for (
+        let index = 0;
+        index < heroSlots.length;
+        index += 1
+    ) {
+        const slot =
+            heroSlots[index];
+
+        if (
+            x >= slot.x &&
+            x <= slot.x + slot.width &&
+            y >= slot.y &&
+            y <= slot.y + slot.height
+        ) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+
+/*
+ * --------------------------------
+ * SELECT IMAGE + START DRAG
+ * --------------------------------
+ */
+
+canvas.addEventListener(
+    "pointerdown",
+    function (event) {
+        if (!heroImages.length) {
+            return;
+        }
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+        const canvasX =
+            (event.clientX - rect.left) *
+            (canvas.width / rect.width);
+
+        const canvasY =
+            (event.clientY - rect.top) *
+            (canvas.height / rect.height);
+
+        const clickedSlot =
+            findHeroSlot(
+                canvasX,
+                canvasY
+            );
+
+        if (clickedSlot < 0) {
+            return;
+        }
+
+        activeSlot =
+            clickedSlot;
+
+        if (activeLabel) {
+            activeLabel.textContent =
+                "Editing image " +
+                (activeSlot + 1);
+        }
+
+        if (zoomControl) {
+            zoomControl.value =
+                heroImages[
+                    activeSlot
+                ].zoom;
+        }
+
+        heroDragging = true;
+
+        heroLastX =
+            event.clientX;
+
+        heroLastY =
+            event.clientY;
+
+        canvas.setPointerCapture(
+            event.pointerId
+        );
+
+        drawHeroPreview();
+    }
+);
+
+
+/*
+ * --------------------------------
+ * DRAG ACTIVE IMAGE
+ * --------------------------------
+ */
+
+canvas.addEventListener(
+    "pointermove",
+    function (event) {
+        if (
+            !heroDragging ||
+            activeSlot < 0
+        ) {
+            return;
+        }
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+        const scaleX =
+            canvas.width /
+            rect.width;
+
+        const scaleY =
+            canvas.height /
+            rect.height;
+
+        const item =
+            heroImages[
+                activeSlot
+            ];
+
+        item.offsetX +=
+            (
+                event.clientX -
+                heroLastX
+            ) * scaleX;
+
+        item.offsetY +=
+            (
+                event.clientY -
+                heroLastY
+            ) * scaleY;
+
+        heroLastX =
+            event.clientX;
+
+        heroLastY =
+            event.clientY;
+
+        drawHeroPreview();
+    }
+);
+
+
+/*
+ * --------------------------------
+ * STOP DRAGGING
+ * --------------------------------
+ */
+
+function stopHeroDragging() {
+    heroDragging = false;
+}
+
+canvas.addEventListener(
+    "pointerup",
+    stopHeroDragging
+);
+
+canvas.addEventListener(
+    "pointercancel",
+    stopHeroDragging
+);
+
+
+/*
+ * --------------------------------
+ * ZOOM ACTIVE IMAGE
+ * --------------------------------
+ */
+
+if (zoomControl) {
+    zoomControl.addEventListener(
+        "input",
+        function () {
+            if (
+                activeSlot < 0 ||
+                !heroImages[
+                    activeSlot
+                ]
+            ) {
+                return;
+            }
+
+            heroImages[
+                activeSlot
+            ].zoom =
+                Number(
+                    zoomControl.value
+                );
+
+            drawHeroPreview();
+        }
+    );
+}
+
+if (applyHeroBtn) {
+    applyHeroBtn.addEventListener(
+        "click",
+        function () {
+            if (!heroImages.length) {
+                alert(
+                    "Please choose at least one image."
+                );
+                return;
+            }
+
+            const heroInputId =
+                modal.dataset.heroId;
+
+            const useHeroId =
+                modal.dataset.useHeroId;
+
+            const heroInput =
+                document.getElementById(
+                    heroInputId
+                );
+
+            const useHeroCheckbox =
+                document.getElementById(
+                    useHeroId
+                );
+
+            if (!heroInput) {
+                alert(
+                    "Could not find the hero image field."
+                );
+                return;
+            }
+
+            canvas.toBlob(
+                function (blob) {
+                    if (!blob) {
+                        alert(
+                            "Could not generate hero image."
+                        );
+                        return;
+                    }
+
+                    const language =
+                        modal.dataset.language || "en";
+
+                    const filename =
+                        "auction-hero-" +
+                        language +
+                        ".jpg";
+
+                    const heroFile =
+                        new File(
+                            [blob],
+                            filename,
+                            {
+                                type: "image/jpeg",
+                                lastModified:
+                                    Date.now()
+                            }
+                        );
+
+                    const transfer =
+                        new DataTransfer();
+
+                    transfer.items.add(
+                        heroFile
+                    );
+
+                    heroInput.files =
+                        transfer.files;
+
+                    if (useHeroCheckbox) {
+                        useHeroCheckbox.checked =
+                            true;
+                    }
+
+                    modal.hidden = true;
+                },
+                "image/jpeg",
+                0.92
+            );
+        }
+    );
+}
+
+});
+</script>
 {% endblock %}
