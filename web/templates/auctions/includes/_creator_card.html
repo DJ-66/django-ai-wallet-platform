@@ -43,9 +43,9 @@
             {% endif %}
         </div>
         </div>
-             {% if creator.profile.bio %}
-            <p class="creator-card-bio">
-            {{ creator.profile.bio|truncatechars:140 }}
+             {% if creator.display_bio %}
+             <p class="creator-card-bio">
+            {{ creator.display_bio|truncatechars:140 }}
             </p>
             {% endif %}
    

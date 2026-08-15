@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load i18n %}
 {% block content %}
 <style>
 .discovery-detail-wrap {
@@ -465,7 +465,7 @@
 <div class="discovery-detail-wrap">
 
     <a href="{% url 'discovery_home' %}?lang={{ language }}" class="discovery-back">
-        ← Back to Discovery
+        ← {% trans "Back to Discovery" %}
     </a>
 
     <section class="discovery-hero-card">
@@ -488,10 +488,10 @@
 
             {% if hashtag %}
                         <p>
-                            Create a free public post using
-                            <strong>#{{ hashtag.name }}</strong>
-                            and it will appear here automatically.
-                        </p>
+                         {% blocktrans trimmed with tag=hashtag.name %}
+                         Create a free public post using #{{ tag }} and it will appear here automatically.
+                         {% endblocktrans %}
+                         </p>
             {% endif %}
 
             {% if translation.button_url and translation.button_text %}
@@ -504,43 +504,44 @@
             class="discovery-primary-cta"
             href="{% url 'businesses:create' %}"
         >
-            List Your Business
+            {% trans "List Your Business" %}
         </a>
 
             {% endif %}
 
         {% if hub.slug == "auctions" %}
     <div class="auction-page-intro">
-        <h2>Live Auctions Ending Soon</h2>
+        <h2>{% trans "Live Auctions Ending Soon" %}</h2>
 
         <p>
-            Explore live FANZ auctions connected to the
-            Auctions community.
+             {% trans "Explore live FANZ auctions connected to the Auctions community." %}
         </p>
 
         <a
             class="discovery-section-cta"
             href="{% url 'auction_list' %}"
         >
-            Explore All Auctions
+            {% trans "Explore All Auctions" %}
         </a>
     </div>
 {% endif %}
 
 {% if hub.slug == "discover-fanz" %}
 <div class="business-page-intro">
-    <h2>Businesses to Discover</h2>
+    <h2>{% trans "Businesses to Discover" %}</h2>
 
-    <p>
-        Find businesses connected to the
-        {{ translation.title }} community.
+     <p>
+        {% blocktrans trimmed with community=translation.title %}
+            Find businesses connected to the {{ community }} community.
+        {% endblocktrans %}
     </p>
 
     <a
         class="discovery-section-cta"
         href="{% url 'businesses:create' %}"
     >
-        List Your Business
+       {% trans "List Your Business" %}
+
     </a>
 </div>
 {% endif %}
@@ -562,37 +563,38 @@
         {% if auction_page.paginator.num_pages > 1 %}
             <nav
                 class="discovery-pagination"
-                aria-label="Auction pagination"
+                aria-label="{% trans 'Auction pagination' %}"
             >
-                {% if auction_page.has_previous %}
+                {% if auction_page.has_previous %}aria-label="{% trans 'Auction pagination' %}"
                     <a
                         href="?lang={{ language }}&auction_page={{ auction_page.previous_page_number }}"
                     >
-                        ← Previous
+                       ← {% trans "Previous" %}
+
                     </a>
                 {% endif %}
 
                 <span>
-                    Page {{ auction_page.number }}
-                    of {{ auction_page.paginator.num_pages }}
+                {% blocktrans trimmed with current=auction_page.number total=auction_page.paginator.num_pages %}
+                Page {{ current }} of {{ total }}
+                {% endblocktrans %}
                 </span>
 
                 {% if auction_page.has_next %}
                     <a
                         href="?lang={{ language }}&auction_page={{ auction_page.next_page_number }}"
                     >
-                        Next →
+                       {% trans "Next" %} →
+
                     </a>
                 {% endif %}
             </nav>
         {% endif %}
     {% else %}
         <div class="discovery-empty-state">
-            <h3>No live auctions right now</h3>
-
+            <h3>{% trans "No live auctions right now" %}</h3>
             <p>
-                Live FANZ auctions connected to this Discovery
-                community will appear here automatically.
+                {% trans "Live FANZ auctions connected to this Discovery community will appear here automatically." %}
             </p>
         </div>
 {% endif %}
@@ -605,13 +607,16 @@
 <section class="discovery-posts-section">
     <div class="discovery-section-heading">
         <h2>
-            Fresh from the {{ translation.title }} Community
+            {% blocktrans trimmed with community=translation.title %}
+                Fresh from the {{ community }} Community
+            {% endblocktrans %}
         </h2>
 
         {% if hashtag %}
             <p>
-                Public stories, photos, and updates shared with
-                <strong>#{{ hashtag.name }}</strong>.
+                {% blocktrans trimmed with tag=hashtag.name %}
+                    Public stories, photos, and updates shared with #{{ tag }}.
+                {% endblocktrans %}
             </p>
         {% endif %}
     </div>
@@ -626,11 +631,13 @@
 {% if creators %}
 <section class="discovery-creators-section">
     <div class="discovery-section-heading">
-        <h2>Meet Fanz Creators</h2>
+        <h2>{% trans "Meet Fanz Creators" %}</h2>
 
-        <p>
-            Connect with Fanz Creators of the
-            {{ translation.title }} community.
+
+         <p>
+            {% blocktrans trimmed with community=translation.title %}
+                Connect with Fanz Creators of the {{ community }} community.
+            {% endblocktrans %}
         </p>
     </div>
 
@@ -653,18 +660,19 @@
     </div>
         {% else %}
             <div class="discovery-empty-state">
-                <h3>Does your business belong here?</h3>
+                <h3>{% trans "Does your business belong here?" %}</h3>
 
-                <p>
-                    Join this Discovery community so customers can
-                    find your business, updates, events, and offers.
-                </p>
+
+                 <p>
+            {% trans "Join this Discovery community so customers can find your business, updates, events, and offers." %}
+                 </p>
 
                 <a
                     class="discovery-primary-cta"
                     href="{% url 'businesses:create' %}"
                 >
-                    Add Your Business
+                    {% trans "Add Your Business" %}
+
                 </a>
             </div>
         {% endif %}
@@ -676,7 +684,8 @@
             {{ metrics.posts }}
         </span>
         <span class="discovery-metric-label">
-            Community Posts
+         {% trans "Community Posts" %}
+
         </span>
     </div>
     {% endif %}
@@ -686,7 +695,8 @@
     </span>
 
     <span class="discovery-metric-label">
-        Active Creators
+       {% trans "Active Creators" %}
+
     </span>
     </div>
 
@@ -695,7 +705,8 @@
             {{ metrics.businesses }}
         </span>
         <span class="discovery-metric-label">
-            Business Profiles
+           {% trans "Business Profiles" %}
+
         </span>
     </div>
 
@@ -704,7 +715,8 @@
             {{ metrics.events }}
         </span>
         <span class="discovery-metric-label">
-            Upcoming Events
+            {% trans "Upcoming Events" %}
+
         </span>
     </div>
 {% if hub.slug == "auctions" %}
@@ -713,7 +725,8 @@
         {{ metrics.auctions }}
     </span>
     <span class="discovery-metric-label">
-        Live Auctions
+       {% trans "Live Auctions" %}
+
     </span>
 </div>
  {% endif %}
@@ -721,11 +734,13 @@
     <section class="discovery-events-section">
         <div class="discovery-section-heading discovery-section-heading-row">
             <div>
-                <h2>Upcoming Community Events</h2>
+               <h2>{% trans "Upcoming Community Events" %}</h2>
 
-                <p>
-                    Discover events hosted by businesses in the
-                    {{ translation.title }} community.
+
+                 <p>
+                {% blocktrans trimmed with community=translation.title %}
+                    Discover events hosted by businesses in the {{ community }} community.
+                {% endblocktrans %}
                 </p>
             </div>
 
@@ -733,7 +748,8 @@
                 class="discovery-section-cta"
                 href="{% url 'event_list' %}"
             >
-                Explore All Events
+                {% trans "Explore All Events" %}
+
             </a>
         </div>
 
@@ -745,30 +761,35 @@
             </div>
         {% else %}
             <div class="discovery-empty-state">
-                <h3>No community events yet</h3>
+                 <h3>{% trans "No community events yet" %}</h3>
+
 
                 <p>
-                    Events created by businesses in this Discovery
-                    community will appear here automatically.
-                </p>
+                {% trans "Events created by businesses in this Discovery community will appear here automatically." %}
+               </p>
             </div>
         {% endif %}
     </section>
 
     <section class="discovery-action-grid">
         <div class="discovery-action-card">
-            <h3>Find answers</h3>
-            <p>Start with the question you are trying to solve today.</p>
+            <h3>{% trans "Find answers" %}</h3>
+
+            <p>{% trans "Start with the question you are trying to solve today." %}</p>
+
         </div>
 
         <div class="discovery-action-card">
-            <h3>Take action</h3>
-            <p>Move from ideas to practical next steps.</p>
+             <h3>{% trans "Take action" %}</h3>
+
+             <p>{% trans "Move from ideas to practical next steps." %}</p>
+
         </div>
 
         <div class="discovery-action-card">
-            <h3>Create value</h3>
-            <p>Use FANZ to grow, share, and build momentum.</p>
+            <h3>{% trans "Create value" %}</h3>
+
+            <p>{% trans "Use FANZ to grow, share, and build momentum." %}</p>
         </div>
     </section>
 

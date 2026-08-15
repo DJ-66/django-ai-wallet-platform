@@ -2,9 +2,14 @@ from django.utils import timezone
 from businesses.services import get_discovery_business_count
 from django.contrib.auth import get_user_model
 from django.db.models import Max, Q
-
-from .models import Auction, Event, FeedPost, Hashtag
 from .services import get_public_hashtag_post_count
+from .models import (
+    Auction,
+    Event,
+    FeedPost,
+    Hashtag,
+    UserProfileTranslation,
+)
 
 User = get_user_model()
 
@@ -200,17 +205,57 @@ def _get_discovery_creator_queryset(hub):
         .distinct()
     )
 
+def get_discovery_creators(
+    hub,
+    limit=8,
+    language="en",
+):
+    """
+    Return creators with recent public posts connected to a Discovery Hub,
+    including the localized profile bio for the requested language.
+    """
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
 
-def get_discovery_creators(hub, limit=8):
-    """
-    Return creators with recent public posts connected to a Discovery Hub.
-    """
-    queryset = _get_discovery_creator_queryset(hub)
+    if language not in {
+        "en",
+        "es",
+        "pt",
+    }:
+        language = "en"
+
+    queryset = (
+        _get_discovery_creator_queryset(
+            hub
+        )
+    )
 
     if limit is not None:
         queryset = queryset[:limit]
 
-    return queryset
+    creators = list(queryset)
+
+    for creator in creators:
+        profile = creator.profile
+
+        display_bio = profile.bio
+
+        translation = (
+            UserProfileTranslation.objects
+            .filter(
+                profile=profile,
+                language=language,
+            )
+            .first()
+        )
+
+        if translation is not None:
+            display_bio = translation.bio
+
+        creator.display_bio = display_bio
+
+    return creators
 
 
 def get_discovery_creator_count(hub):

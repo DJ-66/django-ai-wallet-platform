@@ -21,6 +21,102 @@ from .models import (
     CreditPackage,
 )
 
+def localize_notification_message(
+    notification,
+    language="en",
+):
+    """
+    Return a localized display message for a Notification.
+
+    Notification.message remains the canonical stored message.
+    Localization happens at display time so changing EN / ES / PT
+    immediately changes notification presentation.
+    """
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
+    if language not in {
+        "en",
+        "es",
+        "pt",
+    }:
+        language = "en"
+
+    message = notification.message or ""
+
+    if language == "en":
+        return message
+
+    actor_username = (
+        notification.actor.username
+        if notification.actor
+        else ""
+    )
+
+    notification_type = (
+        notification.notification_type
+    )
+
+    translations = {
+        "es": {
+            Notification.LIKE:
+                f"❤️ {actor_username} indicó que le gusta tu publicación.",
+
+            Notification.COMMENT:
+                f"💬 {actor_username} comentó en tu publicación.",
+
+            Notification.FAN:
+                f"⭐ {actor_username} se ha convertido en uno de tus Fanz!",
+
+            Notification.TIP:
+                None,
+
+            Notification.UNLOCK:
+                None,
+
+            Notification.MESSAGE:
+                None,
+
+            Notification.AUCTION:
+                None,
+        },
+
+        "pt": {
+            Notification.LIKE:
+                f"❤️ {actor_username} curtiu sua publicação.",
+
+            Notification.COMMENT:
+                f"💬 {actor_username} comentou na sua publicação.",
+
+            Notification.FAN:
+                f"⭐ {actor_username} se tornou um dos seus Fanz!",
+
+            Notification.TIP:
+                None,
+
+            Notification.UNLOCK:
+                None,
+
+            Notification.MESSAGE:
+                None,
+
+            Notification.AUCTION:
+                None,
+        },
+    }
+
+    localized = (
+        translations
+        .get(language, {})
+        .get(notification_type)
+    )
+
+    if localized:
+        return localized
+
+    return message
+
 def send_winner_email(auction):
     if not auction.winner or not auction.winner.email:
         return
