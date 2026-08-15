@@ -601,128 +601,290 @@ function buildHeroSlots(
     width,
     height
 ) {
-    const gap = 8;
+    const outer = 18;
+    const gap = 10;
+
+    const usableWidth =
+        width - outer * 2;
+
+    /*
+     * 1 image
+     */
 
     if (count === 1) {
         return [
             {
-                x: 0,
+                x: outer,
                 y: top,
-                width: width,
+                width: usableWidth,
                 height: height
             }
         ];
     }
+
+    /*
+     * 2 images
+     */
 
     if (count === 2) {
-        const left =
-            Math.floor(width * 0.60);
+        const cellWidth =
+            (usableWidth - gap) / 2;
 
         return [
             {
-                x: 0,
+                x: outer,
                 y: top,
-                width: left - gap / 2,
+                width: cellWidth,
                 height: height
             },
             {
-                x: left + gap / 2,
+                x: outer + cellWidth + gap,
                 y: top,
-                width: width - left - gap / 2,
+                width: cellWidth,
                 height: height
             }
         ];
     }
+
+    /*
+     * 3 images:
+     * 2 large top
+     * 1 wide bottom
+     */
 
     if (count === 3) {
-        const left =
-            Math.floor(width * 0.58);
+        const topHeight =
+            Math.floor(height * 0.64);
 
-        const right =
-            width - left;
+        const bottomHeight =
+            height - topHeight - gap;
+
+        const cellWidth =
+            (usableWidth - gap) / 2;
 
         return [
             {
-                x: 0,
+                x: outer,
                 y: top,
-                width: left - gap / 2,
-                height: height
+                width: cellWidth,
+                height: topHeight
             },
             {
-                x: left + gap / 2,
+                x: outer + cellWidth + gap,
                 y: top,
-                width: right - gap / 2,
-                height: height / 2 - gap / 2
+                width: cellWidth,
+                height: topHeight
             },
             {
-                x: left + gap / 2,
-                y: top + height / 2 + gap / 2,
-                width: right - gap / 2,
-                height: height / 2 - gap / 2
+                x: outer,
+                y: top + topHeight + gap,
+                width: usableWidth,
+                height: bottomHeight
             }
         ];
     }
 
-    const upperHeight =
-        Math.floor(height * 0.62);
-
-    const lowerHeight =
-        height - upperHeight;
-
-    const left =
-        Math.floor(width * 0.55);
-
-    const right =
-        width - left;
-
-    const slots = [
-        {
-            x: 0,
-            y: top,
-            width: left - gap / 2,
-            height: upperHeight - gap / 2
-        },
-        {
-            x: left + gap / 2,
-            y: top,
-            width: right - gap / 2,
-            height: upperHeight / 2 - gap
-        },
-        {
-            x: left + gap / 2,
-            y: top + upperHeight / 2,
-            width: right - gap / 2,
-            height: upperHeight / 2 - gap / 2
-        }
-    ];
+    /*
+     * 4 images:
+     * 2 large top
+     * 2 bottom
+     */
 
     if (count === 4) {
-        slots.push({
-            x: 0,
-            y: top + upperHeight + gap / 2,
-            width: width,
-            height: lowerHeight - gap / 2
-        });
+        const topHeight =
+            Math.floor(height * 0.64);
 
-        return slots;
+        const bottomHeight =
+            height - topHeight - gap;
+
+        const topWidth =
+            (usableWidth - gap) / 2;
+
+        const bottomWidth =
+            (usableWidth - gap) / 2;
+
+        return [
+            {
+                x: outer,
+                y: top,
+                width: topWidth,
+                height: topHeight
+            },
+            {
+                x: outer + topWidth + gap,
+                y: top,
+                width: topWidth,
+                height: topHeight
+            },
+            {
+                x: outer,
+                y: top + topHeight + gap,
+                width: bottomWidth,
+                height: bottomHeight
+            },
+            {
+                x: outer + bottomWidth + gap,
+                y: top + topHeight + gap,
+                width: bottomWidth,
+                height: bottomHeight
+            }
+        ];
     }
 
-    slots.push(
+    /*
+     * DEFAULT AI CHARACTER TEMPLATE
+     *
+     * 5 images:
+     * 2 large images on top
+     * 3 supporting images below
+     */
+
+    const topHeight =
+        Math.floor(height * 0.64);
+
+    const bottomHeight =
+        height - topHeight - gap;
+
+    const largeWidth =
+        (usableWidth - gap) / 2;
+
+    const smallWidth =
+        (usableWidth - gap * 2) / 3;
+
+    return [
         {
-            x: 0,
-            y: top + upperHeight + gap / 2,
-            width: width / 2 - gap / 2,
-            height: lowerHeight - gap / 2
+            x: outer,
+            y: top,
+            width: largeWidth,
+            height: topHeight
         },
         {
-            x: width / 2 + gap / 2,
-            y: top + upperHeight + gap / 2,
-            width: width / 2 - gap / 2,
-            height: lowerHeight - gap / 2
+            x: outer + largeWidth + gap,
+            y: top,
+            width: largeWidth,
+            height: topHeight
+        },
+        {
+            x: outer,
+            y: top + topHeight + gap,
+            width: smallWidth,
+            height: bottomHeight
+        },
+        {
+            x: outer + smallWidth + gap,
+            y: top + topHeight + gap,
+            width: smallWidth,
+            height: bottomHeight
+        },
+        {
+            x:
+                outer +
+                (smallWidth + gap) * 2,
+            y: top + topHeight + gap,
+            width: smallWidth,
+            height: bottomHeight
         }
-    );
+    ];
+}    
+function getWrappedTitleLines(
+    ctx,
+    text,
+    maxWidth,
+    maxLines,
+    startFontSize,
+    minFontSize
+) {
+    let fontSize = startFontSize;
 
-    return slots;
+    while (fontSize >= minFontSize) {
+        ctx.font =
+            "700 " +
+            fontSize +
+            "px Arial, sans-serif";
+
+        const words =
+            text.trim().split(/\s+/);
+
+        const lines = [];
+        let currentLine = "";
+
+        words.forEach(function (word) {
+            const testLine =
+                currentLine
+                    ? currentLine + " " + word
+                    : word;
+
+            if (
+                ctx.measureText(testLine).width <=
+                maxWidth
+            ) {
+                currentLine = testLine;
+            } else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+
+                currentLine = word;
+            }
+        });
+
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        if (lines.length <= maxLines) {
+            return {
+                lines: lines,
+                fontSize: fontSize
+            };
+        }
+
+        fontSize -= 1;
+    }
+
+    /*
+     * Fallback if a very long translated title
+     * still needs more room.
+     */
+    ctx.font =
+        "700 " +
+        minFontSize +
+        "px Arial, sans-serif";
+
+    const words =
+        text.trim().split(/\s+/);
+
+    const lines = [];
+    let currentLine = "";
+
+    words.forEach(function (word) {
+        const testLine =
+            currentLine
+                ? currentLine + " " + word
+                : word;
+
+        if (
+            ctx.measureText(testLine).width <=
+            maxWidth
+        ) {
+            currentLine = testLine;
+        } else {
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+
+            currentLine = word;
+        }
+    });
+
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+
+    return {
+        lines: lines.slice(0, maxLines),
+        fontSize: minFontSize
+    };
 }
 
 function drawHeroPreview() {
@@ -736,7 +898,79 @@ function drawHeroPreview() {
     const height =
         canvas.height;
 
-    const titleHeight = 210;
+    const language =
+        modal.dataset.language || "en";
+
+    const neon =
+        "#eaff00";
+
+    const white =
+        "#ffffff";
+
+    const black =
+        "#050505";
+
+    /*
+     * --------------------------------
+     * LOCALIZED TEMPLATE COPY
+     * --------------------------------
+     */
+
+    const copy = {
+        en: {
+            headline1: "SAME GIRL",
+            headline2: "EVERY PHOTO",
+
+            rights: "COMMERCIAL RIGHTS INCLUDED",
+            
+            benefits: [
+                "INSTAGRAM\nREADY",
+                "CONSISTENT\nIDENTITY",
+                "CONTENT FOR\nEVERY PLATFORM",
+                "HIGH QUALITY\nPHOTOS",
+                "INSTANT\nDOWNLOAD"
+            ]
+        },
+
+        es: {
+            headline1: "LA MISMA CHICA",
+            headline2: "EN CADA FOTO",
+
+            rights: "DERECHOS COMERCIALES INCLUIDOS",
+            
+            benefits: [
+                "LISTA PARA\nINSTAGRAM",
+                "IDENTIDAD\nCONSISTENTE",
+                "CONTENIDO PARA\nTODA PLATAFORMA",
+                "FOTOS DE\nALTA CALIDAD",
+                "DESCARGA\nINSTANTÁNEA"
+            ]
+        },
+
+        pt: {
+            headline1: "A MESMA GAROTA",
+            headline2: "EM TODA FOTO",
+
+            rights: "DERECHOS COMERCIALES INCLUIDOS",
+
+            benefits: [
+                "PRONTA PARA\nINSTAGRAM",
+                "IDENTIDADE\nCONSISTENTE",
+                "CONTEÚDO PARA\nTODA PLATAFORMA",
+                "FOTOS DE\nALTA QUALIDADE",
+                "DOWNLOAD\nINSTANTÂNEO"
+            ]
+        }
+    };
+
+    const text =
+        copy[language] || copy.en;
+
+    /*
+     * --------------------------------
+     * BACKGROUND
+     * --------------------------------
+     */
 
     ctx.clearRect(
         0,
@@ -745,110 +979,196 @@ function drawHeroPreview() {
         height
     );
 
-    /*
-     * --------------------------
-     * LOCALIZED TITLE AREA
-     * --------------------------
-     */
-
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle =
+        black;
 
     ctx.fillRect(
         0,
         0,
         width,
-        titleHeight
+        height
     );
+
+    ctx.textAlign =
+        "center";
+
+    ctx.textBaseline =
+        "middle";
+
+    /*
+     * --------------------------------
+     * MAIN MARKETING HEADLINE
+     * --------------------------------
+     */
+
+    ctx.font =
+        "900 92px Arial, sans-serif";
+
+    ctx.fillStyle =
+        white;
+
+    ctx.fillText(
+        text.headline1,
+        width / 2,
+        72
+    );
+
+    ctx.font =
+        "900 98px Arial, sans-serif";
+
+    ctx.fillStyle =
+        neon;
+
+    ctx.shadowColor =
+        "rgba(234,255,0,.45)";
+
+    ctx.shadowBlur =
+        16;
+
+    ctx.fillText(
+        text.headline2,
+        width / 2,
+        168
+    );
+
+    ctx.shadowBlur = 0;
+
+    /*
+     * --------------------------------
+     * DIVIDER
+     * --------------------------------
+     */
+
+    ctx.strokeStyle =
+        neon;
+
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        42,
+        230
+    );
+
+    ctx.lineTo(
+        width - 42,
+        230
+    );
+
+    ctx.stroke();
+
+    /*
+     * --------------------------------
+     * LOCALIZED AUCTION TITLE
+     * --------------------------------
+     */
 
     const title =
         titleDisplay.textContent.trim();
 
-    ctx.fillStyle = "#111111";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.fillStyle =
+        white;
+
+    ctx.textAlign =
+        "center";
+
+    ctx.textBaseline =
+        "middle";
+
+/*
+ * Allow the localized auction title
+ * to wrap across as many as 3 lines.
+ *
+ * EN will normally use 1–2.
+ * ES may use 2.
+ * PT can safely use 2–3.
+ */
+
+    const wrappedTitle =
+        getWrappedTitleLines(
+            ctx,
+            title,
+            width - 100,
+            3,
+            30,
+            20
+        );
+
+    const titleLineHeight =
+        wrappedTitle.fontSize + 7;
+
+    const titleCenterY =
+        285;
+
+    const titleTotalHeight =
+        wrappedTitle.lines.length *
+        titleLineHeight;
+
+    const titleStartY =
+        titleCenterY -
+        titleTotalHeight / 2 +
+        titleLineHeight / 2;
+
     ctx.font =
-        "bold 42px Arial, sans-serif";
+        "700 " +
+        wrappedTitle.fontSize +
+        "px Arial, sans-serif";
 
-    let displayTitle = title;
-
-    const maxTitleWidth =
-        width - 100;
-
-    while (
-        ctx.measureText(
-            displayTitle
-        ).width > maxTitleWidth &&
-        displayTitle.length > 20
-    ) {
-        displayTitle =
-            displayTitle.slice(
-                0,
-                -1
+    wrappedTitle.lines.forEach(
+        function (line, index) {
+            ctx.fillText(
+                line,
+                width / 2,
+                titleStartY +
+                    index * titleLineHeight
             );
-    }
-
-    if (displayTitle !== title) {
-        displayTitle += "…";
-    }
-
-    ctx.fillText(
-        displayTitle,
-        width / 2,
-        78
+        }
     );
 
-    /*
-     * --------------------------
-     * LOCALIZED CTA
-     * --------------------------
-     */
-
-    const language =
-        modal.dataset.language || "en";
-
-    const ctas = {
-        en: "AUCTION • BID NOW",
-        es: "SUBASTA • PUJA AHORA",
-        pt: "LEILÃO • DÊ SEU LANCE"
-    };
-
-    ctx.font =
-        "bold 28px Arial, sans-serif";
-
-    ctx.fillText(
-        ctas[language] || ctas.en,
-        width / 2,
-        150
-    );
+    
 
     /*
-     * --------------------------
-     * IMAGE AREA
-     * --------------------------
+     * --------------------------------
+     * COLLAGE
+     * --------------------------------
      */
+
+    const imageTop =
+        335;
+
+    const rightsTop =
+        1190;
+
+    const featureTop =
+        1290;
 
     const imageHeight =
-        height - titleHeight;
-
-    ctx.fillStyle = "#222222";
-
-    ctx.fillRect(
-        0,
-        titleHeight,
-        width,
-        imageHeight
-    );
+        rightsTop -
+        imageTop -
+        25;
 
     if (!heroImages.length) {
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle =
+            "#181818";
+
+        ctx.fillRect(
+            18,
+            imageTop,
+            width - 36,
+            imageHeight
+        );
+
+        ctx.fillStyle =
+            white;
 
         ctx.font =
-            "bold 32px Arial, sans-serif";
+            "700 30px Arial, sans-serif";
 
         ctx.fillText(
             "Choose up to 5 images",
             width / 2,
-            titleHeight +
+            imageTop +
                 imageHeight / 2
         );
 
@@ -857,23 +1177,13 @@ function drawHeroPreview() {
         return;
     }
 
-    /*
-     * buildHeroSlots() calculates the
-     * layout for 1, 2, 3, 4 or 5 images.
-     */
-
     heroSlots =
         buildHeroSlots(
             heroImages.length,
-            titleHeight,
+            imageTop,
             width,
             imageHeight
         );
-
-    /*
-     * Draw each image into its assigned
-     * crop slot.
-     */
 
     heroImages.forEach(
         function (item, index) {
@@ -884,15 +1194,209 @@ function drawHeroPreview() {
                 return;
             }
 
+            /*
+             * Black frame behind each image.
+             */
+
+            ctx.fillStyle =
+                "#000000";
+
+            ctx.fillRect(
+                slot.x - 3,
+                slot.y - 3,
+                slot.width + 6,
+                slot.height + 6
+            );
+
             drawImageInSlot(
                 item,
                 slot,
                 index === activeSlot
             );
+
+            /*
+             * Neon border around each panel.
+             */
+
+            ctx.strokeStyle =
+                neon;
+
+            ctx.lineWidth = 3;
+
+            ctx.strokeRect(
+                slot.x,
+                slot.y,
+                slot.width,
+                slot.height
+            );
+        }
+    );
+
+    /*
+     * --------------------------------
+     * COMMERCIAL RIGHTS BADGE
+     * --------------------------------
+     */
+
+    const pillWidth = 730;
+    const pillHeight = 66;
+
+    const pillX =
+        (width - pillWidth) / 2;
+
+    const pillY =
+        rightsTop;
+
+    ctx.strokeStyle =
+        neon;
+
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        pillX,
+        pillY,
+        pillWidth,
+        pillHeight,
+        32
+    );
+
+    ctx.stroke();
+
+    /*
+     * Check mark.
+     */
+
+    ctx.fillStyle =
+        neon;
+
+    ctx.font =
+        "700 30px Arial, sans-serif";
+
+    ctx.fillText(
+        "✓",
+        pillX + 70,
+        pillY + pillHeight / 2
+    );
+
+    /*
+     * Localized rights text.
+     */
+
+    let rightsFontSize = 29;
+
+    ctx.font =
+        "800 " +
+        rightsFontSize +
+        "px Arial, sans-serif";
+
+    while (
+        ctx.measureText(text.rights).width >
+            pillWidth - 150 &&
+        rightsFontSize > 20
+    ) {
+        rightsFontSize -= 1;
+
+        ctx.font =
+            "800 " +
+            rightsFontSize +
+            "px Arial, sans-serif";
+    }
+
+    ctx.fillStyle =
+        white;
+
+    ctx.fillText(
+        text.rights,
+        pillX + pillWidth / 2 + 25,
+        pillY + pillHeight / 2
+    );
+
+    /*
+     * --------------------------------
+     * BENEFIT ICON / LABEL ROW
+     * --------------------------------
+     */
+
+    const columnWidth =
+        width / 5;
+
+    const icons = [
+        "◎",
+        "◯",
+        "▶",
+        "▧",
+        "↓"
+    ];
+
+    text.benefits.forEach(
+        function (label, index) {
+            const centerX =
+                columnWidth *
+                index +
+                columnWidth / 2;
+
+            ctx.fillStyle =
+                neon;
+
+            ctx.font =
+                "700 46px Arial, sans-serif";
+
+            ctx.fillText(
+                icons[index],
+                centerX,
+                featureTop + 35
+            );
+
+            ctx.fillStyle =
+                white;
+
+            ctx.font =
+                "700 17px Arial, sans-serif";
+
+            const lines =
+                label.split("\n");
+
+            lines.forEach(
+                function (
+                    line,
+                    lineIndex
+                ) {
+                    ctx.fillText(
+                        line,
+                        centerX,
+                        featureTop +
+                            82 +
+                            lineIndex * 22
+                    );
+                }
+            );
+
+            /*
+             * Vertical separators.
+             */
+
+            if (index < 4) {
+                ctx.fillStyle =
+                    neon;
+
+                ctx.fillRect(
+                    columnWidth *
+                        (index + 1),
+                    featureTop + 15,
+                    2,
+                    100
+                );
+            }
         }
     );
 }
-
+/*
+ * --------------------------------
+ * LOAD SELECTED HERO IMAGES
+ * --------------------------------
+ */
 
 if (imageInput) {
     imageInput.addEventListener(
@@ -943,7 +1447,8 @@ if (imageInput) {
             }
 
             /*
-             * Preserve file-selection order.
+             * Keep images in the same order
+             * they were selected.
              */
 
             const loadedImages =
@@ -994,29 +1499,34 @@ if (imageInput) {
                                             : " images selected"
                                     );
 
-                                if (
-                                    editControls
-                                ) {
+                                if (editControls) {
                                     editControls.hidden =
                                         false;
                                 }
 
-                                if (
-                                    activeLabel
-                                ) {
+                                if (activeLabel) {
                                     activeLabel.textContent =
                                         "Editing image 1";
                                 }
 
-                                if (
-                                    zoomControl
-                                ) {
+                                if (zoomControl) {
                                     zoomControl.value =
                                         1;
                                 }
 
                                 drawHeroPreview();
                             }
+                        };
+
+                    image.onerror =
+                        function () {
+                            URL.revokeObjectURL(
+                                objectUrl
+                            );
+
+                            alert(
+                                "One of the selected images could not be loaded."
+                            );
                         };
 
                     image.src =
@@ -1026,7 +1536,6 @@ if (imageInput) {
         }
     );
 }
-
 
 /*
  * --------------------------------

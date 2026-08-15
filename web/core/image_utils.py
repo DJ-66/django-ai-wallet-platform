@@ -98,7 +98,7 @@ def add_fanz_platform_footer(
     img = img.convert("RGBA")
 
     width, height = img.size
-    footer_height = max(60, int(width * 0.075))
+    footer_height = max(90, int(width * 0.12))
 
     new_img = Image.new(
         "RGBA",
@@ -112,7 +112,7 @@ def add_fanz_platform_footer(
 
     brand_text = text
 
-    font_size = int(footer_height * 0.60)
+    font_size = int(footer_height * 1.0)
 
     try:
         brand_font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
@@ -124,13 +124,13 @@ def add_fanz_platform_footer(
     text_height = bbox[3] - bbox[1]
 
     text_x = (width - text_width) // 2
-    text_y = height + (footer_height - text_height) // 2 - int(footer_height * 0.06)
+    text_y = height + (footer_height - text_height) // 2 - bbox[1]
 
     draw.text(
         (text_x, text_y),
         brand_text,
         font=brand_font,
-        fill=(255, 255, 255, 255),
+        fill=(234, 255, 0, 255),
     )
 
     return new_img.convert("RGB")
