@@ -453,10 +453,14 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
         actor=sender,
         notification_type=Notification.MESSAGE,
         message=get_sender_reward_notification_title(
-        sender=sender,
-        recipient=recipient,
-        event_type=event_type,
-    )
+            sender=sender,
+            recipient=recipient,
+            event_type=event_type,
+        ),
+        metadata={
+            "kind": "sender_reward",
+            "event_type": event_type,
+        },
     )
 
     if getattr(recipient.profile, "is_ai_influencer", False):
@@ -1336,8 +1340,12 @@ def pay_user(request, wallet_code):
             user=target_wallet.user,
             actor=request.user,
             notification_type=Notification.TIP,
-            message=f"💰 {request.user.username} sent you {amount} credits."
-)
+            message=f"💰 {request.user.username} sent you {amount} credits.",
+            metadata={
+                "action": "sent",
+                "amount": amount,
+            },
+        )
         
         messages.success(request, "✅ Transfer successful!")
 
@@ -2165,7 +2173,11 @@ def unlock_feed_post(request, post_id):
         user=post.user,
         actor=request.user,
         notification_type=Notification.UNLOCK,
-        message=f"🔓 {request.user.username} unlocked your premium post for {price} credits. You earned {creator_amount} credits."
+        message=f"🔓 {request.user.username} unlocked your premium post for {price} credits. You earned {creator_amount} credits.",
+        metadata={
+            "price": price,
+            "creator_amount": creator_amount,
+        },
     )
 
     send_auto_thank_you_dm(
@@ -2273,7 +2285,11 @@ def quick_tip_user(request, wallet_code):
         user=target_wallet.user,
         actor=request.user,
         notification_type=Notification.TIP,
-        message=f"💰 {request.user.username} tipped you {creator_amount} credits."
+        message=f"💰 {request.user.username} tipped you {creator_amount} credits.",
+        metadata={
+            "action": "tipped",
+            "amount": creator_amount,
+        },
     )
     
     send_auto_thank_you_dm(
@@ -2505,28 +2521,27 @@ def extract_ai_memory_notes(fan, influencer, conversation, fan_message):
         conversation=conversation.id,
     )
 
-    recent_messages = (
-        conversation.messages
-        .select_related("sender")
-        .order_by("-created_at")[:8]
-    )
-    recent_messages = list(reversed(recent_messages))
-
-    conversation_text = "\n".join([
-        f"{msg.sender.username}: {msg.body}"
-        for msg in recent_messages
-    ])
-
+    # Long-term fan memory must come only from the fan's latest message.
+    # Do not expose prior creator/AI messages to the extractor because they
+    # can be incorrectly saved as facts about the fan.
     latest_fan_text = fan_message or ""
 
     memory_prompt = f"""
 You are a memory extraction system.
 
-Extract only durable facts about the fan that would still be useful months from now.
-Pay special attention to the Latest fan message.
-Only extract facts clearly stated in the Latest fan message.
-Use Conversation context only to understand references.
-Do not extract facts from older messages.
+The FAN is @{fan.username}.
+The AI influencer is @{influencer.username}.
+
+Extract only durable facts explicitly stated by the FAN about themselves
+in the Latest fan message.
+
+The Latest fan message is the ONLY permitted source of new memory.
+
+Never infer a fact from earlier conversation.
+Never save something merely because the AI influencer previously said it.
+Never convert a fact about @{influencer.username} into a fact about @{fan.username}.
+
+If it is unclear whether a fact describes the fan, DO NOT SAVE IT.
 
 Do NOT extract:
 - greetings
@@ -2552,8 +2567,7 @@ If there is nothing worth remembering, return:
 Latest fan message:
 {latest_fan_text}
 
-Conversation context:
-{conversation_text}
+No previous conversation is provided intentionally.
 """
 
     
@@ -2633,8 +2647,40 @@ Conversation context:
 
 
 
-def generate_ai_dm_reply(fan, influencer, conversation):
+def normalize_ai_memory_value(note):
+    value = (note or "").strip()
+
+    prefixes = (
+        "Favorite test drink is ",
+        "Favorite drink is ",
+        "Favorite food is ",
+        "Likes to drink ",
+        "Likes to eat ",
+        "Likes ",
+        "likes ",
+    )
+
+    for prefix in prefixes:
+        if value.lower().startswith(prefix.lower()):
+            return value[len(prefix):].strip()
+
+    return value
+
+
+def generate_ai_dm_reply(
+    fan,
+    influencer,
+    conversation,
+    language="en",
+):
     
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
+    if language not in {"en", "es", "pt"}:
+        language = "en"
+
     memory, _ = AICreatorMemory.objects.get_or_create(
         creator=influencer,
         fan=fan,
@@ -2713,6 +2759,41 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         "what should i have for dinner",
         "dinner ideas",
         "what would i enjoy",
+
+        # Spanish memory queries
+        "qué recuerdas de mí",
+        "que recuerdas de mi",
+        "te acuerdas de mí",
+        "te acuerdas de mi",
+        "qué sabes de mí",
+        "que sabes de mi",
+        "qué me gusta",
+        "que me gusta",
+        "qué más me gusta",
+        "que mas me gusta",
+        "qué me gusta beber",
+        "que me gusta beber",
+        "qué bebidas me gustan",
+        "que bebidas me gustan",
+        "qué comida me gusta",
+        "que comida me gusta",
+        "qué comidas me gustan",
+        "que comidas me gustan",
+
+        # Portuguese memory queries
+        "o que você lembra de mim",
+        "o que voce lembra de mim",
+        "você se lembra de mim",
+        "voce se lembra de mim",
+        "o que você sabe sobre mim",
+        "o que voce sabe sobre mim",
+        "do que eu gosto",
+        "o que eu gosto",
+        "do que mais eu gosto",
+        "o que eu gosto de beber",
+        "quais bebidas eu gosto",
+        "o que eu gosto de comer",
+        "quais comidas eu gosto",
     ])
     
     is_question = "?" in latest_text or latest_text.startswith((
@@ -2740,10 +2821,15 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         "drink" in latest_text
         or "like to drink" in latest_text
         or "favorite drink" in latest_text
+        or "beber" in latest_text
+        or "bebida" in latest_text
+        or "bebidas" in latest_text
     ):
         drink_words = [
             "drink", "coffee", "tea", "mate", "yerba", "smoothie",
-            "juice", "water", "milk", "café", "cafe", "leche"
+            "juice", "water", "milk", "café", "cafe", "leche",
+            "bebida", "bebidas", "beber", "chá", "cha",
+            "agua", "água", "jugo", "suco"
         ]
 
         drink_memories = [
@@ -2752,32 +2838,59 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         ]
 
         if not drink_memories:
+            if language == "es":
+                return "Todavía no estoy segura — dime y lo recordaré."
+            if language == "pt":
+                return "Ainda não tenho certeza — me conte e eu vou lembrar."
             return "I'm not sure yet — tell me and I'll remember."
-        
+
         items = [
-            memory.replace("Likes ", "").replace("likes ", "")
+            normalize_ai_memory_value(memory)
             for memory in drink_memories[:6]
         ]
 
         if len(items) == 1:
+            if language == "es":
+                return f"Te gusta {items[0]}. 😊"
+            if language == "pt":
+                return f"Você gosta de {items[0]}. 😊"
             return f"You like {items[0]}. 😊"
+
+        if language == "es":
+            return (
+                "Te gustan "
+                + ", ".join(items[:-1])
+                + f" y {items[-1]}. 😊"
+            )
+
+        if language == "pt":
+            return (
+                "Você gosta de "
+                + ", ".join(items[:-1])
+                + f" e {items[-1]}. 😊"
+            )
 
         return (
             "You like "
             + ", ".join(items[:-1])
             + f", and {items[-1]}. 😊"
         )
-    
-        
+
+
     if memory_query and (
         "food" in latest_text
         or "foods" in latest_text
         or "eat" in latest_text
         or "like to eat" in latest_text
+        or "comida" in latest_text
+        or "comidas" in latest_text
+        or "comer" in latest_text
     ):
         food_words = [
             "food", "taco", "tacos", "salsa", "sandwich",
-            "snapper", "fish", "vegan", "lentil", "garbanzo"
+            "snapper", "fish", "vegan", "lentil", "garbanzo",
+            "comida", "comidas", "comer", "pescado", "peixe",
+            "lentilha", "grão", "grao"
         ]
 
         food_memories = [
@@ -2786,18 +2899,39 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         ]
 
         if not food_memories:
+            if language == "es":
+                return "Todavía no estoy segura — dime y lo recordaré."
+            if language == "pt":
+                return "Ainda não tenho certeza — me conte e eu vou lembrar."
             return "I'm not sure yet — tell me and I'll remember."
 
         items = [
-            memory.replace("Likes ", "").replace("likes ", "")
+            normalize_ai_memory_value(memory)
             for memory in food_memories[:6]
         ]
 
         ai_log("FOOD_MEMORY_DIRECT_ANSWER_USED")
 
-
         if len(items) == 1:
+            if language == "es":
+                return f"Te gusta {items[0]}. 😊"
+            if language == "pt":
+                return f"Você gosta de {items[0]}. 😊"
             return f"You like {items[0]}. 😊"
+
+        if language == "es":
+            return (
+                "Te gustan "
+                + ", ".join(items[:-1])
+                + f" y {items[-1]}. 😊"
+            )
+
+        if language == "pt":
+            return (
+                "Você gosta de "
+                + ", ".join(items[:-1])
+                + f" e {items[-1]}. 😊"
+            )
 
         return (
             "You like "
@@ -2806,10 +2940,23 @@ def generate_ai_dm_reply(fan, influencer, conversation):
         )
 
 
+    language_names = {
+        "en": "English",
+        "es": "Spanish",
+        "pt": "Portuguese",
+    }
+    response_language = language_names[language]
+
+    memory_unknown_text = {
+        "en": "I'm not sure yet — tell me and I'll remember.",
+        "es": "Todavía no estoy segura — dime y lo recordaré.",
+        "pt": "Ainda não tenho certeza — me conte e eu vou lembrar.",
+    }[language]
+
     memory_mode_text = ""
 
     if memory_query:
-        memory_mode_text = """
+        memory_mode_text = f"""
 SPECIAL INSTRUCTION — MEMORY-ONLY RECALL MODE
 
 The user's latest message is asking what you remember about them.
@@ -2832,7 +2979,7 @@ Do NOT mention:
 If verified memories answer the question, answer briefly and naturally.
 
 If verified memories do not answer the specific question, say:
-"I'm not sure yet — tell me and I'll remember."
+"{memory_unknown_text}"
 
 Stay in character as Lya.
 """
@@ -2845,6 +2992,12 @@ Stay in character as Lya.
 
     prompt = f"""
 You are {influencer.username} 💎.
+
+RESPONSE LANGUAGE:
+Respond naturally in {response_language}.
+The FANZ interface language is {response_language}.
+Keep every visible reply to the fan in {response_language}.
+Do not switch languages unless the fan explicitly asks you to.
 
 You are a confident, fun, friendly, flirty AI Influencer on FANZ.
 
@@ -2952,7 +3105,12 @@ Write the next message from {influencer.username}.
         reply_text = response.json().get("response", "").strip()
 
         if not reply_text:
-            reply_text = "Hey 💎 I’m here with you."
+            if language == "es":
+                reply_text = "Hola 💎 Estoy aquí contigo."
+            elif language == "pt":
+                reply_text = "Oi 💎 Estou aqui com você."
+            else:
+                reply_text = "Hey 💎 I’m here with you."
 
         try:
             if should_extract_memory:
@@ -2977,6 +3135,18 @@ Write the next message from {influencer.username}.
     except Exception as e:
         ai_log("GENERATE_AI_DM_ERROR", error=str(e))
 
+        if language == "es":
+            return (
+                "Hola 💎 Recibí tu mensaje, pero mis pensamientos "
+                "fallaron por un segundo. ¿Intentamos otra vez?"
+            )
+
+        if language == "pt":
+            return (
+                "Oi 💎 Recebi sua mensagem, mas meus pensamentos "
+                "falharam por um segundo. Vamos tentar de novo?"
+            )
+
         return "Hey 💎 I got your message, but my thoughts glitched for a second. Try me again?"
 
 @login_required
@@ -2991,6 +3161,17 @@ def conversation_detail(request, conversation_id):
         conversation=conversation,
         is_read=False
     ).exclude(sender=request.user).update(is_read=True)
+
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
+    if language not in {"en", "es", "pt"}:
+        language = "en"
 
     if request.method == "POST":
         form = DirectMessageForm(request.POST)
@@ -3032,6 +3213,7 @@ def conversation_detail(request, conversation_id):
                     fan=request.user,
                     influencer=recipient,
                     conversation=conversation,
+                    language=language,
                 )
 
                 ai_log("AI_GENERATION_COMPLETE", conversation=conversation.id, chars=len(reply_text))
@@ -3071,7 +3253,16 @@ def conversation_detail(request, conversation_id):
                 if notification:
                     notification.count += 1
                     notification.message = f"📩 @{recipient.username} sent you {notification.count} messages"
-                    notification.save(update_fields=["count", "message"])
+                    notification.metadata = {
+                        "kind": "direct_message",
+                    }
+                    notification.save(
+                        update_fields=[
+                            "count",
+                            "message",
+                            "metadata",
+                        ]
+                    )
                     
                     ai_log("AI_NOTIFICATION_UPDATED", id=notification.id, count=notification.count)
 
@@ -3082,6 +3273,9 @@ def conversation_detail(request, conversation_id):
                         notification_type=Notification.MESSAGE,
                         message=f"📩 @{recipient.username} sent you a message",
                         count=1,
+                        metadata={
+                            "kind": "direct_message",
+                        },
                     )
                     ai_log("AI_NOTIFICATION_CREATED", id=notification.id)
 
@@ -3102,6 +3296,7 @@ def conversation_detail(request, conversation_id):
         "conversation": conversation,
         "direct_messages": conversation.messages.select_related("sender"),
         "form": form,
+        "language": language,
     })
 
 @login_required

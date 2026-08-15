@@ -1147,6 +1147,7 @@ class Notification(models.Model):
         default=FAN,
     )
     message = models.CharField(max_length=255)
+    metadata = models.JSONField(default=dict, blank=True)
     count = models.PositiveIntegerField(default=1)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
