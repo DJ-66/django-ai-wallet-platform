@@ -13,52 +13,6 @@ from .models import (
 
 User = get_user_model()
 
-def get_discovery_creators(hub, limit=8):
-    """
-    Return creators with recent public posts connected to a Discovery Hub.
-
-    Creators are derived automatically from the hub hashtag and ordered by
-    their most recent relevant post.
-    """
-    hashtag_name = hub.hashtag.lstrip("#").strip().lower()
-
-    hashtag = (
-        Hashtag.objects
-        .filter(name=hashtag_name)
-        .first()
-    )
-
-    if hashtag is None:
-        return User.objects.none()
-
-    queryset = (
-        User.objects
-        .filter(
-            feedpost__hashtags=hashtag,
-            feedpost__is_public=True,
-        )
-        .select_related("profile")
-        .annotate(
-            latest_discovery_post_at=Max(
-                "feedpost__created_at",
-                filter=Q(
-                    feedpost__hashtags=hashtag,
-                    feedpost__is_public=True,
-                ),
-            )
-        )
-        .order_by(
-            "-latest_discovery_post_at",
-            "username",
-        )
-        .distinct()
-    )
-
-    if limit is not None:
-        queryset = queryset[:limit]
-
-    return queryset
-
 def _get_discovery_event_queryset(hub):
     """
     Build the shared queryset for upcoming public events belonging

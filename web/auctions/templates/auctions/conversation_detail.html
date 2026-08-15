@@ -44,7 +44,7 @@
 
     <div class="dm-footer">
         <form method="post"
-              action="{% url 'conversation_detail' conversation.id %}"
+              action="{% url 'conversation_detail' conversation.id %}?lang={{ language }}"
               class="dm-form">
             {% csrf_token %}
 
@@ -69,7 +69,7 @@
             </form>
 
             <p class="dm-back-link">
-                <a href="{% url 'inbox' %}">← {% trans "Back to Inbox" %}</a>
+                <a href="{% url 'inbox' %}?lang={{ language }}">← {% trans "Back to Inbox" %}</a>
             </p>
             
         </div>

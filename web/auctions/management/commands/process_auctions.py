@@ -77,7 +77,11 @@ class Command(BaseCommand):
                         user=auction.winner,
                         actor=None,
                         notification_type=Notification.AUCTION,
-                        message=f"🏆 You're a Winner! ~ {auction.title}!"
+                        message=f"🏆 You're a Winner! ~ {auction.title}!",
+                        metadata={
+                            "kind": "winner",
+                            "auction_title": auction.title,
+                        },
                     )
 
                     User = get_user_model()

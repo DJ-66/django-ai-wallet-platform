@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from .models import Notification, Conversation, DirectMessage
 from datetime import timedelta
+import re
 from django.db.models import BooleanField, Exists, OuterRef, Subquery, Value
 from django.db import transaction
 from django.utils import timezone
@@ -57,6 +58,207 @@ def localize_notification_message(
     notification_type = (
         notification.notification_type
     )
+
+    # TIP notifications need variable data such as the credit amount.
+    # New notifications store this in metadata. Older notifications
+    # fall back to parsing the canonical English message.
+    if notification_type == Notification.TIP:
+        metadata = notification.metadata or {}
+        action = metadata.get("action")
+        amount = metadata.get("amount")
+
+        if action not in {"sent", "tipped"} or amount is None:
+            match = re.search(
+                r"\b(sent you|tipped you)\s+(\d+)\s+credits\b",
+                message,
+                re.IGNORECASE,
+            )
+
+            if match:
+                action = (
+                    "sent"
+                    if match.group(1).lower() == "sent you"
+                    else "tipped"
+                )
+                amount = int(match.group(2))
+
+        if action in {"sent", "tipped"} and amount is not None:
+            if language == "es":
+                if action == "sent":
+                    return (
+                        f"💰 {actor_username} te envió "
+                        f"{amount} créditos."
+                    )
+
+                return (
+                    f"💰 {actor_username} te dio una propina de "
+                    f"{amount} créditos."
+                )
+
+            if language == "pt":
+                if action == "sent":
+                    return (
+                        f"💰 {actor_username} enviou "
+                        f"{amount} créditos para você."
+                    )
+
+                return (
+                    f"💰 {actor_username} deu uma gorjeta de "
+                    f"{amount} créditos para você."
+                )
+
+    # UNLOCK notifications include the purchase price and creator earnings.
+    # New notifications use structured metadata; older notifications fall
+    # back to parsing the canonical English message.
+    if notification_type == Notification.UNLOCK:
+        metadata = notification.metadata or {}
+        price = metadata.get("price")
+        creator_amount = metadata.get("creator_amount")
+
+        if price is None or creator_amount is None:
+            match = re.search(
+                r"unlocked your premium post for\s+(\d+)\s+credits\.\s+"
+                r"You earned\s+(\d+)\s+credits\.",
+                message,
+                re.IGNORECASE,
+            )
+
+            if match:
+                price = int(match.group(1))
+                creator_amount = int(match.group(2))
+
+        if price is not None and creator_amount is not None:
+            if language == "es":
+                return (
+                    f"🔓 {actor_username} desbloqueó tu publicación premium "
+                    f"por {price} créditos. Ganaste {creator_amount} créditos."
+                )
+
+            if language == "pt":
+                return (
+                    f"🔓 {actor_username} desbloqueou sua publicação premium "
+                    f"por {price} créditos. Você ganhou "
+                    f"{creator_amount} créditos."
+                )
+
+    # MESSAGE notifications cover several different behaviors.
+    # Structured metadata lets us localize known message kinds safely
+    # while leaving unrelated MESSAGE notifications unchanged.
+    if notification_type == Notification.MESSAGE:
+        metadata = notification.metadata or {}
+        kind = metadata.get("kind")
+
+        if kind == "direct_message":
+            count = notification.count or 1
+
+            if language == "es":
+                if count == 1:
+                    return (
+                        f"📩 @{actor_username} te envió un mensaje"
+                    )
+
+                return (
+                    f"📩 @{actor_username} te envió "
+                    f"{count} mensajes"
+                )
+
+            if language == "pt":
+                if count == 1:
+                    return (
+                        f"📩 @{actor_username} enviou uma mensagem para você"
+                    )
+
+                return (
+                    f"📩 @{actor_username} enviou "
+                    f"{count} mensagens para você"
+                )
+
+        if kind == "sender_reward":
+            event_type = metadata.get("event_type")
+
+            reward_messages = {
+                "es": {
+                    "like":
+                        f"@{actor_username}: Gracias por el ❤️",
+                    "tip":
+                        f"@{actor_username}: Gracias por los créditos ❤️",
+                    "unlock":
+                        f"@{actor_username}: Gracias por desbloquear mi publicación 🔓",
+                    "fan":
+                        f"@{actor_username}: Bienvenido a mis Fanz ⭐",
+                },
+                "pt": {
+                    "like":
+                        f"@{actor_username}: Obrigado pelo ❤️",
+                    "tip":
+                        f"@{actor_username}: Obrigado pelos créditos ❤️",
+                    "unlock":
+                        f"@{actor_username}: Obrigado por desbloquear minha publicação 🔓",
+                    "fan":
+                        f"@{actor_username}: Bem-vindo aos meus Fanz ⭐",
+                },
+            }
+
+            localized_reward = (
+                reward_messages
+                .get(language, {})
+                .get(event_type)
+            )
+
+            if localized_reward:
+                return localized_reward
+
+    # AUCTION notifications use structured metadata for winner,
+    # purchase-complete, and outbid events.
+    if notification_type == Notification.AUCTION:
+        metadata = notification.metadata or {}
+        kind = metadata.get("kind")
+        auction_title = metadata.get("auction_title")
+
+        if kind and auction_title:
+            if language == "es":
+                if kind == "winner":
+                    return (
+                        f"🏆 ¡Eres el ganador!\n\n"
+                        f"{auction_title}\n\n"
+                        f"Enlace de descarga disponible."
+                    )
+
+                if kind == "purchase_complete":
+                    return (
+                        f"🎉 ¡Compra completada!\n\n"
+                        f"{auction_title}\n\n"
+                        f"Enlace de descarga disponible."
+                    )
+
+                if kind == "outbid":
+                    return (
+                        f"📣 ¡Han superado tu oferta!\n"
+                        f"{auction_title}\n"
+                        f"Toca para volver a ofertar."
+                    )
+
+            if language == "pt":
+                if kind == "winner":
+                    return (
+                        f"🏆 Você é o vencedor!\n\n"
+                        f"{auction_title}\n\n"
+                        f"Link para download disponível."
+                    )
+
+                if kind == "purchase_complete":
+                    return (
+                        f"🎉 Compra concluída!\n\n"
+                        f"{auction_title}\n\n"
+                        f"Link para download disponível."
+                    )
+
+                if kind == "outbid":
+                    return (
+                        f"📣 Sua oferta foi superada!\n"
+                        f"{auction_title}\n"
+                        f"Toque para dar outro lance."
+                    )
 
     translations = {
         "es": {
@@ -174,6 +376,14 @@ def send_digital_delivery_message(user, auction, event_type="buy_now"):
         actor=None,
         notification_type=Notification.AUCTION,
         message=notification_message,
+        metadata={
+            "kind": (
+                "winner"
+                if event_type == "auction_win"
+                else "purchase_complete"
+            ),
+            "auction_title": auction.title,
+        },
     )
 
     conversation = Conversation.objects.create()
@@ -260,12 +470,16 @@ def place_bid(auction_id, user):
         Notification.objects.create(
             user=previous_bid.user,
             actor=user,
-            notification_type=Notification.MESSAGE,
+            notification_type=Notification.AUCTION,
             message=(
                 f"📣 You Were Outbid!\n"
                 f"{auction.title}\n"
                 f"Tap to bid again."
             ),
+            metadata={
+                "kind": "outbid",
+                "auction_title": auction.title,
+            },
         )
 
         User = get_user_model()
