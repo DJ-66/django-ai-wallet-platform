@@ -48,6 +48,7 @@ from .services import (
     prepare_auction_cards,
     send_digital_delivery_message,
     prepare_feed_posts,
+    localize_notification_message,
 )
 from .utils import get_system_wallet
 from .models import Event
@@ -273,7 +274,10 @@ def discovery_hub_detail(request, slug):
 
     businesses = get_discovery_businesses(hub)
     events = get_discovery_events(hub)
-    creators = get_discovery_creators(hub)
+    creators = get_discovery_creators(
+        hub,
+        language=language,
+    )
 
     auction_queryset = get_live_discovery_auctions(hub)
 
@@ -341,6 +345,19 @@ def latest_notification_check(request):
     if not notification:
         return JsonResponse({"latest_id": None, "sound_type": None})
 
+    language = request.GET.get(
+        "lang",
+        getattr(
+            request,
+            "LANGUAGE_CODE",
+            "en",
+        ),
+    )
+
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
     text = (notification.message or "").lower()
 
     if "outbid" in text:
@@ -362,9 +379,11 @@ def latest_notification_check(request):
     return JsonResponse({
         "latest_id": notification.id,
         "sound_type": sound_type,
-        "message": notification.message,
+        "message": localize_notification_message(
+            notification,
+            language=language,
+        ),
     })
-
 
 
 def ai_log(event, **kwargs):
@@ -2405,9 +2424,32 @@ def notifications_page(request):
 
     next_url = request.GET.get("next", "/")
 
-    notifications = Notification.objects.filter(
-        user=request.user
-    )[:50]
+    language = request.GET.get(
+        "lang",
+        getattr(
+            request,
+            "LANGUAGE_CODE",
+            "en",
+        ),
+    )
+
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
+    notifications = list(
+        Notification.objects.filter(
+            user=request.user
+        )[:50]
+    )
+
+    for notification in notifications:
+        notification.display_message = (
+            localize_notification_message(
+                notification,
+                language=language,
+            )
+        )
 
     return render(
         request,

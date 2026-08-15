@@ -118,10 +118,10 @@
         >
 
             <p style="margin:0;">
-                {% blocktrans count count=hashtag.usage_count %}
-                    {{ count }} post tagged
+                {% blocktrans trimmed count count=hashtag.usage_count %}
+                {{ count }} post tagged
                 {% plural %}
-                    {{ count }} posts tagged
+                {{ count }} posts tagged
                 {% endblocktrans %}
             </p>
 

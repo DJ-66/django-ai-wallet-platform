@@ -277,7 +277,7 @@
 {% elif not request.user.is_authenticated %}
     <a href="{% url 'account_login' %}"
        class="buy-credits-btn">
-        📩 Login to DM Seller
+        📩 {% trans "Login to DM Seller" %}
     </a>
 {% endif %}
 
