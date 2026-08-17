@@ -11,7 +11,7 @@
 
 <div class="inbox-card">
 
-    {% with last_message=conversation.messages.last %}
+    {% with last_message=conversation.display_last_message %}
 
         <div class="inbox-user">
             {% for participant in conversation.participants.all %}
@@ -26,7 +26,7 @@
                 {% if "Download your item:" in last_message.body %}
                     🎉 {% trans "You're a Winner! — Download link inside." %}
                 {% else %}
-                    {{ last_message.body|truncatechars:90 }}
+                    {{ last_message.display_body|truncatechars:90 }}
                 {% endif %}
             </div>
 
@@ -41,7 +41,7 @@
         {% endif %}
 
         <a class="inbox-open-btn"
-           href="{% url 'conversation_detail' conversation.id %}">
+           href="{% url 'conversation_detail' conversation.id %}?lang={{ language }}">
             📩 {% trans "Open" %}
         </a>
 

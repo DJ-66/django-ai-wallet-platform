@@ -1176,6 +1176,16 @@ class Conversation(models.Model):
 
 
 class DirectMessage(models.Model):
+    HUMAN = "human"
+    AI = "ai"
+    SYSTEM = "system"
+
+    MESSAGE_TYPE_CHOICES = [
+        (HUMAN, "Human"),
+        (AI, "AI"),
+        (SYSTEM, "System"),
+    ]
+
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
@@ -1187,6 +1197,20 @@ class DirectMessage(models.Model):
         related_name="sent_direct_messages"
     )
     body = models.TextField(max_length=2000)
+    original_language = models.CharField(
+        max_length=5,
+        blank=True,
+        default="",
+    )
+    translations = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    message_type = models.CharField(
+        max_length=10,
+        choices=MESSAGE_TYPE_CHOICES,
+        default=HUMAN,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
     generated_by_ai = models.BooleanField(default=False)
