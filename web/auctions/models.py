@@ -9,7 +9,13 @@ from django.contrib.auth.models import User
 from decimal import Decimal
 from django.utils.text import slugify
 from django.db import transaction, models
+from django.core.exceptions import ValidationError
 
+from .validators import (
+    FOUNDER_FLOOR_CREDITS,
+    normalize_founder_handle,
+    validate_founder_handle,
+)
 
 class NotificationSound(models.Model):
     SOUND_TYPES = [
@@ -1333,4 +1339,298 @@ class DiscoveryHubTranslation(models.Model):
     def __str__(self):
         return f"{self.hub.title} ({self.language})"
 
+class FounderAccount(models.Model):
+    """
+    Permanent scarce FANZ Founder property representing one valid
+    canonical 1-4 character handle.
+
+    The property exists independently of whether a Django User
+    currently occupies/operates it.
+    """
+
+    STATUS_AVAILABLE = "available"
+    STATUS_OWNED = "owned"
+    STATUS_LISTED = "listed"
+    STATUS_RESERVED = "reserved"
+    STATUS_TREASURY = "treasury"
+
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_OWNED, "Owned"),
+        (STATUS_LISTED, "Listed"),
+        (STATUS_RESERVED, "Reserved"),
+        (STATUS_TREASURY, "FANZ Treasury"),
+    ]
+
+    handle = models.CharField(
+        max_length=4,
+        unique=True,
+    )
+
+    handle_length = models.PositiveSmallIntegerField(
+        blank=True,
+    )
+
+    current_account = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="founder_account",
+    )
+    owner_root = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="owned_founder_accounts",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_AVAILABLE,
+    )
+
+    floor_price_credits = models.PositiveIntegerField(
+        default=FOUNDER_FLOOR_CREDITS,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["handle_length", "handle"]
+
+    def clean(self):
+        super().clean()
+
+        self.handle = validate_founder_handle(self.handle)
+        self.handle_length = len(self.handle)
+
+        if self.floor_price_credits < FOUNDER_FLOOR_CREDITS:
+            raise ValidationError(
+                f"Founder Accounts cannot have a floor price below "
+                f"{FOUNDER_FLOOR_CREDITS} credits."
+            )
+
+
+    def save(self, *args, **kwargs):
+        self.handle = normalize_founder_handle(self.handle)
+        self.handle_length = len(self.handle)
+
+        validate_founder_handle(self.handle)
+
+        if self.floor_price_credits < FOUNDER_FLOOR_CREDITS:
+            raise ValueError(
+                f"Founder Accounts cannot have a floor price below "
+                f"{FOUNDER_FLOOR_CREDITS} credits."
+            )
+
+        super().save(*args, **kwargs)
+
+
+    def __str__(self):
+        return f"@{self.handle} (Founder)"
+
+
+class AccountControl(models.Model):
+    """
+    Authoritative FANZ account-control edge.
+
+    A controlled account may have at most one direct controller.
+    Root accounts have no AccountControl row as controlled_account.
+
+    Cycle prevention and authoritative-root resolution belong in the
+    Founder ownership service layer, not recursive User model fields.
+    """
+
+    controller_account = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="controlled_account_edges",
+    )
+
+    controlled_account = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="controller_edge",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(
+                    controller_account=models.F("controlled_account")
+                ),
+                name="account_control_no_direct_self_control",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"@{self.controller_account.username} controls "
+            f"@{self.controlled_account.username}"
+        )
+
+class FounderOwnershipLedger(models.Model):
+    """
+    Append-only authoritative ownership provenance for Founder property.
+
+    Records are hash-chained globally in sequence order.
+    Creation must go through the Founder ledger service.
+    """
+
+    TRANSFER_P2P_FIXED = "p2p_fixed"
+    TRANSFER_P2P_BLIND = "p2p_blind"
+    TRANSFER_MINIMUM_CONVEYANCE = "minimum_conveyance"
+    TRANSFER_TREASURY_RELEASE = "treasury_release"
+    TRANSFER_CB_REDEMPTION = "cb_redemption"
+
+    TRANSFER_TYPE_CHOICES = [
+        (TRANSFER_P2P_FIXED, "P2P Fixed Price"),
+        (TRANSFER_P2P_BLIND, "P2P Blind Sale"),
+        (
+            TRANSFER_MINIMUM_CONVEYANCE,
+            "Minimum Founder Conveyance",
+        ),
+        (
+            TRANSFER_TREASURY_RELEASE,
+            "FANZ Treasury Release",
+        ),
+        (
+            TRANSFER_CB_REDEMPTION,
+            "FANZ CB Redemption",
+        ),
+    ]
+
+    sequence = models.PositiveBigIntegerField(
+        unique=True,
+        editable=False,
+    )
+
+    founder_account = models.ForeignKey(
+        FounderAccount,
+        on_delete=models.PROTECT,
+        related_name="ownership_ledger",
+    )
+
+    handle_snapshot = models.CharField(
+        max_length=4,
+        editable=False,
+    )
+
+    seller_root = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="founder_ledger_sales",
+    )
+
+    buyer_root = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="founder_ledger_purchases",
+    )
+
+    transfer_type = models.CharField(
+        max_length=32,
+        choices=TRANSFER_TYPE_CHOICES,
+        default=TRANSFER_MINIMUM_CONVEYANCE,
+    )
+
+    sale_price_credits = models.PositiveBigIntegerField()
+
+    platform_fee_credits = models.PositiveBigIntegerField()
+
+    seller_proceeds_credits = models.PositiveBigIntegerField()
+
+    wallet_transaction_ids = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    previous_hash = models.CharField(
+        max_length=64,
+        editable=False,
+    )
+
+    record_hash = models.CharField(
+        max_length=64,
+        unique=True,
+        editable=False,
+    )
+
+    metadata_snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["sequence"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    sale_price_credits__gte=FOUNDER_FLOOR_CREDITS
+                ),
+                name="founder_ledger_minimum_200_credit_conveyance",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    sale_price_credits=(
+                        models.F("platform_fee_credits")
+                        + models.F("seller_proceeds_credits")
+                    )
+                ),
+                name="founder_ledger_settlement_balances",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Founder ledger #{self.sequence}: "
+            f"@{self.handle_snapshot}"
+        )
+
+
+class FounderLedgerHead(models.Model):
+    """
+    Singleton serialization point for the Founder hash chain.
+
+    The row is locked with SELECT ... FOR UPDATE whenever a new
+    ownership ledger record is appended.
+    """
+
+    key = models.CharField(
+        max_length=32,
+        unique=True,
+        default="founder",
+        editable=False,
+    )
+
+    last_sequence = models.PositiveBigIntegerField(
+        default=0,
+        editable=False,
+    )
+
+    last_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        editable=False,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return (
+            f"Founder Ledger Head "
+            f"#{self.last_sequence}"
+        )
 #end
