@@ -49,6 +49,7 @@ from .services import (
     send_digital_delivery_message,
     prepare_feed_posts,
     localize_notification_message,
+    translate_direct_message_for_language,
 )
 from .utils import get_system_wallet
 from .models import Event
@@ -443,6 +444,7 @@ def send_auto_thank_you_dm(sender, recipient, event_type):
         body=body,
         is_read=False,
         generated_by_ai=False,
+        message_type=DirectMessage.SYSTEM,
     )
 
     conversation.last_message_at = timezone.now()
@@ -2501,15 +2503,40 @@ def terms_view(request):
 
 @login_required
 def inbox(request):
-    conversations = (
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
+    if language not in {"en", "es", "pt"}:
+        language = "en"
+
+    conversations = list(
         Conversation.objects
         .filter(participants=request.user)
         .prefetch_related("participants", "messages")
         .order_by("-last_message_at")
     )
 
+    for conversation in conversations:
+        last_message = conversation.messages.last()
+
+        if last_message:
+            last_message.display_body = (
+                translate_direct_message_for_language(
+                    last_message,
+                    language=language,
+                )
+            )
+
+        conversation.display_last_message = last_message
+
     return render(request, "auctions/inbox.html", {
         "conversations": conversations,
+        "language": language,
     })
 
 
@@ -3181,6 +3208,8 @@ def conversation_detail(request, conversation_id):
             message.conversation = conversation
             message.sender = request.user
             message.generated_by_ai = False
+            message.message_type = DirectMessage.HUMAN
+            message.original_language = language
             message.save()
 
             ai_log("DM_POST_HIT", sender=f"@{request.user.username}", message_id=message.id)
@@ -3227,6 +3256,7 @@ def conversation_detail(request, conversation_id):
                     body=reply_text,
                     is_read=False,
                     generated_by_ai=True,
+                    message_type=DirectMessage.AI,
                 )
                 ai_log("AI_REPLY_CREATE_OK", message_id=ai_reply.id)
 
@@ -3288,13 +3318,31 @@ def conversation_detail(request, conversation_id):
                 )
 
 
-            return redirect("conversation_detail", conversation_id=conversation.id)
+            conversation_url = reverse(
+                "conversation_detail",
+                kwargs={"conversation_id": conversation.id},
+            )
+            return redirect(f"{conversation_url}?lang={language}")
     else:
         form = DirectMessageForm()
 
+    direct_messages = list(
+        conversation.messages
+        .select_related("sender")
+        .all()
+    )
+
+    for direct_message in direct_messages:
+        direct_message.display_body = (
+            translate_direct_message_for_language(
+                direct_message,
+                language=language,
+            )
+        )
+
     return render(request, "auctions/conversation_detail.html", {
         "conversation": conversation,
-        "direct_messages": conversation.messages.select_related("sender"),
+        "direct_messages": direct_messages,
         "form": form,
         "language": language,
     })
@@ -3306,6 +3354,17 @@ def start_conversation(request, username):
     if other_user == request.user:
         messages.error(request, "You cannot message yourself.")
         return redirect("public_profile", username=username)
+
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+    language = (
+        language or "en"
+    ).lower().split("-")[0]
+
+    if language not in {"en", "es", "pt"}:
+        language = "en"
 
     conversation = (
         Conversation.objects
@@ -3319,17 +3378,33 @@ def start_conversation(request, username):
         conversation.participants.add(request.user, other_user)
 
     initial_message = request.GET.get(
-    "message",
-    "Hi 👋 I found your FANZ profile and wanted to connect."
-)
+        "message",
+        "Hi 👋 I found your FANZ profile and wanted to connect."
+    )
 
     form = DirectMessageForm(initial={"body": initial_message})
 
+    direct_messages = list(
+        conversation.messages
+        .select_related("sender")
+        .all()
+    )
+
+    for direct_message in direct_messages:
+        direct_message.display_body = (
+            translate_direct_message_for_language(
+                direct_message,
+                language=language,
+            )
+        )
+
     return render(request, "auctions/conversation_detail.html", {
         "conversation": conversation,
-        "direct_messages": conversation.messages.select_related("sender"),
+        "direct_messages": direct_messages,
         "form": form,
+        "language": language,
     })
+
 
 @login_required
 @require_POST

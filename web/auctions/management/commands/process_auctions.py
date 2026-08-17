@@ -101,6 +101,7 @@ class Command(BaseCommand):
                         conversation=conversation,
                         sender=platform_sender,
                         body=f"🎉 You're a Winner! ~ {auction.title}!{delivery_link}",
+                        message_type=DirectMessage.SYSTEM,
                     )
 
                     auction.winner_email_sent = True

@@ -22,7 +22,7 @@
                 <div class="dm-sender">@{{ message.sender.username }}</div>
 
                 <div class="dm-body">
-                    {{ message.body|urlize|linebreaksbr }}
+                    {{ message.display_body|urlize|linebreaksbr }}
                 </div>
 
                 <div class="dm-time">
