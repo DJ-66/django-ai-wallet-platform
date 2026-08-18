@@ -629,6 +629,356 @@ def _release_outbid_founder_bids(
             ]
         )
 
+@transaction.atomic
+def close_founder_blind_listing(
+    *,
+    listing,
+):
+    """
+    Close and settle one expired blind Founder listing.
+
+    The highest remaining fully funded active bid wins.
+
+    Tienda:
+        full winning amount -> @platform
+
+    P2P:
+        85% -> seller root
+        15% -> @platform
+
+    Winning held credits are consumed, not debited again.
+    Title + settlement + listing + bid/hold state + ledger are atomic.
+    """
+
+    locked_listing = (
+        FounderListing.objects
+        .select_for_update()
+        .get(pk=listing.pk)
+    )
+
+    if locked_listing.status != FounderListing.STATUS_ACTIVE:
+        raise ValidationError(
+            "Founder blind listing is no longer active."
+        )
+
+    if locked_listing.sale_type != FounderListing.SALE_BLIND:
+        raise ValidationError(
+            "Only blind Founder listings use the blind close path."
+        )
+
+    if locked_listing.ends_at is None:
+        raise ValidationError(
+            "Founder blind listing has no closing time."
+        )
+
+    if locked_listing.ends_at > timezone.now():
+        raise ValidationError(
+            "Founder blind listing has not ended yet."
+        )
+
+    locked_asset = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(pk=locked_listing.founder_account_id)
+    )
+
+    if locked_asset.status != FounderAccount.STATUS_LISTED:
+        raise ValidationError(
+            "Founder property is not currently listed."
+        )
+
+    if locked_asset.owner_root_id != locked_listing.seller_root_id:
+        raise ValidationError(
+            "Founder listing seller no longer owns the property."
+        )
+
+    winning_bid = (
+        FounderBid.objects
+        .select_for_update()
+        .filter(
+            listing=locked_listing,
+            status=FounderBid.STATUS_ACTIVE,
+        )
+        .order_by(
+            "-amount_credits",
+            "created_at",
+            "pk",
+        )
+        .first()
+    )
+
+    if winning_bid is None:
+        locked_listing.status = FounderListing.STATUS_EXPIRED
+        locked_listing.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        locked_asset.status = FounderAccount.STATUS_OWNED
+        locked_asset.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        return {
+            "sold": False,
+            "listing": locked_listing,
+            "founder_account": locked_asset,
+        }
+
+    winning_hold = (
+        FounderCreditHold.objects
+        .select_for_update()
+        .get(
+            bid=winning_bid,
+            status=FounderCreditHold.STATUS_HELD,
+        )
+    )
+
+    if winning_hold.amount_credits != winning_bid.amount_credits:
+        raise ValidationError(
+            "Winning Founder bid and credit hold do not match."
+        )
+
+    sale_price_credits = int(
+        winning_bid.amount_credits
+    )
+
+    if sale_price_credits < FOUNDER_MIN_TRANSFER_CREDITS:
+        raise ValidationError(
+            "Winning Founder bid is below the transaction floor."
+        )
+
+    buyer_root = get_authoritative_root(
+        winning_bid.bidder_root
+    )
+
+    seller_root = get_authoritative_root(
+        locked_listing.seller_root
+    )
+
+    if buyer_root.pk == seller_root.pk:
+        raise ValidationError(
+            "Founder buyer and seller resolve to the same root."
+        )
+
+    system_wallet = get_system_wallet()
+    platform_user = system_wallet.user
+
+    if locked_listing.listing_source == FounderListing.SOURCE_TIENDA:
+        if seller_root.pk != platform_user.pk:
+            raise ValidationError(
+                "Tienda Founder listing is not owned by FANZ Treasury."
+            )
+
+        platform_fee = 0
+        seller_proceeds = sale_price_credits
+
+    elif locked_listing.listing_source == FounderListing.SOURCE_P2P:
+        if seller_root.pk == platform_user.pk:
+            raise ValidationError(
+                "Treasury inventory cannot settle through the P2P path."
+            )
+
+        platform_fee = int(
+            Decimal(sale_price_credits)
+            * FOUNDER_PLATFORM_FEE_RATE
+        )
+
+        seller_proceeds = (
+            sale_price_credits - platform_fee
+        )
+
+    else:
+        raise ValidationError(
+            "Unsupported Founder listing source."
+        )
+
+    wallet_ids = {
+        winning_hold.wallet_id,
+        system_wallet.pk,
+    }
+
+    seller_wallet_id = None
+
+    if locked_listing.listing_source == FounderListing.SOURCE_P2P:
+        seller_wallet_id = (
+            BidWallet.objects
+            .get(user=seller_root)
+            .pk
+        )
+        wallet_ids.add(seller_wallet_id)
+
+    locked_wallets = {
+        wallet.pk: wallet
+        for wallet in (
+            BidWallet.objects
+            .select_for_update()
+            .filter(pk__in=sorted(wallet_ids))
+            .order_by("pk")
+        )
+    }
+
+    winner_wallet = locked_wallets[
+        winning_hold.wallet_id
+    ]
+
+    platform_wallet = locked_wallets[
+        system_wallet.pk
+    ]
+
+    wallet_transaction_ids = []
+
+    if locked_listing.listing_source == FounderListing.SOURCE_TIENDA:
+        platform_wallet.credits += sale_price_credits
+        platform_wallet.save(
+            update_fields=["credits"]
+        )
+
+        sale_tx = WalletTransaction.objects.create(
+            sender=winner_wallet,
+            receiver=platform_wallet,
+            amount=sale_price_credits,
+            transaction_type="purchase",
+            reference=(
+                f"Founder blind Tienda sale "
+                f"@{locked_asset.handle}: "
+                f"price={sale_price_credits}"
+            ),
+        )
+
+        wallet_transaction_ids.append(
+            sale_tx.pk
+        )
+
+        transfer_type = (
+            FounderOwnershipLedger
+            .TRANSFER_TREASURY_RELEASE
+        )
+
+    else:
+        seller_wallet = locked_wallets[
+            seller_wallet_id
+        ]
+
+        seller_wallet.credits += seller_proceeds
+        platform_wallet.credits += platform_fee
+
+        seller_wallet.save(
+            update_fields=["credits"]
+        )
+
+        platform_wallet.save(
+            update_fields=["credits"]
+        )
+
+        seller_tx = WalletTransaction.objects.create(
+            sender=winner_wallet,
+            receiver=seller_wallet,
+            amount=seller_proceeds,
+            transaction_type="transfer",
+            reference=(
+                f"Founder blind sale @{locked_asset.handle}: "
+                f"gross={sale_price_credits}; "
+                f"seller={seller_proceeds}"
+            ),
+        )
+
+        fee_tx = WalletTransaction.objects.create(
+            sender=winner_wallet,
+            receiver=platform_wallet,
+            amount=platform_fee,
+            transaction_type="transfer",
+            reference=(
+                f"Founder blind platform fee "
+                f"@{locked_asset.handle}: "
+                f"gross={sale_price_credits}; "
+                f"fee={platform_fee}"
+            ),
+        )
+
+        wallet_transaction_ids.extend([
+            seller_tx.pk,
+            fee_tx.pk,
+        ])
+
+        transfer_type = (
+            FounderOwnershipLedger
+            .TRANSFER_P2P_BLIND
+        )
+
+    winning_hold.status = FounderCreditHold.STATUS_CONSUMED
+    winning_hold.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    winning_bid.status = FounderBid.STATUS_WON
+    winning_bid.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    locked_asset.owner_root = buyer_root
+    locked_asset.status = FounderAccount.STATUS_OWNED
+    locked_asset.save(
+        update_fields=[
+            "owner_root",
+            "status",
+            "updated_at",
+        ]
+    )
+
+    locked_listing.status = FounderListing.STATUS_SOLD
+    locked_listing.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    ledger_record = append_founder_ownership_ledger(
+        founder_account=locked_asset,
+        seller_root=seller_root,
+        buyer_root=buyer_root,
+        transfer_type=transfer_type,
+        sale_price_credits=sale_price_credits,
+        platform_fee_credits=platform_fee,
+        seller_proceeds_credits=seller_proceeds,
+        wallet_transaction_ids=wallet_transaction_ids,
+        metadata_snapshot={
+            "seller_username": seller_root.username,
+            "buyer_username": buyer_root.username,
+            "handle": locked_asset.handle,
+            "listing_id": locked_listing.pk,
+            "winning_bid_id": winning_bid.pk,
+            "listing_source": locked_listing.listing_source,
+            "tienda_lane": locked_listing.tienda_lane,
+        },
+    )
+
+    return {
+        "sold": True,
+        "listing": locked_listing,
+        "founder_account": locked_asset,
+        "winning_bid": winning_bid,
+        "winning_hold": winning_hold,
+        "seller_root": seller_root,
+        "buyer_root": buyer_root,
+        "sale_price_credits": sale_price_credits,
+        "platform_fee_credits": platform_fee,
+        "seller_proceeds_credits": seller_proceeds,
+        "ledger_record": ledger_record,
+    }
+
 def normalize_owner_root(user):
     """
     Return the authoritative beneficial root for a user.
