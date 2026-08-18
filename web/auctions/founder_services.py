@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -7,6 +7,7 @@ from .founder_ledger import append_founder_ownership_ledger
 from .models import (
     AccountControl,
     BidWallet,
+    FounderListing,
     FounderAccount,
     FounderOwnershipLedger,
     WalletTransaction,
@@ -198,6 +199,202 @@ def transfer_founder_ownership(
         "ledger_record": ledger_record,
     }
 
+@transaction.atomic
+def purchase_tienda_fixed_listing(
+    *,
+    listing,
+    buyer,
+):
+    """
+    Atomically purchase a fixed-price Founder property from FANZ Tienda.
+
+    Rules:
+    - listing must be active Tienda inventory
+    - listing must use fixed-price sale mode
+    - authoritative listing price must be >= 200 credits
+    - property must still be owned by FANZ Treasury/@platform
+    - buyer must have sufficient credits
+    - buyer wallet, platform wallet, listing, and property are locked
+    - full sale price settles to @platform
+    - title moves to buyer authoritative root
+    - listing closes as sold
+    - ownership ledger records a Treasury release
+    """
+
+    locked_listing = (
+        FounderListing.objects
+        .select_for_update()
+        .get(pk=listing.pk)
+    )
+
+    if locked_listing.status != FounderListing.STATUS_ACTIVE:
+        raise ValidationError(
+            "Founder Tienda listing is no longer active."
+        )
+
+    if locked_listing.listing_source != FounderListing.SOURCE_TIENDA:
+        raise ValidationError(
+            "This listing is not FANZ Tienda inventory."
+        )
+
+    if locked_listing.sale_type != FounderListing.SALE_FIXED:
+        raise ValidationError(
+            "Blind-sale Tienda listings cannot use the fixed purchase path."
+        )
+
+    if locked_listing.starts_at > timezone.now():
+        raise ValidationError(
+            "Founder Tienda listing has not started yet."
+        )
+
+    sale_price_credits = int(
+        locked_listing.fixed_price_credits or 0
+    )
+
+    if sale_price_credits < FOUNDER_MIN_TRANSFER_CREDITS:
+        raise ValidationError(
+            "Founder Tienda purchases require at least 200 credits."
+        )
+
+    locked_asset = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(pk=locked_listing.founder_account_id)
+    )
+
+    system_wallet = get_system_wallet()
+    platform_user = system_wallet.user
+
+    if locked_listing.seller_root_id != platform_user.pk:
+        raise ValidationError(
+            "Tienda listing seller is not the FANZ Treasury."
+        )
+
+    if locked_asset.owner_root_id != platform_user.pk:
+        raise ValidationError(
+            "Founder property is no longer owned by FANZ Treasury."
+        )
+
+    if locked_asset.status != FounderAccount.STATUS_LISTED:
+        raise ValidationError(
+            "Founder property is not currently listed."
+        )
+
+    buyer_root = get_authoritative_root(buyer)
+
+    if buyer_root.pk == platform_user.pk:
+        raise ValidationError(
+            "The FANZ platform cannot buy its own Tienda inventory."
+        )
+
+    buyer_wallet_id = (
+        BidWallet.objects
+        .get(user=buyer_root)
+        .pk
+    )
+
+    wallet_ids = sorted({
+        buyer_wallet_id,
+        system_wallet.pk,
+    })
+
+    locked_wallets = {
+        wallet.pk: wallet
+        for wallet in (
+            BidWallet.objects
+            .select_for_update()
+            .filter(pk__in=wallet_ids)
+            .order_by("pk")
+        )
+    }
+
+    buyer_wallet = locked_wallets[
+        buyer_wallet_id
+    ]
+
+    platform_wallet = locked_wallets[
+        system_wallet.pk
+    ]
+
+    if buyer_wallet.credits < sale_price_credits:
+        raise ValidationError(
+            "Buyer does not have enough credits."
+        )
+
+    buyer_wallet.credits -= sale_price_credits
+    platform_wallet.credits += sale_price_credits
+
+    buyer_wallet.save(
+        update_fields=["credits"]
+    )
+
+    platform_wallet.save(
+        update_fields=["credits"]
+    )
+
+    purchase_tx = WalletTransaction.objects.create(
+        sender=buyer_wallet,
+        receiver=platform_wallet,
+        amount=sale_price_credits,
+        transaction_type="purchase",
+        reference=(
+            f"Founder Tienda purchase @{locked_asset.handle}: "
+            f"price={sale_price_credits}"
+        ),
+    )
+
+    locked_asset.owner_root = buyer_root
+    locked_asset.status = FounderAccount.STATUS_OWNED
+
+    locked_asset.save(
+        update_fields=[
+            "owner_root",
+            "status",
+            "updated_at",
+        ]
+    )
+
+    locked_listing.status = FounderListing.STATUS_SOLD
+
+    locked_listing.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    ledger_record = append_founder_ownership_ledger(
+        founder_account=locked_asset,
+        seller_root=platform_user,
+        buyer_root=buyer_root,
+        transfer_type=(
+            FounderOwnershipLedger
+            .TRANSFER_TREASURY_RELEASE
+        ),
+        sale_price_credits=sale_price_credits,
+        platform_fee_credits=0,
+        seller_proceeds_credits=sale_price_credits,
+        wallet_transaction_ids=[
+            purchase_tx.pk,
+        ],
+        metadata_snapshot={
+            "seller_username": platform_user.username,
+            "buyer_username": buyer_root.username,
+            "handle": locked_asset.handle,
+            "listing_id": locked_listing.pk,
+            "tienda_lane": locked_listing.tienda_lane,
+        },
+    )
+
+    return {
+        "listing": locked_listing,
+        "founder_account": locked_asset,
+        "buyer_root": buyer_root,
+        "sale_price_credits": sale_price_credits,
+        "platform_credits_received": sale_price_credits,
+        "ledger_record": ledger_record,
+    }
+
 def normalize_owner_root(user):
     """
     Return the authoritative beneficial root for a user.
@@ -237,6 +434,124 @@ def assign_founder_owner(*, founder_account, owner):
     )
 
     return root
+
+@transaction.atomic
+def create_founder_listing(
+    *,
+    founder_account,
+    seller,
+    sale_type,
+    fixed_price_credits=None,
+    minimum_bid_credits=None,
+    ends_at=None,
+):
+    """
+    Create one active secondary-market Founder listing.
+
+    Only the current authoritative owner/root may list the property.
+    """
+
+    locked_asset = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(pk=founder_account.pk)
+    )
+
+    seller_root = get_authoritative_root(seller)
+
+    if locked_asset.owner_root_id is None:
+        raise ValidationError(
+            "Unowned Founder property cannot be listed "
+            "on the P2P marketplace."
+        )
+
+    if locked_asset.owner_root_id != seller_root.pk:
+        raise ValidationError(
+            "Only the authoritative Founder owner may list this property."
+        )
+
+    if locked_asset.status not in {
+        FounderAccount.STATUS_OWNED,
+        FounderAccount.STATUS_LISTED,
+    }:
+        raise ValidationError(
+            "Founder property is not eligible for a P2P listing."
+        )
+
+    if FounderListing.objects.filter(
+        founder_account=locked_asset,
+        status=FounderListing.STATUS_ACTIVE,
+    ).exists():
+        raise ValidationError(
+            "Founder property already has an active listing."
+        )
+
+    if sale_type == FounderListing.SALE_FIXED:
+        if fixed_price_credits is None:
+            raise ValidationError(
+                "Fixed-price listings require a sale price."
+            )
+
+        fixed_price_credits = int(fixed_price_credits)
+
+        if fixed_price_credits < FOUNDER_MIN_TRANSFER_CREDITS:
+            raise ValidationError(
+                "Fixed-price Founder listings require at least 200 credits."
+            )
+
+        if minimum_bid_credits is not None or ends_at is not None:
+            raise ValidationError(
+                "Fixed-price listings cannot contain blind-sale terms."
+            )
+
+    elif sale_type == FounderListing.SALE_BLIND:
+        if minimum_bid_credits is None:
+            raise ValidationError(
+                "Blind Founder sales require a minimum bid."
+            )
+
+        minimum_bid_credits = int(minimum_bid_credits)
+
+        if minimum_bid_credits < FOUNDER_MIN_TRANSFER_CREDITS:
+            raise ValidationError(
+                "Blind Founder sales require a minimum bid "
+                "of at least 200 credits."
+            )
+
+        if fixed_price_credits is not None:
+            raise ValidationError(
+                "Blind Founder sales cannot contain a fixed price."
+            )
+
+        if ends_at is None or ends_at <= timezone.now():
+            raise ValidationError(
+                "Blind Founder sales require a future closing time."
+            )
+
+    else:
+        raise ValidationError(
+            "Unsupported Founder listing type."
+        )
+
+    listing = FounderListing.objects.create(
+        founder_account=locked_asset,
+        seller_root=seller_root,
+        sale_type=sale_type,
+        fixed_price_credits=fixed_price_credits,
+        minimum_bid_credits=minimum_bid_credits,
+        ends_at=ends_at,
+        status=FounderListing.STATUS_ACTIVE,
+    )
+
+    locked_asset.status = FounderAccount.STATUS_LISTED
+    locked_asset.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    return listing
 
 def same_authoritative_root(user_a, user_b):
     return (

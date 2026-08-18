@@ -1633,4 +1633,173 @@ class FounderLedgerHead(models.Model):
             f"Founder Ledger Head "
             f"#{self.last_sequence}"
         )
+
+class FounderListing(models.Model):
+    """
+    Marketplace listing for one transferable Founder property.
+
+    A Founder property may have at most one active listing.
+    One owner/root may list unlimited different Founder properties.
+    """
+
+    SOURCE_P2P = "p2p"
+    SOURCE_TIENDA = "tienda"
+
+    SOURCE_CHOICES = [
+    (SOURCE_P2P, "P2P Marketplace"),
+    (SOURCE_TIENDA, "Founder Tienda"),
+    ]
+
+    TIENDA_FIXED = "fixed"
+    TIENDA_BLIND = "blind"
+    TIENDA_SWAMP = "swamp"
+
+    TIENDA_LANE_CHOICES = [
+    (TIENDA_FIXED, "Fixed Price"),
+    (TIENDA_BLIND, "Blind Offer"),
+    (TIENDA_SWAMP, "Swamp Land"),
+]
+    SALE_FIXED = "fixed"
+    SALE_BLIND = "blind"
+
+    SALE_TYPE_CHOICES = [
+        (SALE_FIXED, "Fixed Price"),
+        (SALE_BLIND, "Blind Sale"),
+    ]
+
+    STATUS_ACTIVE = "active"
+    STATUS_SOLD = "sold"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_SOLD, "Sold"),
+        (STATUS_EXPIRED, "Expired"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    founder_account = models.ForeignKey(
+        FounderAccount,
+        on_delete=models.PROTECT,
+        related_name="listings",
+    )
+
+    seller_root = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="founder_listings",
+    )
+
+    listing_source = models.CharField(
+        max_length=16,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_P2P,
+    )
+
+    tienda_lane = models.CharField(
+        max_length=16,
+        choices=TIENDA_LANE_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+
+    sale_type = models.CharField(
+        max_length=16,
+        choices=SALE_TYPE_CHOICES,
+    )
+
+    fixed_price_credits = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    minimum_bid_credits = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    starts_at = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["founder_account"],
+                condition=models.Q(status="active"),
+                name="unique_active_founder_listing_per_asset",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        sale_type="fixed",
+                        fixed_price_credits__gte=FOUNDER_FLOOR_CREDITS,
+                    )
+                    |
+                    models.Q(
+                        sale_type="blind",
+                        minimum_bid_credits__gte=FOUNDER_FLOOR_CREDITS,
+                    )
+                ),
+                name="founder_listing_minimum_200_credits",
+            ),
+
+            models.CheckConstraint(
+                condition=(
+                models.Q(
+                    listing_source="p2p",
+                    tienda_lane__isnull=True,
+                )
+                |
+                models.Q(
+                    listing_source="tienda",
+                    tienda_lane__isnull=False,
+        )
+    ),
+            name="founder_listing_tienda_lane_matches_source",
+),
+
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(tienda_lane="swamp")
+                    |
+                    models.Q(
+                        sale_type="fixed",
+                        fixed_price_credits=FOUNDER_FLOOR_CREDITS,
+                    )
+                ),
+                name="founder_tienda_swamp_exactly_200_fixed",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"@{self.founder_account.handle} "
+            f"{self.get_sale_type_display()} "
+            f"[{self.status}]"
+        )
+
 #end
