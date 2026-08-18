@@ -11,6 +11,8 @@ from .models import (
     FounderAccount,
     FounderOwnershipLedger,
     WalletTransaction,
+    FounderBid,
+    FounderCreditHold,
 )
 from .utils import get_system_wallet
 
@@ -394,6 +396,238 @@ def purchase_tienda_fixed_listing(
         "platform_credits_received": sale_price_credits,
         "ledger_record": ledger_record,
     }
+
+@transaction.atomic
+def place_founder_blind_bid(
+    *,
+    listing,
+    bidder,
+    amount_credits,
+):
+    """
+    Place or raise one fully funded bid on an active blind Founder listing.
+
+    Held credits are removed from the bidder's spendable BidWallet balance.
+    Raising an existing bid only reserves the additional difference.
+    """
+
+    amount_credits = int(amount_credits)
+
+    if amount_credits < FOUNDER_MIN_TRANSFER_CREDITS:
+        raise ValidationError(
+            "Founder bids require at least 200 credits."
+        )
+
+    locked_listing = (
+        FounderListing.objects
+        .select_for_update()
+        .get(pk=listing.pk)
+    )
+
+    if locked_listing.status != FounderListing.STATUS_ACTIVE:
+        raise ValidationError(
+            "Founder listing is no longer active."
+        )
+
+    if locked_listing.sale_type != FounderListing.SALE_BLIND:
+        raise ValidationError(
+            "This Founder listing does not accept blind bids."
+        )
+
+    now = timezone.now()
+
+    if locked_listing.starts_at > now:
+        raise ValidationError(
+            "Founder blind sale has not started yet."
+        )
+
+    if locked_listing.ends_at is None or locked_listing.ends_at <= now:
+        raise ValidationError(
+            "Founder blind sale has already ended."
+        )
+
+    minimum_bid = int(
+        locked_listing.minimum_bid_credits or 0
+    )
+
+    if amount_credits < minimum_bid:
+        raise ValidationError(
+            f"Bid must be at least {minimum_bid} credits."
+        )
+
+    bidder_root = get_authoritative_root(bidder)
+
+    if bidder_root.pk == locked_listing.seller_root_id:
+        raise ValidationError(
+            "Seller cannot bid on their own Founder property."
+        )
+    
+
+    bidder_wallet = (
+        BidWallet.objects
+        .select_for_update()
+        .get(user=bidder_root)
+    )
+
+    existing_bid = (
+        FounderBid.objects
+        .select_for_update()
+        .filter(
+            listing=locked_listing,
+            bidder_root=bidder_root,
+            status=FounderBid.STATUS_ACTIVE,
+        )
+        .first()
+    )
+
+    if existing_bid is None:
+        if bidder_wallet.credits < amount_credits:
+            raise ValidationError(
+                "Bidder does not have enough available credits."
+            )
+
+        bidder_wallet.credits -= amount_credits
+        bidder_wallet.save(
+            update_fields=["credits"]
+        )
+
+        bid = FounderBid.objects.create(
+            listing=locked_listing,
+            bidder_root=bidder_root,
+            amount_credits=amount_credits,
+            status=FounderBid.STATUS_ACTIVE,
+        )
+
+        hold = FounderCreditHold.objects.create(
+            bid=bid,
+            wallet=bidder_wallet,
+            amount_credits=amount_credits,
+            status=FounderCreditHold.STATUS_HELD,
+        )
+        _release_outbid_founder_bids(
+            listing=locked_listing,
+            winning_bid=bid,
+        )
+        return {
+            "bid": bid,
+            "hold": hold,
+            "additional_credits_held": amount_credits,
+            }
+
+    hold = (
+        FounderCreditHold.objects
+        .select_for_update()
+        .get(
+            bid=existing_bid,
+            status=FounderCreditHold.STATUS_HELD,
+        )
+    )
+
+    if amount_credits <= existing_bid.amount_credits:
+        raise ValidationError(
+            "Raised Founder bid must exceed the current bid amount."
+        )
+
+    additional_required = (
+        amount_credits - existing_bid.amount_credits
+    )
+
+    if bidder_wallet.credits < additional_required:
+        raise ValidationError(
+            "Bidder does not have enough available credits "
+            "to raise this bid."
+        )
+
+    bidder_wallet.credits -= additional_required
+    bidder_wallet.save(
+        update_fields=["credits"]
+    )
+
+    existing_bid.amount_credits = amount_credits
+    existing_bid.save(
+        update_fields=[
+            "amount_credits",
+            "updated_at",
+        ]
+    )
+
+    hold.amount_credits = amount_credits
+    hold.save(
+        update_fields=[
+            "amount_credits",
+            "updated_at",
+        ]
+    )
+    _release_outbid_founder_bids(
+        listing=locked_listing,
+        winning_bid=existing_bid,
+    )
+
+    return {
+        "bid": existing_bid,
+        "hold": hold,
+        "additional_credits_held": additional_required,
+    }
+
+def _release_outbid_founder_bids(
+    *,
+    listing,
+    winning_bid,
+):
+    """
+    Release held credits for all lower active bids on a blind listing.
+    """
+
+    losing_bids = (
+        FounderBid.objects
+        .select_for_update()
+        .filter(
+            listing=listing,
+            status=FounderBid.STATUS_ACTIVE,
+        )
+        .exclude(pk=winning_bid.pk)
+        .filter(
+            amount_credits__lt=winning_bid.amount_credits,
+        )
+        .order_by("pk")
+    )
+
+    for losing_bid in losing_bids:
+        hold = (
+            FounderCreditHold.objects
+            .select_for_update()
+            .get(
+                bid=losing_bid,
+                status=FounderCreditHold.STATUS_HELD,
+            )
+        )
+
+        wallet = (
+            BidWallet.objects
+            .select_for_update()
+            .get(pk=hold.wallet_id)
+        )
+
+        wallet.credits += hold.amount_credits
+        wallet.save(
+            update_fields=["credits"]
+        )
+
+        hold.status = FounderCreditHold.STATUS_RELEASED
+        hold.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        losing_bid.status = FounderBid.STATUS_OUTBID
+        losing_bid.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
 
 def normalize_owner_root(user):
     """

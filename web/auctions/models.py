@@ -1802,4 +1802,150 @@ class FounderListing(models.Model):
             f"[{self.status}]"
         )
 
+
+class FounderBid(models.Model):
+    """
+    One funded bid on a blind Founder listing.
+
+    Each bidder/root has at most one current bid per listing.
+    Raising a bid updates that economic position through the service layer.
+    """
+
+    STATUS_ACTIVE = "active"
+    STATUS_OUTBID = "outbid"
+    STATUS_WON = "won"
+    STATUS_LOST = "lost"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_OUTBID, "Outbid"),
+        (STATUS_WON, "Won"),
+        (STATUS_LOST, "Lost"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    listing = models.ForeignKey(
+        FounderListing,
+        on_delete=models.PROTECT,
+        related_name="bids",
+    )
+
+    bidder_root = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="founder_bids",
+    )
+
+    amount_credits = models.PositiveBigIntegerField()
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-amount_credits",
+            "created_at",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "listing",
+                    "bidder_root",
+                ],
+                condition=models.Q(status="active"),
+                name="unique_active_founder_bid_per_root_listing",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    amount_credits__gte=FOUNDER_FLOOR_CREDITS
+                ),
+                name="founder_bid_minimum_200_credits",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"@{self.bidder_root.username} bid "
+            f"{self.amount_credits} cr on "
+            f"@{self.listing.founder_account.handle}"
+        )
+
+
+class FounderCreditHold(models.Model):
+    """
+    Credits reserved for one funded Founder bid.
+
+    Held credits have already been removed from the bidder's spendable
+    BidWallet balance. They are either released back or consumed at
+    settlement.
+    """
+
+    STATUS_HELD = "held"
+    STATUS_RELEASED = "released"
+    STATUS_CONSUMED = "consumed"
+
+    STATUS_CHOICES = [
+        (STATUS_HELD, "Held"),
+        (STATUS_RELEASED, "Released"),
+        (STATUS_CONSUMED, "Consumed"),
+    ]
+
+    bid = models.OneToOneField(
+        FounderBid,
+        on_delete=models.PROTECT,
+        related_name="credit_hold",
+    )
+
+    wallet = models.ForeignKey(
+        BidWallet,
+        on_delete=models.PROTECT,
+        related_name="founder_credit_holds",
+    )
+
+    amount_credits = models.PositiveBigIntegerField()
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_HELD,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    amount_credits__gte=FOUNDER_FLOOR_CREDITS
+                ),
+                name="founder_credit_hold_minimum_200_credits",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.amount_credits} cr held for "
+            f"Founder bid #{self.bid_id}"
+        )
 #end
