@@ -52,7 +52,6 @@ from .services import (
     translate_direct_message_for_language,
 )
 from .utils import get_system_wallet
-from .models import Event
 from businesses.models import BusinessUpdate
 from businesses.services import get_discovery_businesses
 from .ai_memory import touch_ai_creator_memory
@@ -67,6 +66,8 @@ from .forms import (
     PlatformAccountForm,
 )
 from .models import (
+    Event,
+    FounderListing,
     AuctionTranslation,
     DigitalItemTranslation,
     AICompanion,
@@ -94,6 +95,10 @@ from .models import (
     UserProfileTranslation,
     WalletTransaction,
     NotificationSound,
+)
+from .founder_services import (
+    place_founder_blind_bid,
+    purchase_tienda_fixed_listing,
 )
 
 def hashtag_feed(request, tag_name):
@@ -1367,6 +1372,153 @@ def pay_user(request, wallet_code):
         "target_profile": target_profile,
         
     })
+
+@login_required
+def founder_tienda(request):
+    fixed_listings = (
+        FounderListing.objects
+        .filter(
+            listing_source=FounderListing.SOURCE_TIENDA,
+            tienda_lane=FounderListing.TIENDA_FIXED,
+            status=FounderListing.STATUS_ACTIVE,
+        )
+        .select_related(
+            "founder_account",
+            "seller_root",
+        )
+        .order_by(
+            "founder_account__handle_length",
+            "founder_account__handle",
+        )
+    )
+
+    blind_listings = (
+        FounderListing.objects
+        .filter(
+            listing_source=FounderListing.SOURCE_TIENDA,
+            tienda_lane=FounderListing.TIENDA_BLIND,
+            status=FounderListing.STATUS_ACTIVE,
+        )
+        .select_related(
+            "founder_account",
+            "seller_root",
+        )
+        .order_by(
+            "ends_at",
+            "founder_account__handle",
+        )
+    )
+
+    wasteland_listings = (
+        FounderListing.objects
+        .filter(
+            listing_source=FounderListing.SOURCE_TIENDA,
+            tienda_lane=FounderListing.TIENDA_SWAMP,
+            status=FounderListing.STATUS_ACTIVE,
+        )
+        .select_related(
+            "founder_account",
+            "seller_root",
+        )
+        .order_by(
+            "founder_account__handle",
+        )
+    )
+
+    wallet = BidWallet.objects.filter(
+        user=request.user
+    ).first()
+
+    return render(
+        request,
+        "auctions/founder_tienda.html",
+        {
+            "fixed_listings": fixed_listings,
+            "blind_listings": blind_listings,
+            "wasteland_listings": wasteland_listings,
+            "wallet": wallet,
+        },
+    )
+
+@login_required
+def buy_founder_tienda_listing(request, listing_id):
+    if request.method != "POST":
+        return redirect("founder_tienda")
+
+    listing = get_object_or_404(
+        FounderListing,
+        pk=listing_id,
+    )
+
+    try:
+        result = purchase_tienda_fixed_listing(
+            listing=listing,
+            buyer=request.user,
+        )
+
+        messages.success(
+            request,
+            (
+                f"🏡 You now own "
+                f"@{result['founder_account'].handle} "
+                f"for {result['sale_price_credits']} credits."
+            ),
+        )
+
+    except Exception as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect("founder_tienda")
+
+
+@login_required
+def bid_founder_tienda_listing(request, listing_id):
+    if request.method != "POST":
+        return redirect("founder_tienda")
+
+    listing = get_object_or_404(
+        FounderListing,
+        pk=listing_id,
+    )
+
+    try:
+        amount = int(
+            request.POST.get("amount_credits", 0)
+        )
+    except (TypeError, ValueError):
+        messages.error(
+            request,
+            "Invalid Founder bid amount.",
+        )
+        return redirect("founder_tienda")
+
+    try:
+        result = place_founder_blind_bid(
+            listing=listing,
+            bidder=request.user,
+            amount_credits=amount,
+        )
+
+        messages.success(
+            request,
+            (
+                f"💰 Funded offer of "
+                f"{result['bid'].amount_credits} credits "
+                f"placed on "
+                f"@{listing.founder_account.handle}."
+            ),
+        )
+
+    except Exception as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect("founder_tienda")
 
 
 @login_required

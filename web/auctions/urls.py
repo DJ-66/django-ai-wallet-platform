@@ -26,6 +26,22 @@ urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path(
+        "founder/tienda/",
+        views.founder_tienda,
+        name="founder_tienda",
+    ),
+    path(
+        "founder/tienda/<int:listing_id>/buy/",
+        views.buy_founder_tienda_listing,
+        name="buy_founder_tienda_listing",
+    ),
+
+    path(
+        "founder/tienda/<int:listing_id>/bid/",
+        views.bid_founder_tienda_listing,
+        name="bid_founder_tienda_listing",
+    ),
+    path(
         "platform/accounts/<int:user_id>/login-as/",
         views.login_as_platform_account,
         name="login_as_platform_account",
