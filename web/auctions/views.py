@@ -20,7 +20,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.core.paginator import Paginator
 from django.db import models, transaction
-from django.db.models import Case, IntegerField, Q, Sum, Value, When, Count
+from django.db.models import Case, IntegerField, Q, Sum, Value, When, Count, Exists, OuterRef
 from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -67,6 +67,7 @@ from .forms import (
 )
 from .models import (
     Event,
+    FounderBid,
     FounderListing,
     AuctionTranslation,
     DigitalItemTranslation,
@@ -1374,6 +1375,40 @@ def pay_user(request, wallet_code):
     })
 
 @login_required
+def confirm_founder_tienda_purchase(request, listing_id):
+    listing = get_object_or_404(
+        FounderListing.objects.select_related(
+            "founder_account",
+            "seller_root",
+        ),
+        pk=listing_id,
+        listing_source=FounderListing.SOURCE_TIENDA,
+        status=FounderListing.STATUS_ACTIVE,
+        sale_type=FounderListing.SALE_FIXED,
+    )
+
+    wallet, _ = BidWallet.objects.get_or_create(
+        user=request.user
+    )
+
+    price = int(listing.fixed_price_credits or 0)
+
+    balance_after = wallet.credits - price
+    can_afford = wallet.credits >= price
+
+    return render(
+        request,
+        "auctions/founder_purchase_confirm.html",
+        {
+            "listing": listing,
+            "wallet": wallet,
+            "price": price,
+            "balance_after": balance_after,
+            "can_afford": can_afford,
+        },
+    )
+
+@login_required
 def founder_tienda(request):
     fixed_listings = (
         FounderListing.objects
@@ -1402,6 +1437,19 @@ def founder_tienda(request):
         .select_related(
             "founder_account",
             "seller_root",
+        )
+        .annotate(
+            bidder_count=Count(
+                "bids__bidder_root",
+                distinct=True,
+            ),
+            viewer_is_high_bidder=Exists(
+                FounderBid.objects.filter(
+                    listing=OuterRef("pk"),
+                    bidder_root=request.user,
+                    status=FounderBid.STATUS_ACTIVE,
+                )
+            ),
         )
         .order_by(
             "ends_at",
@@ -1443,7 +1491,20 @@ def founder_tienda(request):
 @login_required
 def buy_founder_tienda_listing(request, listing_id):
     if request.method != "POST":
-        return redirect("founder_tienda")
+        return redirect(
+            "confirm_founder_tienda_purchase",
+            listing_id=listing_id,
+        )
+
+    if request.POST.get("confirm") != "yes":
+        messages.error(
+            request,
+            _("Founder purchase confirmation is required."),
+        )
+        return redirect(
+            "confirm_founder_tienda_purchase",
+            listing_id=listing_id,
+        )
 
     listing = get_object_or_404(
         FounderListing,
@@ -1458,12 +1519,13 @@ def buy_founder_tienda_listing(request, listing_id):
 
         messages.success(
             request,
-            (
-                f"🏡 You now own "
-                f"@{result['founder_account'].handle} "
-                f"for {result['sale_price_credits']} credits."
-            ),
-        )
+            _(
+                "🏡 You now own @%(handle)s for %(credits)s credits."
+            ) % {
+                "handle": result["founder_account"].handle,
+                "credits": result["sale_price_credits"],
+            },
+)
 
     except Exception as exc:
         messages.error(
@@ -1472,7 +1534,6 @@ def buy_founder_tienda_listing(request, listing_id):
         )
 
     return redirect("founder_tienda")
-
 
 @login_required
 def bid_founder_tienda_listing(request, listing_id):
@@ -1491,7 +1552,7 @@ def bid_founder_tienda_listing(request, listing_id):
     except (TypeError, ValueError):
         messages.error(
             request,
-            "Invalid Founder bid amount.",
+            _("Invalid Founder bid amount."),
         )
         return redirect("founder_tienda")
 
@@ -1504,12 +1565,12 @@ def bid_founder_tienda_listing(request, listing_id):
 
         messages.success(
             request,
-            (
-                f"💰 Funded offer of "
-                f"{result['bid'].amount_credits} credits "
-                f"placed on "
-                f"@{listing.founder_account.handle}."
-            ),
+            _(
+                "💰 Funded offer of %(credits)s credits placed on @%(handle)s."
+            ) % {
+                "credits": result["bid"].amount_credits,
+                "handle": listing.founder_account.handle,
+            },
         )
 
     except Exception as exc:

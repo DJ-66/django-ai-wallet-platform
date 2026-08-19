@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 21:20-0300\n"
+"POT-Creation-Date: 2026-08-18 17:24-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -228,10 +228,6 @@ msgstr "Os formatos de imagem QR suportados são JPG, PNG e WebP."
 msgid "Write a message..."
 msgstr "Escreva uma mensagem..."
 
-#: auctions/founder_services.py:47
-msgid "Your offer was not high enough to become the leading funded offer."
-msgstr ""
-
 #: auctions/templates/auctions/conversation_detail.html:10
 msgid "Conversation with"
 msgstr "Conversa com"
@@ -444,58 +440,41 @@ msgstr "Use a FANZ para crescer, compartilhar e ganhar impulso."
 
 #: auctions/templates/auctions/founder_purchase_confirm.html:130
 msgid "Confirm Founder Purchase"
-msgstr "Confirmar compra de Fundador"
+msgstr ""
 
 #: auctions/templates/auctions/founder_purchase_confirm.html:138
 msgid "You are about to purchase this Founder property from FANZ Treasury."
-msgstr "Você está prestes a comprar esta propriedade Founder do Tesouro FANZ."
+msgstr ""
 
 #: auctions/templates/auctions/founder_purchase_confirm.html:145
 msgid "Purchase price"
-msgstr "Preço de compra"
+msgstr ""
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:147
-#: auctions/templates/auctions/founder_tienda.html:559
-#: auctions/templates/auctions/founder_tienda.html:725
-#, python-format
-msgid "%(price)s credits"
-msgstr "%(price)s créditos"
-
-#: auctions/templates/auctions/founder_purchase_confirm.html:154
+#: auctions/templates/auctions/founder_purchase_confirm.html:150
+#, fuzzy
 #| msgid "Current image:"
 msgid "Current wallet"
-msgstr "Saldo atual"
+msgstr "Imagem atual:"
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:156
-#: auctions/templates/auctions/founder_purchase_confirm.html:167
-#, python-format
-msgid "%(credits)s credits"
-msgstr "%(credits)s créditos"
-
-#: auctions/templates/auctions/founder_purchase_confirm.html:163
+#: auctions/templates/auctions/founder_purchase_confirm.html:155
 msgid "Wallet after purchase"
-msgstr "Saldo após a compra"
+msgstr ""
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:173
+#: auctions/templates/auctions/founder_purchase_confirm.html:161
 msgid "Insufficient credits"
-msgstr "Créditos insuficientes"
+msgstr ""
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:179
+#: auctions/templates/auctions/founder_purchase_confirm.html:167
 msgid "Property type"
-msgstr "Tipo de propriedade"
+msgstr ""
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:182
-#, python-format
-msgid "%(chars)s-char Founder"
-msgstr "Founder de %(chars)s caracteres"
-
-#: auctions/templates/auctions/founder_purchase_confirm.html:193
+#: auctions/templates/auctions/founder_purchase_confirm.html:178
 msgid ""
 "You do not currently have enough available credits to purchase this Founder "
 "property."
-msgstr "No momento, você não tem créditos disponíveis suficientes para comprar esta propriedade Founder."
+msgstr ""
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:204
+#: auctions/templates/auctions/founder_purchase_confirm.html:189
 #: templates/admin/auctions/auction/translate.html:233
 #: templates/auction_detail.html:248 templates/auctions/edit_profile.html:90
 #: templates/auctions/edit_profile.html:137
@@ -503,17 +482,29 @@ msgstr "No momento, você não tem créditos disponíveis suficientes para compr
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: auctions/templates/auctions/founder_purchase_confirm.html:225
-#, python-format
-msgid "Confirm Purchase — %(price)s cr"
-msgstr "Confirmar compra — %(price)s cr"
-
-#: auctions/templates/auctions/founder_purchase_confirm.html:236
+#: auctions/templates/auctions/founder_purchase_confirm.html:210
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "          Edit %(name)s\n"
+#| "        "
 msgid ""
-"No credits are deducted until you press Confirm Purchase. Final price, "
+"\n"
+"          Confirm Purchase — %(price)s cr\n"
+"          "
+msgstr ""
+"\n"
+"          Editar %(name)s\n"
+"        "
+
+#: auctions/templates/auctions/founder_purchase_confirm.html:221
+msgid ""
+"\n"
+"    No credits are deducted until you press Confirm Purchase. Final price, "
 "ownership, listing status and wallet balance are validated again atomically "
-"before title transfers."
-msgstr "Nenhum crédito é descontado até você pressionar Confirmar compra. O preço final, a propriedade, o status do anúncio e o saldo da carteira são validados novamente de forma atômica antes da transferência do título."
+"before title transfers.\n"
+"    "
+msgstr ""
 
 #: auctions/templates/auctions/founder_tienda.html:509
 msgid "FANZ Founder Tienda"
@@ -527,8 +518,11 @@ msgstr ""
 
 #: auctions/templates/auctions/founder_tienda.html:518
 #, python-format
-msgid "💰 Available wallet: %(credits)s credits"
-msgstr "💰 Saldo disponível: %(credits)s créditos"
+msgid ""
+"\n"
+"        💰 Available wallet: %(credits)s credits\n"
+"        "
+msgstr ""
 
 #: auctions/templates/auctions/founder_tienda.html:529
 msgid "Premium / Fixed Price"
@@ -538,103 +532,169 @@ msgstr "Premium / Preço fixo"
 msgid "Curated Founder properties available at a set FANZ Treasury price."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:537
-#: auctions/templates/auctions/founder_tienda.html:597
-#: auctions/templates/auctions/founder_tienda.html:701
-#, python-format
-msgid "%(count)s available"
-msgstr "%(count)s disponíveis"
+#: auctions/templates/auctions/founder_tienda.html:551
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                About @%(username)s\n"
+#| "            "
+msgid ""
+"\n"
+"            Founder Property · %(chars)s-char\n"
+"            "
+msgstr ""
+"\n"
+"                Sobre @%(username)s\n"
+"            "
 
-#: auctions/templates/auctions/founder_tienda.html:553
-#, python-format
-msgid "Founder Property · %(chars)s-char"
-msgstr "Propriedade Founder · %(chars)s caracteres"
+#: auctions/templates/auctions/founder_tienda.html:557
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                %(fan_count)s fan\n"
+#| "                "
+#| msgid_plural ""
+#| "\n"
+#| "                %(fan_count)s fans\n"
+#| "                "
+msgid ""
+"\n"
+"             %(price)s credits\n"
+"             "
+msgstr ""
+"\n"
+"                %(fan_count)s fã\n"
+"                "
 
-#: auctions/templates/auctions/founder_tienda.html:565
+#: auctions/templates/auctions/founder_tienda.html:563
 msgid "Fixed Treasury release price."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:574
-msgid "Buy Property"
-msgstr ""
-
-#: auctions/templates/auctions/founder_tienda.html:580
+#: auctions/templates/auctions/founder_tienda.html:578
 msgid "No Premium Founder properties are currently available."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:590
-#: auctions/templates/auctions/founder_tienda.html:606
+#: auctions/templates/auctions/founder_tienda.html:588
+#: auctions/templates/auctions/founder_tienda.html:602
 msgid "Blind Offer"
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:592
+#: auctions/templates/auctions/founder_tienda.html:590
 msgid ""
 "Fully funded private offers. Highest valid funded bid wins when the sale "
 "closes."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:618
-#, python-format
-msgid "Minimum %(minimum)s credits"
-msgstr "Mínimo %(minimum)s créditos"
+#: auctions/templates/auctions/founder_tienda.html:614
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                About @%(username)s\n"
+#| "            "
+msgid ""
+"\n"
+"            Minimum %(minimum)s credits\n"
+"            "
+msgstr ""
+"\n"
+"                Sobre @%(username)s\n"
+"            "
 
-#: auctions/templates/auctions/founder_tienda.html:625
-#, python-format
-msgid "Closes %(closes)s"
-msgstr "Encerra %(closes)s"
+#: auctions/templates/auctions/founder_tienda.html:621
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                %(fan_count)s fan\n"
+#| "                "
+#| msgid_plural ""
+#| "\n"
+#| "                %(fan_count)s fans\n"
+#| "                "
+msgid ""
+"\n"
+"               Closes %(closes)s\n"
+"               "
+msgstr ""
+"\n"
+"                %(fan_count)s fã\n"
+"                "
 
-#: auctions/templates/auctions/founder_tienda.html:633
+#: auctions/templates/auctions/founder_tienda.html:629
 msgid "1 funded bidder"
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:635
-#, python-format
-msgid "%(count)s funded bidders"
-msgstr "%(count)s ofertantes financiados"
+#: auctions/templates/auctions/founder_tienda.html:631
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                %(fan_count)s fan\n"
+#| "                "
+#| msgid_plural ""
+#| "\n"
+#| "                %(fan_count)s fans\n"
+#| "                "
+msgid ""
+"\n"
+"              %(count)s funded bidders\n"
+"              "
+msgstr ""
+"\n"
+"                %(fan_count)s fã\n"
+"                "
 
-#: auctions/templates/auctions/founder_tienda.html:643
+#: auctions/templates/auctions/founder_tienda.html:639
 msgid "HIGH BIDDER"
 msgstr "MAIOR OFERTA"
 
-#: auctions/templates/auctions/founder_tienda.html:644
+#: auctions/templates/auctions/founder_tienda.html:640
 msgid "Your funded offer is currently leading."
 msgstr "Sua oferta financiada está atualmente na liderança."
 
-#: auctions/templates/auctions/founder_tienda.html:657
+#: auctions/templates/auctions/founder_tienda.html:653
 msgid "Your funded offer"
 msgstr "Sua oferta financiada"
 
-#: auctions/templates/auctions/founder_tienda.html:675
+#: auctions/templates/auctions/founder_tienda.html:671
 msgid "Make Offer"
 msgstr "Fazer oferta"
 
-#: auctions/templates/auctions/founder_tienda.html:683
+#: auctions/templates/auctions/founder_tienda.html:679
 msgid "No Blind Offer properties are currently available."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:693
-#: auctions/templates/auctions/founder_tienda.html:711
+#: auctions/templates/auctions/founder_tienda.html:689
+#: auctions/templates/auctions/founder_tienda.html:705
 msgid "The Wasteland"
 msgstr "The Wasteland"
 
-#: auctions/templates/auctions/founder_tienda.html:696
+#: auctions/templates/auctions/founder_tienda.html:692
 msgid "Raw Founder land released by FANZ at the 200-credit transaction floor."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:719
-#, python-format
-msgid "Raw Founder Property · %(chars)s-char"
-msgstr "Propriedade Founder bruta · %(chars)s caracteres"
+#: auctions/templates/auctions/founder_tienda.html:713
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "          Edit %(name)s\n"
+#| "        "
+msgid ""
+"\n"
+"          Raw Founder Property · %(chars)s-char\n"
+"          "
+msgstr ""
+"\n"
+"          Editar %(name)s\n"
+"        "
 
-#: auctions/templates/auctions/founder_tienda.html:731
+#: auctions/templates/auctions/founder_tienda.html:723
 msgid "No amenities. Questionable neighbors. Clean title deed."
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:740
+#: auctions/templates/auctions/founder_tienda.html:732
 msgid "Buy Land"
 msgstr ""
 
-#: auctions/templates/auctions/founder_tienda.html:746
+#: auctions/templates/auctions/founder_tienda.html:738
 msgid "The Wasteland is temporarily sold out."
 msgstr ""
 
@@ -2513,42 +2573,6 @@ msgstr "Você está prestes a fazer login usando sua conta do Google."
 msgid "Back to login"
 msgstr "Voltar para o login"
 
-#, fuzzy, python-format
-#~| msgid ""
-#~| "\n"
-#~| "                %(fan_count)s fan\n"
-#~| "                "
-#~| msgid_plural ""
-#~| "\n"
-#~| "                %(fan_count)s fans\n"
-#~| "                "
-#~ msgid ""
-#~ "\n"
-#~ "             %(price)s credits\n"
-#~ "             "
-#~ msgstr ""
-#~ "\n"
-#~ "                %(fan_count)s fã\n"
-#~ "                "
-
-#, fuzzy, python-format
-#~| msgid ""
-#~| "\n"
-#~| "                %(fan_count)s fan\n"
-#~| "                "
-#~| msgid_plural ""
-#~| "\n"
-#~| "                %(fan_count)s fans\n"
-#~| "                "
-#~ msgid ""
-#~ "\n"
-#~ "               Closes %(closes)s\n"
-#~ "               "
-#~ msgstr ""
-#~ "\n"
-#~ "                %(fan_count)s fã\n"
-#~ "                "
-
 #, python-format
 #~ msgid ""
 #~ "\n"
@@ -2569,4 +2593,3 @@ msgstr "Voltar para o login"
 
 #~ msgid "or"
 #~ msgstr "ou"
-
