@@ -26,6 +26,11 @@ urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path(
+        "search/",
+        views.fanz_search,
+        name="fanz_search",
+    ),
+    path(
         "founder/tienda/",
         views.founder_tienda,
         name="founder_tienda",
