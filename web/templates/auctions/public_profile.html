@@ -151,12 +151,12 @@
         </a>
         {% endif %}
         <br>
-
+             {% if profile_user.bidwallet.wallet_code %}
             <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
                class="auth-primary-btn profile-tip-btn">
                 💰 {% trans "Send Credits" %}
             </a>
-            
+            {% endif %}
             
             {% if display_bio or profile.location or profile.website %}
                 <div class="profile-about-block">

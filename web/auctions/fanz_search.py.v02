@@ -1,0 +1,503 @@
+from django.contrib.auth.models import User
+from django.db.models import Case, IntegerField, Q, Value, When
+from django.urls import reverse
+from businesses.models import BusinessListing
+from .models import (
+    DiscoveryHub,
+    FeedPost,
+    FounderAccount,
+    Hashtag,
+    Auction,
+    Event,
+)
+
+
+DEFAULT_LIMIT_PER_TYPE = 5
+MAX_LIMIT_PER_TYPE = 20
+
+def _search_auctions(query, limit):
+    rows = (
+        Auction.objects
+        .exclude(status="draft")
+        .filter(
+            Q(title__icontains=query)
+            | Q(hashtags__name__icontains=query)
+            | Q(translations__title__icontains=query)
+            | Q(translations__description__icontains=query)
+        )
+        .annotate(
+            search_score=_text_score(
+                "title",
+                query,
+            )
+        )
+        .distinct()
+        .order_by(
+            "-search_score",
+            "-created_at",
+        )[:limit]
+    )
+
+    return [
+        {
+            "type": "auction",
+            "id": auction.pk,
+            "title": auction.title,
+            "subtitle": (
+                f"{auction.get_status_display()} auction"
+            ),
+            "url": reverse(
+                "auction_detail",
+                kwargs={
+                    "auction_id": auction.pk,
+                },
+            ),
+            "score": (
+                auction.search_score
+                if auction.search_score
+                else 40
+            ),
+        }
+        for auction in rows
+    ]
+
+def _search_events(query, limit):
+    rows = (
+        Event.objects
+        .filter(
+            is_published=True,
+            is_cancelled=False,
+        )
+        .filter(
+            Q(title__icontains=query)
+            | Q(description__icontains=query)
+            | Q(location__icontains=query)
+        )
+        .annotate(
+            search_score=_text_score(
+                "title",
+                query,
+            )
+        )
+        .order_by(
+            "-search_score",
+            "start_at",
+            "title",
+        )[:limit]
+    )
+
+    return [
+        {
+            "type": "event",
+            "id": event.pk,
+            "title": event.title,
+            "subtitle": event.location,
+            "url": reverse(
+                "event_detail",
+                kwargs={
+                    "event_id": event.pk,
+                },
+            ),
+            "score": (
+                event.search_score
+                if event.search_score
+                else 40
+            ),
+        }
+        for event in rows
+    ]
+
+def _search_businesses(query, limit):
+    rows = (
+        BusinessListing.objects
+        .filter(
+            is_active=True,
+        )
+        .filter(
+            Q(name__icontains=query)
+            | Q(description__icontains=query)
+            | Q(address__icontains=query)
+            | Q(city__icontains=query)
+            | Q(country__icontains=query)
+        )
+        .annotate(
+            search_score=_text_score(
+                "name",
+                query,
+            )
+        )
+        .order_by(
+            "-search_score",
+            "name",
+        )[:limit]
+    )
+
+    return [
+        {
+            "type": "business",
+            "id": business.pk,
+            "title": business.name,
+            "subtitle": " · ".join(
+                part
+                for part in [
+                    business.city,
+                    business.country,
+                ]
+                if part
+            ),
+            "url": reverse(
+                "businesses:detail",
+                kwargs={
+                    "slug": business.slug,
+                },
+            ),
+            "score": (
+                business.search_score
+                if business.search_score
+                else 40
+            ),
+        }
+        for business in rows
+    ]
+
+
+def _clean_query(query):
+    """
+    Normalize user search input without destroying meaningful
+    FANZ prefixes such as @username and #hashtag.
+    """
+    return (query or "").strip()
+
+
+def _bare_query(query):
+    """
+    Remove one leading FANZ object prefix for matching.
+    """
+    query = _clean_query(query)
+
+    if query.startswith(("@", "#")):
+        return query[1:].strip()
+
+    return query
+
+
+def _limit(value):
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        value = DEFAULT_LIMIT_PER_TYPE
+
+    return max(
+        1,
+        min(value, MAX_LIMIT_PER_TYPE),
+    )
+
+
+def _text_score(field_name, query):
+    """
+    Deterministic ranking:
+
+    exact       100
+    startswith   75
+    contains     50
+    """
+    return Case(
+        When(
+            **{f"{field_name}__iexact": query},
+            then=Value(100),
+        ),
+        When(
+            **{f"{field_name}__istartswith": query},
+            then=Value(75),
+        ),
+        When(
+            **{f"{field_name}__icontains": query},
+            then=Value(50),
+        ),
+        default=Value(0),
+        output_field=IntegerField(),
+    )
+
+
+def _search_users(query, limit):
+    rows = (
+        User.objects
+        .filter(
+            Q(username__icontains=query)
+            | Q(profile__display_name__icontains=query)
+        )
+        .select_related("profile")
+        .annotate(
+            search_score=_text_score(
+                "username",
+                query,
+            )
+        )
+        .order_by(
+            "-search_score",
+            "username",
+        )[:limit]
+    )
+
+    results = []
+
+    for user in rows:
+        profile = getattr(user, "profile", None)
+
+        results.append({
+            "type": "user",
+            "id": user.pk,
+            "title": f"@{user.username}",
+            "subtitle": (
+                profile.display_name
+                if profile
+                else ""
+            ),
+            "url": reverse(
+                "public_profile",
+                kwargs={
+                    "username": user.username,
+                },
+            ),
+            "score": user.search_score,
+        })
+
+    return results
+
+
+def _search_founder_accounts(query, limit):
+    rows = (
+        FounderAccount.objects
+        .filter(
+            handle__icontains=query,
+        )
+        .annotate(
+            search_score=_text_score(
+                "handle",
+                query,
+            )
+        )
+        .order_by(
+            "-search_score",
+            "handle_length",
+            "handle",
+        )[:limit]
+    )
+
+    return [
+        {
+            "type": "founder_account",
+            "id": asset.pk,
+            "title": f"@{asset.handle}",
+            "subtitle": "Founder Property",
+            "url": reverse("founder_tienda"),
+            "score": asset.search_score,
+            "status": asset.status,
+        }
+        for asset in rows
+    ]
+
+
+def _search_hashtags(query, limit):
+    rows = (
+        Hashtag.objects
+        .filter(
+            name__icontains=query,
+        )
+        .annotate(
+            search_score=_text_score(
+                "name",
+                query,
+            )
+        )
+        .order_by(
+            "-search_score",
+            "-usage_count",
+            "name",
+        )[:limit]
+    )
+
+    return [
+        {
+            "type": "hashtag",
+            "id": hashtag.pk,
+            "title": f"#{hashtag.name}",
+            "subtitle": (
+                f"{hashtag.usage_count} uses"
+            ),
+            "url": reverse(
+                "hashtag_feed",
+                kwargs={
+                    "tag_name": hashtag.name,
+                },
+            ),
+            "score": hashtag.search_score,
+        }
+        for hashtag in rows
+    ]
+
+
+def _search_posts(query, limit):
+    rows = (
+        FeedPost.objects
+        .filter(
+            is_public=True,
+        )
+        .filter(
+            Q(title__icontains=query)
+            | Q(content__icontains=query)
+            | Q(hashtags__name__icontains=query)
+        )
+        .select_related("user")
+        .distinct()
+        .order_by("-created_at")[:limit]
+    )
+
+    results = []
+
+    for post in rows:
+        title = (
+            post.title.strip()
+            if post.title
+            else post.content[:80].strip()
+        )
+
+        results.append({
+            "type": "post",
+            "id": post.pk,
+            "title": title,
+            "subtitle": f"@{post.user.username}",
+            "url": reverse(
+                "post_detail",
+                kwargs={
+                    "post_id": post.pk,
+                },
+            ),
+            "score": 40,
+        })
+
+    return results
+
+
+def _search_discovery_hubs(query, limit):
+    rows = (
+        DiscoveryHub.objects
+        .filter(
+            is_active=True,
+        )
+        .filter(
+            Q(hashtag__icontains=query)
+            | Q(title__icontains=query)
+            | Q(subtitle__icontains=query)
+        )
+        .order_by(
+            "sort_order",
+            "title",
+        )[:limit]
+    )
+
+    return [
+        {
+            "type": "discovery_hub",
+            "id": hub.pk,
+            "title": hub.title,
+            "subtitle": hub.subtitle[:120],
+            "url": reverse(
+                "discovery_hub_detail",
+                kwargs={
+                    "slug": hub.slug,
+                },
+            ),
+            "score": 40,
+        }
+        for hub in rows
+    ]
+
+
+def search_fanz(
+    query,
+    *,
+    viewer=None,
+    language="en",
+    limit_per_type=DEFAULT_LIMIT_PER_TYPE,
+):
+    """
+    Deterministic FANZ canonical retrieval.
+
+    Retrieval decides truth.
+    Viewer language will later decide presentation.
+
+    No LLM is involved in this function.
+    """
+
+    raw_query = _clean_query(query)
+    query = _bare_query(raw_query)
+    limit = _limit(limit_per_type)
+
+    if not query:
+        return {
+            "query": raw_query,
+            "normalized_query": "",
+            "language": language,
+            "total": 0,
+            "results": [],
+            "groups": {},
+        }
+
+    groups = {
+        "users": _search_users(
+            query,
+            limit,
+        ),
+        "founder_accounts": _search_founder_accounts(
+            query,
+            limit,
+        ),
+        "hashtags": _search_hashtags(
+            query,
+            limit,
+        ),
+        "posts": _search_posts(
+            query,
+            limit,
+        ),
+        "discovery_hubs": _search_discovery_hubs(
+            query,
+            limit,
+        ),
+        "auctions": _search_auctions(
+            query,
+            limit,
+        ),
+        "events": _search_events(
+            query,
+            limit,
+        ),
+        "businesses": _search_businesses(
+            query,
+            limit,
+        ),
+    }
+
+    results = []
+
+    for group_name, group_results in groups.items():
+        for result in group_results:
+            result["group"] = group_name
+            results.append(result)
+
+    results.sort(
+        key=lambda item: (
+            -item.get("score", 0),
+            item.get("title", "").lower(),
+        )
+    )
+
+    return {
+        "query": raw_query,
+        "normalized_query": query,
+        "language": language,
+        "total": len(results),
+        "results": results,
+        "groups": groups,
+    }

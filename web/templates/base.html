@@ -11,7 +11,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=363">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=377">
   {% block extra_css %}{% endblock %}
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
@@ -74,6 +74,7 @@
      <a href="{% url 'notifications' %}?next={{ request.get_full_path|urlencode }}" class="nav-link nav-icon-link">
      <span class="nav-emoji">🔔</span> {{ unread_notification_count }}
     </a>
+
 
 {% get_current_language as CURRENT_LANGUAGE %}
 
@@ -174,6 +175,36 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 </script>
+<div class="nav-search-row">
+  <form
+    method="get"
+    action="{% url 'fanz_search' %}"
+    class="global-search"
+  >
+    <input
+      type="search"
+      name="q"
+      placeholder="{% trans 'Search FANZ' %}"
+      aria-label="{% trans 'Search FANZ' %}"
+      autocomplete="off"
+    >
+
+    {% if request.GET.lang %}
+      <input
+        type="hidden"
+        name="lang"
+        value="{{ request.GET.lang }}"
+      >
+    {% endif %}
+
+    <button
+      type="submit"
+      aria-label="{% trans 'Search' %}"
+    >
+      🔎
+    </button>
+  </form>
+</div>
 </nav>
 
 </header>

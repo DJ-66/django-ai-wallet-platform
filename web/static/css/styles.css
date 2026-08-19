@@ -7364,4 +7364,101 @@ Allow the content to wrap safely in every language.
     cursor: grabbing;
 }
 
+.site-header nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nav-search-row {
+  flex: 0 0 100%;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 1px;
+}
+
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin: 0;
+}
+
+.nav-search-row .global-search {
+  width: 420px;
+  flex: 0 1 420px;
+  max-width: 100%;
+}
+
+.global-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  font-size: 0.84rem;
+}
+
+.global-search input:focus {
+  outline: none;
+  border-color: rgba(124, 58, 237, 0.65);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.10);
+}
+
+.global-search button {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: #7c3aed;
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+    .site-header nav {
+        position: relative;
+        padding-top: 1px;
+        padding-bottom: 1px;
+        padding-right: 58px;
+    }
+
+    .language-switcher {
+        position: absolute;
+        top: 4px;
+        right: 8px;
+
+        flex-direction: column;
+        gap: 3px;
+        align-items: flex-end;
+
+        margin: 0;
+        transform: none;
+    }
+
+    .nav-search-row {
+        margin-top: 1px;
+    }
+
+    .nav-search-row .global-search {
+        width: 80%;
+        flex: 0 1 80%;
+        max-width: 80%;
+    }
+
+    .global-search input {
+        font-size: 16px;
+        padding-top: 1px;
+        padding-bottom: 1px;
+    }
+}
+
+
 /* end_css */

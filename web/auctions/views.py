@@ -30,6 +30,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_POST
+from .fanz_search import search_fanz
 from businesses.services import (
     process_business_referral_activation,
 )
@@ -327,6 +328,33 @@ def discovery_hub_detail(request, slug):
         },
     )
 
+
+@login_required
+def fanz_search(request):
+    query = request.GET.get("q", "").strip()
+
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+
+    result = search_fanz(
+        query,
+        viewer=request.user,
+        language=language,
+        limit_per_type=8,
+    )
+
+    return render(
+        request,
+        "auctions/fanz_search.html",
+        {
+            "search_query": query,
+            "search_result": result,
+            "search_results": result["results"],
+            "search_groups": result["groups"],
+        },
+    )
 
 def notification_sounds_json(request):
     sounds = {}

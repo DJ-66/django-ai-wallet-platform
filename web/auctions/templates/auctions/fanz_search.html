@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block extra_css %}
+<style>
+  .fanz-search-page {
+    max-width: 1050px;
+    margin: 0 auto;
+    padding: 24px 16px 70px;
+  }
+
+  .fanz-search-hero {
+    margin-bottom: 24px;
+    padding: 22px;
+    border-radius: 16px;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(15, 23, 42, .98),
+        rgba(30, 41, 59, .96)
+      );
+    border: 1px solid rgba(148, 163, 184, .25);
+  }
+
+  .fanz-search-hero h1 {
+    margin: 0 0 8px;
+    color: #f8fafc;
+  }
+
+  .fanz-search-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .fanz-search-form input {
+    flex: 1;
+    min-width: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, .3);
+    padding: 11px 13px;
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  .fanz-search-form button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 900;
+    cursor: pointer;
+    background: #7c3aed;
+    color: white;
+  }
+
+  .fanz-search-meta {
+    margin: 12px 0 0;
+    color: #94a3b8;
+    font-size: .9rem;
+  }
+
+  .fanz-search-results {
+    display: grid;
+    gap: 12px;
+  }
+
+  .fanz-search-result {
+    display: block;
+    padding: 16px 18px;
+    border-radius: 14px;
+    text-decoration: none;
+    background: rgba(15, 23, 42, .97);
+    border: 1px solid rgba(148, 163, 184, .24);
+    transition:
+      transform 140ms ease,
+      border-color 140ms ease;
+  }
+
+  .fanz-search-result:hover {
+    transform: translateY(-2px);
+    border-color: rgba(124, 58, 237, .65);
+  }
+
+  .fanz-search-result__type {
+    font-size: .72rem;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #a78bfa;
+  }
+
+  .fanz-search-result__title {
+    margin-top: 5px;
+    color: #f8fafc;
+    font-size: 1.08rem;
+    font-weight: 900;
+  }
+
+  .fanz-search-result__subtitle {
+    margin-top: 4px;
+    color: #94a3b8;
+    font-size: .88rem;
+  }
+
+  .fanz-search-empty {
+    padding: 28px;
+    border-radius: 14px;
+    text-align: center;
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, .94);
+    border: 1px solid rgba(148, 163, 184, .22);
+  }
+
+  @media (max-width: 620px) {
+    .fanz-search-form {
+      display: grid;
+    }
+  }
+
+.fanz-search-group {
+  margin-bottom: 28px;
+}
+
+.fanz-search-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.fanz-search-group__header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.fanz-search-group__header span {
+  min-width: 28px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+.fanz-search-group {
+  margin-bottom: 30px;
+}
+
+.fanz-search-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 10px;
+  padding: 10px 14px;
+
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.55);
+
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.92),
+    rgba(147, 51, 234, 0.82)
+  );
+
+  box-shadow: 0 5px 14px rgba(124, 58, 237, 0.16);
+}
+
+.fanz-search-group__header h2 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.fanz-search-group__header span {
+  min-width: 28px;
+  padding: 3px 9px;
+
+  border-radius: 999px;
+
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 900;
+
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fanz-search-page">
+
+  <section class="fanz-search-hero">
+    <h1>🔎 {% trans "Search FANZ" %}</h1>
+
+    <p class="fanz-search-meta">
+      {% trans "Search people, Founder properties, hashtags, posts, Discovery, auctions, events, and businesses." %}
+    </p>
+
+    <form
+      method="get"
+      action="{% url 'fanz_search' %}"
+      class="fanz-search-form"
+    >
+      <input
+        type="search"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="{% trans 'Search FANZ' %}"
+        autocomplete="off"
+        required
+      >
+
+      {% if request.GET.lang %}
+        <input
+          type="hidden"
+          name="lang"
+          value="{{ request.GET.lang }}"
+        >
+      {% endif %}
+
+      <button type="submit">
+        {% trans "Search" %}
+      </button>
+    </form>
+
+    {% if search_query %}
+      <p class="fanz-search-meta">
+        {% blocktrans trimmed with total=search_result.total %}
+        {{ total }} results
+        {% endblocktrans %}
+      </p>
+    {% endif %}
+  </section>
+
+{% if search_query %}
+
+  {% if search_result.total %}
+
+    {% for group_name, rows in search_groups.items %}
+      {% if rows %}
+        <section class="fanz-search-group">
+
+          <div class="fanz-search-group__header">
+            <h2>
+              {% if group_name == "users" %}
+                👤 {% trans "People" %}
+              {% elif group_name == "founder_accounts" %}
+                🏛️ {% trans "Founder Properties" %}
+              {% elif group_name == "hashtags" %}
+                #️⃣ {% trans "Hashtags" %}
+              {% elif group_name == "posts" %}
+                📝 {% trans "Posts" %}
+              {% elif group_name == "discovery_hubs" %}
+                🧭 {% trans "Discovery" %}
+              {% elif group_name == "auctions" %}
+                🎁 {% trans "Auctions" %}
+              {% elif group_name == "events" %}
+                📅 {% trans "Events" %}
+              {% elif group_name == "businesses" %}
+                🏪 {% trans "Businesses" %}
+              {% endif %}
+            </h2>
+
+            <span>{{ rows|length }}</span>
+          </div>
+
+          <div class="fanz-search-results">
+            {% for row in rows %}
+              <a
+                href="{{ row.url }}"
+                class="fanz-search-result"
+              >
+                <div class="fanz-search-result__title">
+                  {{ row.title }}
+                </div>
+
+                {% if row.subtitle %}
+                  <div class="fanz-search-result__subtitle">
+                    {{ row.subtitle }}
+                  </div>
+                {% endif %}
+              </a>
+            {% endfor %}
+          </div>
+
+        </section>
+      {% endif %}
+    {% endfor %}
+
+  {% else %}
+    <div class="fanz-search-empty">
+      {% trans "No FANZ results found." %}
+    </div>
+  {% endif %}
+
+{% endif %}
+</div>
+{% endblock %}
+
