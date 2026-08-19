@@ -41,6 +41,13 @@ urlpatterns = [
         views.bid_founder_tienda_listing,
         name="bid_founder_tienda_listing",
     ),
+
+    path(
+        "founder/tienda/<int:listing_id>/confirm/",
+        views.confirm_founder_tienda_purchase,
+        name="confirm_founder_tienda_purchase",
+    ),
+
     path(
         "platform/accounts/<int:user_id>/login-as/",
         views.login_as_platform_account,

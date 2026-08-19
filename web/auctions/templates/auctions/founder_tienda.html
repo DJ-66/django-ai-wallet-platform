@@ -1,207 +1,754 @@
+
 {% extends "base.html" %}
+{% load i18n %}
+{% block extra_css %}
+<style>
+  .founder-tienda {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 28px 14px 72px;
+  }
+
+  .founder-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 22px;
+    padding: 34px 38px;
+    margin-bottom: 38px;
+    background:
+      radial-gradient(circle at 78% 35%, rgba(168, 85, 247, 0.18), transparent 24%),
+      radial-gradient(circle at 92% 75%, rgba(124, 58, 237, 0.14), transparent 28%),
+      linear-gradient(135deg, #0b1120 0%, #111827 55%, #0a0f1d 100%);
+    box-shadow:
+      0 22px 60px rgba(0, 0, 0, 0.20),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .founder-hero h1 {
+    margin: 0 0 12px;
+    font-size: clamp(2.25rem, 4.6vw, 3.6rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    color: #f8fafc;
+  }
+
+  .founder-hero h1::first-line {
+    color: #f8fafc;
+  }
+
+  .founder-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+
+  .founder-wallet {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    padding: 10px 15px;
+    border-radius: 999px;
+    color: #e2e8f0;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.26);
+  }
+
+  .founder-wallet strong {
+    color: #fbbf24;
+  }
+
+  .founder-district {
+    margin-bottom: 48px;
+  }
+
+  .founder-district-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .founder-district-header h2 {
+    margin: 0 0 6px;
+    font-size: 1.75rem;
+    line-height: 1.1;
+    color: #f8fafc;
+  }
+
+  .founder-district-header p {
+    margin: 0;
+    max-width: 760px;
+    color: #cbd5e1;
+    line-height: 1.5;
+  }
+
+  .founder-district-count {
+    flex: 0 0 auto;
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .founder-district:nth-of-type(1) .founder-district-count {
+    color: #fbbf24;
+  }
+
+  .founder-district:nth-of-type(2) .founder-district-count {
+    color: #a855f7;
+  }
+
+  .founder-district:nth-of-type(3) .founder-district-count {
+    color: #84cc16;
+  }
+
+  .founder-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .founder-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 250px;
+    padding: 18px;
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(9, 14, 25, 0.98));
+    border: 1px solid rgba(148, 163, 184, 0.30);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.025),
+      0 12px 28px rgba(0, 0, 0, 0.12);
+    transition:
+      transform 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .founder-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+  }
+
+  .founder-card--premium {
+    border-top: 3px solid #f59e0b;
+  }
+
+  .founder-card--premium:hover {
+    border-color: rgba(245, 158, 11, 0.75);
+  }
+
+  .founder-card--blind {
+    border-top: 3px solid #9333ea;
+  }
+
+  .founder-card--blind:hover {
+    border-color: rgba(147, 51, 234, 0.78);
+  }
+
+  .founder-card--wasteland {
+    border-top: 3px solid #65a30d;
+  }
+
+  .founder-card--wasteland:hover {
+    border-color: rgba(101, 163, 13, 0.78);
+  }
+
+  .founder-badge {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    margin-bottom: 17px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .founder-card--premium .founder-badge {
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.30);
+    background: rgba(245, 158, 11, 0.11);
+  }
+
+  .founder-card--blind .founder-badge {
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.30);
+    background: rgba(147, 51, 234, 0.13);
+  }
+
+  .founder-card--wasteland .founder-badge {
+    color: #84cc16;
+    border: 1px solid rgba(101, 163, 13, 0.34);
+    background: rgba(101, 163, 13, 0.13);
+  }
+
+  .founder-handle {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.85rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+
+  .founder-property-meta {
+    margin-top: 9px;
+    color: #94a3b8;
+    font-size: 0.82rem;
+  }
+
+  .founder-price {
+    margin: 22px 0 5px;
+    font-size: 1.2rem;
+    font-weight: 900;
+  }
+
+  .founder-card--premium .founder-price {
+    color: #fbbf24;
+  }
+
+  .founder-card--blind .founder-price {
+    color: #c084fc;
+  }
+
+  .founder-card--wasteland .founder-price {
+    color: #84cc16;
+  }
+
+  .founder-subtext {
+    margin: 0 0 17px;
+    color: #aeb8c7;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .wasteland-tagline {
+    font-style: italic;
+  }
+
+  .founder-actions {
+    margin-top: auto;
+  }
+
+  .founder-button {
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 13px;
+    font-size: 0.92rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition:
+      transform 130ms ease,
+      filter 130ms ease;
+  }
+
+  .founder-button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  .founder-button--premium {
+    color: #111827;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  }
+
+  .founder-button--blind {
+    color: #ffffff;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+  }
+
+  .founder-button--wasteland {
+    color: #f8fafc;
+    background: linear-gradient(135deg, #65a30d, #4d7c0f);
+  }
+
+  .founder-bid-form label {
+    display: block;
+    margin-bottom: 7px;
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .founder-bid-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .founder-bid-row input {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #f8fafc;
+    background: #0b1220;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+  }
+
+  .founder-bid-row input:focus {
+    outline: none;
+    border-color: #a855f7;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.13);
+  }
+
+  .founder-empty {
+    grid-column: 1 / -1;
+    padding: 28px;
+    color: #94a3b8;
+    text-align: center;
+    border-radius: 14px;
+    border: 1px dashed rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.40);
+  }
+
+  body .container {
+    max-width: 1320px;
+  }
+
+  @media (max-width: 1100px) {
+    .founder-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 820px) {
+    .founder-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .founder-hero {
+      padding: 28px 24px;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .founder-tienda {
+      padding: 20px 2px 64px;
+    }
+
+    .founder-hero {
+      padding: 24px 18px;
+    }
+
+    .founder-district-header {
+      display: block;
+    }
+
+    .founder-district-count {
+      display: block;
+      margin-top: 8px;
+    }
+
+    .founder-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+.founder-district-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+
+  margin-bottom: 18px;
+  padding: 18px 20px;
+
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.98),
+      rgba(10, 15, 29, 0.96)
+    );
+
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.founder-district-header h2 {
+  margin: 0 0 6px;
+  color: #f8fafc;
+}
+
+.founder-district-header p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.founder-district-count {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.05);
+}
+.founder-district--premium .founder-district-header {
+  border-top: 3px solid #f59e0b;
+}
+
+.founder-district--premium .founder-district-count {
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.09);
+}
+
+
+.founder-district--blind .founder-district-header {
+  border-top: 3px solid #9333ea;
+}
+
+.founder-district--blind .founder-district-count {
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  background: rgba(147, 51, 234, 0.10);
+}
+
+
+.founder-district--wasteland .founder-district-header {
+  border-top: 3px solid #65a30d;
+}
+
+.founder-district--wasteland .founder-district-count {
+  color: #84cc16;
+  border: 1px solid rgba(101, 163, 13, 0.30);
+  background: rgba(101, 163, 13, 0.10);
+}
+
+@media (max-width: 620px) {
+  .founder-district-header {
+    display: block;
+    padding: 16px;
+  }
+
+  .founder-district-count {
+    display: inline-flex;
+    margin-top: 10px;
+  }
+}
+
+.founder-high-bidder {
+  margin: 10px 0 12px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.30);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.founder-high-bidder span {
+  display: block;
+  margin-top: 3px;
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+.founder-card--premium .founder-actions,
+.founder-card--wasteland .founder-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.founder-button--premium,
+.founder-button--wasteland {
+  width: auto;
+  min-width: 150px;
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+.founder-card--premium .founder-actions,
+.founder-card--wasteland .founder-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.founder-button--premium,
+.founder-button--wasteland {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+
+  width: auto !important;
+  min-width: 150px;
+  min-height: 0;
+
+  padding: 9px 22px;
+  line-height: 1;
+  white-space: nowrap;
+}
+</style>
+{% endblock %}
+
 
 {% block content %}
-<div style="max-width: 1180px; margin: 0 auto; padding: 24px 16px;">
+<div class="founder-tienda">
 
-    <div style="margin-bottom: 28px;">
-        <h1 style="margin-bottom: 8px;">
-            FANZ Founder Tienda
-        </h1>
+  <header class="founder-hero">
+    <h1>{% trans "FANZ Founder Tienda" %}</h1>
 
-        <p style="margin: 0 0 8px 0;">
-            Scarce 1–4 character Founder properties.
-        </p>
 
-        {% if wallet %}
-            <p>
-                Available wallet:
-                <strong>{{ wallet.credits }} credits</strong>
-            </p>
+    <p>
+  {% trans "Scarce 1–4 character Founder properties. Own a permanent piece of FANZ virtual real estate." %}
+    </p>
+
+    {% if wallet %}
+      <div class="founder-wallet">
+        {% blocktrans trimmed with credits=wallet.credits %}
+        💰 Available wallet: {{ credits }} credits
+        {% endblocktrans %}
+        </div>
         {% endif %}
+  </header>
+
+
+  <section class="founder-district founder-district--premium">
+    <div class="founder-district-header">
+      <div>
+        <h2>✨ {% trans "Premium / Fixed Price" %}</h2>
+
+        <p>
+          {% trans "Curated Founder properties available at a set FANZ Treasury price." %}
+        </p>
+      </div>
+
+      <span class="founder-district-count">
+        {% blocktrans trimmed with count=fixed_listings|length %}
+        {{ count }} available
+        {% endblocktrans %}
+      </span>
     </div>
 
+    <div class="founder-grid">
+      {% for listing in fixed_listings %}
+        <article class="founder-card founder-card--premium">
+          <span class="founder-badge">Premium</span>
 
-    <section style="margin-bottom: 42px;">
-        <h2>Premium / Fixed Price</h2>
+          <h3 class="founder-handle">
+            @{{ listing.founder_account.handle }}
+          </h3>
 
+          <div class="founder-property-meta">
+            {% blocktrans trimmed with chars=listing.founder_account.handle_length %}
+            Founder Property · {{ chars }}-char
+            {% endblocktrans %}
+          </div>
+
+          <div class="founder-price">
+             {% blocktrans trimmed with price=listing.fixed_price_credits %}
+             {{ price }} credits
+             {% endblocktrans %}
+          </div>
+
+          <p class="founder-subtext">
+             {% trans "Fixed Treasury release price." %}
+          </p>
+
+          <div class="founder-actions">
+           <a
+           href="{% url 'confirm_founder_tienda_purchase' listing.id %}"
+           class="founder-button founder-button--premium"
+           style="display:block; text-align:center; text-decoration:none;"
+           >
+           {% trans "Buy Property" %}
+           </a>
+          </div>
+        </article>
+      {% empty %}
+        <div class="founder-empty">
+          {% trans "No Premium Founder properties are currently available." %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+
+ <section class="founder-district founder-district--blind">
+    <div class="founder-district-header">
+      <div>
+        <h2>🎯 {% trans "Blind Offer" %}</h2>
         <p>
-            Curated Founder properties available at a set Treasury price.
+          {% trans "Fully funded private offers. Highest valid funded bid wins when the sale closes." %}
         </p>
+      </div>
 
-        <div style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 16px;
-        ">
-            {% for listing in fixed_listings %}
-                <article style="
-                    border: 1px solid #ccc;
-                    border-radius: 12px;
-                    padding: 18px;
-                ">
-                    <h3 style="font-size: 1.5rem; margin-top: 0;">
-                        @{{ listing.founder_account.handle }}
-                    </h3>
+      <span class="founder-district-count">
+        {% blocktrans trimmed with count=blind_listings|length %}
+        {{ count }} available
+        {% endblocktrans %}
+      </span>
+    </div>
 
-                    <p>
-                        <strong>
-                            {{ listing.fixed_price_credits }} credits
-                        </strong>
-                    </p>
+    <div class="founder-grid">
+      {% for listing in blind_listings %}
+        <article class="founder-card founder-card--blind">
+          <span class="founder-badge">{% trans "Blind Offer" %}</span>
 
-              <form
+          <h3 class="founder-handle">
+            @{{ listing.founder_account.handle }}
+          </h3>
+
+          <div class="founder-property-meta">
+            Founder Property ·
+            {{ listing.founder_account.handle_length }}-char
+          </div>
+
+          <div class="founder-price">
+            {% blocktrans trimmed with minimum=listing.minimum_bid_credits %}
+            Minimum {{ minimum }} credits
+            {% endblocktrans %}
+          </div>
+
+          {% if listing.ends_at %}
+            <p class="founder-subtext">
+               {% blocktrans trimmed with closes=listing.ends_at|date:"M j, Y · H:i" %}
+               Closes {{ closes }}
+               {% endblocktrans %}
+            </p>
+          {% endif %}
+            <p class="founder-subtext">
+              👥
+              {% if listing.bidder_count == 1 %}
+              {% trans "1 funded bidder" %}
+              {% else %}
+              {% blocktrans trimmed with count=listing.bidder_count %}
+              {{ count }} funded bidders
+              {% endblocktrans %}
+              {% endif %}
+            </p>
+
+          {% if listing.viewer_is_high_bidder %}
+          <div class="founder-high-bidder">
+         🏆 {% trans "HIGH BIDDER" %}
+         <span>{% trans "Your funded offer is currently leading." %}</span>
+         </div>
+         {% endif %}
+
+          <div class="founder-actions">
+            <form
+              class="founder-bid-form"
               method="post"
-              action="{% url 'buy_founder_tienda_listing' listing.id %}"
+              action="{% url 'bid_founder_tienda_listing' listing.id %}"
             >
-             {% csrf_token %}
+              {% csrf_token %}
 
-            <button type="submit">
-            Buy
-        </button>
-    </form>
-                </article>
-            {% empty %}
-                <p>No Premium Founder properties are currently available.</p>
-            {% endfor %}
+              <label for="bid-{{ listing.id }}">
+              {% trans "Your funded offer" %}
+              </label>
+
+              <div class="founder-bid-row">
+                <input
+                  id="bid-{{ listing.id }}"
+                  type="number"
+                  name="amount_credits"
+                  min="{{ listing.minimum_bid_credits }}"
+                  step="1"
+                  required
+                  placeholder="{{ listing.minimum_bid_credits }}"
+                >
+
+                <button
+                  type="submit"
+                  class="founder-button founder-button--blind"
+                >
+                  {% trans "Make Offer" %}
+                </button>
+              </div>
+            </form>
+          </div>
+        </article>
+      {% empty %}
+        <div class="founder-empty">
+          {% trans "No Blind Offer properties are currently available." %}
         </div>
-    </section>
+      {% endfor %}
+    </div>
+  </section>
 
 
-    <section style="margin-bottom: 42px;">
-        <h2>Blind Offer</h2>
+  <section class="founder-district founder-district--wasteland">
+    <div class="founder-district-header">
+      <div>
+        <h2>🌵 {% trans "The Wasteland" %}</h2>
 
-        <p>
-            Fully funded private offers. Highest valid funded bid wins
-            when the sale closes.
-        </p>
+       <p>
+       {% trans "Raw Founder land released by FANZ at the 200-credit transaction floor." %}
+       </p>
+      </div>
 
-        <div style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 16px;
-        ">
-            {% for listing in blind_listings %}
-                <article style="
-                    border: 1px solid #ccc;
-                    border-radius: 12px;
-                    padding: 18px;
-              <form
-    method="post"
-    action="{% url 'buy_founder_tienda_listing' listing.id %}"
->
-    {% csrf_token %}
+      <span class="founder-district-count">
+       {% blocktrans trimmed with count=wasteland_listings|length %}
+       {{ count }} available
+       {% endblocktrans %}        
+      </span>
+    </div>
 
-    <button type="submit">
-        Buy Land
-    </button>
-</form><form
-    method="post"
-    action="{% url 'buy_founder_tienda_listing' listing.id %}"
->
-    {% csrf_token %}
+    <div class="founder-grid">
+      {% for listing in wasteland_listings %}
+        <article class="founder-card founder-card--wasteland">
+          <span class="founder-badge">
+          {% trans "The Wasteland" %}
+          </span>
 
-    <button type="submit">
-        Buy Land
-    </button>
-</form>  ">
-                    <h3 style="font-size: 1.5rem; margin-top: 0;">
-                        @{{ listing.founder_account.handle }}
-                    </h3>
+          <h3 class="founder-handle">
+            @{{ listing.founder_account.handle }}
+          </h3>
 
-                    <p>
-                        Minimum:
-                        <strong>
-                            {{ listing.minimum_bid_credits }} credits
-                        </strong>
-                    </p>
+          <div class="founder-property-meta">
+          {% blocktrans trimmed with chars=listing.founder_account.handle_length %}
+          Raw Founder Property · {{ chars }}-char
+          {% endblocktrans %}
+          </div>
 
-                    {% if listing.ends_at %}
-                        <p>
-                            Closes:
-                            {{ listing.ends_at }}
-                        </p>
-                    {% endif %}
+          <div class="founder-price">
+            {% blocktrans trimmed with price=listing.fixed_price_credits %}
+            {{ price }} credits
+            {% endblocktrans %}
+          </div>
 
-                    <form
-    method="post"
-    action="{% url 'bid_founder_tienda_listing' listing.id %}"
->
-    {% csrf_token %}
+          <p class="founder-subtext wasteland-tagline">
+          {% trans "No amenities. Questionable neighbors. Clean title deed." %}
+          </p>
 
-    <label>
-        Your funded offer
-    </label>
+          <div class="founder-actions">
+            <a
+            href="{% url 'confirm_founder_tienda_purchase' listing.id %}"
+            class="founder-button founder-button--wasteland"
+            style="display:block; text-align:center; text-decoration:none;"
+            >
+            {% trans "Buy Land" %}
+            </a>
+          </div>
+        </article>
+      {% empty %}
+        <div class="founder-empty">
+          {% trans "The Wasteland is temporarily sold out." %}
 
-    <input
-        type="number"
-        name="amount_credits"
-        min="{{ listing.minimum_bid_credits }}"
-        step="1"
-        required
-        placeholder="{{ listing.minimum_bid_credits }}"
-    >
-
-    <button type="submit">
-        Make Offer
-    </button>
-</form>
-                </article>
-            {% empty %}
-                <p>No Blind Offer properties are currently available.</p>
-            {% endfor %}
         </div>
-    </section>
-
-
-    <section>
-        <h2>The Wasteland 🌵</h2>
-
-        <p>
-            Raw Founder land released by FANZ at the
-            200-credit transaction floor.
-        </p>
-
-        <div style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 16px;
-        ">
-            {% for listing in wasteland_listings %}
-                <article style="
-                    border: 1px solid #ccc;
-                    border-radius: 12px;
-                    padding: 18px;
-                ">
-                    <h3 style="font-size: 1.5rem; margin-top: 0;">
-                        @{{ listing.founder_account.handle }}
-                    </h3>
-
-                    <p>
-                        <strong>
-                            {{ listing.fixed_price_credits }} credits
-                        </strong>
-                    </p>
-
-                    <p style="font-size: .9rem;">
-                        Raw Founder Property
-                    </p>
-
-                    <form
-                    method="post"
-                   action="{% url 'buy_founder_tienda_listing' listing.id %}"
-                  >
-                  {% csrf_token %}
-
-                 <button type="submit">
-                 Buy Land
-                 </button>
-              </form>
-                </article>
-            {% empty %}
-                <p>The Wasteland is temporarily sold out.</p>
-            {% endfor %}
-        </div>
-    </section>
+      {% endfor %}
+    </div>
+  </section>
 
 </div>
 {% endblock %}

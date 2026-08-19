@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 16px;">
+
+    <div style="margin-bottom: 28px;">
+        <h1 style="margin-bottom: 8px;">
+            FANZ Founder Tienda
+        </h1>
+
+        <p style="margin: 0 0 8px 0;">
+            Scarce 1–4 character Founder properties.
+        </p>
+
+        {% if wallet %}
+            <p>
+                Available wallet:
+                <strong>{{ wallet.credits }} credits</strong>
+            </p>
+        {% endif %}
+    </div>
+
+
+    <section style="margin-bottom: 42px;">
+        <h2>Premium / Fixed Price</h2>
+
+        <p>
+            Curated Founder properties available at a set Treasury price.
+        </p>
+
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+        ">
+            {% for listing in fixed_listings %}
+                <article style="
+                    border: 1px solid #ccc;
+                    border-radius: 12px;
+                    padding: 18px;
+                ">
+                    <h3 style="font-size: 1.5rem; margin-top: 0;">
+                        @{{ listing.founder_account.handle }}
+                    </h3>
+
+                    <p>
+                        <strong>
+                            {{ listing.fixed_price_credits }} credits
+                        </strong>
+                    </p>
+
+              <form
+              method="post"
+              action="{% url 'buy_founder_tienda_listing' listing.id %}"
+            >
+             {% csrf_token %}
+
+            <button type="submit">
+            Buy
+        </button>
+    </form>
+                </article>
+            {% empty %}
+                <p>No Premium Founder properties are currently available.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+
+    <section style="margin-bottom: 42px;">
+        <h2>Blind Offer</h2>
+
+        <p>
+            Fully funded private offers. Highest valid funded bid wins
+            when the sale closes.
+        </p>
+
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+        ">
+            {% for listing in blind_listings %}
+                <article style="
+                    border: 1px solid #ccc;
+                    border-radius: 12px;
+                    padding: 18px;
+              <form
+    method="post"
+    action="{% url 'buy_founder_tienda_listing' listing.id %}"
+>
+    {% csrf_token %}
+
+    <button type="submit">
+        Buy Land
+    </button>
+</form><form
+    method="post"
+    action="{% url 'buy_founder_tienda_listing' listing.id %}"
+>
+    {% csrf_token %}
+
+    <button type="submit">
+        Buy Land
+    </button>
+</form>  ">
+                    <h3 style="font-size: 1.5rem; margin-top: 0;">
+                        @{{ listing.founder_account.handle }}
+                    </h3>
+
+                    <p>
+                        Minimum:
+                        <strong>
+                            {{ listing.minimum_bid_credits }} credits
+                        </strong>
+                    </p>
+
+                    {% if listing.ends_at %}
+                        <p>
+                            Closes:
+                            {{ listing.ends_at }}
+                        </p>
+                    {% endif %}
+
+                    <form
+    method="post"
+    action="{% url 'bid_founder_tienda_listing' listing.id %}"
+>
+    {% csrf_token %}
+
+    <label>
+        Your funded offer
+    </label>
+
+    <input
+        type="number"
+        name="amount_credits"
+        min="{{ listing.minimum_bid_credits }}"
+        step="1"
+        required
+        placeholder="{{ listing.minimum_bid_credits }}"
+    >
+
+    <button type="submit">
+        Make Offer
+    </button>
+</form>
+                </article>
+            {% empty %}
+                <p>No Blind Offer properties are currently available.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+
+    <section>
+        <h2>The Wasteland 🌵</h2>
+
+        <p>
+            Raw Founder land released by FANZ at the
+            200-credit transaction floor.
+        </p>
+
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+        ">
+            {% for listing in wasteland_listings %}
+                <article style="
+                    border: 1px solid #ccc;
+                    border-radius: 12px;
+                    padding: 18px;
+                ">
+                    <h3 style="font-size: 1.5rem; margin-top: 0;">
+                        @{{ listing.founder_account.handle }}
+                    </h3>
+
+                    <p>
+                        <strong>
+                            {{ listing.fixed_price_credits }} credits
+                        </strong>
+                    </p>
+
+                    <p style="font-size: .9rem;">
+                        Raw Founder Property
+                    </p>
+
+                    <form
+                    method="post"
+                   action="{% url 'buy_founder_tienda_listing' listing.id %}"
+                  >
+                  {% csrf_token %}
+
+                 <button type="submit">
+                 Buy Land
+                 </button>
+              </form>
+                </article>
+            {% empty %}
+                <p>The Wasteland is temporarily sold out.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block extra_css %}
+<style>
+  .founder-confirm {
+    max-width: 620px;
+    margin: 36px auto 70px;
+  }
+
+  .founder-confirm-card {
+    border-radius: 20px;
+    padding: 28px;
+    color: #f8fafc;
+    background:
+      linear-gradient(145deg, #111827, #08111f);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  }
+
+  .founder-confirm-label {
+    display: inline-flex;
+    padding: 6px 10px;
+    margin-bottom: 16px;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #fbbf24;
+    background: rgba(245, 158, 11, .10);
+    border: 1px solid rgba(245, 158, 11, .28);
+  }
+
+  .founder-confirm-handle {
+    margin: 0 0 8px;
+    font-size: 2.6rem;
+  }
+
+  .founder-confirm-copy {
+    color: #cbd5e1;
+  }
+
+  .founder-confirm-summary {
+    margin: 26px 0;
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(148, 163, 184, .20);
+  }
+
+  .founder-confirm-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 7px 0;
+  }
+
+  .founder-confirm-row strong {
+    color: #fbbf24;
+  }
+
+  .founder-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .founder-confirm-buy,
+  .founder-confirm-cancel {
+    min-height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    font-weight: 900;
+    text-decoration: none;
+  }
+
+  .founder-confirm-buy {
+    border: 0;
+    cursor: pointer;
+    color: #111827;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  }
+
+  .founder-confirm-buy:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+  }
+
+  .founder-confirm-cancel {
+    color: #e2e8f0;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(148,163,184,.25);
+  }
+
+  .founder-confirm-warning {
+    margin-top: 18px;
+    font-size: .85rem;
+    line-height: 1.5;
+    color: #94a3b8;
+  }
+
+  .founder-confirm-error {
+    color: #fca5a5;
+    font-weight: 800;
+  }
+
+  @media (max-width: 560px) {
+    .founder-confirm {
+      margin-top: 20px;
+    }
+
+    .founder-confirm-card {
+      padding: 22px 18px;
+    }
+
+    .founder-confirm-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="founder-confirm">
+
+  <div class="founder-confirm-card">
+
+    <span class="founder-confirm-label">
+     {% trans "Confirm Founder Purchase" %}
+    </span>
+
+    <h1 class="founder-confirm-handle">
+      @{{ listing.founder_account.handle }}
+    </h1>
+
+    <p class="founder-confirm-copy">
+      {% trans "You are about to purchase this Founder property from FANZ Treasury." %}
+    </p>
+
+
+    <div class="founder-confirm-summary">
+
+      <div class="founder-confirm-row">
+        <span>{% trans "Purchase price" %}</span>
+        <strong>
+        {% blocktrans trimmed with price=price %}
+        {{ price }} credits
+        {% endblocktrans %}
+       </strong>
+      </div>
+
+      <div class="founder-confirm-row">
+        <span>{% trans "Current wallet" %}</span>
+        <span>
+        {% blocktrans trimmed with credits=wallet.credits %}
+        {{ credits }} credits
+        {% endblocktrans %}
+      </span>
+      </div>
+
+      <div class="founder-confirm-row">
+        <span>{% trans "Wallet after purchase" %}</span>
+
+        {% if can_afford %}
+          <span>
+          {% blocktrans trimmed with credits=balance_after %}
+          {{ credits }} credits
+          {% endblocktrans %}
+        </span>
+        {% else %}
+          <span class="founder-confirm-error">
+            {% trans "Insufficient credits" %}
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="founder-confirm-row">
+        <span>{% trans "Property type" %}</span>
+         
+       <span>
+       {% blocktrans trimmed with chars=listing.founder_account.handle_length %}
+       {{ chars }}-char Founder
+       {% endblocktrans %}
+      </span>
+      </div>
+
+    </div>
+
+
+    {% if not can_afford %}
+      <p class="founder-confirm-error">
+        {% trans "You do not currently have enough available credits to purchase this Founder property." %}
+        </p>
+    {% endif %}
+
+
+    <div class="founder-confirm-actions">
+
+      <a
+        href="{% url 'founder_tienda' %}"
+        class="founder-confirm-cancel"
+      >
+        {% trans "Cancel" %}
+      </a>
+
+      <form
+        method="post"
+        action="{% url 'buy_founder_tienda_listing' listing.id %}"
+      >
+        {% csrf_token %}
+
+        <input
+          type="hidden"
+          name="confirm"
+          value="yes"
+        >
+
+        <button
+          type="submit"
+          class="founder-confirm-buy"
+          style="width:100%;"
+          {% if not can_afford %}disabled{% endif %}
+        >
+          {% blocktrans trimmed with price=price %}
+          Confirm Purchase — {{ price }} cr
+          {% endblocktrans %}
+        </button>
+      </form>
+
+    </div>
+
+
+    <p class="founder-confirm-warning">
+
+    {% blocktrans trimmed %}
+    No credits are deducted until you press Confirm Purchase. Final price, ownership, listing status and wallet balance are validated again atomically before title transfers.
+    {% endblocktrans %}
+    </p>
+
+  </div>
+
+</div>
+{% endblock %}
+

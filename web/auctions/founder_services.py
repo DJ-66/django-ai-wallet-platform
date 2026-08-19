@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
-
+from django.utils.translation import gettext as _
 from .founder_ledger import append_founder_ownership_ledger
 from .models import (
     AccountControl,
@@ -43,9 +43,10 @@ def transfer_founder_ownership(
 
     if sale_price_credits < FOUNDER_MIN_TRANSFER_CREDITS:
         raise ValidationError(
-            f"Founder ownership transfers require at least "
-            f"{FOUNDER_MIN_TRANSFER_CREDITS} credits."
+            _(
+                "Your offer was not high enough to become the leading funded offer."
         )
+    )
 
     locked_asset = (
         FounderAccount.objects
@@ -479,6 +480,32 @@ def place_founder_blind_bid(
         )
         .first()
     )
+    highest_other_bid = (
+        FounderBid.objects
+        .select_for_update()
+        .filter(
+            listing=locked_listing,
+            status=FounderBid.STATUS_ACTIVE,
+        )
+        .exclude(
+            bidder_root=bidder_root,
+        )
+        .order_by(
+            "-amount_credits",
+            "created_at",
+            "pk",
+        )
+        .first()
+    )
+
+    if (
+        highest_other_bid is not None
+        and amount_credits <= highest_other_bid.amount_credits
+    ):
+        raise ValidationError(
+            f"Offer must exceed the current high offer of "
+            f"{highest_other_bid.amount_credits} credits."
+        )
 
     if existing_bid is None:
         if bidder_wallet.credits < amount_credits:
