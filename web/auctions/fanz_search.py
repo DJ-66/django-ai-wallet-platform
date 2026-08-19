@@ -18,6 +18,20 @@ DEFAULT_LIMIT_PER_TYPE = 5
 MAX_LIMIT_PER_TYPE = 20
 CANDIDATE_MULTIPLIER = 5
 
+SUPPORTED_LANGUAGES = ("en", "es", "pt")
+DEFAULT_LANGUAGE = "en"
+
+
+def _normalize_language(language):
+    language = (language or DEFAULT_LANGUAGE).strip().lower()
+
+    if "-" in language:
+        language = language.split("-", 1)[0]
+
+    if language not in SUPPORTED_LANGUAGES:
+        return DEFAULT_LANGUAGE
+
+    return language
 
 def _clean_query(query):
     """
@@ -271,10 +285,11 @@ def _search_users(query, limit):
                 object_type="user",
                 object_id=user.pk,
                 title=f"@{user.username}",
-                subtitle=(
-                    display_name
+                subtitle=display_name,
+                subtitle_code=(
+                    ""
                     if display_name
-                    else "FANZ Account"
+                    else "fanz_account"
                 ),
                 url=result_url,
                 score=score,
@@ -321,7 +336,8 @@ def _search_founder_accounts(query, limit):
                 object_type="founder_account",
                 object_id=asset.pk,
                 title=f"@{asset.handle}",
-                subtitle="Founder Property",
+                subtitle="",
+                subtitle_code="founder_property",
                 url=reverse("founder_tienda"),
                 score=score,
                 match_reason=reason,
@@ -367,7 +383,9 @@ def _search_hashtags(query, limit):
                 object_type="hashtag",
                 object_id=hashtag.pk,
                 title=f"#{hashtag.name}",
-                subtitle=f"{hashtag.usage_count} uses",
+                subtitle="",
+                subtitle_code="hashtag_uses",
+                subtitle_count=hashtag.usage_count,
                 url=reverse(
                     "hashtag_feed",
                     kwargs={
@@ -613,9 +631,9 @@ def _search_auctions(query, limit):
                 object_type="auction",
                 object_id=auction.pk,
                 title=auction.title,
-                subtitle=(
-                    f"{auction.get_status_display()} auction"
-                ),
+                subtitle="",
+                subtitle_code="auction_status",
+                subtitle_status=auction.status,
                 url=reverse(
                     "auction_detail",
                     kwargs={
@@ -812,6 +830,7 @@ def search_fanz(
     raw_query = _clean_query(query)
     query = _bare_query(raw_query)
     limit = _limit(limit_per_type)
+    language = _normalize_language(language)
 
     if not query:
         return {

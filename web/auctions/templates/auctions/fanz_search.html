@@ -285,11 +285,41 @@
                   {{ row.title }}
                 </div>
 
-                {% if row.subtitle %}
-                  <div class="fanz-search-result__subtitle">
-                    {{ row.subtitle }}
-                  </div>
-                {% endif %}
+                {% if row.subtitle or row.subtitle_code %}
+  <div class="fanz-search-result__subtitle">
+
+    {% if row.subtitle %}
+      {{ row.subtitle }}
+
+    {% elif row.subtitle_code == "fanz_account" %}
+      {% trans "FANZ Account" %}
+
+    {% elif row.subtitle_code == "founder_property" %}
+      {% trans "Founder Property" %}
+
+    {% elif row.subtitle_code == "hashtag_uses" %}
+      {% blocktrans trimmed count count=row.subtitle_count %}
+        {{ count }} use
+      {% plural %}
+        {{ count }} uses
+      {% endblocktrans %}
+
+    {% elif row.subtitle_code == "auction_status" %}
+
+      {% if row.subtitle_status == "live" %}
+        {% trans "Live auction" %}
+      {% elif row.subtitle_status == "ended" %}
+        {% trans "Ended auction" %}
+      {% elif row.subtitle_status == "draft" %}
+        {% trans "Draft auction" %}
+      {% else %}
+        {% trans "Auction" %}
+      {% endif %}
+
+    {% endif %}
+
+  </div>
+{% endif %}
               </a>
             {% endfor %}
           </div>
