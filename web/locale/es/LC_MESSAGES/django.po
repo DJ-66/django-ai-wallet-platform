@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 21:20-0300\n"
+"POT-Creation-Date: 2026-08-19 18:00-0300\n"
 "PO-Revision-Date: 2026-08-05 HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE ES <LL@li.org>\n"
@@ -31,7 +31,7 @@ msgstr "Traducciones de la subasta guardadas."
 msgid "Translate Auction"
 msgstr "Traducir subasta"
 
-#: auctions/admin_forms.py:53
+#: auctions/admin_forms.py:53 auctions/templates/auctions/fanz_search.html:261
 msgid "Hashtags"
 msgstr "Hashtags"
 
@@ -233,7 +233,7 @@ msgstr "Escribe un comentario..."
 
 #: auctions/founder_services.py:47
 msgid "Your offer was not high enough to become the leading funded offer."
-msgstr ""
+msgstr "Su oferta no era lo suficientemente alta como para convertirse en la oferta financiada líder."
 
 #: auctions/templates/auctions/conversation_detail.html:10
 msgid "Conversation with"
@@ -337,9 +337,8 @@ msgstr "No hay subastas en vivo en este momento"
 
 #: auctions/templates/auctions/discovery/default.html:597
 msgid ""
-"Live FANZ auctions connected to this Discovery community will appear here "
-"automatically."
-msgstr ""
+"Live FANZ auctions connected to this Discovery community will appear here automatically."
+msgstr "Las subastas FANZ en vivo conectadas a esta comunidad Discovery aparecerán aquí automáticamente."
 
 #: auctions/templates/auctions/discovery/default.html:610
 #, python-format
@@ -447,6 +446,90 @@ msgstr "Crea valor"
 msgid "Use FANZ to grow, share, and build momentum."
 msgstr "Usa FANZ para crecer, compartir y ganar impulso."
 
+#: auctions/templates/auctions/fanz_search.html:204
+#: auctions/templates/auctions/fanz_search.html:219 templates/base.html:187
+#: templates/base.html:188
+msgid "Search FANZ"
+msgstr "Buscar FANZ"
+
+#: auctions/templates/auctions/fanz_search.html:207
+msgid "Search people, Founder properties, hashtags, posts, Discovery, auctions, events, and businesses."
+msgstr "Busque personas, propiedades del fundador, hashtags, publicaciones, descubrimiento, subastas, eventos y negocios."
+
+#: auctions/templates/auctions/fanz_search.html:233 templates/base.html:202
+msgid "Search"
+msgstr "Buscar"
+
+#: auctions/templates/auctions/fanz_search.html:239
+#, python-format
+msgid "%(total)s results"
+msgstr "%(total)s resultados"
+
+#: auctions/templates/auctions/fanz_search.html:257
+msgid "People"
+msgstr "Gente"
+
+#: auctions/templates/auctions/fanz_search.html:259
+msgid "Founder Properties"
+msgstr "Propiedades Founder"
+
+#: auctions/templates/auctions/fanz_search.html:263
+msgid "Posts"
+msgstr "Correo"
+
+#: auctions/templates/auctions/fanz_search.html:265
+msgid "Discovery"
+msgstr "Descubrimiento"
+
+#: auctions/templates/auctio#: auctions/templates/auctions/fanz_search.html:259
+msgid "Auctions"
+msgstr "Subastas"
+
+#: auctions/templates/auctions/fanz_search.html:269 templates/base.html:287
+#: templates/businesses/_business_stats.html:21
+msgid "Events"
+msgstr "Eventos"
+
+#: auctions/templates/auctions/fanz_search.html:271
+msgid "Businesses"
+msgstr "Empresas"
+
+#: auctions/templates/auctions/fanz_search.html:295
+msgid "FANZ Account"
+msgstr "Cuenta FANZ"
+
+#: auctions/templates/auctions/fanz_search.html:298
+msgid "Founder Property"
+msgstr "Propiedad Founder"
+
+#: auctions/templates/auctions/fanz_search.html:301
+#, python-format
+msgid "%(count)s use"
+msgid_plural "%(count)s uses"
+msgstr[0] "%(count)s uso"
+msgstr[1] "%(count)s usos"
+msgstr[2] "%(count)s usos"
+
+#: auctions/templates/auctions/fanz_search.html:310
+msgid "Live auction"
+msgstr "Subasta en vivo"
+
+#: auctions/templates/auctions/fanz_search.html:312
+msgid "Ended auction"
+msgstr "Subasta finalizada"
+
+#: auctions/templates/auctions/fanz_search.html:314
+msgid "Draft auction"
+msgstr "Subasta en borrador"
+
+#: auctions/templates/auctions/fanz_search.html:316
+msgid "Auction"
+msgstr "Subasta"
+
+#: auctions/templates/auctions/fanz_search.html:333
+msgid "No FANZ results found."
+msgstr "No se encontraron resultados en FANZ."
+
 #: auctions/templates/auctions/founder_purchase_confirm.html:130
 msgid "Confirm Founder Purchase"
 msgstr "Confirmar compra de Fundador"
@@ -467,7 +550,6 @@ msgid "%(price)s credits"
 msgstr "%(price)s créditos"
 
 #: auctions/templates/auctions/founder_purchase_confirm.html:154
-#| msgid "Current image:"
 msgid "Current wallet"
 msgstr "Saldo actual"
 
@@ -498,7 +580,9 @@ msgstr "Fundador de %(chars)s caracteres"
 msgid ""
 "You do not currently have enough available credits to purchase this Founder "
 "property."
-msgstr "Actualmente no tienes suficientes créditos disponibles para comprar esta propiedad Fundador."
+msgstr ""
+"Actualmente no tienes suficientes créditos disponibles para comprar esta "
+"propiedad Fundador."
 
 #: auctions/templates/auctions/founder_purchase_confirm.html:204
 #: templates/admin/auctions/auction/translate.html:233
@@ -518,7 +602,10 @@ msgid ""
 "No credits are deducted until you press Confirm Purchase. Final price, "
 "ownership, listing status and wallet balance are validated again atomically "
 "before title transfers."
-msgstr "No se descontarán créditos hasta que pulses Confirmar compra. El precio final, la propiedad, el estado del anuncio y el saldo de la cartera se validan nuevamente de forma atómica antes de transferir el título."
+msgstr ""
+"No se descontarán créditos hasta que pulses Confirmar compra. El precio "
+"final, la propiedad, el estado del anuncio y el saldo de la cartera se "
+"validan nuevamente de forma atómica antes de transferir el título."
 
 #: auctions/templates/auctions/founder_tienda.html:509
 msgid "FANZ Founder Tienda"
@@ -565,7 +652,7 @@ msgstr "Precio fijo de liberación del Tesoro."
 
 #: auctions/templates/auctions/founder_tienda.html:574
 msgid "Buy Property"
-msgstr ""
+msgstr "Comprar Propiedad"
 
 #: auctions/templates/auctions/founder_tienda.html:580
 msgid "No Premium Founder properties are currently available."
@@ -671,27 +758,28 @@ msgstr "abierta"
 msgid "No conversations yet."
 msgstr "conversación con"
 
-#: auctions/views.py:921
+#: auctions/views.py:949
 msgid "🎉 Welcome to FANZ — Claim Your 50 FREE Credits"
 msgstr "🎉 Bienvenido a FANZ: Reclama tus 50 créditos gratis."
 
-#: auctions/views.py:1502
+#: auctions/views.py:1530
 msgid "Founder purchase confirmation is required."
 msgstr "Confirmar compra de Fundador"
 
-#: auctions/views.py:1523
+#: auctions/views.py:1551
 #, python-format
 msgid "🏡 You now own @%(handle)s for %(credits)s credits."
-msgstr ""
+msgstr "🏡 Ahora eres dueño de @%(handle)s por %(credits)s créditos."
 
-#: auctions/views.py:1555
+
+#: auctions/views.py:1583
 msgid "Invalid Founder bid amount."
-msgstr ""
+msgstr "Monto de oferta Founder no válido."
 
-#: auctions/views.py:1569
+#: auctions/views.py:1597
 #, python-format
 msgid "💰 Funded offer of %(credits)s credits placed on @%(handle)s."
-msgstr ""
+msgstr "💰 Oferta financiada de %(credits)s créditos realizada para @%(handle)s."
 
 #: auctions/wallet_setup.py:32
 msgid "🎉 Welcome to FANZ — Your 50 FREE Credits Are Ready"
@@ -2066,67 +2154,59 @@ msgstr "Volver a DJ"
 msgid "Feed"
 msgstr "Feed"
 
-#: templates/base.html:51
-msgid "Auctions"
-msgstr "Subastas"
-
 #: templates/base.html:52
 msgid "AI"
 msgstr "IA"
 
-#: templates/base.html:93
+#: templates/base.html:94
 msgid "Spanish"
 msgstr "Española"
 
-#: templates/base.html:102
+#: templates/base.html:103
 msgid "Switch to Spanish"
 msgstr "Cambiar a español"
 
-#: templates/base.html:109
+#: templates/base.html:110
 msgid "Portuguese"
 msgstr "Portuguesa"
 
-#: templates/base.html:118
+#: templates/base.html:119
 msgid "Switch to Portuguese"
 msgstr "Cambiar a portugués"
 
-#: templates/base.html:125
+#: templates/base.html:126
 msgid "English"
 msgstr "Inglesa"
 
-#: templates/base.html:134
+#: templates/base.html:135
 msgid "Switch to English"
 msgstr "Cambiar al inglés"
 
-#: templates/base.html:184
+#: templates/base.html:215
 msgid "Show QR code for this page"
 msgstr "Mostrar el código QR de esta página"
 
-#: templates/base.html:211
+#: templates/base.html:242
 msgid "Close"
 msgstr "Cerca"
 
-#: templates/base.html:217
+#: templates/base.html:248
 msgid "Scan this page"
 msgstr "Escanea esta página"
 
-#: templates/base.html:223
+#: templates/base.html:254
 msgid "QR code for this page"
 msgstr "Código QR de esta página"
 
-#: templates/base.html:252
+#: templates/base.html:283
 msgid "Profile"
 msgstr "Perfil"
 
-#: templates/base.html:256 templates/businesses/_business_stats.html:21
-msgid "Events"
-msgstr "Eventos"
-
-#: templates/base.html:262
+#: templates/base.html:293
 msgid "Sign up"
 msgstr "Inscribirse"
 
-#: templates/base.html:283
+#: templates/base.html:314
 msgid "Login"
 msgstr "Acceso"
 
@@ -2535,79 +2615,4 @@ msgstr "Está a punto de iniciar sesión con su cuenta de Google."
 #: templates/socialaccount/login.html:23
 msgid "Back to login"
 msgstr "Volver a iniciar sesión"
-
-#, fuzzy, python-format
-#~| msgid ""
-#~| "\n"
-#~| "                %(fan_count)s fan\n"
-#~| "                "
-#~| msgid_plural ""
-#~| "\n"
-#~| "                %(fan_count)s fans\n"
-#~| "                "
-#~ msgid ""
-#~ "\n"
-#~ "             %(price)s credits\n"
-#~ "             "
-#~ msgstr ""
-#~ "\n"
-#~ "                %(fan_count)s fan\n"
-#~ "                "
-
-#, fuzzy, python-format
-#~| msgid ""
-#~| "\n"
-#~| "                %(fan_count)s fan\n"
-#~| "                "
-#~| msgid_plural ""
-#~| "\n"
-#~| "                %(fan_count)s fans\n"
-#~| "                "
-#~ msgid ""
-#~ "\n"
-#~ "               Closes %(closes)s\n"
-#~ "               "
-#~ msgstr ""
-#~ "\n"
-#~ "                %(fan_count)s fan\n"
-#~ "                "
-
-#, fuzzy, python-format
-#~| msgid ""
-#~| "\n"
-#~| "                %(fan_count)s fan\n"
-#~| "                "
-#~| msgid_plural ""
-#~| "\n"
-#~| "                %(fan_count)s fans\n"
-#~| "                "
-#~ msgid ""
-#~ "\n"
-#~ "              %(count)s funded bidders\n"
-#~ "              "
-#~ msgstr ""
-#~ "\n"
-#~ "                %(fan_count)s fan\n"
-#~ "                "
-
-#, python-format
-#~ msgid ""
-#~ "\n"
-#~ "                    %(count)s post tagged\n"
-#~ "                "
-#~ msgid_plural ""
-#~ "\n"
-#~ "                    %(count)s posts tagged\n"
-#~ "                "
-#~ msgstr[0] ""
-#~ "\n"
-#~ "                    %(count)s publicación etiquetada\n"
-#~ "                "
-#~ msgstr[1] ""
-#~ "\n"
-#~ "                    %(count)s publicaciones etiquetadas\n"
-#~ "                "
-
-#~ msgid "or"
-#~ msgstr "or"
 
