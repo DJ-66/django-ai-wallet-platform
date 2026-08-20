@@ -203,11 +203,63 @@ def _search_destinations(query, limit):
             "id": "founder_tienda",
             "title": "Founder Tienda",
             "aliases": [
+                # FANZ / Founder terminology
                 "tienda",
                 "founder tienda",
-                "marketplace",
+                "founder store",
+                "founder shop",
+                "founder market",
                 "founder marketplace",
-            ],
+                "founder accounts",
+                "founder names",
+                "founder handles",
+
+                # English marketplace intent
+                "marketplace",
+                "name marketplace",
+                "username marketplace",
+                "handle marketplace",
+                "account marketplace",
+                "buy names",
+                "buy usernames",
+                "buy handles",
+                "buy accounts",
+                "names for sale",
+                "usernames for sale",
+                "handles for sale",
+                "accounts for sale",
+                "names to buy",
+                "usernames to buy",
+                "handles to buy",
+
+                # Spanish marketplace intent
+                "mercado",
+                "mercado founder",
+                "tienda founder",
+                "mercado de nombres",
+                "mercado de usuarios",
+                "mercado de cuentas",
+                "comprar nombres",
+                "comprar usuarios",
+                "comprar cuentas",
+                "nombres en venta",
+                "usuarios en venta",
+                "cuentas en venta",
+
+                # Portuguese marketplace intent
+                "loja",
+                "loja founder",
+                "mercado founder",
+                "mercado de nomes",
+                "mercado de usuários",
+                "mercado de contas",
+                "comprar nomes",
+                "comprar usuários",
+                "comprar contas",
+                "nomes à venda",
+                "usuários à venda",
+                "contas à venda",
+],
             "url_name": "founder_tienda",
             "subtitle_code": "founder_marketplace",
         },
@@ -223,14 +275,27 @@ def _search_destinations(query, limit):
 
         best_score = 0
 
+        query_is_single_word = (
+            len(query.split()) == 1
+        )
+
         for value in values:
-            score = _match_text(
-                value,
-                query,
-                exact=100,
-                startswith=75,
-                contains=50,
-            )
+            if query_is_single_word:
+                score = _match_text(
+                    value,
+                    query,
+                    exact=100,
+                    startswith=0,
+                    contains=0,
+                )
+            else:
+                score = _match_text(
+                    value,
+                    query,
+                    exact=100,
+                    startswith=75,
+                    contains=50,
+                )
 
             best_score = max(
                 best_score,
