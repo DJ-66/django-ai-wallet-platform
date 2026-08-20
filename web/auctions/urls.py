@@ -54,6 +54,12 @@ urlpatterns = [
     ),
 
     path(
+        "founder/<str:handle>/",
+        views.founder_knowledge,
+        name="founder_knowledge",
+    ),
+
+    path(
         "platform/accounts/<int:user_id>/login-as/",
         views.login_as_platform_account,
         name="login_as_platform_account",

@@ -498,6 +498,27 @@
   line-height: 1;
   white-space: nowrap;
 }
+
+.founder-card-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 10px;
+  font-size: 0.85rem;
+}
+
+.founder-card-links a {
+  text-decoration: none;
+  font-weight: 700;
+}
+.founder-card .founder-handle a,
+.founder-card .founder-handle a:visited,
+.founder-card .founder-handle a:hover,
+.founder-card .founder-card-links a,
+.founder-card .founder-card-links a:visited,
+.founder-card .founder-card-links a:hover {
+  color: #ffffff;
+}
 </style>
 {% endblock %}
 
@@ -541,19 +562,47 @@
     </div>
 
     <div class="founder-grid">
-      {% for listing in fixed_listings %}
-        <article class="founder-card founder-card--premium">
-          <span class="founder-badge">Premium</span>
+  {% for listing in fixed_listings %}
+    <article class="founder-card founder-card--premium">
+      <span class="founder-badge">Premium</span>
 
-          <h3 class="founder-handle">
-            @{{ listing.founder_account.handle }}
-          </h3>
+      <h3 class="founder-handle">
+      {% if listing.founder_account.current_account %}
+      <a
+      href="{% url 'public_profile' username=listing.founder_account.current_account.username %}"
+      >
+      @{{ listing.founder_account.handle }}
+      </a>
+     {% else %}
+      <a
+      href="{% url 'founder_knowledge' handle=listing.founder_account.handle %}"
+      >
+      @{{ listing.founder_account.handle }}
+      </a>
+     {% endif %}
+     </h3>
 
-          <div class="founder-property-meta">
-            {% blocktrans trimmed with chars=listing.founder_account.handle_length %}
-            Founder Property · {{ chars }}-char
-            {% endblocktrans %}
-          </div>
+      <div class="founder-card-links">
+        <a
+          href="{% url 'founder_knowledge' handle=listing.founder_account.handle %}"
+        >
+          📊 {% trans "Property stats" %}
+        </a>
+
+        {% if listing.founder_account.current_account %}
+          <a
+            href="{% url 'public_profile' username=listing.founder_account.current_account.username %}"
+          >
+            👤 {% trans "Profile" %}
+          </a>
+        {% endif %}
+      </div>
+
+      <div class="founder-property-meta">
+        {% blocktrans trimmed with chars=listing.founder_account.handle_length %}
+          Founder Property · {{ chars }}-char
+        {% endblocktrans %}
+      </div>
 
           <div class="founder-price">
              {% blocktrans trimmed with price=listing.fixed_price_credits %}
@@ -606,8 +655,36 @@
           <span class="founder-badge">{% trans "Blind Offer" %}</span>
 
           <h3 class="founder-handle">
-            @{{ listing.founder_account.handle }}
-          </h3>
+  {% if listing.founder_account.current_account %}
+    <a
+      href="{% url 'public_profile' username=listing.founder_account.current_account.username %}"
+    >
+      @{{ listing.founder_account.handle }}
+    </a>
+  {% else %}
+    <a
+      href="{% url 'founder_knowledge' handle=listing.founder_account.handle %}"
+    >
+      @{{ listing.founder_account.handle }}
+    </a>
+  {% endif %}
+</h3>
+
+<div class="founder-card-links">
+  <a
+    href="{% url 'founder_knowledge' handle=listing.founder_account.handle %}"
+  >
+    📊 {% trans "Property stats" %}
+  </a>
+
+  {% if listing.founder_account.current_account %}
+    <a
+      href="{% url 'public_profile' username=listing.founder_account.current_account.username %}"
+    >
+      👤 {% trans "Profile" %}
+    </a>
+  {% endif %}
+</div>
 
           <div class="founder-property-meta">
             Founder Property ·
@@ -712,8 +789,36 @@
           </span>
 
           <h3 class="founder-handle">
-            @{{ listing.founder_account.handle }}
-          </h3>
+  {% if listing.founder_account.current_account %}
+    <a
+      href="{% url 'public_profile' username=listing.founder_account.current_account.username %}"
+    >
+      @{{ listing.founder_account.handle }}
+    </a>
+  {% else %}
+    <a
+      href="{% url 'founder_knowledge' handle=listing.founder_account.handle %}"
+    >
+      @{{ listing.founder_account.handle }}
+    </a>
+  {% endif %}
+</h3>
+
+<div class="founder-card-links">
+  <a
+    href="{% url 'founder_knowledge' handle=listing.founder_account.handle %}"
+  >
+    📊 {% trans "Property stats" %}
+  </a>
+
+  {% if listing.founder_account.current_account %}
+    <a
+      href="{% url 'public_profile' username=listing.founder_account.current_account.username %}"
+    >
+      👤 {% trans "Profile" %}
+    </a>
+  {% endif %}
+</div>
 
           <div class="founder-property-meta">
           {% blocktrans trimmed with chars=listing.founder_account.handle_length %}

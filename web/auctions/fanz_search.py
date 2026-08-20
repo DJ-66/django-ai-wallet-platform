@@ -338,7 +338,12 @@ def _search_founder_accounts(query, limit):
                 title=f"@{asset.handle}",
                 subtitle="",
                 subtitle_code="founder_property",
-                url=reverse("founder_tienda"),
+                url=reverse(
+                "founder_knowledge",
+                kwargs={
+                "handle": asset.handle,
+                },
+            ),
                 score=score,
                 match_reason=reason,
                 status=asset.status,
