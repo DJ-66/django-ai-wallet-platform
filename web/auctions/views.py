@@ -70,6 +70,8 @@ from .models import (
     Event,
     FounderBid,
     FounderListing,
+    FounderAccount,
+    FounderOwnershipLedger,
     AuctionTranslation,
     DigitalItemTranslation,
     AICompanion,
@@ -101,6 +103,10 @@ from .models import (
 from .founder_services import (
     place_founder_blind_bid,
     purchase_tienda_fixed_listing,
+)
+from .founder_valuation import get_founder_valuation
+from .founder_valuation_i18n import (
+    get_localized_valuation_presentation,
 )
 
 def hashtag_feed(request, tag_name):
@@ -1435,6 +1441,58 @@ def confirm_founder_tienda_purchase(request, listing_id):
             "can_afford": can_afford,
         },
     )
+
+@login_required
+def founder_knowledge(request, handle):
+    founder_account = get_object_or_404(
+        FounderAccount.objects.select_related(
+            "current_account",
+            "owner_root",
+        ),
+        handle__iexact=handle,
+    )
+
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
+    )
+
+    valuation = get_founder_valuation(
+        founder_account
+    )
+
+    valuation_presentation = (
+        get_localized_valuation_presentation(
+            valuation,
+            language,
+        )
+    )
+
+    ownership_history = (
+        FounderOwnershipLedger.objects
+        .filter(
+            founder_account=founder_account,
+        )
+        .select_related(
+            "seller_root",
+            "buyer_root",
+        )
+        .order_by("-sequence")
+    )
+
+    return render(
+        request,
+        "auctions/founder_knowledge.html",
+        {
+            "founder_account": founder_account,
+            "valuation": valuation,
+            "valuation_presentation": (
+                valuation_presentation
+            ),
+            "ownership_history": ownership_history,
+        },
+    )
+
 
 @login_required
 def founder_tienda(request):

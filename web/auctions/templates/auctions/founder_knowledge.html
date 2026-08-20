@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block extra_css %}
+<style>
+  .founder-knowledge-page {
+    color: #e2e8f0;
+  }
+
+  .founder-knowledge-page h1,
+  .founder-knowledge-page h2,
+  .founder-knowledge-page h3,
+  .founder-knowledge-page strong {
+    color: #f8fafc;
+  }
+
+  .founder-knowledge-page p,
+  .founder-knowledge-page li {
+    color: #cbd5e1;
+  }
+
+  .founder-knowledge-page small {
+    color: #94a3b8;
+  }
+
+  .founder-knowledge-page a {
+    color: #a78bfa;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div
+  class="container founder-knowledge-page"
+  style="
+    max-width: 1050px;
+    margin: 0 auto;
+    padding: 24px 16px 70px;
+    color: #e2e8f0;
+  "
+>
+
+  <section style="
+    padding: 22px;
+    margin-bottom: 22px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, .97);
+    border: 1px solid rgba(148, 163, 184, .24);
+  ">
+    <h1 style="margin: 0 0 8px;">
+      🏛️ @{{ founder_account.handle }}
+    </h1>
+
+    <p style="margin: 0; color: #94a3b8;">
+      {% trans "Founder Property" %}
+      ·
+      {% blocktrans with chars=founder_account.handle_length %}
+        {{ chars }} characters
+      {% endblocktrans %}
+    </p>
+
+    <p style="margin-top: 12px;">
+      {% trans "Status" %}:
+      <strong>{{ founder_account.status }}</strong>
+    </p>
+
+    {% if founder_account.current_account %}
+      <p>
+        {% trans "Operating account" %}:
+        @{{ founder_account.current_account.username }}
+      </p>
+    {% endif %}
+  </section>
+
+
+  <section style="
+    padding: 20px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .95);
+    border: 1px solid rgba(148, 163, 184, .22);
+  ">
+    <h2>{% trans "Valuation" %}</h2>
+
+    <p>
+      <strong>
+        {{ valuation_presentation.labels.current_value }}
+      </strong>:
+      {{ valuation.estimated_value.current }} cr
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.intrinsic_value }}:
+      {{ valuation.estimated_value.intrinsic }} cr
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.passive_value }}:
+      {{ valuation.estimated_value.passive }} cr
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.development_value }}:
+      {{ valuation.estimated_value.development }} cr
+    </p>
+
+    <hr>
+
+    <p>
+      {{ valuation_presentation.labels.projected_2y }}:
+      {{ valuation.estimated_value.year_2 }} cr
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.projected_5y }}:
+      {{ valuation.estimated_value.year_5 }} cr
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.projected_10y }}:
+      {{ valuation.estimated_value.year_10 }} cr
+    </p>
+  </section>
+
+
+  <section style="
+    padding: 20px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .95);
+    border: 1px solid rgba(148, 163, 184, .22);
+  ">
+    <h2>{% trans "FANZ Liquidity" %}</h2>
+
+    <p>
+      {{ valuation_presentation.liquidity_status.text }}
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.buyback_floor }}:
+      {{ valuation.buyback_floor.estimated_current }} cr
+    </p>
+
+    <p>
+      {{ valuation_presentation.labels.actionable_floor }}:
+      {% if valuation.buyback_floor.actionable_current %}
+        {{ valuation.buyback_floor.actionable_current }} cr
+      {% else %}
+        {% trans "Not yet available" %}
+      {% endif %}
+    </p>
+
+    <p>
+      {% trans "Eligible after" %}:
+      {{ valuation.buyback_floor.liquidity_eligible_at }}
+    </p>
+  </section>
+
+
+  <section style="
+    padding: 20px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .95);
+    border: 1px solid rgba(148, 163, 184, .22);
+  ">
+    <h2>{% trans "Active Development" %}</h2>
+
+    <p>
+      {{ valuation_presentation.development_status.text }}
+    </p>
+
+    <p>
+      {% trans "Ownership days" %}:
+      {{ valuation.development.ownership_days }}
+    </p>
+
+    <p>
+      {% trans "Public posts" %}:
+      {{ valuation.development.public_posts }}
+    </p>
+
+    <p>
+      {% trans "Posts per week" %}:
+      {{ valuation.development.posts_per_week }}
+    </p>
+
+    {% if valuation_presentation.reasons %}
+      <ul>
+        {% for reason in valuation_presentation.reasons %}
+          <li>{{ reason.text }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+
+  <section style="
+    padding: 20px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .95);
+    border: 1px solid rgba(148, 163, 184, .22);
+  ">
+    <h2>{% trans "Market" %}</h2>
+
+    {% if valuation.market.active_listing %}
+      <p>
+        {% trans "Listing type" %}:
+        {{ valuation.market.listing_type }}
+      </p>
+
+      {% if valuation.market.asking_price_credits %}
+        <p>
+          {% trans "Asking price" %}:
+          {{ valuation.market.asking_price_credits }} cr
+        </p>
+      {% endif %}
+
+      {% if valuation.market.minimum_offer_credits %}
+        <p>
+          {% trans "Minimum offer" %}:
+          {{ valuation.market.minimum_offer_credits }} cr
+        </p>
+      {% endif %}
+    {% else %}
+      <p>{% trans "Not currently listed." %}</p>
+    {% endif %}
+
+    {% if valuation.market.last_market_sale_credits %}
+      <p>
+        {% trans "Last market sale" %}:
+        {{ valuation.market.last_market_sale_credits }} cr
+      </p>
+    {% endif %}
+  </section>
+
+
+  <section style="
+    padding: 20px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .95);
+    border: 1px solid rgba(148, 163, 184, .22);
+  ">
+    <h2>{% trans "Ownership Provenance" %}</h2>
+
+    {% if ownership_history %}
+      {% for entry in ownership_history %}
+        <div style="
+          padding: 12px 0;
+          border-bottom: 1px solid rgba(148, 163, 184, .15);
+        ">
+          <strong>
+            #{% firstof entry.sequence "—" %}
+          </strong>
+
+          · {{ entry.get_transfer_type_display }}
+
+          · {{ entry.sale_price_credits }} cr
+
+          <br>
+
+          <small style="color: #94a3b8;">
+            {{ entry.created_at }}
+
+            {% if entry.record_hash %}
+              ·
+              {% trans "Hash" %}:
+              {{ entry.record_hash|slice:":16" }}…
+            {% endif %}
+          </small>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>{% trans "No ownership history available." %}</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
