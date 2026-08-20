@@ -25,6 +25,99 @@
   .founder-knowledge-page a {
     color: #a78bfa;
   }
+
+.founder-market-button {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #7c3aed;
+  color: #ffffff !important;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.founder-market-button:hover,
+.founder-market-button:visited {
+  color: #ffffff !important;
+  text-decoration: none;
+}
+.founder-deed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.founder-deed-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, .72);
+  border: 1px solid rgba(148, 163, 184, .18);
+}
+
+.founder-deed-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: .76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.founder-deed-value {
+  color: #f8fafc;
+  font-weight: 800;
+}
+
+.founder-ledger-entry {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, .58);
+  border: 1px solid rgba(148, 163, 184, .16);
+}
+
+.founder-ledger-entry:first-of-type {
+  border-color: rgba(167, 139, 250, .45);
+}
+
+.founder-ledger-transfer {
+  margin: 10px 0;
+  font-size: .95rem;
+}
+
+.founder-hash {
+  font-family: monospace;
+  word-break: break-all;
+  color: #94a3b8;
+}
+
+.founder-ledger-financials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  color: #cbd5e1;
+}
+.founder-market-button {
+  border: 0;
+  cursor: pointer;
+}
+.founder-cancel-button {
+  display: inline-block;
+  padding: 9px 14px;
+  border: 1px solid rgba(248, 113, 113, .55);
+  border-radius: 10px;
+  background: rgba(127, 29, 29, .35);
+  color: #fecaca;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.founder-cancel-button:hover {
+  background: rgba(127, 29, 29, .55);
+}
 </style>
 {% endblock %}
 {% block content %}
@@ -68,6 +161,84 @@
         @{{ founder_account.current_account.username }}
       </p>
     {% endif %}
+    <div class="founder-deed-grid">
+
+  <div class="founder-deed-item">
+    <span class="founder-deed-label">
+      {% trans "Current owner" %}
+    </span>
+
+    <span class="founder-deed-value">
+      {% if founder_account.owner_root %}
+        @{{ founder_account.owner_root.username }}
+      {% else %}
+        {% trans "FANZ Treasury" %}
+      {% endif %}
+    </span>
+  </div>
+
+  <div class="founder-deed-item">
+    <span class="founder-deed-label">
+      {% trans "Operating account" %}
+    </span>
+
+    <span class="founder-deed-value">
+      {% if founder_account.current_account %}
+        @{{ founder_account.current_account.username }}
+      {% else %}
+        {% trans "Not assigned" %}
+      {% endif %}
+    </span>
+  </div>
+
+  <div class="founder-deed-item">
+    <span class="founder-deed-label">
+      {% trans "Property age" %}
+    </span>
+
+    <span class="founder-deed-value">
+      {% blocktrans trimmed with days=valuation.development.ownership_days %}
+        {{ days }} days
+      {% endblocktrans %}
+    </span>
+  </div>
+
+  <div class="founder-deed-item">
+    <span class="founder-deed-label">
+      {% trans "Acquired" %}
+    </span>
+
+    <span class="founder-deed-value">
+      {{ valuation.basis.acquired_at|date:"M j, Y" }}
+    </span>
+  </div>
+
+  <div class="founder-deed-item">
+    <span class="founder-deed-label">
+      {% trans "Capital basis" %}
+    </span>
+
+    <span class="founder-deed-value">
+      {{ valuation.basis.capital_basis_credits }} cr
+    </span>
+  </div>
+
+  <div class="founder-deed-item">
+    <span class="founder-deed-label">
+      {% trans "Ledger sequence" %}
+    </span>
+
+    <span class="founder-deed-value">
+      {% if valuation.provenance.ledger_sequence %}
+        #{{ valuation.provenance.ledger_sequence }}
+      {% else %}
+        —
+      {% endif %}
+    </span>
+  </div>
+
+</div>
+
   </section>
 
 
@@ -80,27 +251,31 @@
   ">
     <h2>{% trans "Valuation" %}</h2>
 
-    <p>
-      <strong>
-        {{ valuation_presentation.labels.current_value }}
-      </strong>:
-      {{ valuation.estimated_value.current }} cr
-    </p>
+<p>
+  {% trans "Structural Value" %}:
+  {{ valuation.estimated_value.intrinsic }} cr
+</p>
 
-    <p>
-      {{ valuation_presentation.labels.intrinsic_value }}:
-      {{ valuation.estimated_value.intrinsic }} cr
-    </p>
+{% if valuation.basis.treasury_offering_value_credits %}
+  <p>
+    {% trans "Treasury Offering Value" %}:
+    <strong>
+      {{ valuation.basis.treasury_offering_value_credits }} cr
+    </strong>
+  </p>
+{% endif %}
 
-    <p>
-      {{ valuation_presentation.labels.passive_value }}:
-      {{ valuation.estimated_value.passive }} cr
-    </p>
+<p>
+  <strong>{% trans "Current FANZ Estimate" %}:</strong>
+  {{ valuation.estimated_value.current }} cr
+</p>
 
-    <p>
-      {{ valuation_presentation.labels.development_value }}:
-      {{ valuation.estimated_value.development }} cr
-    </p>
+{% if valuation.estimated_value.development %}
+  <p>
+    {{ valuation_presentation.labels.development_value }}:
+    {{ valuation.estimated_value.development }} cr
+  </p>
+{% endif %}
 
     <hr>
 
@@ -202,29 +377,134 @@
   ">
     <h2>{% trans "Market" %}</h2>
 
-    {% if valuation.market.active_listing %}
-      <p>
-        {% trans "Listing type" %}:
-        {{ valuation.market.listing_type }}
+    {% if active_listing %}
+
+  <p>
+    <strong>🏷️ {% trans "Listed for sale" %}</strong>
+  </p>
+
+  <p>
+    {% trans "Listing type" %}:
+
+    {% if active_listing.sale_type == "fixed" %}
+      {% trans "Fixed Price" %}
+    {% elif active_listing.sale_type == "blind" %}
+      {% trans "Blind Offer" %}
+    {% else %}
+      {{ active_listing.sale_type }}
+    {% endif %}
+  </p>
+
+  {% if valuation.market.asking_price_credits %}
+    <p>
+      <strong>{% trans "Listing price" %}:</strong>
+      {{ valuation.market.asking_price_credits }} cr
+    </p>
+  {% endif %}
+
+  {% if valuation.market.minimum_offer_credits %}
+    <p>
+      <strong>{% trans "Minimum offer" %}:</strong>
+      {{ valuation.market.minimum_offer_credits }} cr
+    </p>
+  {% endif %}
+
+  {% if active_listing.listing_source == "tienda" %}
+    <p>
+      {% trans "Marketplace" %}:
+      {% trans "Founder Tienda" %}
+    </p>
+  {% elif active_listing.listing_source == "p2p" %}
+    <p>
+      {% trans "Marketplace" %}:
+      {% trans "P2P Marketplace" %}
+    </p>
+  {% endif %}
+
+{% if active_listing.listing_source == "tienda" and market_url %}
+
+  <p style="margin-top: 18px;">
+    <a
+      href="{{ market_url }}"
+      class="founder-market-button"
+    >
+      {% if market_action == "buy" %}
+        🏪 {% trans "View listing / Buy Property" %}
+      {% elif market_action == "offer" %}
+        🎯 {% trans "View listing / Make Offer" %}
+      {% else %}
+        🏷️ {% trans "View listing" %}
+      {% endif %}
+    </a>
+  </p>
+
+{% elif active_listing.listing_source == "p2p" %}
+
+  {% if active_listing.sale_type == "fixed" %}
+
+    <form
+      method="post"
+      action="{% url 'buy_founder_p2p_fixed_listing' active_listing.id %}"
+      style="margin-top: 18px;"
+    >
+      {% csrf_token %}
+
+      <button
+        type="submit"
+        class="founder-market-button"
+        onclick="return confirm('{% trans "Purchase this Founder property at the listed price?" %}');"
+      >
+        🏷️ {% trans "Buy Property" %}
+      </button>
+    </form>
+
+      {% elif active_listing.sale_type == "blind" %}
+
+      <p style="color: #94a3b8; margin-top: 18px;">
+        {% trans "Blind-offer controls will be available here." %}
       </p>
 
-      {% if valuation.market.asking_price_credits %}
-        <p>
-          {% trans "Asking price" %}:
-          {{ valuation.market.asking_price_credits }} cr
-        </p>
-      {% endif %}
-
-      {% if valuation.market.minimum_offer_credits %}
-        <p>
-          {% trans "Minimum offer" %}:
-          {{ valuation.market.minimum_offer_credits }} cr
-        </p>
-      {% endif %}
-    {% else %}
-      <p>{% trans "Not currently listed." %}</p>
     {% endif %}
 
+
+    {% if viewer_is_seller %}
+
+      {% if active_listing.sale_type == "fixed" or not active_listing_has_bids %}
+
+        <form
+          method="post"
+          action="{% url 'cancel_founder_p2p_listing' active_listing.id %}"
+          style="margin-top: 12px;"
+        >
+          {% csrf_token %}
+
+          <button
+            type="submit"
+            class="founder-cancel-button"
+            onclick="return confirm('{% trans "Cancel this Founder listing?" %}');"
+          >
+            ✖ {% trans "Cancel Listing" %}
+          </button>
+        </form>
+
+      {% elif active_listing.sale_type == "blind" and active_listing_has_bids %}
+
+        <p style="margin-top: 12px; color: #94a3b8;">
+          {% trans "This blind listing cannot be cancelled after a funded bid has been placed." %}
+        </p>
+
+      {% endif %}
+
+    {% endif %}
+
+
+  {% endif %}
+
+{% else %}
+
+  <p>{% trans "Not currently listed." %}</p>
+
+{% endif %}
     {% if valuation.market.last_market_sale_credits %}
       <p>
         {% trans "Last market sale" %}:
@@ -243,35 +523,117 @@
     <h2>{% trans "Ownership Provenance" %}</h2>
 
     {% if ownership_history %}
-      {% for entry in ownership_history %}
-        <div style="
-          padding: 12px 0;
-          border-bottom: 1px solid rgba(148, 163, 184, .15);
-        ">
-          <strong>
-            #{% firstof entry.sequence "—" %}
-          </strong>
 
-          · {{ entry.get_transfer_type_display }}
+  {% for entry in ownership_history %}
+    <article class="founder-ledger-entry">
 
-          · {{ entry.sale_price_credits }} cr
+      <div>
+        <strong>
+          {% trans "Ledger record" %}
+          #{{ entry.sequence }}
+        </strong>
 
-          <br>
+        {% if forloop.first %}
+          · 🏛️ {% trans "Current deed record" %}
+        {% endif %}
+      </div>
 
-          <small style="color: #94a3b8;">
-            {{ entry.created_at }}
+      <div class="founder-ledger-transfer">
 
-            {% if entry.record_hash %}
-              ·
-              {% trans "Hash" %}:
-              {{ entry.record_hash|slice:":16" }}…
-            {% endif %}
-          </small>
-        </div>
-      {% endfor %}
-    {% else %}
-      <p>{% trans "No ownership history available." %}</p>
-    {% endif %}
+        {% if entry.transfer_type == "treasury_release" %}
+          {% trans "FANZ Treasury Release" %}
+        {% elif entry.transfer_type == "p2p_fixed" %}
+          {% trans "P2P Fixed Price" %}
+        {% elif entry.transfer_type == "p2p_blind" %}
+          {% trans "P2P Blind Sale" %}
+        {% elif entry.transfer_type == "minimum_conveyance" %}
+          {% trans "Minimum Founder Conveyance" %}
+        {% elif entry.transfer_type == "cb_redemption" %}
+          {% trans "FANZ CB Redemption" %}
+        {% else %}
+          {{ entry.transfer_type }}
+        {% endif %}
+
+      </div>
+
+      <div>
+        <span class="founder-deed-label">
+          {% trans "Ownership transfer" %}
+        </span>
+
+        <strong>
+          @{{ entry.seller_root.username }}
+          →
+          @{{ entry.buyer_root.username }}
+        </strong>
+      </div>
+
+      <div class="founder-ledger-financials">
+        <span>
+          {% trans "Sale price" %}:
+          <strong>{{ entry.sale_price_credits }} cr</strong>
+        </span>
+
+        <span>
+          {% trans "Ledger fee" %}:
+          <strong>{{ entry.platform_fee_credits }} cr</strong>
+        </span>
+
+        <span>
+          {% trans "Seller proceeds" %}:
+          <strong>{{ entry.seller_proceeds_credits }} cr</strong>
+        </span>
+      </div>
+
+      <p style="margin: 12px 0 4px;">
+        <small>
+          {{ entry.created_at|date:"M j, Y · H:i" }}
+        </small>
+      </p>
+
+      <div style="margin-top: 12px;">
+        <span class="founder-deed-label">
+          {% trans "Record hash" %}
+        </span>
+
+        <span
+          class="founder-hash"
+          title="{{ entry.record_hash }}"
+        >
+          {{ entry.record_hash|slice:":24" }}…
+        </span>
+      </div>
+
+      <div style="margin-top: 8px;">
+        <span class="founder-deed-label">
+          {% trans "Previous hash" %}
+        </span>
+
+        {% if entry.previous_hash %}
+          <span
+            class="founder-hash"
+            title="{{ entry.previous_hash }}"
+          >
+            {{ entry.previous_hash|slice:":24" }}…
+          </span>
+        {% else %}
+          <span class="founder-hash">
+            {% trans "Genesis" %}
+          </span>
+        {% endif %}
+      </div>
+
+    </article>
+  {% endfor %}
+
+{% else %}
+
+  <p>
+    {% trans "No ownership history available." %}
+  </p>
+
+{% endif %}
+
   </section>
 
 </div>

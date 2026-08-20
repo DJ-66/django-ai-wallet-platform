@@ -26,6 +26,10 @@ def transfer_founder_ownership(
     founder_account,
     buyer,
     sale_price_credits,
+    transfer_type=(
+        FounderOwnershipLedger
+        .TRANSFER_MINIMUM_CONVEYANCE
+    ),
 ):
     """
     Atomically transfer a Founder property between independent roots.
@@ -174,10 +178,7 @@ def transfer_founder_ownership(
         founder_account=locked_asset,
         seller_root=seller_root,
         buyer_root=buyer_root,
-        transfer_type=(
-            FounderOwnershipLedger
-            .TRANSFER_MINIMUM_CONVEYANCE
-        ),
+        transfer_type=transfer_type,
         sale_price_credits=sale_price_credits,
         platform_fee_credits=platform_fee,
         seller_proceeds_credits=seller_proceeds,
@@ -200,6 +201,254 @@ def transfer_founder_ownership(
         "platform_fee_credits": platform_fee,
         "seller_proceeds_credits": seller_proceeds,
         "ledger_record": ledger_record,
+    }
+
+@transaction.atomic
+def purchase_p2p_fixed_listing(
+    *,
+    listing,
+    buyer,
+):
+    """
+    Atomically purchase an active fixed-price Founder
+    property from the P2P marketplace.
+
+    The listing establishes the authoritative transaction
+    price, but an owner's asking price is not itself FANZ
+    valuation evidence until the sale completes.
+    """
+
+    locked_listing = (
+        FounderListing.objects
+        .select_for_update()
+        .select_related(
+            "founder_account",
+            "seller_root",
+        )
+        .get(pk=listing.pk)
+    )
+
+    if (
+        locked_listing.status
+        != FounderListing.STATUS_ACTIVE
+    ):
+        raise ValidationError(
+            "Founder P2P listing is no longer active."
+        )
+
+    if (
+        locked_listing.listing_source
+        != FounderListing.SOURCE_P2P
+    ):
+        raise ValidationError(
+            "This listing is not P2P inventory."
+        )
+
+    if (
+        locked_listing.sale_type
+        != FounderListing.SALE_FIXED
+    ):
+        raise ValidationError(
+            "Blind Founder listings cannot use the "
+            "fixed-price purchase path."
+        )
+
+    if locked_listing.starts_at > timezone.now():
+        raise ValidationError(
+            "Founder P2P listing has not started yet."
+        )
+
+    sale_price_credits = int(
+        locked_listing.fixed_price_credits or 0
+    )
+
+    if (
+        sale_price_credits
+        < FOUNDER_MIN_TRANSFER_CREDITS
+    ):
+        raise ValidationError(
+            "Founder P2P purchases require at least "
+            "200 credits."
+        )
+
+    locked_asset = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(
+            pk=locked_listing.founder_account_id
+        )
+    )
+
+    seller_root = get_authoritative_root(
+        locked_listing.seller_root
+    )
+
+    if locked_asset.owner_root_id != seller_root.pk:
+        raise ValidationError(
+            "Founder listing seller no longer owns "
+            "this property."
+        )
+
+    if (
+        locked_asset.status
+        != FounderAccount.STATUS_LISTED
+    ):
+        raise ValidationError(
+            "Founder property is not currently listed."
+        )
+
+    buyer_root = get_authoritative_root(buyer)
+
+    if buyer_root.pk == seller_root.pk:
+        raise ValidationError(
+            "Seller cannot purchase their own "
+            "Founder property."
+        )
+
+    result = transfer_founder_ownership(
+        founder_account=locked_asset,
+        buyer=buyer_root,
+        sale_price_credits=sale_price_credits,
+        transfer_type=(
+            FounderOwnershipLedger
+            .TRANSFER_P2P_FIXED
+        ),
+    )
+
+    locked_listing.status = (
+        FounderListing.STATUS_SOLD
+    )
+
+    locked_listing.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    return {
+        **result,
+        "listing": locked_listing,
+    }
+
+@transaction.atomic
+def cancel_founder_listing(
+    *,
+    listing,
+    requester,
+):
+    """
+    Cancel one active P2P Founder listing.
+
+    Rules:
+    - only the authoritative seller may cancel
+    - fixed listings may be cancelled while active
+    - blind listings may be cancelled only before any
+      funded/active bid exists
+    - ownership does not change
+    - no ownership-ledger record is created
+    """
+
+    locked_listing = (
+        FounderListing.objects
+        .select_for_update()
+        .select_related(
+            "founder_account",
+            "seller_root",
+        )
+        .get(pk=listing.pk)
+    )
+
+    if (
+        locked_listing.status
+        != FounderListing.STATUS_ACTIVE
+    ):
+        raise ValidationError(
+            "Founder listing is no longer active."
+        )
+
+    if (
+        locked_listing.listing_source
+        != FounderListing.SOURCE_P2P
+    ):
+        raise ValidationError(
+            "Only P2P Founder listings may be cancelled "
+            "through this path."
+        )
+
+    requester_root = get_authoritative_root(
+        requester
+    )
+
+    seller_root = get_authoritative_root(
+        locked_listing.seller_root
+    )
+
+    if requester_root.pk != seller_root.pk:
+        raise ValidationError(
+            "Only the Founder property seller may cancel "
+            "this listing."
+        )
+
+    locked_asset = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(
+            pk=locked_listing.founder_account_id
+        )
+    )
+
+    if locked_asset.owner_root_id != seller_root.pk:
+        raise ValidationError(
+            "Founder listing seller no longer owns "
+            "this property."
+        )
+
+    if (
+        locked_listing.sale_type
+        == FounderListing.SALE_BLIND
+    ):
+        has_active_bids = (
+            FounderBid.objects
+            .filter(
+                listing=locked_listing,
+                status=FounderBid.STATUS_ACTIVE,
+            )
+            .exists()
+        )
+
+        if has_active_bids:
+            raise ValidationError(
+                "Blind Founder listings cannot be "
+                "cancelled after a funded bid is placed."
+            )
+
+    locked_listing.status = (
+        FounderListing.STATUS_CANCELLED
+    )
+
+    locked_listing.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    locked_asset.status = (
+        FounderAccount.STATUS_OWNED
+    )
+
+    locked_asset.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    return {
+        "listing": locked_listing,
+        "founder_account": locked_asset,
+        "seller_root": seller_root,
     }
 
 @transaction.atomic
@@ -503,8 +752,10 @@ def place_founder_blind_bid(
         and amount_credits <= highest_other_bid.amount_credits
     ):
         raise ValidationError(
-            f"Offer must exceed the current high offer of "
-            f"{highest_other_bid.amount_credits} credits."
+            _(
+            "Your offer was not high enough to become "
+            "the leading funded offer."
+        )
         )
 
     if existing_bid is None:

@@ -253,7 +253,9 @@
 
           <div class="fanz-search-group__header">
             <h2>
-              {% if group_name == "users" %}
+              {% if group_name == "destinations" %}
+              🧭 {% trans "FANZ Destinations" %}
+              {% elif group_name == "users" %}
                 👤 {% trans "People" %}
               {% elif group_name == "founder_accounts" %}
                 🏛️ {% trans "Founder Properties" %}
@@ -296,7 +298,8 @@
 
     {% elif row.subtitle_code == "founder_property" %}
       {% trans "Founder Property" %}
-
+    {% elif row.subtitle_code == "founder_marketplace" %}
+    {% trans "Founder property marketplace" %}
     {% elif row.subtitle_code == "hashtag_uses" %}
       {% blocktrans trimmed count count=row.subtitle_count %}
         {{ count }} use
