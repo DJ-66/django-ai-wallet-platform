@@ -58,7 +58,13 @@ urlpatterns = [
         views.buy_founder_p2p_fixed_listing,
         name="buy_founder_p2p_fixed_listing",
     ),
-    
+
+    path(
+        "founder/p2p/<int:listing_id>/offer/",
+        views.bid_founder_p2p_blind_listing,
+        name="bid_founder_p2p_blind_listing",
+    ),
+
     path(
         "founder/p2p/<int:listing_id>/cancel/",
         views.cancel_founder_p2p_listing,

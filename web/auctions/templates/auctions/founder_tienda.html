@@ -519,14 +519,45 @@
 .founder-card .founder-card-links a:hover {
   color: #ffffff;
 }
+
 .founder-card--p2p {
   background: rgba(30, 41, 59, .96);
-  border: 1px solid rgba(167, 139, 250, .30);
+  border: 1px solid rgba(34, 211, 238, .38);
 }
 
+.founder-card--p2p .founder-price {
+  color: #22d3ee;
+}
+
+/* P2P owner badge */
+.founder-card--p2p .founder-badge {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, .08);
+  border: 1px solid rgba(34, 211, 238, .35);
+}
+
+/* P2P action */
 .founder-button--p2p {
-  background: #7c3aed;
+  width: auto;
+  min-height: 36px;
+  padding: 8px 14px;
+
+  display: inline-block !important;
+
+  background: rgba(8, 145, 178, .10);
+  border: 1px solid #22d3ee;
+
+  color: #67e8f9 !important;
+
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.founder-button--p2p:hover {
+  background: rgba(34, 211, 238, .18);
   color: #ffffff !important;
+  border-color: #67e8f9;
 }
 
 .founder-pagination {
@@ -557,6 +588,7 @@
 .founder-handle a:hover {
   opacity: 0.82;
 }
+
 </style>
 {% endblock %}
 
@@ -656,7 +688,7 @@
            <a
            href="{% url 'confirm_founder_tienda_purchase' listing.id %}"
            class="founder-button founder-button--premium"
-           style="display:block; text-align:center; text-decoration:none;"
+           style="text-align:center; text-decoration:none;"
            >
            {% trans "Buy Property" %}
            </a>
