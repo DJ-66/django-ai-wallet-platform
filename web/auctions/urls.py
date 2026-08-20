@@ -52,6 +52,18 @@ urlpatterns = [
         views.confirm_founder_tienda_purchase,
         name="confirm_founder_tienda_purchase",
     ),
+    
+    path(
+        "founder/p2p/<int:listing_id>/buy/",
+        views.buy_founder_p2p_fixed_listing,
+        name="buy_founder_p2p_fixed_listing",
+    ),
+    
+    path(
+        "founder/p2p/<int:listing_id>/cancel/",
+        views.cancel_founder_p2p_listing,
+        name="cancel_founder_p2p_listing",
+    ),
 
     path(
         "founder/<str:handle>/",

@@ -190,6 +190,77 @@ def _rank_results(results, limit):
         ),
     )[:limit]
 
+def _search_destinations(query, limit):
+    """
+    Deterministic FANZ navigation destinations.
+
+    These are canonical platform destinations that should be
+    discoverable through Search without consuming permanent
+    mobile-navigation space.
+    """
+    destinations = [
+        {
+            "id": "founder_tienda",
+            "title": "Founder Tienda",
+            "aliases": [
+                "tienda",
+                "founder tienda",
+                "marketplace",
+                "founder marketplace",
+            ],
+            "url_name": "founder_tienda",
+            "subtitle_code": "founder_marketplace",
+        },
+    ]
+
+    results = []
+
+    for destination in destinations:
+        values = [
+            destination["title"],
+            *destination["aliases"],
+        ]
+
+        best_score = 0
+
+        for value in values:
+            score = _match_text(
+                value,
+                query,
+                exact=100,
+                startswith=75,
+                contains=50,
+            )
+
+            best_score = max(
+                best_score,
+                score,
+            )
+
+        if not best_score:
+            continue
+
+        results.append(
+            _normalized_result(
+                object_type="destination",
+                object_id=destination["id"],
+                title=destination["title"],
+                subtitle="",
+                subtitle_code=destination[
+                    "subtitle_code"
+                ],
+                url=reverse(
+                    destination["url_name"]
+                ),
+                score=best_score,
+                match_reason="destination",
+            )
+        )
+
+    return _rank_results(
+        results,
+        limit,
+    )
 
 def _search_users(query, limit):
     rows = (
@@ -848,6 +919,10 @@ def search_fanz(
         }
 
     groups = {
+        "destinations": _search_destinations(
+            query,
+            limit,
+        ),
         "users": _search_users(
             query,
             limit,

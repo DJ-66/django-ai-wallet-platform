@@ -335,6 +335,30 @@ def get_founder_valuation(
     active_listing = _get_active_listing(
         founder_account
     )
+    # -----------------------------------------------------
+    # Trusted FANZ primary-market evidence
+    #
+    # A current fixed-price Founder Tienda listing is a
+    # FANZ Treasury valuation signal.
+    #
+    # P2P asking prices and blind minimums are NOT valuation
+    # evidence and must never raise the FANZ estimate.
+    # -----------------------------------------------------
+
+    treasury_offering_value = None
+
+    if (
+        active_listing
+        and active_listing.listing_source
+        == FounderListing.SOURCE_TIENDA
+        and active_listing.sale_type
+        == FounderListing.SALE_FIXED
+        and active_listing.fixed_price_credits
+    ):
+        treasury_offering_value = int(
+            active_listing.fixed_price_credits
+        )
+
 
     last_market_sale = _get_last_market_sale(
         founder_account
@@ -403,6 +427,24 @@ def get_founder_valuation(
         * passive_multiplier
     )
 
+    # -----------------------------------------------------
+    # Recognized current property value
+    #
+    # Structural/passive valuation remains visible as the
+    # deterministic model value.
+    #
+    # FANZ Treasury may establish a higher current primary-
+    # market value through an active fixed Tienda listing.
+    # -----------------------------------------------------
+
+    recognized_current_value = passive_value
+
+    if treasury_offering_value is not None:
+        recognized_current_value = max(
+            recognized_current_value,
+            treasury_offering_value,
+        )
+
     if development["active_development"]:
         development_multiplier = _growth_multiplier(
             ownership_years
@@ -411,13 +453,14 @@ def get_founder_valuation(
         development_multiplier = 1.0
 
     current_estimate = _round_credits(
-        passive_value
+        recognized_current_value
         * development_multiplier
     )
 
     development_value = max(
         0,
-        current_estimate - passive_value,
+        current_estimate
+        - recognized_current_value,
     )
 
     # -----------------------------------------------------
@@ -434,8 +477,13 @@ def get_founder_valuation(
             projection_age
         )
 
+        projection_base = max(
+            intrinsic_value,
+            treasury_offering_value or 0,
+        )
+
         projected = (
-            intrinsic_value
+            projection_base
             * target_passive
         )
 
@@ -590,11 +638,15 @@ def get_founder_valuation(
             "acquisition_price_credits": acquisition_price,
             "acquired_at": acquired_at,
             "structural_multiplier": structural_multiplier,
+            "treasury_offering_value_credits": (
+                treasury_offering_value
+        ),
         },
 
         "estimated_value": {
             "intrinsic": intrinsic_value,
             "passive": passive_value,
+            "recognized_current": recognized_current_value,
             "development": development_value,
             "current": current_estimate,
             "year_2": estimate_2y,

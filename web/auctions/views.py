@@ -103,6 +103,9 @@ from .models import (
 from .founder_services import (
     place_founder_blind_bid,
     purchase_tienda_fixed_listing,
+    purchase_p2p_fixed_listing,
+    cancel_founder_listing,
+    get_authoritative_root,
 )
 from .founder_valuation import get_founder_valuation
 from .founder_valuation_i18n import (
@@ -906,7 +909,101 @@ def feed_home(request):
 
     })
 
+@login_required
+def cancel_founder_p2p_listing(request, listing_id):
+    listing = get_object_or_404(
+        FounderListing.objects.select_related(
+            "founder_account",
+            "seller_root",
+        ),
+        pk=listing_id,
+    )
 
+    handle = listing.founder_account.handle
+
+    if request.method != "POST":
+        return redirect(
+            "founder_knowledge",
+            handle=handle,
+        )
+
+    try:
+        cancel_founder_listing(
+            listing=listing,
+            requester=request.user,
+        )
+
+        messages.success(
+            request,
+            _(
+                "Founder listing for @%(handle)s was cancelled."
+            ) % {
+                "handle": handle,
+            },
+        )
+
+    except Exception as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect(
+        "founder_knowledge",
+        handle=handle,
+    )
+
+
+@login_required
+def buy_founder_p2p_fixed_listing(request, listing_id):
+    if request.method != "POST":
+        return redirect(
+            "founder_knowledge",
+            handle=FounderListing.objects.get(
+                pk=listing_id
+            ).founder_account.handle,
+        )
+
+    listing = get_object_or_404(
+        FounderListing.objects.select_related(
+            "founder_account",
+        ),
+        pk=listing_id,
+    )
+
+    handle = listing.founder_account.handle
+
+    try:
+        result = purchase_p2p_fixed_listing(
+            listing=listing,
+            buyer=request.user,
+        )
+
+        messages.success(
+            request,
+            _(
+                "🏡 You purchased @%(handle)s for "
+                "%(credits)s credits."
+            ) % {
+                "handle": result[
+                    "founder_account"
+                ].handle,
+                "credits": result[
+                    "sale_price_credits"
+                ],
+            },
+        )
+
+    except Exception as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect(
+        "founder_knowledge",
+        handle=handle,
+    )
 
 @login_required
 def bid_view(request, auction_id):
@@ -1467,6 +1564,74 @@ def founder_knowledge(request, handle):
             language,
         )
     )
+    active_listing = valuation[
+        "market"
+    ]["active_listing"]
+    viewer_is_seller = False
+    active_listing_has_bids = False
+
+    if active_listing:
+        viewer_root = get_authoritative_root(
+            request.user
+        )
+
+        seller_root = get_authoritative_root(
+            active_listing.seller_root
+        )
+
+        viewer_is_seller = (
+            viewer_root.pk == seller_root.pk
+        )
+
+        if (
+            active_listing.sale_type
+            == FounderListing.SALE_BLIND
+        ):
+            active_listing_has_bids = (
+                FounderBid.objects
+                .filter(
+                    listing=active_listing,
+                    status=FounderBid.STATUS_ACTIVE,
+                )
+                .exists()
+            )
+    market_url = None
+    market_action = None
+
+    
+    if active_listing:
+        if (
+            active_listing.listing_source
+            == FounderListing.SOURCE_TIENDA
+        ):
+            if (
+                active_listing.sale_type
+                == FounderListing.SALE_FIXED
+            ):
+                market_url = reverse(
+                    "confirm_founder_tienda_purchase",
+                    kwargs={
+                        "listing_id": active_listing.pk,
+                    },
+                )
+                market_action = "buy"
+
+            elif (
+                active_listing.sale_type
+                == FounderListing.SALE_BLIND
+            ):
+                market_url = reverse(
+                    "founder_tienda",
+                )
+                market_action = "offer"
+
+        elif (
+            active_listing.listing_source
+            == FounderListing.SOURCE_P2P
+        ):
+            # P2P listing data is canonical already, but there
+            # is not yet a public P2P marketplace route.
+            market_action = "p2p"
 
     ownership_history = (
         FounderOwnershipLedger.objects
@@ -1490,8 +1655,14 @@ def founder_knowledge(request, handle):
                 valuation_presentation
             ),
             "ownership_history": ownership_history,
+            "active_listing": active_listing,
+            "market_url": market_url,
+            "market_action": market_action,
+            "viewer_is_seller": viewer_is_seller,
+            "active_listing_has_bids": active_listing_has_bids,
         },
     )
+
 
 
 @login_required
@@ -1558,6 +1729,32 @@ def founder_tienda(request):
             "founder_account__handle",
         )
     )
+    p2p_queryset = (
+        FounderListing.objects
+        .filter(
+            listing_source=FounderListing.SOURCE_P2P,
+            status=FounderListing.STATUS_ACTIVE,
+        )
+        .select_related(
+            "founder_account",
+            "founder_account__current_account",
+            "seller_root",
+        )
+        .order_by(
+            "-created_at",
+            "founder_account__handle",
+        )
+    )
+
+    p2p_paginator = Paginator(
+        p2p_queryset,
+        10,
+    )
+
+    p2p_page = p2p_paginator.get_page(
+        request.GET.get("p2p_page")
+    )
+
 
     wallet = BidWallet.objects.filter(
         user=request.user
@@ -1570,6 +1767,7 @@ def founder_tienda(request):
             "fixed_listings": fixed_listings,
             "blind_listings": blind_listings,
             "wasteland_listings": wasteland_listings,
+            "p2p_page": p2p_page,
             "wallet": wallet,
         },
     )
