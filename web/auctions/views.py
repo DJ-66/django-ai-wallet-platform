@@ -1005,6 +1005,68 @@ def buy_founder_p2p_fixed_listing(request, listing_id):
         handle=handle,
     )
 
+
+@login_required
+def bid_founder_p2p_blind_listing(request, listing_id):
+    listing = get_object_or_404(
+        FounderListing.objects.select_related(
+            "founder_account",
+        ),
+        pk=listing_id,
+    )
+
+    handle = listing.founder_account.handle
+
+    if request.method != "POST":
+        return redirect(
+            "founder_knowledge",
+            handle=handle,
+        )
+
+    try:
+        amount = int(
+            request.POST.get("amount_credits", 0)
+        )
+    except (TypeError, ValueError):
+        messages.error(
+            request,
+            _("Invalid Founder offer amount."),
+        )
+        return redirect(
+            "founder_knowledge",
+            handle=handle,
+        )
+
+    try:
+        result = place_founder_blind_bid(
+            listing=listing,
+            bidder=request.user,
+            amount_credits=amount,
+        )
+
+        messages.success(
+            request,
+            _(
+                "💰 Funded offer of %(credits)s credits "
+                "placed on @%(handle)s."
+            ) % {
+                "credits": result["bid"].amount_credits,
+                "handle": handle,
+            },
+        )
+
+    except Exception as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect(
+        "founder_knowledge",
+        handle=handle,
+    )
+
+
 @login_required
 def bid_view(request, auction_id):
     auction = get_object_or_404(Auction, id=auction_id)
@@ -1571,17 +1633,18 @@ def founder_knowledge(request, handle):
     active_listing_has_bids = False
 
     if active_listing:
-        viewer_root = get_authoritative_root(
-            request.user
-        )
+        if request.user.is_authenticated:
+            viewer_root = get_authoritative_root(
+                request.user
+            )
 
-        seller_root = get_authoritative_root(
-            active_listing.seller_root
-        )
+            seller_root = get_authoritative_root(
+                active_listing.seller_root
+            )
 
-        viewer_is_seller = (
-            viewer_root.pk == seller_root.pk
-        )
+            viewer_is_seller = (
+                viewer_root.pk == seller_root.pk
+            )
 
         if (
             active_listing.sale_type
@@ -1595,6 +1658,7 @@ def founder_knowledge(request, handle):
                 )
                 .exists()
             )
+
     market_url = None
     market_action = None
 

@@ -118,6 +118,60 @@
 .founder-cancel-button:hover {
   background: rgba(127, 29, 29, .55);
 }
+.founder-market-value {
+  color: #8cff00;
+  font-weight: 700;
+}
+
+.founder-offer-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.founder-offer-input {
+  max-width: 220px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  background: rgba(15, 23, 42, .7);
+  color: #f8fafc;
+}
+
+.founder-offer-input::placeholder {
+  color: #94a3b8;
+}
+
+.founder-offer-input:focus {
+  outline: none;
+  border-color: #8cff00;
+}
+.founder-offer-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.founder-offer-input {
+  max-width: 220px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  background: rgba(15, 23, 42, .72);
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.founder-offer-input::placeholder {
+  color: #94a3b8;
+}
+
+.founder-offer-input:focus {
+  outline: none;
+  border-color: #8cff00;
+}
 </style>
 {% endblock %}
 {% block content %}
@@ -460,9 +514,67 @@
 
       {% elif active_listing.sale_type == "blind" %}
 
-      <p style="color: #94a3b8; margin-top: 18px;">
-        {% trans "Blind-offer controls will be available here." %}
-      </p>
+  {% if viewer_is_seller %}
+
+    <p style="color: #94a3b8; margin-top: 18px;">
+      🔒
+      {% trans "You are the seller of this Founder property." %}
+    </p>
+
+  {% elif request.user.is_authenticated %}
+
+    <form
+      method="post"
+      action="{% url 'bid_founder_p2p_blind_listing' active_listing.id %}"
+      style="margin-top: 18px;"
+    >
+      {% csrf_token %}
+
+      <label
+        for="founder-offer-{{ active_listing.id }}"
+        style="display: block; margin-bottom: 8px;"
+      >
+        <strong>{% trans "Your funded offer" %}</strong>
+      </label>
+
+  <div class="founder-offer-row">
+  <input
+    id="founder-offer-{{ active_listing.id }}"
+    type="number"
+    name="amount_credits"
+    min="{{ active_listing.minimum_bid_credits }}"
+    step="1"
+    required
+    placeholder="{{ active_listing.minimum_bid_credits }}"
+    class="founder-offer-input"
+  >
+
+  <button
+    type="submit"
+    class="founder-market-button"
+  >
+    🎯 {% trans "Place Funded Offer" %}
+  </button>
+</div>
+    </form>
+
+    <p style="
+      color: #94a3b8;
+      margin-top: 12px;
+      margin-bottom: 0;
+    ">
+      🔒
+      {% trans "Offers are fully funded. Competing offer amounts and bidder identities remain private." %}
+    </p>
+
+  {% else %}
+
+    <p style="color: #94a3b8; margin-top: 18px;">
+      🔒
+      {% trans "Sign in to place a funded offer." %}
+    </p>
+
+  {% endif %}
 
     {% endif %}
 
