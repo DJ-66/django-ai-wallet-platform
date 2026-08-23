@@ -183,12 +183,20 @@ LOGIN_URL = '/accounts/login/'  # optional but recommended
 
 
 # AI Provider settings
-#OLLAMA_URL = "http://192.168.100.109:11434/api/chat"
-OLLAMA_URL = "http://172.17.0.1:11434/api/chat"
-OLLAMA_MODEL = "gemma3:latest"
+OLLAMA_URL = os.getenv(
+    "OLLAMA_URL",
+    "http://172.17.0.1:11434/api/chat",
+)
+OLLAMA_MODEL = os.getenv(
+    "OLLAMA_MODEL",
+    "gemma3:latest",
+)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", default="")
-OPENAI_COMPANION_MODEL = "gpt-4.1-mini"
+OPENAI_COMPANION_MODEL = os.getenv(
+    "OPENAI_COMPANION_MODEL",
+    "gpt-4.1-mini",
+)
 
 # Relist Auctions
 AUCTION_RELIST_DAYS = int(

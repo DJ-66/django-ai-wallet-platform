@@ -71,7 +71,7 @@ class OpenAIProvider:
 
 
 def get_ai_provider(provider_name):
-    if provider_name == "local_deepseek":
+    if provider_name in {"local_ollama", "local_deepseek"}:
         return DeepSeekLocalProvider()
 
     if provider_name == "openai":
