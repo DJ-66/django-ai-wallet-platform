@@ -1,0 +1,84 @@
+name: ${FANZ_PROJECT_NAME:-fanz}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - django_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ..
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn core.wsgi:application
+      --workers 4
+      --bind 0.0.0.0:8000
+      --timeout 300
+      --graceful-timeout 300
+      "
+    volumes:
+      - ../web:/app
+      - staticfiles:/app/staticfiles
+      - ../web/media:/app/media
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - web
+    ports:
+      - "${FANZ_HTTP_PORT:-8085}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles:/app/staticfiles:ro
+      - ../web/media:/app/media:ro
+    restart: unless-stopped
+    networks:
+      - default
+      - fanz-net
+
+  auction_worker:
+    build:
+      context: ..
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: /app/run_auction_tasks.sh
+    volumes:
+      - ../web:/app
+      - staticfiles:/app/staticfiles
+      - ../web/media:/app/media
+    restart: unless-stopped
+
+volumes:
+  django_pgdata:
+  staticfiles:
+
+networks:
+  fanz-net:
+    external: true
+    name: ${FANZ_NETWORK:-fanz-net}
