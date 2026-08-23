@@ -31,6 +31,9 @@ services:
       - ./web:/app
       - staticfiles:/app/staticfiles
       - ./web/media:/app/media
+    networks:
+      - default
+      - fanz-net
     restart: always
 
   nginx:
@@ -60,6 +63,9 @@ services:
       - ./web:/app
       - staticfiles:/app/staticfiles
       - ./web/media:/app/media
+    networks:
+      - default
+      - fanz-net
     restart: always
 
 volumes:
