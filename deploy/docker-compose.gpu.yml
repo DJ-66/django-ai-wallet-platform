@@ -1,0 +1,40 @@
+services:
+  web:
+    environment:
+      OLLAMA_URL: http://ollama:11434/api/chat
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  auction_worker:
+    environment:
+      OLLAMA_URL: http://ollama:11434/api/chat
+
+  ollama:
+    image: ollama/ollama:0.32.14
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - gpu
+
+volumes:
+  ollama_data:
