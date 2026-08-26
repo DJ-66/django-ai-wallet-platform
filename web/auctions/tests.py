@@ -100,12 +100,16 @@ class BTCPayClientTests(SimpleTestCase):
 
 
 from django.contrib.auth.models import User
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from .models import (
     BidWallet,
     CreditPackage,
     CreditPurchase,
+    EconomyAsset,
+    EconomyAssetDelivery,
+    FounderAccount,
     PaymentIntent,
 )
 from .payment_services import (
@@ -257,3 +261,71 @@ class PaymentFulfillmentTests(TestCase):
 
         self.assertEqual(intent.status, "settled")
         self.assertIsNone(intent.fulfilled_at)
+
+
+class EconomyAssetModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="economy-asset-test-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="eco1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+    def test_founder_account_has_at_most_one_economy_asset(self):
+        EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Eco1Fanz",
+            symbol="ECO1FANZ",
+        )
+
+        with self.assertRaises(IntegrityError):
+            EconomyAsset.objects.create(
+                founder_account=self.founder,
+                name="SecondEco1Fanz",
+                symbol="ECO1SECOND",
+            )
+
+    def test_delivery_amount_must_be_positive(self):
+        asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Eco1Fanz",
+            symbol="ECO1FANZ",
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="platform_service",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="economy-zero-delivery",
+            paid_at=timezone.now(),
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                EconomyAssetDelivery.objects.create(
+                    asset=asset,
+                    payment_intent=intent,
+                    recipient_address="0x1234",
+                    amount_base_units=0,
+                )
+
+    def test_default_supply_is_21_billion_at_six_decimals(self):
+        asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Eco1Fanz",
+            symbol="ECO1FANZ",
+        )
+
+        self.assertEqual(asset.decimals, 6)
+        self.assertEqual(
+            asset.genesis_supply_base_units,
+            21_000_000_000_000_000,
+        )

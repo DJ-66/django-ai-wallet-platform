@@ -2048,3 +2048,198 @@ class FounderCreditHold(models.Model):
             f"Founder bid #{self.bid_id}"
         )
 #end
+
+
+class EconomyAsset(models.Model):
+    """
+    Optional creator/community economy attached to a scarce FANZ Founder property.
+
+    FANZ records the asset definition and on-chain identity here. External
+    blockchain ownership remains authoritative for distributed coins.
+    """
+
+    STATUS_DRAFT = "draft"
+    STATUS_ACTIVE = "active"
+    STATUS_DISABLED = "disabled"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DISABLED, "Disabled"),
+    ]
+
+    founder_account = models.OneToOneField(
+        FounderAccount,
+        on_delete=models.PROTECT,
+        related_name="economy_asset",
+    )
+
+    name = models.CharField(
+        max_length=64,
+        unique=True,
+    )
+
+    symbol = models.CharField(
+        max_length=16,
+        unique=True,
+    )
+
+    chain = models.CharField(
+        max_length=16,
+        default="sui",
+    )
+
+    # Canonical on-chain type, e.g. package::module::COIN_TYPE.
+    coin_type = models.CharField(
+        max_length=512,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
+    # Sui Coin/Currency amounts use base units.
+    decimals = models.PositiveSmallIntegerField(
+        default=6,
+    )
+
+    # 21,000,000,000 coins with 6 decimals.
+    genesis_supply_base_units = models.PositiveBigIntegerField(
+        default=21_000_000_000_000_000,
+    )
+
+    genesis_tx_digest = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
+    # Set only after on-chain verification that supply is permanently fixed.
+    supply_fixed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+    )
+
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["founder_account__handle"]
+
+    def __str__(self):
+        return (
+            f"{self.name} ({self.symbol}) "
+            f"for @{self.founder_account.handle}"
+        )
+
+
+class EconomyAssetDelivery(models.Model):
+    """
+    Durable FANZ record for an economy-asset delivery obligation.
+
+    Blockchain submission is intentionally separate from PaymentIntent
+    settlement because an external chain cannot participate in FANZ's
+    PostgreSQL transaction.
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_SUBMITTING = "submitting"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_CONFIRMED = "confirmed"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_SUBMITTING, "Submitting"),
+        (STATUS_SUBMITTED, "Submitted"),
+        (STATUS_CONFIRMED, "Confirmed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    asset = models.ForeignKey(
+        EconomyAsset,
+        on_delete=models.PROTECT,
+        related_name="deliveries",
+    )
+
+    payment_intent = models.OneToOneField(
+        PaymentIntent,
+        on_delete=models.PROTECT,
+        related_name="economy_asset_delivery",
+    )
+
+    recipient_address = models.CharField(
+        max_length=128,
+    )
+
+    amount_base_units = models.PositiveBigIntegerField()
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
+    tx_digest = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
+    attempt_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+    )
+
+    submitted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    confirmed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount_base_units__gt=0),
+                name="economy_asset_delivery_amount_positive",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.asset.symbol} delivery "
+            f"#{self.pk} [{self.status}]"
+        )
