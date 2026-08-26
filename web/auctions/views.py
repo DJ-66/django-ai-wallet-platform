@@ -1,6 +1,8 @@
 from django.utils.translation import gettext as _, override
 import os
 import json
+import hashlib
+import hmac
 import random
 import secrets
 from businesses.models import BusinessListing
@@ -29,6 +31,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .fanz_search import search_fanz
 from businesses.services import (
@@ -3983,3 +3986,154 @@ def delete_conversation(request, conversation_id):
 
     messages.success(request, "Conversation removed from your inbox.")
     return redirect("inbox")
+
+
+@csrf_exempt
+@require_POST
+def btcpay_webhook(request):
+    from .btcpay import BTCPayError, get_invoice
+    from .models import PaymentIntent
+
+    secret = settings.BTCPAY_WEBHOOK_SECRET
+
+    if not secret:
+        return JsonResponse(
+            {"error": "BTCPay webhook is not configured"},
+            status=503,
+        )
+
+    signature = request.headers.get("BTCPay-Sig", "")
+
+    expected = "sha256=" + hmac.new(
+        secret.encode("utf-8"),
+        request.body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(signature, expected):
+        return JsonResponse(
+            {"error": "Invalid webhook signature"},
+            status=401,
+        )
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse(
+            {"error": "Invalid JSON"},
+            status=400,
+        )
+
+    store_id = payload.get("storeId")
+
+    if store_id != settings.BTCPAY_STORE_ID:
+        return JsonResponse(
+            {"error": "Unexpected BTCPay store"},
+            status=403,
+        )
+
+    invoice_id = payload.get("invoiceId")
+
+    if not invoice_id:
+        return JsonResponse(
+            {"error": "Missing invoiceId"},
+            status=400,
+        )
+
+    try:
+        intent = PaymentIntent.objects.get(
+            btcpay_invoice_id=invoice_id
+        )
+    except PaymentIntent.DoesNotExist:
+        # A valid BTCPay webhook may concern an invoice that FANZ
+        # did not create. Acknowledge it without changing anything.
+        return JsonResponse(
+            {
+                "ok": True,
+                "ignored": True,
+            }
+        )
+
+    try:
+        invoice = get_invoice(invoice_id)
+    except BTCPayError:
+        return JsonResponse(
+            {"error": "Unable to verify invoice with BTCPay"},
+            status=502,
+        )
+
+    btcpay_status = invoice.get("status")
+
+    status_map = {
+        "New": "invoice_created",
+        "Processing": "processing",
+        "Settled": "settled",
+        "Expired": "expired",
+        "Invalid": "invalid",
+    }
+
+    new_status = status_map.get(btcpay_status)
+
+    if new_status is None:
+        return JsonResponse(
+            {
+                "ok": True,
+                "ignored_status": btcpay_status,
+            }
+        )
+
+    with transaction.atomic():
+        intent = (
+            PaymentIntent.objects
+            .select_for_update()
+            .get(pk=intent.pk)
+        )
+
+        # Never regress a payment that FANZ has already accepted as
+        # settled or fulfilled because an older webhook was redelivered.
+        if (
+            intent.status in {"settled", "fulfilled"}
+            and new_status not in {"settled", "fulfilled"}
+        ):
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "ignored_transition": (
+                        f"{intent.status}->{new_status}"
+                    ),
+                }
+            )
+
+        # Invalid is treated as terminal unless reconciled manually.
+        if intent.status == "invalid" and new_status != "invalid":
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "ignored_transition": (
+                        f"{intent.status}->{new_status}"
+                    ),
+                }
+            )
+
+        intent.status = new_status
+        update_fields = [
+            "status",
+            "updated_at",
+        ]
+
+        if (
+            new_status == "settled"
+            and intent.paid_at is None
+        ):
+            intent.paid_at = timezone.now()
+            update_fields.append("paid_at")
+
+        intent.save(update_fields=update_fields)
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "payment_intent_id": intent.pk,
+            "status": intent.status,
+        }
+    )

@@ -198,6 +198,14 @@ OPENAI_COMPANION_MODEL = os.getenv(
     "gpt-4.1-mini",
 )
 
+
+# Private BTCPay integration
+BTCPAY_URL = os.getenv("BTCPAY_URL", "").rstrip("/")
+BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID", "")
+BTCPAY_API_KEY = os.getenv("BTCPAY_API_KEY", "")
+BTCPAY_WEBHOOK_SECRET = os.getenv("BTCPAY_WEBHOOK_SECRET", "")
+BTCPAY_TIMEOUT = int(os.getenv("BTCPAY_TIMEOUT", "15"))
+
 # Relist Auctions
 AUCTION_RELIST_DAYS = int(
     os.getenv("AUCTION_RELIST_DAYS", 7)
