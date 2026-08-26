@@ -9,28 +9,14 @@ class PaymentFulfillmentError(RuntimeError):
     pass
 
 
-@transaction.atomic
-def fulfill_payment_intent(payment_intent_id):
-    intent = (
-        PaymentIntent.objects
-        .select_for_update()
-        .get(pk=payment_intent_id)
-    )
+def dispatch_payment_fulfillment(intent):
+    """
+    Deliver the FANZ value associated with a settled PaymentIntent.
 
-    # Already completed: safe no-op.
-    if intent.fulfilled_at is not None:
-        return intent, False
-
-    if intent.status != "settled":
-        raise PaymentFulfillmentError(
-            "PaymentIntent must be settled before fulfillment."
-        )
-
-    if not intent.btcpay_invoice_id:
-        raise PaymentFulfillmentError(
-            "PaymentIntent has no BTCPay invoice id."
-        )
-
+    Settlement validation, locking, idempotency, and final fulfillment state
+    are owned by fulfill_payment_intent(). This dispatcher is responsible only
+    for purpose-specific delivery.
+    """
     if intent.purpose == "credit_purchase":
         if intent.user_id is None:
             raise PaymentFulfillmentError(
@@ -61,6 +47,33 @@ def fulfill_payment_intent(payment_intent_id):
         raise PaymentFulfillmentError(
             f"No fulfillment handler for purpose: {intent.purpose}"
         )
+
+
+@transaction.atomic
+def fulfill_payment_intent(payment_intent_id):
+    intent = (
+        PaymentIntent.objects
+        .select_for_update()
+        .get(pk=payment_intent_id)
+    )
+
+    # Already completed: safe no-op.
+    if intent.fulfilled_at is not None:
+        return intent, False
+
+    if intent.status != "settled":
+        raise PaymentFulfillmentError(
+            "PaymentIntent must be settled before fulfillment."
+        )
+
+    # Current payment intents originate from BTCPay.
+    # Keep this invariant until FANZ introduces another settlement source.
+    if not intent.btcpay_invoice_id:
+        raise PaymentFulfillmentError(
+            "PaymentIntent has no BTCPay invoice id."
+        )
+
+    dispatch_payment_fulfillment(intent)
 
     intent.status = "fulfilled"
     intent.fulfilled_at = timezone.now()

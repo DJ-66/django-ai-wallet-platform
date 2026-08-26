@@ -219,3 +219,41 @@ class PaymentFulfillmentTests(TestCase):
                 external_id="btcpay:donation-invoice"
             ).exists()
         )
+
+    def test_unhandled_payment_purpose_is_rejected(self):
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="founder_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="unhandled-purpose-invoice",
+            paid_at=timezone.now(),
+        )
+
+        with self.assertRaises(PaymentFulfillmentError):
+            fulfill_payment_intent(intent.pk)
+
+        intent.refresh_from_db()
+
+        self.assertEqual(intent.status, "settled")
+        self.assertIsNone(intent.fulfilled_at)
+
+    def test_failed_fulfillment_does_not_mark_intent_fulfilled(self):
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="platform_service",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="failed-fulfillment-invoice",
+            paid_at=timezone.now(),
+        )
+
+        with self.assertRaises(PaymentFulfillmentError):
+            fulfill_payment_intent(intent.pk)
+
+        intent.refresh_from_db()
+
+        self.assertEqual(intent.status, "settled")
+        self.assertIsNone(intent.fulfilled_at)
