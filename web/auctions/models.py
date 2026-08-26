@@ -507,6 +507,105 @@ class CreditPurchase(models.Model):
     def __str__(self):
         return f"{self.user} - {self.package} - ${self.amount_paid}"
 
+
+class PaymentIntent(models.Model):
+    PURPOSE_CHOICES = [
+        ("integration_test", "Integration Test"),
+        ("credit_purchase", "Credit Purchase"),
+        ("donation", "Donation"),
+        ("founder_purchase", "Founder Purchase"),
+        ("platform_service", "Platform Service"),
+    ]
+
+    STATUS_CHOICES = [
+        ("created", "Created"),
+        ("invoice_created", "Invoice Created"),
+        ("processing", "Processing"),
+        ("settled", "Settled"),
+        ("expired", "Expired"),
+        ("invalid", "Invalid"),
+        ("fulfilled", "Fulfilled"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="payment_intents",
+    )
+
+    purpose = models.CharField(
+        max_length=32,
+        choices=PURPOSE_CHOICES,
+    )
+
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default="created",
+    )
+
+    amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+    )
+
+    currency = models.CharField(
+        max_length=10,
+        default="USD",
+    )
+
+    btcpay_invoice_id = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
+    btcpay_checkout_link = models.URLField(
+        max_length=500,
+        blank=True,
+    )
+
+    credit_package = models.ForeignKey(
+        "CreditPackage",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="payment_intents",
+    )
+
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    paid_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    fulfilled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return (
+            f"{self.purpose} - {self.amount} {self.currency} "
+            f"- {self.status}"
+        )
+
+
 EVENT_TYPES = [
     ("general", "General"),
     ("promotion", "Promotion"),
