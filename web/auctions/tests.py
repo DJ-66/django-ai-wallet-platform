@@ -329,3 +329,95 @@ class EconomyAssetModelTests(TestCase):
             asset.genesis_supply_base_units,
             21_000_000_000_000_000,
         )
+
+
+
+class EconomyAssetFulfillmentBridgeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="economy-bridge-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="eco2",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Eco2Fanz",
+            symbol="ECO2FANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+        )
+
+    def create_purchase_intent(self):
+        return PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="economy-asset-purchase-invoice",
+            metadata={
+                "economy_asset_id": self.asset.pk,
+                "recipient_address": "0x1234",
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+    def test_settled_purchase_creates_one_pending_delivery(self):
+        intent = self.create_purchase_intent()
+
+        returned, completed = fulfill_payment_intent(intent.pk)
+
+        self.assertFalse(completed)
+        self.assertEqual(returned.status, "settled")
+        self.assertIsNone(returned.fulfilled_at)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        self.assertEqual(delivery.asset, self.asset)
+        self.assertEqual(delivery.status, "pending")
+        self.assertEqual(delivery.recipient_address, "0x1234")
+        self.assertEqual(delivery.amount_base_units, 1_000_000)
+
+        # Retry must reuse the same durable obligation.
+        fulfill_payment_intent(intent.pk)
+
+        self.assertEqual(
+            EconomyAssetDelivery.objects.filter(
+                payment_intent=intent,
+            ).count(),
+            1,
+        )
+
+    def test_invalid_metadata_creates_no_delivery(self):
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="economy-invalid-metadata",
+            metadata={},
+            paid_at=timezone.now(),
+        )
+
+        with self.assertRaises(PaymentFulfillmentError):
+            fulfill_payment_intent(intent.pk)
+
+        intent.refresh_from_db()
+
+        self.assertEqual(intent.status, "settled")
+        self.assertIsNone(intent.fulfilled_at)
+        self.assertFalse(
+            EconomyAssetDelivery.objects.filter(
+                payment_intent=intent,
+            ).exists()
+        )
