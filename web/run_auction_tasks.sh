@@ -3,12 +3,20 @@
 #!/bin/sh
 
 REMINDER_COUNTER=0
+PAYMENT_COUNTER=0
 
 while true
 do
     python manage.py process_auctions
 
     REMINDER_COUNTER=$((REMINDER_COUNTER + 1))
+    PAYMENT_COUNTER=$((PAYMENT_COUNTER + 1))
+
+    # Fulfill settled payments approximately once per minute.
+    if [ "$PAYMENT_COUNTER" -ge 6 ]; then
+        python manage.py fulfill_settled_payments
+        PAYMENT_COUNTER=0
+    fi
 
     # Run reminders every 10 minutes if loop sleeps 10 seconds
     if [ "$REMINDER_COUNTER" -ge 60 ]; then
