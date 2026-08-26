@@ -1,7 +1,11 @@
 from django.db import transaction
 from django.utils import timezone
 
-from .models import PaymentIntent
+from .models import (
+    EconomyAsset,
+    EconomyAssetDelivery,
+    PaymentIntent,
+)
 from .services import process_credit_purchase
 
 
@@ -34,14 +38,72 @@ def dispatch_payment_fulfillment(intent):
             external_id=f"btcpay:{intent.btcpay_invoice_id}",
         )
 
+        return True
+
     elif intent.purpose == "donation":
         # Settlement itself is the fulfillment for a donation.
         # Donations deliberately mint no FANZ Credits.
-        pass
+        return True
 
     elif intent.purpose == "integration_test":
         # Integration tests deliberately have no economic fulfillment.
-        pass
+        return True
+
+    elif intent.purpose == "economy_asset_purchase":
+        metadata = intent.metadata or {}
+
+        try:
+            economy_asset_id = int(metadata["economy_asset_id"])
+            amount_base_units = int(metadata["amount_base_units"])
+            recipient_address = str(metadata["recipient_address"]).strip()
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PaymentFulfillmentError(
+                "Economy asset purchase has invalid fulfillment metadata."
+            ) from exc
+
+        if amount_base_units <= 0:
+            raise PaymentFulfillmentError(
+                "Economy asset purchase amount must be positive."
+            )
+
+        if not recipient_address:
+            raise PaymentFulfillmentError(
+                "Economy asset purchase has no recipient address."
+            )
+
+        try:
+            asset = EconomyAsset.objects.get(
+                pk=economy_asset_id,
+                status=EconomyAsset.STATUS_ACTIVE,
+            )
+        except EconomyAsset.DoesNotExist as exc:
+            raise PaymentFulfillmentError(
+                "Economy asset purchase references no active EconomyAsset."
+            ) from exc
+
+        delivery, created = EconomyAssetDelivery.objects.get_or_create(
+            payment_intent=intent,
+            defaults={
+                "asset": asset,
+                "recipient_address": recipient_address,
+                "amount_base_units": amount_base_units,
+            },
+        )
+
+        if not created:
+            if (
+                delivery.asset_id != asset.pk
+                or delivery.recipient_address != recipient_address
+                or delivery.amount_base_units != amount_base_units
+            ):
+                raise PaymentFulfillmentError(
+                    "Existing economy delivery does not match PaymentIntent metadata."
+                )
+
+        # Delivery is durable but not yet complete.
+        # A separate blockchain processor must confirm it before this
+        # PaymentIntent can transition to fulfilled.
+        return False
 
     else:
         raise PaymentFulfillmentError(
@@ -73,7 +135,10 @@ def fulfill_payment_intent(payment_intent_id):
             "PaymentIntent has no BTCPay invoice id."
         )
 
-    dispatch_payment_fulfillment(intent)
+    fulfillment_complete = dispatch_payment_fulfillment(intent)
+
+    if not fulfillment_complete:
+        return intent, False
 
     intent.status = "fulfilled"
     intent.fulfilled_at = timezone.now()

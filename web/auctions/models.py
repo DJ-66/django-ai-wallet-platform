@@ -515,6 +515,7 @@ class PaymentIntent(models.Model):
         ("donation", "Donation"),
         ("founder_purchase", "Founder Purchase"),
         ("platform_service", "Platform Service"),
+        ("economy_asset_purchase", "Economy Asset Purchase"),
     ]
 
     STATUS_CHOICES = [
