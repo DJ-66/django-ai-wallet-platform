@@ -9,6 +9,9 @@ services:
     environment:
       PORT: 3000
       FANZ_SUI_DB_PATH: /data/fanz-sui.sqlite3
+      FANZ_SUI_MODE: ${FANZ_SUI_MODE:-mock}
+      SUI_NETWORK: ${SUI_NETWORK:-testnet}
+      SUI_GRPC_URL: ${SUI_GRPC_URL:-https://fullnode.testnet.sui.io:443}
     expose:
       - "3000"
     volumes:
