@@ -1,0 +1,6 @@
+[package]
+name = "__PACKAGE_NAME__"
+edition = "2024"
+
+[addresses]
+__PACKAGE_NAME__ = "0x0"

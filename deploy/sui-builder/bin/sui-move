@@ -3,13 +3,41 @@ set -eu
 
 CONFIG_DIR="$(mktemp -d)"
 CONFIG_FILE="${CONFIG_DIR}/client.yaml"
+KEYSTORE_FILE="${CONFIG_DIR}/sui.keystore"
 
 cleanup() {
     rm -rf "$CONFIG_DIR"
 }
 trap cleanup EXIT INT TERM
 
-exec sui \
+# Valid zero-key Sui keystore.
+printf '[]\n' > "$KEYSTORE_FILE"
+chmod 600 "$KEYSTORE_FILE"
+
+# Builder-only client configuration.
+#
+# This deliberately contains:
+# - zero private keys
+# - no active address
+# - testnet environment metadata only
+#
+# Move build/test needs package environment resolution,
+# not signing authority.
+cat > "$CONFIG_FILE" <<EOF
+---
+keystore:
+  File: "${KEYSTORE_FILE}"
+external_keys: ~
+envs:
+  - alias: testnet
+    rpc: "https://fullnode.testnet.sui.io:443"
+    ws: ~
+    basic_auth: ~
+    chain_id: 4c78adac
+active_env: testnet
+active_address: ~
+EOF
+
+exec sui move \
     --client.config "$CONFIG_FILE" \
-    --yes \
-    move "$@"
+    "$@"
