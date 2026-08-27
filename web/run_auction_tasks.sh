@@ -15,6 +15,12 @@ do
     # Fulfill settled payments approximately once per minute.
     if [ "$PAYMENT_COUNTER" -ge 6 ]; then
         python manage.py fulfill_settled_payments
+
+        # Prepare any newly-created economy asset delivery obligations.
+        # External chain submission is handled separately; this currently
+        # advances only pending -> prepared through the private adapter.
+        python manage.py process_pending_economy_deliveries
+
         PAYMENT_COUNTER=0
     fi
 
