@@ -22,6 +22,9 @@ RUN cargo install \
     --tag ${SUI_REV} \
     sui
 
+COPY bin/sui-move /usr/local/bin/sui-move
+RUN chmod 0755 /usr/local/bin/sui-move
+
 WORKDIR /workspace
 
 CMD ["bash"]
