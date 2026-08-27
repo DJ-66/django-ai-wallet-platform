@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+CONFIG_DIR="$(mktemp -d)"
+CONFIG_FILE="${CONFIG_DIR}/client.yaml"
+
+cleanup() {
+    rm -rf "$CONFIG_DIR"
+}
+trap cleanup EXIT INT TERM
+
+exec sui \
+    --client.config "$CONFIG_FILE" \
+    --yes \
+    move "$@"
