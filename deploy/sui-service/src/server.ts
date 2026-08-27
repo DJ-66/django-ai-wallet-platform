@@ -2,10 +2,24 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import express, { NextFunction, Request, Response } from "express";
+import { SuiGrpcClient } from "@mysten/sui/grpc";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { Transaction } from "@mysten/sui/transactions";
 
 const PORT = Number(process.env.PORT || "3000");
 const DB_PATH = process.env.FANZ_SUI_DB_PATH || "/data/fanz-sui.sqlite3";
 const API_TOKEN = process.env.FANZ_SUI_API_TOKEN || "";
+const SUI_MODE = process.env.FANZ_SUI_MODE || "mock";
+const SUI_NETWORK = process.env.SUI_NETWORK || "testnet";
+const SUI_GRPC_URL =
+  process.env.SUI_GRPC_URL ||
+  "https://fullnode.testnet.sui.io:443";
+
+const TESTNET_PREPARE_ENABLED =
+  process.env.FANZ_SUI_TESTNET_PREPARE_ENABLED === "true";
+
+const TESTNET_SUBMIT_ENABLED =
+  process.env.FANZ_SUI_TESTNET_SUBMIT_ENABLED === "true";
 
 if (!API_TOKEN) {
   throw new Error("FANZ_SUI_API_TOKEN is required");
@@ -32,6 +46,8 @@ db.exec(`
     signature TEXT,
     tx_digest TEXT UNIQUE,
     prepared_at TEXT,
+    submitted_at TEXT,
+    confirmed_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -69,6 +85,16 @@ ensureColumn(
   "prepared_at",
   "TEXT",
 );
+ensureColumn(
+  "deliveries",
+  "submitted_at",
+  "TEXT",
+);
+ensureColumn(
+  "deliveries",
+  "confirmed_at",
+  "TEXT",
+);
 
 db.exec(`
   UPDATE deliveries
@@ -92,6 +118,8 @@ type DeliveryRow = DeliveryInput & {
   signature: string | null;
   tx_digest: string | null;
   prepared_at: string | null;
+  submitted_at: string | null;
+  confirmed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -181,6 +209,8 @@ function getDelivery(submissionKey: string): DeliveryRow | undefined {
       signature,
       tx_digest,
       prepared_at,
+      submitted_at,
+      confirmed_at,
       created_at,
       updated_at
     FROM deliveries
@@ -199,6 +229,395 @@ function immutableFieldsMatch(
     existing.amount_base_units === requested.amount_base_units
   );
 }
+
+
+function publicDelivery(row: DeliveryRow) {
+  return {
+    submission_key: row.submission_key,
+    chain: row.chain,
+    coin_type: row.coin_type,
+    recipient_address: row.recipient_address,
+    amount_base_units: row.amount_base_units,
+    state: row.state,
+    sender_address: row.sender_address,
+    tx_digest: row.tx_digest,
+    prepared_at: row.prepared_at,
+    submitted_at: row.submitted_at,
+    confirmed_at: row.confirmed_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+
+function requireTestnetSigner(): Ed25519Keypair {
+  if (SUI_NETWORK !== "testnet") {
+    throw new Error(
+      "Testnet lifecycle requires SUI_NETWORK=testnet"
+    );
+  }
+
+  const secret =
+    process.env.FANZ_SUI_TESTNET_PRIVATE_KEY || "";
+
+  if (!secret) {
+    throw new Error(
+      "FANZ_SUI_TESTNET_PRIVATE_KEY is missing"
+    );
+  }
+
+  return Ed25519Keypair.fromSecretKey(secret);
+}
+
+
+function testnetClient(): SuiGrpcClient {
+  return new SuiGrpcClient({
+    network: "testnet",
+    baseUrl: SUI_GRPC_URL,
+  });
+}
+
+
+async function prepareTestnetProbe(
+  submissionKey: string,
+): Promise<DeliveryRow> {
+  if (!TESTNET_PREPARE_ENABLED) {
+    throw new Error(
+      "Testnet transaction preparation is disabled"
+    );
+  }
+
+  const existing = getDelivery(submissionKey);
+
+  if (
+    existing?.transaction_bytes_b64 &&
+    existing?.signature
+  ) {
+    // Critical invariant:
+    // once signed material exists, NEVER rebuild it.
+    return existing;
+  }
+
+  const keypair = requireTestnetSigner();
+  const sender = keypair.toSuiAddress();
+
+  const amountBaseUnits = "1000000";
+  const coinType = "0x2::sui::SUI";
+  const now = new Date().toISOString();
+
+  if (!existing) {
+    db.prepare(`
+      INSERT INTO deliveries (
+        submission_key,
+        chain,
+        coin_type,
+        recipient_address,
+        amount_base_units,
+        state,
+        sender_address,
+        transaction_bytes_b64,
+        signature,
+        tx_digest,
+        prepared_at,
+        submitted_at,
+        confirmed_at,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        ?, ?, ?, ?, ?, ?,
+        ?, NULL, NULL, NULL,
+        NULL, NULL, NULL, ?, ?
+      )
+    `).run(
+      submissionKey,
+      "sui",
+      coinType,
+      sender,
+      amountBaseUnits,
+      "preparing",
+      sender,
+      now,
+      now,
+    );
+  } else {
+    if (
+      existing.chain !== "sui" ||
+      existing.coin_type !== coinType ||
+      existing.recipient_address !== sender ||
+      existing.amount_base_units !== amountBaseUnits
+    ) {
+      throw new Error(
+        "Existing submission_key has different immutable data"
+      );
+    }
+
+    if (
+      existing.state !== "preparing" &&
+      existing.state !== "prepared"
+    ) {
+      throw new Error(
+        `Cannot prepare delivery in state ${existing.state}`
+      );
+    }
+  }
+
+  const tx = new Transaction();
+  tx.setSender(sender);
+
+  const [coin] = tx.splitCoins(
+    tx.gas,
+    [Number(amountBaseUnits)],
+  );
+
+  tx.transferObjects([coin], sender);
+
+  const client = testnetClient();
+
+  const bytes = await tx.build({
+    client,
+  });
+
+  const signed =
+    await keypair.signTransaction(bytes);
+
+  const bytesB64 =
+    Buffer.from(bytes).toString("base64");
+
+  const preparedAt =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE deliveries
+    SET
+      state = 'prepared',
+      sender_address = ?,
+      transaction_bytes_b64 = ?,
+      signature = ?,
+      prepared_at = ?,
+      updated_at = ?
+    WHERE submission_key = ?
+      AND tx_digest IS NULL
+  `).run(
+    sender,
+    bytesB64,
+    signed.signature,
+    preparedAt,
+    preparedAt,
+    submissionKey,
+  );
+
+  if (update.changes !== 1) {
+    throw new Error(
+      "Prepared transaction journal update failed"
+    );
+  }
+
+  const prepared =
+    getDelivery(submissionKey);
+
+  if (!prepared) {
+    throw new Error(
+      "Prepared delivery disappeared from journal"
+    );
+  }
+
+  return prepared;
+}
+
+
+async function submitPreparedTestnetProbe(
+  submissionKey: string,
+): Promise<DeliveryRow> {
+  if (!TESTNET_SUBMIT_ENABLED) {
+    throw new Error(
+      "Testnet transaction submission is disabled"
+    );
+  }
+
+  const row = getDelivery(submissionKey);
+
+  if (!row) {
+    throw new Error("Delivery not found");
+  }
+
+  if (row.tx_digest) {
+    // Never re-execute a journal entry that already
+    // has an authoritative chain digest.
+    return row;
+  }
+
+  if (row.state !== "prepared") {
+    throw new Error(
+      `Expected prepared state; found ${row.state}`
+    );
+  }
+
+  if (
+    !row.transaction_bytes_b64 ||
+    !row.signature
+  ) {
+    throw new Error(
+      "Prepared transaction material is missing"
+    );
+  }
+
+  const bytes = Buffer.from(
+    row.transaction_bytes_b64,
+    "base64",
+  );
+
+  const result =
+    await testnetClient().executeTransaction({
+      transaction: bytes,
+      signatures: [row.signature],
+      include: {
+        effects: true,
+        balanceChanges: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Sui execution returned no transaction"
+    );
+  }
+
+  const now = new Date().toISOString();
+  const success =
+    transaction.status.success === true;
+
+  const state =
+    success ? "submitted" : "failed";
+
+  const update = db.prepare(`
+    UPDATE deliveries
+    SET
+      state = ?,
+      tx_digest = ?,
+      submitted_at = ?,
+      updated_at = ?
+    WHERE submission_key = ?
+      AND tx_digest IS NULL
+  `).run(
+    state,
+    transaction.digest,
+    now,
+    now,
+    submissionKey,
+  );
+
+  if (update.changes !== 1) {
+    throw new Error(
+      "Submission journal update failed"
+    );
+  }
+
+  const updated =
+    getDelivery(submissionKey);
+
+  if (!updated) {
+    throw new Error(
+      "Submitted delivery disappeared"
+    );
+  }
+
+  return updated;
+}
+
+
+async function reconcileTestnetProbe(
+  submissionKey: string,
+): Promise<DeliveryRow> {
+  const row = getDelivery(submissionKey);
+
+  if (!row) {
+    throw new Error("Delivery not found");
+  }
+
+  if (row.state === "confirmed") {
+    return row;
+  }
+
+  if (!row.tx_digest) {
+    throw new Error(
+      "Delivery has no transaction digest"
+    );
+  }
+
+  const client = testnetClient();
+
+  await client.waitForTransaction({
+    digest: row.tx_digest,
+    timeout: 60_000,
+  });
+
+  const result =
+    await client.getTransaction({
+      digest: row.tx_digest,
+      include: {
+        effects: true,
+        balanceChanges: true,
+        transaction: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Sui reconciliation returned no transaction"
+    );
+  }
+
+  if (transaction.digest !== row.tx_digest) {
+    throw new Error(
+      "Reconciled digest does not match journal"
+    );
+  }
+
+  const success =
+    transaction.status.success === true;
+
+  const state =
+    success ? "confirmed" : "failed";
+
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE deliveries
+    SET
+      state = ?,
+      confirmed_at = ?,
+      updated_at = ?
+    WHERE submission_key = ?
+      AND tx_digest = ?
+  `).run(
+    state,
+    success ? now : null,
+    now,
+    submissionKey,
+    row.tx_digest,
+  );
+
+  const updated =
+    getDelivery(submissionKey);
+
+  if (!updated) {
+    throw new Error(
+      "Reconciled delivery disappeared"
+    );
+  }
+
+  return updated;
+}
+
 
 const app = express();
 
@@ -233,14 +652,14 @@ app.post("/v1/deliveries", (req, res) => {
     if (!immutableFieldsMatch(existing, requested)) {
       res.status(409).json({
         error: "submission_key already exists with different immutable data",
-        delivery: existing,
+        delivery: publicDelivery(existing),
       });
       return;
     }
 
     res.json({
       created: false,
-      delivery: existing,
+      delivery: publicDelivery(existing),
     });
     return;
   }
@@ -270,10 +689,16 @@ app.post("/v1/deliveries", (req, res) => {
       signature,
       tx_digest,
       prepared_at,
+      submitted_at,
+      confirmed_at,
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)
+    VALUES (
+      ?, ?, ?, ?, ?, ?, ?,
+      NULL, NULL, NULL,
+      ?, NULL, NULL, ?, ?
+    )
   `).run(
     requested.submission_key,
     requested.chain,
@@ -289,7 +714,9 @@ app.post("/v1/deliveries", (req, res) => {
 
   res.status(201).json({
     created: true,
-    delivery: getDelivery(requested.submission_key),
+    delivery: publicDelivery(
+      getDelivery(requested.submission_key)!
+    ),
   });
 });
 
@@ -301,8 +728,83 @@ app.get("/v1/deliveries/:submissionKey", (req, res) => {
     return;
   }
 
-  res.json({ delivery });
+  res.json({
+    delivery: publicDelivery(delivery),
+  });
 });
+
+
+app.post(
+  "/v1/testnet/probes/:submissionKey/prepare",
+  async (req, res) => {
+    try {
+      const delivery =
+        await prepareTestnetProbe(
+          req.params.submissionKey,
+        );
+
+      res.json({
+        delivery: publicDelivery(delivery),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "testnet preparation failed",
+      });
+    }
+  },
+);
+
+
+app.post(
+  "/v1/testnet/probes/:submissionKey/submit",
+  async (req, res) => {
+    try {
+      const delivery =
+        await submitPreparedTestnetProbe(
+          req.params.submissionKey,
+        );
+
+      res.json({
+        delivery: publicDelivery(delivery),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "testnet submission failed",
+      });
+    }
+  },
+);
+
+
+app.post(
+  "/v1/testnet/probes/:submissionKey/reconcile",
+  async (req, res) => {
+    try {
+      const delivery =
+        await reconcileTestnetProbe(
+          req.params.submissionKey,
+        );
+
+      res.json({
+        delivery: publicDelivery(delivery),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "testnet reconciliation failed",
+      });
+    }
+  },
+);
+
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`fanz-sui mock adapter listening on ${PORT}`);
