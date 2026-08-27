@@ -1,0 +1,6 @@
+[package]
+name = "fanz_creator_coin"
+edition = "2024"
+
+[addresses]
+fanz_creator_coin = "0x0"
