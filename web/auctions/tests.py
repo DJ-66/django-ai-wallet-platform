@@ -517,3 +517,278 @@ class EconomyAssetRecoveryIdentityTests(TestCase):
         )
 
         self.assertIsNone(delivery.sender_address)
+
+
+SUI_ADAPTER_TEST_SETTINGS = {
+    "FANZ_SUI_URL": "http://fanz-sui.test:3000",
+    "FANZ_SUI_API_TOKEN": "test-sui-token",
+    "FANZ_SUI_TIMEOUT": 10,
+}
+
+
+@override_settings(**SUI_ADAPTER_TEST_SETTINGS)
+class SuiAdapterClientTests(SimpleTestCase):
+    @patch("auctions.sui_adapter.requests.request")
+    def test_prepare_delivery_posts_immutable_payload(self, request):
+        from types import SimpleNamespace
+
+        from auctions.sui_adapter import prepare_delivery
+
+        response = Mock()
+        response.status_code = 201
+        response.json.return_value = {
+            "created": True,
+            "delivery": {
+                "state": "prepared",
+                "sender_address": "mock:sender",
+            },
+        }
+        response.raise_for_status.return_value = None
+        request.return_value = response
+
+        delivery = SimpleNamespace(
+            submission_key="11111111-2222-4333-8444-555555555555",
+            asset=SimpleNamespace(
+                chain="sui",
+                coin_type="mock::lisa::LISAFANZ",
+            ),
+            recipient_address="0x1234",
+            amount_base_units=1_000_000,
+        )
+
+        result = prepare_delivery(delivery)
+
+        self.assertTrue(result["created"])
+
+        args, kwargs = request.call_args
+
+        self.assertEqual(args[0], "POST")
+        self.assertEqual(
+            args[1],
+            "http://fanz-sui.test:3000/v1/deliveries",
+        )
+
+        self.assertEqual(
+            kwargs["json"],
+            {
+                "submission_key":
+                    "11111111-2222-4333-8444-555555555555",
+                "chain": "sui",
+                "coin_type": "mock::lisa::LISAFANZ",
+                "recipient_address": "0x1234",
+                "amount_base_units": "1000000",
+            },
+        )
+
+    @patch("auctions.sui_adapter.requests.request")
+    def test_conflict_has_specific_error(self, request):
+        from auctions.sui_adapter import (
+            SuiAdapterConflict,
+            prepare_delivery,
+        )
+        from types import SimpleNamespace
+
+        response = Mock()
+        response.status_code = 409
+        request.return_value = response
+
+        delivery = SimpleNamespace(
+            submission_key="11111111-2222-4333-8444-555555555555",
+            asset=SimpleNamespace(
+                chain="sui",
+                coin_type="mock::lisa::LISAFANZ",
+            ),
+            recipient_address="0x1234",
+            amount_base_units=1_000_000,
+        )
+
+        with self.assertRaises(SuiAdapterConflict):
+            prepare_delivery(delivery)
+
+    @override_settings(FANZ_SUI_API_TOKEN="")
+    def test_missing_configuration_is_rejected(self):
+        from auctions.sui_adapter import (
+            SuiAdapterError,
+            get_delivery,
+        )
+
+        with self.assertRaises(SuiAdapterError):
+            get_delivery("test-key")
+
+
+class EconomyDeliveryProcessorTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="economy-processor-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="eco4",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Eco4Fanz",
+            symbol="ECO4FANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::eco4::ECO4FANZ",
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="economy-processor-invoice",
+            metadata={
+                "economy_asset_id": self.asset.pk,
+                "recipient_address": "0x1234",
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(self.intent.pk)
+
+        self.delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=self.intent,
+        )
+
+    @patch(
+        "auctions.economy_delivery_services.prepare_delivery"
+    )
+    def test_pending_delivery_becomes_prepared(self, prepare):
+        from auctions.economy_delivery_services import (
+            process_pending_economy_delivery,
+        )
+
+        prepare.return_value = {
+            "created": True,
+            "delivery": {
+                "submission_key":
+                    str(self.delivery.submission_key),
+                "chain": "sui",
+                "coin_type": "mock::eco4::ECO4FANZ",
+                "recipient_address": "0x1234",
+                "amount_base_units": "1000000",
+                "state": "prepared",
+                "sender_address": "mock:sender",
+                "tx_digest": None,
+            },
+        }
+
+        delivery, changed = (
+            process_pending_economy_delivery(
+                self.delivery.pk
+            )
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(delivery.status, "prepared")
+        self.assertEqual(
+            delivery.sender_address,
+            "mock:sender",
+        )
+        self.assertEqual(delivery.attempt_count, 1)
+
+        self.intent.refresh_from_db()
+        self.assertEqual(self.intent.status, "settled")
+        self.assertIsNone(self.intent.fulfilled_at)
+
+    @patch(
+        "auctions.economy_delivery_services.prepare_delivery"
+    )
+    def test_prepared_retry_is_noop(self, prepare):
+        from auctions.economy_delivery_services import (
+            process_pending_economy_delivery,
+        )
+
+        self.delivery.status = "prepared"
+        self.delivery.sender_address = "mock:sender"
+        self.delivery.save(
+            update_fields=[
+                "status",
+                "sender_address",
+                "updated_at",
+            ]
+        )
+
+        delivery, changed = (
+            process_pending_economy_delivery(
+                self.delivery.pk
+            )
+        )
+
+        self.assertFalse(changed)
+        self.assertEqual(delivery.status, "prepared")
+        prepare.assert_not_called()
+
+    @patch(
+        "auctions.economy_delivery_services.prepare_delivery"
+    )
+    def test_adapter_failure_leaves_delivery_pending(self, prepare):
+        from auctions.economy_delivery_services import (
+            EconomyDeliveryError,
+            process_pending_economy_delivery,
+            record_economy_delivery_error,
+        )
+        from auctions.sui_adapter import SuiAdapterError
+
+        prepare.side_effect = SuiAdapterError(
+            "adapter unavailable"
+        )
+
+        with self.assertRaises(EconomyDeliveryError) as ctx:
+            process_pending_economy_delivery(
+                self.delivery.pk
+            )
+
+        record_economy_delivery_error(
+            self.delivery.pk,
+            str(ctx.exception),
+        )
+
+        self.delivery.refresh_from_db()
+
+        self.assertEqual(self.delivery.status, "pending")
+        self.assertEqual(self.delivery.attempt_count, 1)
+        self.assertTrue(self.delivery.last_error)
+
+    @patch(
+        "auctions.economy_delivery_services.prepare_delivery"
+    )
+    def test_remote_immutable_mismatch_is_rejected(self, prepare):
+        from auctions.economy_delivery_services import (
+            EconomyDeliveryError,
+            process_pending_economy_delivery,
+        )
+
+        prepare.return_value = {
+            "created": False,
+            "delivery": {
+                "submission_key":
+                    str(self.delivery.submission_key),
+                "chain": "sui",
+                "coin_type": "mock::eco4::ECO4FANZ",
+                "recipient_address": "0xWRONG",
+                "amount_base_units": "1000000",
+                "state": "prepared",
+                "sender_address": "mock:sender",
+                "tx_digest": None,
+            },
+        }
+
+        with self.assertRaises(EconomyDeliveryError):
+            process_pending_economy_delivery(
+                self.delivery.pk
+            )
+
+        self.delivery.refresh_from_db()
+
+        self.assertEqual(self.delivery.status, "pending")
+        self.assertIsNone(self.delivery.sender_address)
