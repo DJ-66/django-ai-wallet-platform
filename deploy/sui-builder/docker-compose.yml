@@ -1,0 +1,10 @@
+name: fanz-sui-builder
+
+services:
+  builder:
+    build:
+      context: .
+    working_dir: /workspace
+    volumes:
+      - ../../sui:/workspace
+    network_mode: bridge
