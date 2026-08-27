@@ -421,3 +421,99 @@ class EconomyAssetFulfillmentBridgeTests(TestCase):
                 payment_intent=intent,
             ).exists()
         )
+
+
+class EconomyAssetRecoveryIdentityTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="economy-recovery-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="eco3",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Eco3Fanz",
+            symbol="ECO3FANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+        )
+
+    def create_intent(self, invoice_id):
+        return PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=invoice_id,
+            metadata={
+                "economy_asset_id": self.asset.pk,
+                "recipient_address": "0x1234",
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+    def test_deliveries_receive_unique_submission_keys(self):
+        first_intent = self.create_intent("recovery-invoice-1")
+        second_intent = self.create_intent("recovery-invoice-2")
+
+        fulfill_payment_intent(first_intent.pk)
+        fulfill_payment_intent(second_intent.pk)
+
+        first = EconomyAssetDelivery.objects.get(
+            payment_intent=first_intent
+        )
+        second = EconomyAssetDelivery.objects.get(
+            payment_intent=second_intent
+        )
+
+        self.assertIsNotNone(first.submission_key)
+        self.assertIsNotNone(second.submission_key)
+        self.assertNotEqual(
+            first.submission_key,
+            second.submission_key,
+        )
+
+    def test_retry_preserves_submission_key(self):
+        intent = self.create_intent("recovery-retry-invoice")
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent
+        )
+        original_submission_key = delivery.submission_key
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery.refresh_from_db()
+
+        self.assertEqual(
+            delivery.submission_key,
+            original_submission_key,
+        )
+
+        self.assertEqual(
+            EconomyAssetDelivery.objects.filter(
+                payment_intent=intent
+            ).count(),
+            1,
+        )
+
+    def test_sender_address_is_optional(self):
+        intent = self.create_intent("recovery-sender-invoice")
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent
+        )
+
+        self.assertIsNone(delivery.sender_address)
