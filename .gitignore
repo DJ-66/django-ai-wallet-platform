@@ -38,3 +38,6 @@ web/imports/
 
 # Sui / Move generated build artifacts
 sui/**/build/
+
+# Generated creator-coin packages
+sui/generated/
