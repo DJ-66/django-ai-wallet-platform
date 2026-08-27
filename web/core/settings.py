@@ -236,3 +236,12 @@ LOGGING = {
         },
     },
 }
+
+
+# FANZ private Sui chain-adapter service.
+FANZ_SUI_URL = os.getenv(
+    "FANZ_SUI_URL",
+    "http://fanz-sui:3000",
+).rstrip("/")
+FANZ_SUI_API_TOKEN = os.getenv("FANZ_SUI_API_TOKEN", "")
+FANZ_SUI_TIMEOUT = int(os.getenv("FANZ_SUI_TIMEOUT", "10"))
