@@ -1,0 +1,28 @@
+name: ${SUI_PROJECT_NAME:-fanz-sui}
+
+services:
+  sui:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      PORT: 3000
+      FANZ_SUI_DB_PATH: /data/fanz-sui.sqlite3
+    expose:
+      - "3000"
+    volumes:
+      - sui_journal:/data
+    networks:
+      fanz-net:
+        aliases:
+          - fanz-sui
+    restart: unless-stopped
+
+volumes:
+  sui_journal:
+
+networks:
+  fanz-net:
+    external: true
+    name: ${FANZ_NETWORK:-fanz-net}
