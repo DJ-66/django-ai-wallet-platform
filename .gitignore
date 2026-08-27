@@ -35,3 +35,6 @@ web/businesses/import_data/
 
 # Local import datasets .csv
 web/imports/
+
+# Sui / Move generated build artifacts
+sui/**/build/
