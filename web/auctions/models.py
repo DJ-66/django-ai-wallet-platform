@@ -2,6 +2,8 @@ import uuid
 import secrets
 from datetime import timedelta
 from django.conf import settings
+import uuid
+
 from django.db import models
 from django.utils import timezone
 from django.db import models
@@ -2160,14 +2162,14 @@ class EconomyAssetDelivery(models.Model):
     """
 
     STATUS_PENDING = "pending"
-    STATUS_SUBMITTING = "submitting"
+    STATUS_PREPARED = "prepared"
     STATUS_SUBMITTED = "submitted"
     STATUS_CONFIRMED = "confirmed"
     STATUS_FAILED = "failed"
 
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
-        (STATUS_SUBMITTING, "Submitting"),
+        (STATUS_PREPARED, "Prepared"),
         (STATUS_SUBMITTED, "Submitted"),
         (STATUS_CONFIRMED, "Confirmed"),
         (STATUS_FAILED, "Failed"),
@@ -2183,6 +2185,20 @@ class EconomyAssetDelivery(models.Model):
         PaymentIntent,
         on_delete=models.PROTECT,
         related_name="economy_asset_delivery",
+    )
+
+    # Stable idempotency identity shared with the external chain adapter.
+    submission_key = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+
+    # Public sender identity only. Private signing material never belongs here.
+    sender_address = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
     )
 
     recipient_address = models.CharField(
