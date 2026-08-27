@@ -12,6 +12,8 @@ services:
       FANZ_SUI_MODE: ${FANZ_SUI_MODE:-mock}
       SUI_NETWORK: ${SUI_NETWORK:-testnet}
       SUI_GRPC_URL: ${SUI_GRPC_URL:-https://fullnode.testnet.sui.io:443}
+      FANZ_SUI_TESTNET_PREPARE_ENABLED: ${FANZ_SUI_TESTNET_PREPARE_ENABLED:-false}
+      FANZ_SUI_TESTNET_SUBMIT_ENABLED: ${FANZ_SUI_TESTNET_SUBMIT_ENABLED:-false}
     expose:
       - "3000"
     volumes:
