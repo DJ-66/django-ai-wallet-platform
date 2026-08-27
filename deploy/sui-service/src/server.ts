@@ -28,10 +28,53 @@ db.exec(`
     amount_base_units TEXT NOT NULL,
     state TEXT NOT NULL,
     sender_address TEXT,
+    transaction_bytes_b64 TEXT,
+    signature TEXT,
     tx_digest TEXT UNIQUE,
+    prepared_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+`);
+
+function ensureColumn(
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  const columns = db.prepare(
+    `PRAGMA table_info(${table})`
+  ).all() as Array<{ name: string }>;
+
+  if (!columns.some((item) => item.name === column)) {
+    db.exec(
+      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`
+    );
+  }
+}
+
+// Durable schema upgrades for journals created by earlier fanz-sui versions.
+ensureColumn(
+  "deliveries",
+  "transaction_bytes_b64",
+  "TEXT",
+);
+ensureColumn(
+  "deliveries",
+  "signature",
+  "TEXT",
+);
+ensureColumn(
+  "deliveries",
+  "prepared_at",
+  "TEXT",
+);
+
+db.exec(`
+  UPDATE deliveries
+  SET prepared_at = updated_at
+  WHERE state = 'prepared'
+    AND prepared_at IS NULL;
 `);
 
 type DeliveryInput = {
@@ -45,7 +88,10 @@ type DeliveryInput = {
 type DeliveryRow = DeliveryInput & {
   state: string;
   sender_address: string | null;
+  transaction_bytes_b64: string | null;
+  signature: string | null;
   tx_digest: string | null;
+  prepared_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -131,7 +177,10 @@ function getDelivery(submissionKey: string): DeliveryRow | undefined {
       amount_base_units,
       state,
       sender_address,
+      transaction_bytes_b64,
+      signature,
       tx_digest,
+      prepared_at,
       created_at,
       updated_at
     FROM deliveries
@@ -217,11 +266,14 @@ app.post("/v1/deliveries", (req, res) => {
       amount_base_units,
       state,
       sender_address,
+      transaction_bytes_b64,
+      signature,
       tx_digest,
+      prepared_at,
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)
   `).run(
     requested.submission_key,
     requested.chain,
@@ -230,6 +282,7 @@ app.post("/v1/deliveries", (req, res) => {
     requested.amount_base_units,
     "prepared",
     senderAddress,
+    now,
     now,
     now,
   );
