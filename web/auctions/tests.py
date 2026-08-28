@@ -1023,3 +1023,167 @@ class EconomyAssetPublicationTests(TestCase):
             "different-existing-digest",
         )
         self.assertIsNone(self.asset.coin_type)
+
+
+from unittest.mock import patch
+
+from django.test import TestCase
+
+from auctions.economy_asset_supply_services import (
+    EconomyAssetSupplyError,
+    verify_economy_asset_fixed_supply,
+)
+from auctions.models import EconomyAsset, FounderAccount
+
+
+class EconomyAssetSupplyTests(TestCase):
+    def setUp(self):
+        self.founder = FounderAccount.objects.create(
+            handle="lisa",
+            status=FounderAccount.STATUS_AVAILABLE,
+            floor_price_credits=200,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Lisa FANZ",
+            symbol="LISAFANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=21_000_000_000_000_000,
+            coin_type=(
+                "0xce533b8003ab14f2b9215fe8776f01df"
+                "1bfc06f3a546a49421df6a61b947d70c"
+                "::lisa_fanz::LISA_FANZ"
+            ),
+            genesis_tx_digest=(
+                "GLYJQnxgKzrEs1DCv3iRcRqK5CHktkjfvzb6GGaDuutk"
+            ),
+            status=EconomyAsset.STATUS_ACTIVE,
+            metadata={
+                "publication_key": "lisa-prepare-test-v1",
+            },
+        )
+
+        self.remote = {
+            "supply": {
+                "publication_key": "lisa-prepare-test-v1",
+                "coin_type": self.asset.coin_type,
+                "currency_object_id": (
+                    "0x35c0275e1f964cce6aa0597b5fb44e4c"
+                    "894c48787a7cbe7dbe83597249400c7b"
+                ),
+                "decimals": 6,
+                "symbol": "LISAFANZ",
+                "supply_state": "fixed",
+                "supply_base_units": "21000000000000000",
+                "previous_transaction":
+                    self.asset.genesis_tx_digest,
+            }
+        }
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_fixed_supply_is_recorded(
+        self,
+        get_supply,
+    ):
+        get_supply.return_value = self.remote
+
+        asset, changed = verify_economy_asset_fixed_supply(
+            self.asset.pk,
+            "lisa-prepare-test-v1",
+        )
+
+        self.assertTrue(changed)
+
+        asset.refresh_from_db()
+
+        self.assertIsNotNone(asset.supply_fixed_at)
+        self.assertEqual(
+            asset.metadata["currency_object_id"],
+            self.remote["supply"]["currency_object_id"],
+        )
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_fixed_supply_retry_is_idempotent(
+        self,
+        get_supply,
+    ):
+        get_supply.return_value = self.remote
+
+        _, first_changed = verify_economy_asset_fixed_supply(
+            self.asset.pk,
+            "lisa-prepare-test-v1",
+        )
+
+        _, second_changed = verify_economy_asset_fixed_supply(
+            self.asset.pk,
+            "lisa-prepare-test-v1",
+        )
+
+        self.assertTrue(first_changed)
+        self.assertFalse(second_changed)
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_wrong_supply_is_rejected(
+        self,
+        get_supply,
+    ):
+        remote = {
+            "supply": dict(
+                self.remote["supply"],
+                supply_base_units="123",
+            )
+        }
+
+        get_supply.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetSupplyError
+        ):
+            verify_economy_asset_fixed_supply(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+
+        self.assertIsNone(self.asset.supply_fixed_at)
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_non_fixed_supply_is_rejected(
+        self,
+        get_supply,
+    ):
+        remote = {
+            "supply": dict(
+                self.remote["supply"],
+                supply_state="burn_only",
+            )
+        }
+
+        get_supply.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetSupplyError
+        ):
+            verify_economy_asset_fixed_supply(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+
+        self.assertIsNone(self.asset.supply_fixed_at)
