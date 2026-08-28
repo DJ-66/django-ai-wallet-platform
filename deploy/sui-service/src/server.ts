@@ -989,6 +989,157 @@ async function prepareTestnetProbe(
   return prepared;
 }
 
+async function reconcileCreatorPublication(
+  publicationKey: string,
+): Promise<CreatorPublicationRow> {
+  const row =
+    getCreatorPublication(publicationKey);
+
+  if (!row) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (
+    row.state === "confirmed" &&
+    row.package_id &&
+    row.coin_type
+  ) {
+    return row;
+  }
+
+  if (!row.tx_digest) {
+    throw new Error(
+      "Creator publication has no transaction digest"
+    );
+  }
+
+  const client = testnetClient();
+
+  await client.waitForTransaction({
+    digest: row.tx_digest,
+    timeout: 60_000,
+  });
+
+  const result =
+    await client.getTransaction({
+      digest: row.tx_digest,
+      include: {
+        effects: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Sui creator publication reconciliation returned no transaction"
+    );
+  }
+
+  if (transaction.digest !== row.tx_digest) {
+    throw new Error(
+      "Reconciled creator publication digest does not match journal"
+    );
+  }
+
+  if (transaction.status.success !== true) {
+    throw new Error(
+      "Creator publication transaction failed on Sui"
+    );
+  }
+
+  const effects = transaction.effects;
+
+  if (!effects) {
+    throw new Error(
+      "Creator publication transaction has no effects"
+    );
+  }
+
+  if (
+    effects.transactionDigest !==
+    row.tx_digest
+  ) {
+    throw new Error(
+      "Creator publication effects digest does not match journal"
+    );
+  }
+
+  const publishedPackages =
+    effects.changedObjects.filter(
+      (changed) =>
+        changed.outputState === "PackageWrite" &&
+        changed.idOperation === "Created",
+    );
+
+  if (publishedPackages.length !== 1) {
+    throw new Error(
+      `Expected exactly one published package; found ${publishedPackages.length}`
+    );
+  }
+
+  const packageId =
+    publishedPackages[0].objectId;
+
+  const coinType =
+    `${packageId}::${row.module_name}::${row.coin_struct_name}`;
+
+  const now =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      state = 'confirmed',
+      package_id = ?,
+      coin_type = ?,
+      confirmed_at = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND tx_digest = ?
+      AND package_id IS NULL
+      AND coin_type IS NULL
+  `).run(
+    packageId,
+    coinType,
+    now,
+    now,
+    publicationKey,
+    row.tx_digest,
+  );
+
+  if (update.changes !== 1) {
+    const raced =
+      getCreatorPublication(publicationKey);
+
+    if (
+      raced?.state === "confirmed" &&
+      raced.package_id &&
+      raced.coin_type
+    ) {
+      return raced;
+    }
+
+    throw new Error(
+      "Creator publication reconciliation journal update failed"
+    );
+  }
+
+  const confirmed =
+    getCreatorPublication(publicationKey);
+
+  if (!confirmed) {
+    throw new Error(
+      "Confirmed creator publication disappeared from journal"
+    );
+  }
+
+  return confirmed;
+}
 
 async function submitPreparedTestnetProbe(
   submissionKey: string,
@@ -1396,6 +1547,30 @@ app.post("/v1/creator-publications", (req, res) => {
 });
 
 app.post(
+  "/v1/creator-publications/:publicationKey/prepare",
+  async (req, res) => {
+    try {
+      const publication =
+        await prepareCreatorPublication(
+          req.params.publicationKey,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator publication preparation failed",
+      });
+    }
+  },
+);
+
+app.post(
   "/v1/creator-publications/:publicationKey/submit",
   async (req, res) => {
     try {
@@ -1420,11 +1595,11 @@ app.post(
 );
 
 app.post(
-  "/v1/creator-publications/:publicationKey/prepare",
+  "/v1/creator-publications/:publicationKey/reconcile",
   async (req, res) => {
     try {
       const publication =
-        await prepareCreatorPublication(
+        await reconcileCreatorPublication(
           req.params.publicationKey,
         );
 
@@ -1437,7 +1612,7 @@ app.post(
         error:
           error instanceof Error
             ? error.message
-            : "creator publication preparation failed",
+            : "creator publication reconciliation failed",
       });
     }
   },
