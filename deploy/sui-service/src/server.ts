@@ -1310,6 +1310,194 @@ async function recoverCreatorPublication(
   return recovered;
 }
 
+async function getCreatorPublicationSupply(
+  publicationKey: string,
+) {
+  const publication =
+    getCreatorPublication(publicationKey);
+
+  if (!publication) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (publication.state !== "confirmed") {
+    throw new Error(
+      "Creator publication is not confirmed"
+    );
+  }
+
+  if (
+    !publication.coin_type ||
+    !publication.tx_digest
+  ) {
+    throw new Error(
+      "Confirmed creator publication has no on-chain identity"
+    );
+  }
+
+  const client = testnetClient();
+
+  const transactionResult =
+    await client.getTransaction({
+      digest: publication.tx_digest,
+      include: {
+        effects: true,
+        objectTypes: true,
+      },
+    });
+
+  const transaction =
+    transactionResult.Transaction ??
+    transactionResult.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Creator publication transaction not found"
+    );
+  }
+
+  if (
+    transaction.digest !==
+    publication.tx_digest
+  ) {
+    throw new Error(
+      "Creator publication transaction digest mismatch"
+    );
+  }
+
+  if (transaction.status.success !== true) {
+    throw new Error(
+      "Creator publication transaction failed on Sui"
+    );
+  }
+
+  const expectedCurrencyType =
+    `0x0000000000000000000000000000000000000000000000000000000000000002` +
+    `::coin_registry::Currency<${publication.coin_type}>`;
+
+  const currencyObjects =
+    transaction.effects?.changedObjects.filter(
+      (changed) =>
+        changed.outputState === "ObjectWrite" &&
+        changed.idOperation === "Created" &&
+        transaction.objectTypes?.[
+          changed.objectId
+        ] === expectedCurrencyType,
+    ) ?? [];
+
+  if (currencyObjects.length !== 1) {
+    throw new Error(
+      `Expected exactly one creator Currency object; found ${currencyObjects.length}`
+    );
+  }
+
+  const currencyObjectId =
+    currencyObjects[0].objectId;
+
+  const { object } =
+    await client.getObject({
+      objectId: currencyObjectId,
+      include: {
+        json: true,
+        previousTransaction: true,
+      },
+    });
+
+  if (object.type !== expectedCurrencyType) {
+    throw new Error(
+      "Creator Currency object type mismatch"
+    );
+  }
+
+  if (
+    object.previousTransaction !==
+    publication.tx_digest
+  ) {
+    throw new Error(
+      "Creator Currency genesis transaction mismatch"
+    );
+  }
+
+  const json = object.json;
+
+  if (!json) {
+    throw new Error(
+      "Creator Currency object has no JSON representation"
+    );
+  }
+
+  const decimals = json.decimals;
+  const symbol = json.symbol;
+  const supply = json.supply;
+
+  if (
+    typeof decimals !== "number" ||
+    typeof symbol !== "string" ||
+    !supply ||
+    typeof supply !== "object"
+  ) {
+    throw new Error(
+      "Creator Currency object has invalid supply metadata"
+    );
+  }
+
+  const supplyRecord =
+    supply as Record<string, unknown>;
+
+  if (
+    supplyRecord["@variant"] !== "Fixed"
+  ) {
+    throw new Error(
+      "Creator Currency supply is not fixed"
+    );
+  }
+
+  const fixedSupply =
+    supplyRecord["pos0"];
+
+  if (
+    !fixedSupply ||
+    typeof fixedSupply !== "object"
+  ) {
+    throw new Error(
+      "Creator Currency fixed supply value is missing"
+    );
+  }
+
+  const fixedSupplyRecord =
+    fixedSupply as Record<string, unknown>;
+
+  const supplyBaseUnits =
+    fixedSupplyRecord["value"];
+
+  if (
+    typeof supplyBaseUnits !== "string" ||
+    !/^[0-9]+$/.test(supplyBaseUnits)
+  ) {
+    throw new Error(
+      "Creator Currency fixed supply value is invalid"
+    );
+  }
+
+  return {
+    publication_key:
+      publication.publication_key,
+    coin_type:
+      publication.coin_type,
+    currency_object_id:
+      currencyObjectId,
+    decimals,
+    symbol,
+    supply_state: "fixed",
+    supply_base_units:
+      supplyBaseUnits,
+    previous_transaction:
+      object.previousTransaction,
+  };
+}
+
 async function submitPreparedTestnetProbe(
   submissionKey: string,
 ): Promise<DeliveryRow> {
@@ -1812,6 +2000,29 @@ app.post(
           error instanceof Error
             ? error.message
             : "creator publication recovery failed",
+      });
+    }
+  },
+);
+
+app.get(
+  "/v1/creator-publications/:publicationKey/supply",
+  async (req, res) => {
+    try {
+      const supply =
+        await getCreatorPublicationSupply(
+          req.params.publicationKey,
+        );
+
+      res.json({
+        supply,
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator publication supply lookup failed",
       });
     }
   },

@@ -117,3 +117,8 @@ def get_creator_publication(publication_key):
         "GET",
         f"/v1/creator-publications/{publication_key}",
     )
+def get_creator_publication_supply(publication_key):
+    return _request(
+        "GET",
+        f"/v1/creator-publications/{publication_key}/supply",
+    )
