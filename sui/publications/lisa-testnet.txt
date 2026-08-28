@@ -1,0 +1,12 @@
+FANZ Creator Publication
+========================
+
+handle=@lisa
+network=testnet
+
+tx_digest=GLYJQnxgKzrEs1DCv3iRcRqK5CHktkjfvzb6GGaDuutk
+package_id=0xce533b8003ab14f2b9215fe8776f01df1bfc06f3a546a49421df6a61b947d70c
+coin_type=0xce533b8003ab14f2b9215fe8776f01df1bfc06f3a546a49421df6a61b947d70c::lisa_fanz::LISA_FANZ
+
+source_sha256=695e2040445a2a249a52ee91f1a2f6da3f2c4cd559b694834dc0376301312cad
+artifact_sha256=291e7fef5a09d4adb6079f1226daa6045728ab9f0bb3a87984681035332e38ad
