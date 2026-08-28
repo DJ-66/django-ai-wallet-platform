@@ -792,3 +792,234 @@ class EconomyDeliveryProcessorTests(TestCase):
 
         self.assertEqual(self.delivery.status, "pending")
         self.assertIsNone(self.delivery.sender_address)
+
+from unittest.mock import patch
+
+from django.test import TestCase
+
+from auctions.economy_asset_publication_services import (
+    EconomyAssetPublicationError,
+    reconcile_confirmed_creator_publication,
+)
+from auctions.models import EconomyAsset, FounderAccount
+
+
+class EconomyAssetPublicationTests(TestCase):
+    def setUp(self):
+        self.founder = FounderAccount.objects.create(
+            handle="lisa",
+            status=FounderAccount.STATUS_AVAILABLE,
+            floor_price_credits=200,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Lisa FANZ",
+            symbol="LISAFANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=21_000_000_000_000_000,
+            status=EconomyAsset.STATUS_DRAFT,
+        )
+
+        self.package_id = (
+            "0xce533b8003ab14f2b9215fe8776f01df"
+            "1bfc06f3a546a49421df6a61b947d70c"
+        )
+
+        self.tx_digest = (
+            "GLYJQnxgKzrEs1DCv3iRcRqK5CHktkjfvzb6GGaDuutk"
+        )
+
+        self.coin_type = (
+            f"{self.package_id}::lisa_fanz::LISA_FANZ"
+        )
+
+        self.remote = {
+            "publication": {
+                "publication_key": "lisa-prepare-test-v1",
+                "chain": "sui",
+                "module_name": "lisa_fanz",
+                "coin_struct_name": "LISA_FANZ",
+                "state": "confirmed",
+                "tx_digest": self.tx_digest,
+                "package_id": self.package_id,
+                "coin_type": self.coin_type,
+            }
+        }
+
+    @patch(
+        "auctions.economy_asset_publication_services."
+        "get_creator_publication"
+    )
+    def test_confirmed_publication_writes_asset_identity(
+        self,
+        get_publication,
+    ):
+        get_publication.return_value = self.remote
+
+        asset, changed = (
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+        )
+
+        self.assertTrue(changed)
+
+        asset.refresh_from_db()
+
+        self.assertEqual(asset.coin_type, self.coin_type)
+        self.assertEqual(
+            asset.genesis_tx_digest,
+            self.tx_digest,
+        )
+        self.assertEqual(
+            asset.metadata["package_id"],
+            self.package_id,
+        )
+        self.assertEqual(
+            asset.metadata["publication_key"],
+            "lisa-prepare-test-v1",
+        )
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_ACTIVE,
+        )
+        self.assertIsNone(asset.supply_fixed_at)
+
+    @patch(
+        "auctions.economy_asset_publication_services."
+        "get_creator_publication"
+    )
+    def test_confirmed_publication_retry_is_idempotent(
+        self,
+        get_publication,
+    ):
+        get_publication.return_value = self.remote
+
+        _, first_changed = (
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+        )
+
+        _, second_changed = (
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+        )
+
+        self.assertTrue(first_changed)
+        self.assertFalse(second_changed)
+
+    @patch(
+        "auctions.economy_asset_publication_services."
+        "get_creator_publication"
+    )
+    def test_unconfirmed_publication_is_rejected(
+        self,
+        get_publication,
+    ):
+        remote = {
+            "publication": dict(
+                self.remote["publication"],
+                state="submitted",
+            )
+        }
+
+        get_publication.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetPublicationError
+        ):
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+
+        self.assertIsNone(self.asset.coin_type)
+        self.assertIsNone(
+            self.asset.genesis_tx_digest
+        )
+        self.assertEqual(
+            self.asset.status,
+            EconomyAsset.STATUS_DRAFT,
+        )
+    @patch(
+        "auctions.economy_asset_publication_services."
+        "get_creator_publication"
+    )
+    def test_conflicting_existing_coin_type_is_rejected(
+        self,
+        get_publication,
+    ):
+        self.asset.coin_type = (
+            "0xdeadbeef::other_module::OTHER"
+        )
+        self.asset.save(
+            update_fields=[
+                "coin_type",
+                "updated_at",
+            ]
+        )
+
+        get_publication.return_value = self.remote
+
+        with self.assertRaises(
+            EconomyAssetPublicationError
+        ):
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+
+        self.assertEqual(
+            self.asset.coin_type,
+            "0xdeadbeef::other_module::OTHER",
+        )
+        self.assertIsNone(
+            self.asset.genesis_tx_digest
+        )
+
+    @patch(
+        "auctions.economy_asset_publication_services."
+        "get_creator_publication"
+    )
+    def test_conflicting_existing_genesis_digest_is_rejected(
+        self,
+        get_publication,
+    ):
+        self.asset.genesis_tx_digest = (
+            "different-existing-digest"
+        )
+        self.asset.save(
+            update_fields=[
+                "genesis_tx_digest",
+                "updated_at",
+            ]
+        )
+
+        get_publication.return_value = self.remote
+
+        with self.assertRaises(
+            EconomyAssetPublicationError
+        ):
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+
+        self.assertEqual(
+            self.asset.genesis_tx_digest,
+            "different-existing-digest",
+        )
+        self.assertIsNone(self.asset.coin_type)
