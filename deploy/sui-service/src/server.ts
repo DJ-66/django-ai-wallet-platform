@@ -1141,6 +1141,175 @@ async function reconcileCreatorPublication(
   return confirmed;
 }
 
+async function recoverCreatorPublication(
+  publicationKey: string,
+  txDigest: string,
+): Promise<CreatorPublicationRow> {
+  const row =
+    getCreatorPublication(publicationKey);
+
+  if (!row) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (!txDigest) {
+    throw new Error(
+      "Transaction digest is required"
+    );
+  }
+
+  if (
+    row.state === "confirmed" &&
+    row.tx_digest === txDigest &&
+    row.package_id &&
+    row.coin_type
+  ) {
+    return row;
+  }
+
+  if (
+    row.tx_digest &&
+    row.tx_digest !== txDigest
+  ) {
+    throw new Error(
+      "Creator publication already has a different transaction digest"
+    );
+  }
+
+  const client = testnetClient();
+
+  await client.waitForTransaction({
+    digest: txDigest,
+    timeout: 60_000,
+  });
+
+  const result =
+    await client.getTransaction({
+      digest: txDigest,
+      include: {
+        effects: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Sui recovery returned no transaction"
+    );
+  }
+
+  if (transaction.digest !== txDigest) {
+    throw new Error(
+      "Recovered transaction digest does not match requested digest"
+    );
+  }
+
+  if (transaction.status.success !== true) {
+    throw new Error(
+      "Recovered creator publication transaction failed on Sui"
+    );
+  }
+
+  const effects = transaction.effects;
+
+  if (!effects) {
+    throw new Error(
+      "Recovered creator publication has no transaction effects"
+    );
+  }
+
+  if (
+    effects.transactionDigest !==
+    txDigest
+  ) {
+    throw new Error(
+      "Recovered effects digest does not match requested digest"
+    );
+  }
+
+  const publishedPackages =
+    effects.changedObjects.filter(
+      (changed) =>
+        changed.outputState === "PackageWrite" &&
+        changed.idOperation === "Created",
+    );
+
+  if (publishedPackages.length !== 1) {
+    throw new Error(
+      `Expected exactly one published package; found ${publishedPackages.length}`
+    );
+  }
+
+  const packageId =
+    publishedPackages[0].objectId;
+
+  const coinType =
+    `${packageId}::${row.module_name}::${row.coin_struct_name}`;
+
+  const now =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      state = 'confirmed',
+      tx_digest = ?,
+      package_id = ?,
+      coin_type = ?,
+      submitted_at = COALESCE(submitted_at, ?),
+      confirmed_at = COALESCE(confirmed_at, ?),
+      updated_at = ?
+    WHERE publication_key = ?
+      AND (
+        tx_digest IS NULL OR
+        tx_digest = ?
+      )
+  `).run(
+    txDigest,
+    packageId,
+    coinType,
+    now,
+    now,
+    now,
+    publicationKey,
+    txDigest,
+  );
+
+  if (update.changes !== 1) {
+    const raced =
+      getCreatorPublication(publicationKey);
+
+    if (
+      raced?.state === "confirmed" &&
+      raced.tx_digest === txDigest &&
+      raced.package_id === packageId &&
+      raced.coin_type === coinType
+    ) {
+      return raced;
+    }
+
+    throw new Error(
+      "Creator publication recovery journal update failed"
+    );
+  }
+
+  const recovered =
+    getCreatorPublication(publicationKey);
+
+  if (!recovered) {
+    throw new Error(
+      "Recovered creator publication disappeared from journal"
+    );
+  }
+
+  return recovered;
+}
+
 async function submitPreparedTestnetProbe(
   submissionKey: string,
 ): Promise<DeliveryRow> {
@@ -1613,6 +1782,36 @@ app.post(
           error instanceof Error
             ? error.message
             : "creator publication reconciliation failed",
+      });
+    }
+  },
+);
+
+app.post(
+  "/v1/creator-publications/:publicationKey/recover",
+  async (req, res) => {
+    try {
+      const txDigest =
+        typeof req.body?.tx_digest === "string"
+          ? req.body.tx_digest.trim()
+          : "";
+
+      const publication =
+        await recoverCreatorPublication(
+          req.params.publicationKey,
+          txDigest,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator publication recovery failed",
       });
     }
   },
