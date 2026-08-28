@@ -21,6 +21,11 @@ const TESTNET_PREPARE_ENABLED =
 const TESTNET_SUBMIT_ENABLED =
   process.env.FANZ_SUI_TESTNET_SUBMIT_ENABLED === "true";
 
+const TESTNET_PUBLICATION_SUBMIT_ENABLED =
+  process.env.FANZ_SUI_TESTNET_PUBLICATION_SUBMIT_ENABLED === "true";
+
+
+
 if (!API_TOKEN) {
   throw new Error("FANZ_SUI_API_TOKEN is required");
 }
@@ -695,6 +700,120 @@ async function prepareCreatorPublication(
   return prepared;
 }
 
+async function submitPreparedCreatorPublication(
+  publicationKey: string,
+): Promise<CreatorPublicationRow> {
+  if (!TESTNET_PUBLICATION_SUBMIT_ENABLED) {
+    throw new Error(
+      "Testnet creator publication submission is disabled"
+    );
+  }
+
+  const row =
+    getCreatorPublication(publicationKey);
+
+  if (!row) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (row.tx_digest) {
+    // Once the chain returns an authoritative digest,
+    // NEVER execute these bytes again.
+    return row;
+  }
+
+  if (row.state !== "prepared") {
+    throw new Error(
+      `Expected prepared state; found ${row.state}`
+    );
+  }
+
+  if (
+    !row.transaction_bytes_b64 ||
+    !row.signature
+  ) {
+    throw new Error(
+      "Prepared creator publication material is missing"
+    );
+  }
+
+  const bytes = Buffer.from(
+    row.transaction_bytes_b64,
+    "base64",
+  );
+
+  const result =
+    await testnetClient().executeTransaction({
+      transaction: bytes,
+      signatures: [row.signature],
+      include: {
+        effects: true,
+        balanceChanges: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Sui publication execution returned no transaction"
+    );
+  }
+
+  const now = new Date().toISOString();
+
+  const success =
+    transaction.status.success === true;
+
+  const state =
+    success ? "submitted" : "failed";
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      state = ?,
+      tx_digest = ?,
+      submitted_at = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND tx_digest IS NULL
+  `).run(
+    state,
+    transaction.digest,
+    now,
+    now,
+    publicationKey,
+  );
+
+  if (update.changes !== 1) {
+    const raced =
+      getCreatorPublication(publicationKey);
+
+    if (raced?.tx_digest) {
+      return raced;
+    }
+
+    throw new Error(
+      "Creator publication submission journal update failed"
+    );
+  }
+
+  const updated =
+    getCreatorPublication(publicationKey);
+
+  if (!updated) {
+    throw new Error(
+      "Submitted creator publication disappeared from journal"
+    );
+  }
+
+  return updated;
+}
+
 function requireTestnetSigner(): Ed25519Keypair {
   if (SUI_NETWORK !== "testnet") {
     throw new Error(
@@ -1276,6 +1395,29 @@ app.post("/v1/creator-publications", (req, res) => {
   });
 });
 
+app.post(
+  "/v1/creator-publications/:publicationKey/submit",
+  async (req, res) => {
+    try {
+      const publication =
+        await submitPreparedCreatorPublication(
+          req.params.publicationKey,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator publication submission failed",
+      });
+    }
+  },
+);
 
 app.post(
   "/v1/creator-publications/:publicationKey/prepare",
