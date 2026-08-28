@@ -495,6 +495,205 @@ function publicDelivery(row: DeliveryRow) {
   };
 }
 
+async function prepareCreatorPublication(
+  publicationKey: string,
+): Promise<CreatorPublicationRow> {
+  if (!TESTNET_PREPARE_ENABLED) {
+    throw new Error(
+      "Testnet transaction preparation is disabled"
+    );
+  }
+
+  const existing =
+    getCreatorPublication(publicationKey);
+
+  if (!existing) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (
+    existing.transaction_bytes_b64 &&
+    existing.signature
+  ) {
+    // Critical invariant:
+    // once signed publication material exists,
+    // NEVER rebuild it.
+    return existing;
+  }
+
+  if (existing.tx_digest) {
+    throw new Error(
+      "Creator publication already has a transaction digest"
+    );
+  }
+
+  if (
+    existing.state !== "accepted" &&
+    existing.state !== "prepared"
+  ) {
+    throw new Error(
+      `Cannot prepare creator publication in state ${existing.state}`
+    );
+  }
+
+  const keypair = requireTestnetSigner();
+  const sender = keypair.toSuiAddress();
+
+  const modules =
+    JSON.parse(existing.modules_json) as string[];
+
+  const dependencies =
+    JSON.parse(
+      existing.dependency_ids_json
+    ) as string[];
+
+  if (
+    !Array.isArray(modules) ||
+    modules.length === 0 ||
+    !modules.every(
+      (item) =>
+        typeof item === "string" &&
+        item.length > 0,
+    )
+  ) {
+    throw new Error(
+      "Journaled publication modules are invalid"
+    );
+  }
+
+  if (
+    !Array.isArray(dependencies) ||
+    !dependencies.every(
+      (item) => typeof item === "string",
+    )
+  ) {
+    throw new Error(
+      "Journaled publication dependencies are invalid"
+    );
+  }
+
+  const preparingAt =
+    new Date().toISOString();
+
+    const claim = db.prepare(`
+    UPDATE creator_publications
+    SET
+      state = 'preparing',
+      sender_address = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND state = 'accepted'
+      AND tx_digest IS NULL
+      AND transaction_bytes_b64 IS NULL
+      AND signature IS NULL
+  `).run(
+    sender,
+    preparingAt,
+    publicationKey,
+  );
+
+  if (claim.changes !== 1) {
+    const current =
+      getCreatorPublication(publicationKey);
+
+    if (
+      current?.transaction_bytes_b64 &&
+      current?.signature
+    ) {
+      return current;
+    }
+
+    if (current?.state === "preparing") {
+      throw new Error(
+        "Creator publication preparation is already in progress"
+      );
+    }
+
+    throw new Error(
+      "Creator publication could not be claimed for preparation"
+    );
+  }
+
+  const tx = new Transaction();
+
+  tx.setSender(sender);
+
+  const [upgradeCap] = tx.publish({
+    modules,
+    dependencies,
+  });
+
+  tx.transferObjects(
+    [upgradeCap],
+    sender,
+  );
+
+  const client = testnetClient();
+
+  const bytes = await tx.build({
+    client,
+  });
+
+  const signed =
+    await keypair.signTransaction(bytes);
+
+  const bytesB64 =
+    Buffer.from(bytes).toString("base64");
+
+  const preparedAt =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      state = 'prepared',
+      sender_address = ?,
+      transaction_bytes_b64 = ?,
+      signature = ?,
+      prepared_at = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND tx_digest IS NULL
+      AND transaction_bytes_b64 IS NULL
+      AND signature IS NULL
+  `).run(
+    sender,
+    bytesB64,
+    signed.signature,
+    preparedAt,
+    preparedAt,
+    publicationKey,
+  );
+
+  if (update.changes !== 1) {
+    const raced =
+      getCreatorPublication(publicationKey);
+
+    if (
+      raced?.transaction_bytes_b64 &&
+      raced?.signature
+    ) {
+      return raced;
+    }
+
+    throw new Error(
+      "Prepared creator publication journal update failed"
+    );
+  }
+
+  const prepared =
+    getCreatorPublication(publicationKey);
+
+  if (!prepared) {
+    throw new Error(
+      "Prepared creator publication disappeared from journal"
+    );
+  }
+
+  return prepared;
+}
 
 function requireTestnetSigner(): Ed25519Keypair {
   if (SUI_NETWORK !== "testnet") {
@@ -1077,6 +1276,30 @@ app.post("/v1/creator-publications", (req, res) => {
   });
 });
 
+
+app.post(
+  "/v1/creator-publications/:publicationKey/prepare",
+  async (req, res) => {
+    try {
+      const publication =
+        await prepareCreatorPublication(
+          req.params.publicationKey,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator publication preparation failed",
+      });
+    }
+  },
+);
 
 app.get(
   "/v1/creator-publications/:publicationKey",
