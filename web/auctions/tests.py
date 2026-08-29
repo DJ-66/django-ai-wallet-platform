@@ -1669,4 +1669,302 @@ class FounderVendingReservationModelTests(TestCase):
             quoted_at + timedelta(hours=4),
         )
 
+class FounderVendingReservationServiceTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import BidWallet
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="reservationbuyer",
+            password="test-password",
+        )
+
+        self.wallet = BidWallet.objects.create(
+            user=self.user,
+            credits=100_000,
+        )
+
+    def test_reservation_holds_full_budget(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+        )
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="@zoe",
+            budget_credits=50_000,
+        )
+
+        self.wallet.refresh_from_db()
+
+        item = result["item"]
+        hold = result["hold"]
+        memory = result["memory"]
+
+        self.assertEqual(
+            self.wallet.credits,
+            50_000,
+        )
+        self.assertEqual(
+            hold.amount_credits,
+            50_000,
+        )
+        self.assertEqual(
+            item.list_price_credits,
+            46_500,
+        )
+        self.assertEqual(
+            item.status,
+            item.STATUS_QUOTED,
+        )
+        self.assertEqual(
+            memory.list_price_credits,
+            46_500,
+        )
+
+    def test_insufficient_wallet_balance_rejects_reservation(self):
+        from auctions.founder_cart_services import (
+            FounderCartError,
+            create_founder_vending_reservation,
+        )
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+
+        with self.assertRaises(FounderCartError):
+            create_founder_vending_reservation(
+                purchaser=self.user,
+                wanted_handle="zoe",
+                budget_credits=150_000,
+            )
+
+        self.wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            100_000,
+        )
+        self.assertFalse(
+            FounderCartItem.objects.exists()
+        )
+        self.assertFalse(
+            FounderVendingHold.objects.exists()
+        )
+
+    def test_reservation_sets_one_and_four_hour_windows(self):
+        from datetime import timedelta
+
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+        )
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        item = result["item"]
+
+        self.assertEqual(
+            item.reservation_expires_at,
+            item.quoted_at + timedelta(hours=1),
+        )
+        self.assertEqual(
+            item.price_memory_expires_at,
+            item.quoted_at + timedelta(hours=4),
+        )
+
+    def test_lower_budget_cannot_bypass_active_price_memory(self):
+        from auctions.founder_cart_services import (
+            FounderCartError,
+            create_founder_vending_reservation,
+        )
+
+        first = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        self.assertEqual(
+            first["item"].list_price_credits,
+            46_500,
+        )
+
+        # Simulate the first reservation no longer blocking the name,
+        # while its four-hour price memory remains active.
+        from auctions.founder_cart_services import (
+            cancel_founder_vending_reservation,
+        )
+
+        cancel_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=first["item"].pk,
+        )
+
+        with self.assertRaises(FounderCartError):
+            create_founder_vending_reservation(
+                purchaser=self.user,
+                wanted_handle="zoe",
+                budget_credits=10_000,
+            )
+
+    def test_cancel_releases_full_budget(self):
+        from auctions.founder_cart_services import (
+            cancel_founder_vending_reservation,
+            create_founder_vending_reservation,
+        )
+        from auctions.models import FounderVendingHold
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+        self.wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            50_000,
+        )
+        item, changed = (
+            cancel_founder_vending_reservation(
+                purchaser=self.user,
+                cart_item_id=result["item"].pk,
+        )
+        )
+
+        self.wallet.refresh_from_db()
+        result["hold"].refresh_from_db()
+
+        self.assertTrue(changed)
+        self.assertEqual(
+            self.wallet.credits,
+            100_000,
+        )
+        self.assertEqual(
+            item.status,
+            item.STATUS_CANCELLED,
+        )
+        self.assertEqual(
+            result["hold"].status,
+            FounderVendingHold.STATUS_RELEASED,
+        )
+
+
+    def test_cancel_keeps_four_hour_price_memory(self):
+        from auctions.founder_cart_services import (
+            cancel_founder_vending_reservation,
+            create_founder_vending_reservation,
+        )
+        from auctions.models import FounderPriceMemory
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        cancel_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        memory = FounderPriceMemory.objects.get(
+            buyer_root=self.user,
+            wanted_handle="zoe",
+        )
+
+        self.assertEqual(
+            memory.list_price_credits,
+            46_500,
+        )
+
+
+    def test_expiration_releases_full_budget(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            expire_founder_vending_reservations,
+        )
+        from auctions.models import FounderVendingHold
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        item = result["item"]
+
+        future = (
+            item.reservation_expires_at
+            + timedelta(seconds=1)
+        )
+
+        expired_count = (
+            expire_founder_vending_reservations(
+                now=future,
+            )
+        )
+
+        self.wallet.refresh_from_db()
+        item.refresh_from_db()
+        result["hold"].refresh_from_db()
+
+        self.assertEqual(expired_count, 1)
+        self.assertEqual(
+            self.wallet.credits,
+            100_000,
+        )
+        self.assertEqual(
+            item.status,
+            item.STATUS_EXPIRED,
+        )
+        self.assertEqual(
+            result["hold"].status,
+            FounderVendingHold.STATUS_RELEASED,
+        )
+
+    def test_other_buyer_cannot_reserve_same_active_handle(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.founder_cart_services import (
+            FounderCartError,
+            create_founder_vending_reservation,
+        )
+        from auctions.models import BidWallet
+
+        User = get_user_model()
+
+        other = User.objects.create_user(
+            username="otherbuyer",
+            password="test-password",
+        )
+
+        BidWallet.objects.create(
+            user=other,
+            credits=100_000,
+        )
+
+        create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        with self.assertRaises(FounderCartError):
+            create_founder_vending_reservation(
+                purchaser=other,
+                wanted_handle="zoe",
+                budget_credits=50_000,
+            )
+
 # end_py
