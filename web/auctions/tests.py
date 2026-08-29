@@ -1968,3 +1968,95 @@ class FounderVendingReservationServiceTests(TestCase):
             )
 
 # end_py
+
+
+    def test_funded_reservation_marks_founder_reserved(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+        )
+        from auctions.models import FounderAccount
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="@zoe",
+            budget_credits=50_000,
+        )
+
+        founder = result["founder_account"]
+        founder.refresh_from_db()
+
+        self.assertEqual(
+            founder.handle,
+            "zoe",
+        )
+        self.assertEqual(
+            founder.status,
+            FounderAccount.STATUS_RESERVED,
+        )
+        self.assertIsNone(
+            founder.owner_root_id
+        )
+
+    def test_cancel_releases_founder_to_available(self):
+        from auctions.founder_cart_services import (
+            cancel_founder_vending_reservation,
+            create_founder_vending_reservation,
+        )
+        from auctions.models import FounderAccount
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        cancel_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        founder = FounderAccount.objects.get(
+            handle="zoe"
+        )
+
+        self.assertEqual(
+            founder.status,
+            FounderAccount.STATUS_AVAILABLE,
+        )
+        self.assertIsNone(
+            founder.owner_root_id
+        )
+
+    def test_expiration_releases_founder_to_available(self):
+        from datetime import timedelta
+
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            expire_founder_vending_reservations,
+        )
+        from auctions.models import FounderAccount
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        expire_founder_vending_reservations(
+            now=(
+                result["item"].reservation_expires_at
+                + timedelta(seconds=1)
+            ),
+        )
+
+        founder = FounderAccount.objects.get(
+            handle="zoe"
+        )
+
+        self.assertEqual(
+            founder.status,
+            FounderAccount.STATUS_AVAILABLE,
+        )
+        self.assertIsNone(
+            founder.owner_root_id
+        )
