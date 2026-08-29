@@ -8,6 +8,7 @@ from .founder_vending import (
 )
 from .models import (
     BidWallet,
+    FounderAccount,
     FounderCart,
     FounderCartItem,
     FounderListing,
@@ -173,6 +174,31 @@ def create_founder_vending_reservation(
             f"@{identity.handle} is temporarily reserved."
         )
 
+    founder = (
+        FounderAccount.objects
+        .select_for_update()
+        .filter(
+            handle=identity.handle,
+        )
+        .first()
+    )
+
+    if founder is not None:
+        if founder.owner_root_id is not None:
+            raise FounderCartError(
+                f"@{identity.handle} is already owned."
+            )
+
+        if founder.status not in {
+            FounderAccount.STATUS_AVAILABLE,
+            FounderAccount.STATUS_TREASURY,
+            FounderAccount.STATUS_RESERVED,
+        }:
+            raise FounderCartError(
+                f"@{identity.handle} is not available "
+                "for vending."
+            )
+
     reservation_expires_at = (
         now + FOUNDER_RESERVATION_TTL
     )
@@ -226,6 +252,20 @@ def create_founder_vending_reservation(
 
     item.save()
 
+    if founder is None:
+        founder = FounderAccount.objects.create(
+            handle=identity.handle,
+            status=FounderAccount.STATUS_RESERVED,
+        )
+    else:
+        founder.status = FounderAccount.STATUS_RESERVED
+        founder.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
     hold = FounderVendingHold.objects.create(
         cart_item=item,
         wallet=wallet,
@@ -252,6 +292,7 @@ def create_founder_vending_reservation(
         "memory": memory,
         "identity": identity,
         "buyer_root": buyer_root,
+        "founder_account": founder,
     }
 
 
@@ -315,6 +356,26 @@ def _release_vending_hold(*, item, final_status):
             "updated_at",
         ]
     )
+
+    founder = (
+        FounderAccount.objects
+        .select_for_update()
+        .filter(
+            handle=item.wanted_handle,
+            status=FounderAccount.STATUS_RESERVED,
+            owner_root__isnull=True,
+        )
+        .first()
+    )
+
+    if founder is not None:
+        founder.status = FounderAccount.STATUS_AVAILABLE
+        founder.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
 
     return hold, True
 
