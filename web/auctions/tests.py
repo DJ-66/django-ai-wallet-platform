@@ -2319,3 +2319,263 @@ class FounderVendingReservationServiceTests(TestCase):
         self.assertIsNone(
             founder.owner_root_id
         )
+
+
+class FounderCoinDraftServiceTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import FounderAccount
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="coinbuyer",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="zoe",
+            status=FounderAccount.STATUS_OWNED,
+            owner_root=self.user,
+        )
+
+    def test_owned_founder_with_sui_address_creates_draft(self):
+        from auctions.founder_coin_services import (
+            create_founder_coin_draft,
+        )
+        from auctions.models import EconomyAsset
+
+        asset, created = create_founder_coin_draft(
+            founder_account_id=self.founder.pk,
+            recipient_address=(
+                "0x1234567890abcdef"
+            ),
+        )
+
+        self.assertTrue(created)
+
+        self.assertEqual(
+            asset.founder_account,
+            self.founder,
+        )
+
+        self.assertEqual(
+            asset.name,
+            "ZoeFanz",
+        )
+
+        self.assertEqual(
+            asset.symbol,
+            "ZOEFANZ",
+        )
+
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_DRAFT,
+        )
+
+        self.assertEqual(
+            asset.genesis_supply_base_units,
+            21_000_000_000_000_000,
+        )
+
+        self.assertEqual(
+            asset.decimals,
+            6,
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "generated_package"
+            ],
+            "fanz_creator_zoe",
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "intended_recipient_address"
+            ],
+            "0x1234567890abcdef",
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "issuance_source"
+            ],
+            "founder_vending",
+        )
+
+    def test_missing_sui_address_rejects_direct_draft_creation(self):
+        from auctions.founder_coin_services import (
+            FounderCoinError,
+            create_founder_coin_draft,
+        )
+        from auctions.models import EconomyAsset
+
+        with self.assertRaises(FounderCoinError):
+            create_founder_coin_draft(
+                founder_account_id=self.founder.pk,
+                recipient_address="",
+            )
+
+        self.assertFalse(
+            EconomyAsset.objects.exists()
+        )
+
+    def test_unowned_founder_cannot_create_coin_draft(self):
+        from auctions.founder_coin_services import (
+            FounderCoinError,
+            create_founder_coin_draft,
+        )
+        from auctions.models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        self.founder.owner_root = None
+        self.founder.status = (
+            FounderAccount.STATUS_AVAILABLE
+        )
+        self.founder.save(
+            update_fields=[
+                "owner_root",
+                "status",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(FounderCoinError):
+            create_founder_coin_draft(
+                founder_account_id=self.founder.pk,
+                recipient_address="0xabc",
+            )
+
+        self.assertFalse(
+            EconomyAsset.objects.exists()
+        )
+
+    def test_coin_draft_creation_is_idempotent(self):
+        from auctions.founder_coin_services import (
+            create_founder_coin_draft,
+        )
+        from auctions.models import EconomyAsset
+
+        first, first_created = create_founder_coin_draft(
+            founder_account_id=self.founder.pk,
+            recipient_address="0xabc",
+        )
+
+        second, second_created = create_founder_coin_draft(
+            founder_account_id=self.founder.pk,
+            recipient_address="0xabc",
+        )
+
+        self.assertTrue(first_created)
+        self.assertFalse(second_created)
+
+        self.assertEqual(
+            first.pk,
+            second.pk,
+        )
+
+        self.assertEqual(
+            EconomyAsset.objects.count(),
+            1,
+        )
+
+    def test_existing_draft_rejects_different_sui_recipient(self):
+        from auctions.founder_coin_services import (
+            FounderCoinError,
+            create_founder_coin_draft,
+        )
+
+        create_founder_coin_draft(
+            founder_account_id=self.founder.pk,
+            recipient_address="0xabc",
+        )
+
+        with self.assertRaises(FounderCoinError):
+            create_founder_coin_draft(
+                founder_account_id=self.founder.pk,
+                recipient_address="0xdef",
+            )
+
+    def test_purchased_cart_item_without_sui_address_creates_nothing(self):
+        from auctions.founder_coin_services import (
+            create_coin_draft_for_purchased_cart_item,
+        )
+        from auctions.models import (
+            EconomyAsset,
+            FounderCart,
+            FounderCartItem,
+        )
+
+        cart = FounderCart.objects.create(
+            purchaser=self.user,
+        )
+
+        item = FounderCartItem.objects.create(
+            cart=cart,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+            list_price_credits=46_500,
+            status=FounderCartItem.STATUS_PURCHASED,
+            sui_recipient_address="",
+        )
+
+        asset, created = (
+            create_coin_draft_for_purchased_cart_item(
+                cart_item=item,
+            )
+        )
+
+        self.assertIsNone(asset)
+        self.assertFalse(created)
+
+        self.assertFalse(
+            EconomyAsset.objects.exists()
+        )
+
+    def test_purchased_cart_item_with_sui_address_creates_draft(self):
+        from auctions.founder_coin_services import (
+            create_coin_draft_for_purchased_cart_item,
+        )
+        from auctions.models import (
+            EconomyAsset,
+            FounderCart,
+            FounderCartItem,
+        )
+
+        cart = FounderCart.objects.create(
+            purchaser=self.user,
+        )
+
+        item = FounderCartItem.objects.create(
+            cart=cart,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+            list_price_credits=46_500,
+            status=FounderCartItem.STATUS_PURCHASED,
+            sui_recipient_address="0xabc",
+        )
+
+        asset, created = (
+            create_coin_draft_for_purchased_cart_item(
+                cart_item=item,
+            )
+        )
+
+        self.assertTrue(created)
+
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_DRAFT,
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "intended_recipient_address"
+            ],
+            "0xabc",
+        )
