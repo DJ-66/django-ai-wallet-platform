@@ -2260,3 +2260,181 @@ class EconomyAssetDelivery(models.Model):
             f"{self.asset.symbol} delivery "
             f"#{self.pk} [{self.status}]"
         )
+
+class FounderCart(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_CHECKED_OUT = "checked_out"
+    STATUS_ABANDONED = "abandoned"
+
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Open"),
+        (STATUS_CHECKED_OUT, "Checked Out"),
+        (STATUS_ABANDONED, "Abandoned"),
+    ]
+
+    purchaser = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="founder_carts",
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_OPEN,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"Founder cart #{self.pk} "
+            f"for @{self.purchaser.username}"
+        )
+
+
+class FounderCartItem(models.Model):
+    MODE_SELF = "self"
+    MODE_GIFT = "gift"
+
+    MODE_CHOICES = [
+        (MODE_SELF, "For Me"),
+        (MODE_GIFT, "Send as Gift"),
+    ]
+
+    STATUS_PENDING = "pending"
+    STATUS_AVAILABLE = "available"
+    STATUS_UNAVAILABLE = "unavailable"
+    STATUS_SWAMP_SUGGESTED = "swamp_suggested"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_UNAVAILABLE, "Unavailable"),
+        (
+            STATUS_SWAMP_SUGGESTED,
+            "Wasteland Suggested",
+        ),
+    ]
+
+    cart = models.ForeignKey(
+        FounderCart,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+
+    wanted_handle = models.CharField(
+        max_length=5,
+    )
+
+    # Buyer-private input. Never expose this as List Price.
+    budget_credits = models.PositiveBigIntegerField()
+
+    # Public offer produced by founder_vending.py.
+    list_price_credits = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    purchase_mode = models.CharField(
+        max_length=8,
+        choices=MODE_CHOICES,
+        default=MODE_SELF,
+    )
+
+    # Optional. No address means Founder purchase is still allowed,
+    # but matching Fanz coin issuance remains dormant.
+    sui_recipient_address = models.CharField(
+        max_length=128,
+        blank=True,
+    )
+
+    gift_recipient_name = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    gift_recipient_email = models.EmailField(
+        blank=True,
+    )
+
+    gift_message = models.TextField(
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=24,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "cart",
+                    "wanted_handle",
+                ],
+                name=(
+                    "unique_founder_handle_per_cart"
+                ),
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    budget_credits__gt=0
+                ),
+                name=(
+                    "founder_cart_item_budget_positive"
+                ),
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        self.wanted_handle = (
+            validate_founder_handle(
+                self.wanted_handle
+            )
+        )
+
+        if (
+            self.purchase_mode == self.MODE_GIFT
+            and not self.gift_recipient_email
+        ):
+            raise ValidationError(
+                "Gift purchases require a recipient email."
+            )
+
+    def save(self, *args, **kwargs):
+        self.wanted_handle = (
+            validate_founder_handle(
+                self.wanted_handle
+            )
+        )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"@{self.wanted_handle} "
+            f"in Founder cart #{self.cart_id}"
+        )

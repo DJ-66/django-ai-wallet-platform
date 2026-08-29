@@ -1274,5 +1274,112 @@ class FounderVendingTests(TestCase):
         )
 
 
+class FounderCartModelTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import FounderCart
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="cartbuyer",
+            password="test-password",
+        )
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.user,
+        )
+
+    def test_founder_cart_can_be_created(self):
+        from auctions.models import FounderCart
+
+        self.assertEqual(
+            self.cart.status,
+            FounderCart.STATUS_OPEN,
+        )
+        self.assertEqual(
+            self.cart.purchaser,
+            self.user,
+        )
+
+    def test_handle_is_normalized_on_save(self):
+        from auctions.models import FounderCartItem
+
+        item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="@ZoE",
+            budget_credits=5000,
+        )
+
+        self.assertEqual(
+            item.wanted_handle,
+            "zoe",
+        )
+
+    def test_same_handle_cannot_appear_twice(self):
+        from django.db import IntegrityError
+
+        from auctions.models import FounderCartItem
+
+        FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="zoe",
+            budget_credits=5000,
+        )
+
+        with self.assertRaises(IntegrityError):
+            FounderCartItem.objects.create(
+                cart=self.cart,
+                wanted_handle="zoe",
+                budget_credits=6000,
+            )
+
+    def test_budget_must_be_positive(self):
+        from django.db import IntegrityError
+
+        from auctions.models import FounderCartItem
+
+        with self.assertRaises(IntegrityError):
+            FounderCartItem.objects.create(
+                cart=self.cart,
+                wanted_handle="mia",
+                budget_credits=0,
+            )
+
+    def test_gift_requires_recipient_email(self):
+        from django.core.exceptions import ValidationError
+
+        from auctions.models import FounderCartItem
+
+        item = FounderCartItem(
+            cart=self.cart,
+            wanted_handle="lily",
+            budget_credits=1000,
+            purchase_mode=FounderCartItem.MODE_GIFT,
+        )
+
+        with self.assertRaises(ValidationError):
+            item.full_clean()
+
+    def test_valid_gift_passes_validation(self):
+        from auctions.models import FounderCartItem
+
+        item = FounderCartItem(
+            cart=self.cart,
+            wanted_handle="@Lily",
+            budget_credits=1000,
+            purchase_mode=FounderCartItem.MODE_GIFT,
+            gift_recipient_name="Jamie",
+            gift_recipient_email="jamie@example.com",
+            gift_message="Enjoy your Founder handle!",
+        )
+
+        item.full_clean()
+
+        self.assertEqual(
+            item.wanted_handle,
+            "lily",
+        )
 
 # end_py
