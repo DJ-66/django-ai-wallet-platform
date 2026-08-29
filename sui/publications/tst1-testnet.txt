@@ -1,0 +1,12 @@
+FANZ Creator Publication
+========================
+
+handle=@tst1
+network=testnet
+
+tx_digest=C4pNfGYk3dPH189e1w9Ssd2ZP2QENMKbc2MzhRPVStmy
+package_id=0x49f6866ef07111814e2f271b0ba752a07c24934d00d72e9f32942c2052dba5cc
+coin_type=0x49f6866ef07111814e2f271b0ba752a07c24934d00d72e9f32942c2052dba5cc::tst1_fanz::TST1_FANZ
+
+source_sha256=7609449f6b7d4b207c0f426879325bc1d6a0282e553391f005ac5f2f4559b4a2
+artifact_sha256=76c3196123e6ec1d11cdbd7ae87a9523744e0dc44b03d82c6658e55b46ab3fb3
