@@ -1505,5 +1505,168 @@ class FounderCartServiceTests(TestCase):
                 purchaser=self.user,
                 wanted_handle="@ZOE",
                 budget_credits=6000,
+          )
+
+
+class FounderVendingReservationModelTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import (
+            BidWallet,
+            FounderCart,
+        )
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="reservebuyer",
+            password="test-password",
+        )
+
+        self.wallet = BidWallet.objects.create(
+            user=self.user,
+            credits=100_000,
+        )
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.user,
+        )
+
+    def test_vending_hold_tracks_full_budget(self):
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+
+        item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+            list_price_credits=46_500,
+            status=FounderCartItem.STATUS_QUOTED,
+        )
+
+        hold = FounderVendingHold.objects.create(
+            cart_item=item,
+            wallet=self.wallet,
+            amount_credits=50_000,
+        )
+
+        self.assertEqual(
+            hold.amount_credits,
+            50_000,
+        )
+        self.assertEqual(
+            hold.status,
+            FounderVendingHold.STATUS_HELD,
+        )
+
+    def test_vending_hold_cannot_be_below_floor(self):
+        from django.db import IntegrityError
+
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+
+        item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="mia",
+            budget_credits=199,
+        )
+
+        with self.assertRaises(IntegrityError):
+            FounderVendingHold.objects.create(
+                cart_item=item,
+                wallet=self.wallet,
+                amount_credits=199,
             )
+
+    def test_price_memory_is_unique_per_buyer_handle(self):
+        from datetime import timedelta
+
+        from django.db import IntegrityError
+        from django.utils import timezone
+
+        from auctions.models import FounderPriceMemory
+
+        expires = timezone.now() + timedelta(hours=4)
+
+        FounderPriceMemory.objects.create(
+            buyer_root=self.user,
+            wanted_handle="zoe",
+            list_price_credits=46_500,
+            expires_at=expires,
+        )
+
+        with self.assertRaises(IntegrityError):
+            FounderPriceMemory.objects.create(
+                buyer_root=self.user,
+                wanted_handle="zoe",
+                list_price_credits=9_300,
+                expires_at=expires,
+            )
+
+    def test_price_memory_normalizes_handle(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from auctions.models import FounderPriceMemory
+
+        memory = FounderPriceMemory.objects.create(
+            buyer_root=self.user,
+            wanted_handle="@ZOE",
+            list_price_credits=46_500,
+            expires_at=(
+                timezone.now()
+                + timedelta(hours=4)
+            ),
+        )
+
+        self.assertEqual(
+            memory.wanted_handle,
+            "zoe",
+        )
+
+    def test_cart_item_supports_quote_expiration_times(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from auctions.models import FounderCartItem
+
+        quoted_at = timezone.now()
+
+        item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+            list_price_credits=46_500,
+            status=FounderCartItem.STATUS_QUOTED,
+            quoted_at=quoted_at,
+            reservation_expires_at=(
+                quoted_at + timedelta(hours=1)
+            ),
+            price_memory_expires_at=(
+                quoted_at + timedelta(hours=4)
+            ),
+        )
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_QUOTED,
+        )
+
+        self.assertEqual(
+            item.reservation_expires_at,
+            quoted_at + timedelta(hours=1),
+        )
+
+        self.assertEqual(
+            item.price_memory_expires_at,
+            quoted_at + timedelta(hours=4),
+        )
+
 # end_py

@@ -2315,6 +2315,10 @@ class FounderCartItem(models.Model):
     STATUS_AVAILABLE = "available"
     STATUS_UNAVAILABLE = "unavailable"
     STATUS_SWAMP_SUGGESTED = "swamp_suggested"
+    STATUS_QUOTED = "quoted"
+    STATUS_PURCHASED = "purchased"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
@@ -2324,6 +2328,10 @@ class FounderCartItem(models.Model):
             STATUS_SWAMP_SUGGESTED,
             "Wasteland Suggested",
         ),
+        (STATUS_QUOTED, "Quoted"),
+        (STATUS_PURCHASED, "Purchased"),
+        (STATUS_EXPIRED, "Expired"),
+        (STATUS_CANCELLED, "Cancelled"),
     ]
 
     cart = models.ForeignKey(
@@ -2375,6 +2383,20 @@ class FounderCartItem(models.Model):
         max_length=24,
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
+    )
+    quoted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    reservation_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    price_memory_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
     )
 
     created_at = models.DateTimeField(
@@ -2437,4 +2459,125 @@ class FounderCartItem(models.Model):
         return (
             f"@{self.wanted_handle} "
             f"in Founder cart #{self.cart_id}"
+        )
+
+class FounderVendingHold(models.Model):
+    STATUS_HELD = "held"
+    STATUS_RELEASED = "released"
+    STATUS_CONSUMED = "consumed"
+
+    STATUS_CHOICES = [
+        (STATUS_HELD, "Held"),
+        (STATUS_RELEASED, "Released"),
+        (STATUS_CONSUMED, "Consumed"),
+    ]
+
+    cart_item = models.OneToOneField(
+        FounderCartItem,
+        on_delete=models.PROTECT,
+        related_name="credit_hold",
+    )
+
+    wallet = models.ForeignKey(
+        BidWallet,
+        on_delete=models.PROTECT,
+        related_name="founder_vending_holds",
+    )
+
+    # The buyer's declared budget, not the List Price.
+    amount_credits = models.PositiveBigIntegerField()
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_HELD,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    amount_credits__gte=FOUNDER_FLOOR_CREDITS
+                ),
+                name=(
+                    "founder_vending_hold_minimum_200_credits"
+                ),
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.amount_credits} cr held for "
+            f"Founder cart item #{self.cart_item_id}"
+        )
+
+
+class FounderPriceMemory(models.Model):
+    buyer_root = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="founder_price_memories",
+    )
+
+    wanted_handle = models.CharField(
+        max_length=4,
+    )
+
+    list_price_credits = models.PositiveBigIntegerField()
+
+    expires_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "buyer_root",
+                    "wanted_handle",
+                ],
+                name=(
+                    "unique_founder_price_memory_per_buyer_handle"
+                ),
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    list_price_credits__gte=FOUNDER_FLOOR_CREDITS
+                ),
+                name=(
+                    "founder_price_memory_minimum_200_credits"
+                ),
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.wanted_handle = validate_founder_handle(
+            self.wanted_handle
+        )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"@{self.wanted_handle} price memory "
+            f"for @{self.buyer_root.username}: "
+            f"{self.list_price_credits} cr"
         )
