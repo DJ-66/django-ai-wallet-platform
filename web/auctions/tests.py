@@ -2060,3 +2060,262 @@ class FounderVendingReservationServiceTests(TestCase):
         self.assertIsNone(
             founder.owner_root_id
         )
+
+
+    def test_purchase_consumes_hold_without_double_charge(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+        from auctions.utils import get_system_wallet
+
+        platform_wallet = get_system_wallet()
+        platform_before = platform_wallet.credits
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        self.wallet.refresh_from_db()
+
+        # Full Budget has already been removed.
+        self.assertEqual(
+            self.wallet.credits,
+            50_000,
+        )
+
+        purchase = purchase_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        self.wallet.refresh_from_db()
+        platform_wallet.refresh_from_db()
+        result["hold"].refresh_from_db()
+        result["item"].refresh_from_db()
+
+        self.assertTrue(
+            purchase["purchased"]
+        )
+
+        # 50,000 was held.
+        # 46,500 was spent.
+        # 3,500 was returned.
+        #
+        # Starting wallet = 100,000.
+        # Final wallet = 53,500.
+        self.assertEqual(
+            self.wallet.credits,
+            53_500,
+        )
+
+        self.assertEqual(
+            platform_wallet.credits,
+            platform_before + 46_500,
+        )
+
+        self.assertEqual(
+            purchase["sale_price_credits"],
+            46_500,
+        )
+
+        self.assertEqual(
+            purchase["refund_credits"],
+            3_500,
+        )
+
+        self.assertEqual(
+            result["hold"].status,
+            FounderVendingHold.STATUS_CONSUMED,
+        )
+
+        self.assertEqual(
+            result["item"].status,
+            FounderCartItem.STATUS_PURCHASED,
+        )
+
+    def test_purchase_transfers_founder_to_buyer(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import FounderAccount
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="@zoe",
+            budget_credits=50_000,
+        )
+
+        purchase_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        founder = FounderAccount.objects.get(
+            handle="zoe"
+        )
+
+        self.assertEqual(
+            founder.status,
+            FounderAccount.STATUS_OWNED,
+        )
+
+        self.assertEqual(
+            founder.owner_root_id,
+            self.user.pk,
+        )
+
+    def test_purchase_creates_treasury_release_ledger(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import FounderOwnershipLedger
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        purchase = purchase_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        ledger = purchase["ledger_record"]
+
+        self.assertEqual(
+            ledger.transfer_type,
+            FounderOwnershipLedger
+            .TRANSFER_TREASURY_RELEASE,
+        )
+
+        self.assertEqual(
+            ledger.sale_price_credits,
+            46_500,
+        )
+
+        self.assertEqual(
+            ledger.buyer_root_id,
+            self.user.pk,
+        )
+
+    def test_purchase_retry_is_idempotent(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import WalletTransaction
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        first = purchase_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        transaction_count = (
+            WalletTransaction.objects.count()
+        )
+
+        second = purchase_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+        )
+
+        self.wallet.refresh_from_db()
+
+        self.assertTrue(
+            first["purchased"]
+        )
+
+        self.assertFalse(
+            second["purchased"]
+        )
+
+        self.assertTrue(
+            second["already_purchased"]
+        )
+
+        self.assertEqual(
+            self.wallet.credits,
+            53_500,
+        )
+
+        self.assertEqual(
+            WalletTransaction.objects.count(),
+            transaction_count,
+        )
+
+    def test_expired_quote_cannot_purchase(self):
+        from datetime import timedelta
+
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import (
+            FounderAccount,
+            FounderVendingHold,
+        )
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+        )
+
+        purchase = purchase_founder_vending_reservation(
+            purchaser=self.user,
+            cart_item_id=result["item"].pk,
+            now=(
+                result["item"].reservation_expires_at
+                + timedelta(seconds=1)
+            ),
+        )
+
+        self.wallet.refresh_from_db()
+        result["hold"].refresh_from_db()
+
+        founder = FounderAccount.objects.get(
+            handle="zoe"
+        )
+
+        self.assertFalse(
+            purchase["purchased"]
+        )
+
+        self.assertTrue(
+            purchase["expired"]
+        )
+
+        self.assertEqual(
+            self.wallet.credits,
+            100_000,
+        )
+
+        self.assertEqual(
+            result["hold"].status,
+            FounderVendingHold.STATUS_RELEASED,
+        )
+
+        self.assertEqual(
+            founder.status,
+            FounderAccount.STATUS_AVAILABLE,
+        )
+
+        self.assertIsNone(
+            founder.owner_root_id
+        )
