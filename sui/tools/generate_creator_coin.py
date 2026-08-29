@@ -6,8 +6,13 @@ import shutil
 from pathlib import Path
 
 
-ROOT = Path("/workspace")
-TEMPLATE_ROOT = ROOT / "templates" / "fanz_creator_coin"
+SUI_ROOT = Path(__file__).resolve().parents[1]
+TEMPLATE_ROOT = (
+    SUI_ROOT
+    / "templates"
+    / "fanz_creator_coin"
+)
+GENERATED_ROOT = SUI_ROOT / "generated"
 
 
 def identifier(value: str) -> str:
@@ -56,7 +61,7 @@ def main():
     #   symbol: LISAFANZ
     coin_type = module_name.upper()
 
-    output = ROOT / "generated" / package_name
+    output = GENERATED_ROOT / package_name
 
     if output.exists():
         raise SystemExit(
