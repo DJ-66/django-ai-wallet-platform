@@ -1382,4 +1382,128 @@ class FounderCartModelTests(TestCase):
             "lily",
         )
 
+class FounderCartServiceTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="vendingbuyer",
+            password="test-password",
+        )
+
+    def test_add_item_calculates_list_price(self):
+        from auctions.founder_cart_services import (
+            add_founder_cart_item,
+        )
+
+        result = add_founder_cart_item(
+            purchaser=self.user,
+            wanted_handle="@Zoe",
+            budget_credits=5000,
+        )
+
+        item = result["item"]
+        identity = result["identity"]
+
+        self.assertEqual(
+            item.wanted_handle,
+            "zoe",
+        )
+        self.assertEqual(
+            item.list_price_credits,
+            4650,
+        )
+        self.assertEqual(
+            identity.display_name,
+            "ZoeFanz",
+        )
+        self.assertEqual(
+            item.status,
+            item.STATUS_PENDING,
+        )
+
+    def test_low_budget_suggests_wasteland(self):
+        from auctions.founder_cart_services import (
+            add_founder_cart_item,
+        )
+
+        result = add_founder_cart_item(
+            purchaser=self.user,
+            wanted_handle="mia",
+            budget_credits=214,
+        )
+
+        item = result["item"]
+
+        self.assertEqual(
+            item.status,
+            item.STATUS_SWAMP_SUGGESTED,
+        )
+        self.assertIsNone(
+            item.list_price_credits
+        )
+
+    def test_gift_requires_email(self):
+        from auctions.founder_cart_services import (
+            FounderCartError,
+            add_founder_cart_item,
+        )
+        from auctions.models import FounderCartItem
+
+        with self.assertRaises(FounderCartError):
+            add_founder_cart_item(
+                purchaser=self.user,
+                wanted_handle="lily",
+                budget_credits=1000,
+                purchase_mode=(
+                    FounderCartItem.MODE_GIFT
+                ),
+            )
+
+    def test_gift_can_be_added_without_sui_address(self):
+        from auctions.founder_cart_services import (
+            add_founder_cart_item,
+        )
+        from auctions.models import FounderCartItem
+
+        result = add_founder_cart_item(
+            purchaser=self.user,
+            wanted_handle="lily",
+            budget_credits=1000,
+            purchase_mode=FounderCartItem.MODE_GIFT,
+            gift_recipient_name="Jamie",
+            gift_recipient_email="jamie@example.com",
+        )
+
+        item = result["item"]
+
+        self.assertEqual(
+            item.purchase_mode,
+            FounderCartItem.MODE_GIFT,
+        )
+        self.assertEqual(
+            item.sui_recipient_address,
+            "",
+        )
+
+    def test_same_handle_cannot_be_added_twice(self):
+        from auctions.founder_cart_services import (
+            FounderCartError,
+            add_founder_cart_item,
+        )
+
+        add_founder_cart_item(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=5000,
+        )
+
+        with self.assertRaises(FounderCartError):
+            add_founder_cart_item(
+                purchaser=self.user,
+                wanted_handle="@ZOE",
+                budget_credits=6000,
+            )
 # end_py
