@@ -2684,3 +2684,195 @@ class FounderCoinDraftServiceTests(TestCase):
             ],
             "0xabc",
         )
+
+
+class PendingFounderCoinPublicationsCommandTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="queuebuyer",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="zoe",
+            status=FounderAccount.STATUS_OWNED,
+            owner_root=self.user,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="ZoeFanz",
+            symbol="ZOEFANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=(
+                21_000_000_000_000_000
+            ),
+            status=EconomyAsset.STATUS_DRAFT,
+            metadata={
+                "generated_package":
+                    "fanz_creator_zoe",
+                "intended_recipient_address":
+                    "0xabc",
+                "issuance_source":
+                    "founder_vending",
+            },
+        )
+
+    def test_pending_command_emits_vending_draft(self):
+        import io
+        import json
+
+        from django.core.management import call_command
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        call_command(
+            "pending_founder_coin_publications",
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        lines = [
+            line
+            for line in stdout.getvalue().splitlines()
+            if line.strip()
+        ]
+
+        self.assertEqual(len(lines), 1)
+
+        record = json.loads(lines[0])
+
+        self.assertEqual(
+            record["economy_asset_id"],
+            self.asset.pk,
+        )
+        self.assertEqual(
+            record["handle"],
+            "zoe",
+        )
+        self.assertEqual(
+            record["name"],
+            "ZoeFanz",
+        )
+        self.assertEqual(
+            record["symbol"],
+            "ZOEFANZ",
+        )
+        self.assertEqual(
+            record["generated_package"],
+            "fanz_creator_zoe",
+        )
+        self.assertEqual(
+            record["recipient_address"],
+            "0xabc",
+        )
+        self.assertEqual(
+            record["publication_key"],
+            (
+                f"founder-{self.asset.pk}-"
+                "zoe-v1"
+            ),
+        )
+
+        self.assertIn(
+            "pending_founder_coin_publications=1",
+            stderr.getvalue(),
+        )
+
+    def test_active_asset_is_not_emitted(self):
+        import io
+
+        from django.core.management import call_command
+        from auctions.models import EconomyAsset
+
+        self.asset.status = EconomyAsset.STATUS_ACTIVE
+        self.asset.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        stdout = io.StringIO()
+
+        call_command(
+            "pending_founder_coin_publications",
+            stdout=stdout,
+        )
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            "",
+        )
+
+    def test_non_vending_draft_is_not_emitted(self):
+        import io
+
+        from django.core.management import call_command
+
+        self.asset.metadata = {
+            "generated_package":
+                "fanz_creator_zoe",
+            "intended_recipient_address":
+                "0xabc",
+        }
+
+        self.asset.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        stdout = io.StringIO()
+
+        call_command(
+            "pending_founder_coin_publications",
+            stdout=stdout,
+        )
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            "",
+        )
+
+    def test_missing_recipient_is_not_emitted(self):
+        import io
+
+        from django.core.management import call_command
+
+        metadata = dict(self.asset.metadata)
+        metadata[
+            "intended_recipient_address"
+        ] = ""
+
+        self.asset.metadata = metadata
+        self.asset.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        stdout = io.StringIO()
+
+        call_command(
+            "pending_founder_coin_publications",
+            stdout=stdout,
+        )
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            "",
+        )
