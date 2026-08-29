@@ -2321,6 +2321,111 @@ class FounderVendingReservationServiceTests(TestCase):
         )
 
 
+
+    def test_purchase_without_sui_creates_no_coin_draft(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import EconomyAsset
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="zoe",
+            budget_credits=50_000,
+            sui_recipient_address="",
+        )
+
+        with self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            purchase = (
+                purchase_founder_vending_reservation(
+                    purchaser=self.user,
+                    cart_item_id=result["item"].pk,
+                )
+            )
+
+        self.assertTrue(
+            purchase["purchased"]
+        )
+
+        self.assertFalse(
+            EconomyAsset.objects.exists()
+        )
+
+    def test_purchase_with_sui_creates_coin_draft_after_commit(self):
+        from auctions.founder_cart_services import (
+            create_founder_vending_reservation,
+            purchase_founder_vending_reservation,
+        )
+        from auctions.models import EconomyAsset
+
+        result = create_founder_vending_reservation(
+            purchaser=self.user,
+            wanted_handle="@zoe",
+            budget_credits=50_000,
+            sui_recipient_address="0xabc",
+        )
+
+        self.assertFalse(
+            EconomyAsset.objects.exists()
+        )
+
+        with self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            purchase = (
+                purchase_founder_vending_reservation(
+                    purchaser=self.user,
+                    cart_item_id=result["item"].pk,
+                )
+            )
+
+        self.assertTrue(
+            purchase["purchased"]
+        )
+
+        asset = EconomyAsset.objects.get(
+            founder_account__handle="zoe"
+        )
+
+        self.assertEqual(
+            asset.name,
+            "ZoeFanz",
+        )
+
+        self.assertEqual(
+            asset.symbol,
+            "ZOEFANZ",
+        )
+
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_DRAFT,
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "generated_package"
+            ],
+            "fanz_creator_zoe",
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "intended_recipient_address"
+            ],
+            "0xabc",
+        )
+
+        self.assertEqual(
+            asset.metadata[
+                "issuance_source"
+            ],
+            "founder_vending",
+        )
+
 class FounderCoinDraftServiceTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model

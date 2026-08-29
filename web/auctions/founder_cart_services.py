@@ -28,6 +28,18 @@ from .utils import get_system_wallet
 class FounderCartError(RuntimeError):
     pass
 
+def _create_post_purchase_coin_draft(cart_item_id):
+    from .founder_coin_services import (
+        create_coin_draft_for_purchased_cart_item,
+    )
+
+    item = FounderCartItem.objects.get(
+        pk=cart_item_id
+    )
+
+    create_coin_draft_for_purchased_cart_item(
+        cart_item=item,
+    )
 
 def _active_listing_for_handle(handle):
     return (
@@ -811,6 +823,15 @@ def purchase_founder_vending_reservation(
             "updated_at",
         ]
     )
+
+    if item.sui_recipient_address:
+        transaction.on_commit(
+            lambda item_id=item.pk: (
+                _create_post_purchase_coin_draft(
+                    item_id
+                )
+            )
+        )
 
     return {
         "purchased": True,
