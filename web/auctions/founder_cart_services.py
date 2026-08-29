@@ -12,14 +12,18 @@ from .models import (
     FounderCart,
     FounderCartItem,
     FounderListing,
+    FounderOwnershipLedger,
     FounderPriceMemory,
     FounderVendingHold,
+    WalletTransaction,
 )
 from .founder_services import normalize_owner_root
+from .founder_ledger import append_founder_ownership_ledger
 
 
 FOUNDER_RESERVATION_TTL = timedelta(hours=1)
 FOUNDER_PRICE_MEMORY_TTL = timedelta(hours=4)
+from .utils import get_system_wallet
 
 class FounderCartError(RuntimeError):
     pass
@@ -562,4 +566,263 @@ def add_founder_cart_item(
         "identity": identity,
         "quote": quote,
         "listing": listing,
+    }
+
+
+@transaction.atomic
+def purchase_founder_vending_reservation(
+    *,
+    purchaser,
+    cart_item_id,
+    now=None,
+):
+    now = now or timezone.now()
+    buyer_root = normalize_owner_root(purchaser)
+
+    item = (
+        FounderCartItem.objects
+        .select_for_update()
+        .select_related("cart__purchaser")
+        .get(pk=cart_item_id)
+    )
+
+    item_buyer_root = normalize_owner_root(
+        item.cart.purchaser
+    )
+
+    if item_buyer_root.pk != buyer_root.pk:
+        raise FounderCartError(
+            "Founder reservation does not belong "
+            "to this buyer."
+        )
+
+    if item.status == FounderCartItem.STATUS_PURCHASED:
+        return {
+            "purchased": False,
+            "already_purchased": True,
+            "expired": False,
+            "item": item,
+        }
+
+    if item.status != FounderCartItem.STATUS_QUOTED:
+        raise FounderCartError(
+            "Founder reservation is not purchasable."
+        )
+
+    if (
+        item.reservation_expires_at is None
+        or item.reservation_expires_at <= now
+    ):
+        _release_vending_hold(
+            item=item,
+            final_status=FounderCartItem.STATUS_EXPIRED,
+        )
+
+        return {
+            "purchased": False,
+            "already_purchased": False,
+            "expired": True,
+            "item": item,
+        }
+
+    hold = (
+        FounderVendingHold.objects
+        .select_for_update()
+        .get(cart_item=item)
+    )
+
+    if hold.status != FounderVendingHold.STATUS_HELD:
+        raise FounderCartError(
+            "Founder reservation funds are not held."
+        )
+
+    list_price = int(
+        item.list_price_credits or 0
+    )
+
+    if list_price < 200:
+        raise FounderCartError(
+            "Founder List Price is invalid."
+        )
+
+    if hold.amount_credits < list_price:
+        raise FounderCartError(
+            "Founder reservation hold is below "
+            "the List Price."
+        )
+
+    founder = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(handle=item.wanted_handle)
+    )
+
+    if founder.status != FounderAccount.STATUS_RESERVED:
+        raise FounderCartError(
+            f"@{founder.handle} is no longer reserved."
+        )
+
+    if founder.owner_root_id is not None:
+        raise FounderCartError(
+            f"@{founder.handle} is already owned."
+        )
+
+    system_wallet = get_system_wallet()
+    platform_user = system_wallet.user
+
+    if buyer_root.pk == platform_user.pk:
+        raise FounderCartError(
+            "The FANZ platform cannot purchase "
+            "Founder vending inventory."
+        )
+
+    wallet_ids = sorted({
+        hold.wallet_id,
+        system_wallet.pk,
+    })
+
+    locked_wallets = {
+        wallet.pk: wallet
+        for wallet in (
+            BidWallet.objects
+            .select_for_update()
+            .filter(pk__in=wallet_ids)
+            .order_by("pk")
+        )
+    }
+
+    buyer_wallet = locked_wallets.get(
+        hold.wallet_id
+    )
+
+    platform_wallet = locked_wallets.get(
+        system_wallet.pk
+    )
+
+    if buyer_wallet is None:
+        raise FounderCartError(
+            "Reserved buyer wallet could not be locked."
+        )
+
+    if platform_wallet is None:
+        raise FounderCartError(
+            "FANZ platform wallet could not be locked."
+        )
+
+    if buyer_wallet.user_id != buyer_root.pk:
+        raise FounderCartError(
+            "Founder hold does not belong "
+            "to the authoritative buyer wallet."
+        )
+
+    refund_credits = (
+        hold.amount_credits - list_price
+    )
+
+    # Full Budget was removed when the reservation
+    # was created. Never debit the buyer again.
+    platform_wallet.credits += list_price
+
+    if refund_credits:
+        buyer_wallet.credits += refund_credits
+
+    platform_wallet.save(
+        update_fields=["credits"]
+    )
+
+    if refund_credits:
+        buyer_wallet.save(
+            update_fields=["credits"]
+        )
+
+    purchase_tx = WalletTransaction.objects.create(
+        sender=buyer_wallet,
+        receiver=platform_wallet,
+        amount=list_price,
+        transaction_type="purchase",
+        reference=(
+            f"Founder vending purchase "
+            f"@{founder.handle}: "
+            f"budget={hold.amount_credits}; "
+            f"price={list_price}; "
+            f"refund={refund_credits}"
+        ),
+    )
+
+    founder.owner_root = buyer_root
+    founder.status = FounderAccount.STATUS_OWNED
+
+    founder.save(
+        update_fields=[
+            "owner_root",
+            "status",
+            "updated_at",
+        ]
+    )
+
+    ledger_record = append_founder_ownership_ledger(
+        founder_account=founder,
+        seller_root=platform_user,
+        buyer_root=buyer_root,
+        transfer_type=(
+            FounderOwnershipLedger
+            .TRANSFER_TREASURY_RELEASE
+        ),
+        sale_price_credits=list_price,
+        platform_fee_credits=0,
+        seller_proceeds_credits=list_price,
+        wallet_transaction_ids=[
+            purchase_tx.pk,
+        ],
+        metadata_snapshot={
+            "seller_username":
+                platform_user.username,
+            "buyer_username":
+                buyer_root.username,
+            "handle":
+                founder.handle,
+            "vending":
+                True,
+            "cart_item_id":
+                item.pk,
+            "budget_credits":
+                hold.amount_credits,
+            "refund_credits":
+                refund_credits,
+        },
+    )
+
+    hold.status = (
+        FounderVendingHold.STATUS_CONSUMED
+    )
+
+    hold.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    item.status = FounderCartItem.STATUS_PURCHASED
+
+    item.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    return {
+        "purchased": True,
+        "already_purchased": False,
+        "expired": False,
+        "item": item,
+        "hold": hold,
+        "founder_account": founder,
+        "buyer_root": buyer_root,
+        "platform_wallet": platform_wallet,
+        "sale_price_credits": list_price,
+        "refund_credits": refund_credits,
+        "wallet_transaction": purchase_tx,
+        "ledger_record": ledger_record,
     }
