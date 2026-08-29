@@ -1187,3 +1187,92 @@ class EconomyAssetSupplyTests(TestCase):
         self.asset.refresh_from_db()
 
         self.assertIsNone(self.asset.supply_fixed_at)
+
+
+class FounderVendingTests(TestCase):
+    def test_founder_coin_identity_is_deterministic(self):
+        from auctions.founder_vending import (
+            founder_coin_identity,
+        )
+
+        identity = founder_coin_identity("@zoe")
+
+        self.assertEqual(identity.handle, "zoe")
+        self.assertEqual(
+            identity.display_name,
+            "ZoeFanz",
+        )
+        self.assertEqual(
+            identity.symbol,
+            "ZOEFANZ",
+        )
+        self.assertEqual(
+            identity.package_name,
+            "fanz_creator_zoe",
+        )
+        self.assertEqual(
+            identity.module_name,
+            "zoe_fanz",
+        )
+        self.assertEqual(
+            identity.coin_struct_name,
+            "ZOE_FANZ",
+        )
+
+    def test_non_founder_handle_is_rejected(self):
+        from django.core.exceptions import ValidationError
+
+        from auctions.founder_vending import (
+            founder_coin_identity,
+        )
+
+        with self.assertRaises(ValidationError):
+            founder_coin_identity("@pepsi")
+
+    def test_budget_above_cutoff_gets_list_price(self):
+        from auctions.founder_vending import (
+            founder_budget_quote,
+        )
+
+        quote = founder_budget_quote(5000)
+
+        self.assertEqual(
+            quote.list_price_credits,
+            4650,
+        )
+        self.assertFalse(
+            quote.suggest_swamp
+        )
+
+    def test_215_budget_hits_founder_floor(self):
+        from auctions.founder_vending import (
+            founder_budget_quote,
+        )
+
+        quote = founder_budget_quote(215)
+
+        self.assertEqual(
+            quote.list_price_credits,
+            200,
+        )
+        self.assertFalse(
+            quote.suggest_swamp
+        )
+
+    def test_214_budget_suggests_swamp(self):
+        from auctions.founder_vending import (
+            founder_budget_quote,
+        )
+
+        quote = founder_budget_quote(214)
+
+        self.assertIsNone(
+            quote.list_price_credits
+        )
+        self.assertTrue(
+            quote.suggest_swamp
+        )
+
+
+
+# end_py
