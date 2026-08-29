@@ -132,22 +132,45 @@ def main():
         "docker",
         "run",
         "--rm",
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
+        "--tmpfs",
+        "/root:rw,nosuid,nodev,noexec,mode=700",
         "-v",
         f"{REPO_ROOT}:/work",
         "-w",
         "/work",
         "mysten/sui-tools:mainnet",
-        "sui",
-        "move",
-        "build",
-        "--path",
+        "sh",
+        "-lc",
         (
-            f"sui/generated/"
+            "if ! sui move build "
+            "--path "
+            f"sui/generated/{package_name} "
+            "--dump-bytecode-as-base64 "
+            "--no-tree-shaking "
+            ">/tmp/sui-build.log 2>&1; then "
+            "sed -E "
+            "'s/(secret recovery phrase[[:space:]]*:[[:space:]]*).*/"
+            "\\1[REDACTED]/' "
+            "/tmp/sui-build.log >&2; "
+            "exit 1; "
+            "fi"
+        ),
+    ])
+
+    run([
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{REPO_ROOT}:/work",
+        "alpine:latest",
+        "chown",
+        "-R",
+        f"{os.getuid()}:{os.getgid()}",
+        (
+            f"/work/sui/generated/"
             f"{package_name}"
         ),
-        "--dump-bytecode-as-base64",
     ])
 
     run([
