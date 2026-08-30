@@ -54,6 +54,11 @@ def main():
     )
 
     parser.add_argument(
+        "--recipient-address",
+        required=True,
+    )
+
+    parser.add_argument(
         "--output",
         required=True,
     )
@@ -120,6 +125,8 @@ def main():
         args.description,
         "--icon-url",
         args.icon_url,
+        "--recipient-address",
+        args.recipient_address,
     ])
 
     run([
@@ -188,6 +195,8 @@ def main():
         package_dir,
         "--publication-key",
         args.publication_key,
+        "--recipient-address",
+        args.recipient_address,
         "--output",
         output_path,
     ])

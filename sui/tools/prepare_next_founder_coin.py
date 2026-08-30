@@ -153,6 +153,8 @@ def prepare_job(job, *, force=False):
         job["name"],
         "--publication-key",
         job["publication_key"],
+        "--recipient-address",
+        job["recipient_address"],
         "--output",
         output,
     ]

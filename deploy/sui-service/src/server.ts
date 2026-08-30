@@ -112,6 +112,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS creator_publications (
     publication_key TEXT PRIMARY KEY,
     chain TEXT NOT NULL,
+    recipient_address TEXT,
     module_name TEXT NOT NULL,
     coin_struct_name TEXT NOT NULL,
     source_sha256 TEXT NOT NULL,
@@ -132,6 +133,12 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 `);
+
+ensureColumn(
+  "creator_publications",
+  "recipient_address",
+  "TEXT",
+);
 
 type DeliveryInput = {
   submission_key: string;
@@ -157,6 +164,7 @@ type DeliveryRow = DeliveryInput & {
 type CreatorPublicationInput = {
   publication_key: string;
   chain: string;
+  recipient_address: string;
   module_name: string;
   coin_struct_name: string;
   source_sha256: string;
@@ -168,6 +176,7 @@ type CreatorPublicationInput = {
 type CreatorPublicationRow = {
   publication_key: string;
   chain: string;
+  recipient_address: string | null;
   module_name: string;
   coin_struct_name: string;
   source_sha256: string;
@@ -271,6 +280,7 @@ function validateCreatorPublication(
   const requiredStrings = [
     "publication_key",
     "chain",
+    "recipient_address",
     "module_name",
     "coin_struct_name",
     "source_sha256",
@@ -288,6 +298,16 @@ function validateCreatorPublication(
 
   if (value.chain !== "sui") {
     throw new Error("chain must be sui");
+  }
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      value.recipient_address as string,
+    )
+  ) {
+    throw new Error(
+      "recipient_address must be a canonical lowercase Sui address"
+    );
   }
 
   if (
@@ -362,6 +382,7 @@ function validateCreatorPublication(
   return {
     publication_key: value.publication_key as string,
     chain: value.chain as string,
+    recipient_address: value.recipient_address as string,
     module_name: value.module_name as string,
     coin_struct_name: value.coin_struct_name as string,
     source_sha256: value.source_sha256 as string,
@@ -379,6 +400,7 @@ function getCreatorPublication(
     SELECT
       publication_key,
       chain,
+      recipient_address,
       module_name,
       coin_struct_name,
       source_sha256,
@@ -411,6 +433,7 @@ function creatorPublicationImmutableFieldsMatch(
 ): boolean {
   return (
     existing.chain === requested.chain &&
+    existing.recipient_address === requested.recipient_address &&
     existing.module_name === requested.module_name &&
     existing.coin_struct_name === requested.coin_struct_name &&
     existing.source_sha256 === requested.source_sha256 &&
@@ -428,6 +451,7 @@ function publicCreatorPublication(
   return {
     publication_key: row.publication_key,
     chain: row.chain,
+    recipient_address: row.recipient_address,
     module_name: row.module_name,
     coin_struct_name: row.coin_struct_name,
     source_sha256: row.source_sha256,
@@ -630,9 +654,15 @@ async function prepareCreatorPublication(
     dependencies,
   });
 
+  if (!existing.recipient_address) {
+    throw new Error(
+      "Creator publication has no recipient address"
+    );
+  }
+
   tx.transferObjects(
     [upgradeCap],
-    sender,
+    existing.recipient_address,
   );
 
   const client = testnetClient();
@@ -1854,6 +1884,7 @@ app.post("/v1/creator-publications", (req, res) => {
     INSERT INTO creator_publications (
       publication_key,
       chain,
+      recipient_address,
       module_name,
       coin_struct_name,
       source_sha256,
@@ -1874,7 +1905,7 @@ app.post("/v1/creator-publications", (req, res) => {
       updated_at
     )
     VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?, ?, ?, ?,
       'accepted',
       NULL, NULL, NULL, NULL,
       NULL, NULL, NULL, NULL, NULL,
@@ -1883,6 +1914,7 @@ app.post("/v1/creator-publications", (req, res) => {
   `).run(
     requested.publication_key,
     requested.chain,
+    requested.recipient_address,
     requested.module_name,
     requested.coin_struct_name,
     requested.source_sha256,

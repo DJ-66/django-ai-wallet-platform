@@ -38,8 +38,31 @@ def main():
         default="Fixed-supply FANZ creator economy coin",
     )
     parser.add_argument("--icon-url", default="")
+    parser.add_argument(
+        "--recipient-address",
+        required=True,
+        help=(
+            "Creator-provided Sui address that receives "
+            "creator-owned genesis assets."
+        ),
+    )
 
     args = parser.parse_args()
+
+    recipient_address = (
+        args.recipient_address
+        .strip()
+        .lower()
+    )
+
+    if not re.fullmatch(
+        r"0x[0-9a-f]{64}",
+        recipient_address,
+    ):
+        raise SystemExit(
+            "Recipient address must be a canonical "
+            "32-byte lowercase Sui address."
+        )
 
     handle = args.handle.lower().lstrip("@")
 
@@ -79,6 +102,7 @@ def main():
         "__NAME__": args.name,
         "__DESCRIPTION__": args.description,
         "__ICON_URL__": args.icon_url,
+        "__RECIPIENT_ADDRESS__": recipient_address,
     }
 
     move_toml = (
