@@ -223,6 +223,16 @@ class Command(BaseCommand):
                 "EconomyAsset is not a Founder vending asset."
             )
 
+        if (
+            asset.coin_type
+            and asset.genesis_tx_digest
+            and asset.supply_fixed_at
+        ):
+            self.stdout.write(
+                "founder_coin_publication=ALREADY_COMPLETE"
+            )
+            return
+
         publication_key = (
             publication_key_for_asset(asset)
         )
