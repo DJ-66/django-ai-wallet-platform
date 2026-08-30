@@ -4048,3 +4048,225 @@ class FounderCoinPublicationProcessorTests(TestCase):
             "founder_coin_publication=COMPLETE",
             stdout,
         )
+
+
+class FounderCoinPublicationWorkerTests(TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from django.contrib.auth import get_user_model
+
+        from auctions.management.commands import (
+            process_founder_coin_publication
+            as processor,
+        )
+
+        User = get_user_model()
+
+        self.owner = User.objects.create_user(
+            username="founder-pub-worker-owner",
+            password="test-password",
+        )
+
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.prepared_root = Path(
+            self.temp_dir.name
+        )
+
+        self.root_patch = patch.object(
+            processor,
+            "PREPARED_ROOT",
+            self.prepared_root,
+        )
+
+        self.root_patch.start()
+
+        self.addCleanup(
+            self.root_patch.stop
+        )
+
+        self.addCleanup(
+            self.temp_dir.cleanup
+        )
+
+    def _create_asset(self, handle):
+        from auctions.models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        founder = FounderAccount.objects.create(
+            handle=handle,
+            status=FounderAccount.STATUS_OWNED,
+            owner_root=self.owner,
+            floor_price_credits=200,
+        )
+
+        return EconomyAsset.objects.create(
+            founder_account=founder,
+            name=f"{handle.title()}Fanz",
+            symbol=f"{handle.upper()}FANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=(
+                21_000_000_000_000_000
+            ),
+            status=EconomyAsset.STATUS_DRAFT,
+            metadata={
+                "issuance_source":
+                    "founder_vending",
+                "generated_package":
+                    f"fanz_creator_{handle}",
+                "intended_recipient_address":
+                    "0xabc",
+            },
+        )
+
+    def _payload_path(self, asset):
+        return (
+            self.prepared_root
+            / (
+                f"founder-{asset.pk}-"
+                f"{asset.founder_account.handle}-v1.json"
+            )
+        )
+
+    def _call(self):
+        import io
+
+        from django.core.management import call_command
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        call_command(
+            "process_next_founder_coin_publication",
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        return (
+            stdout.getvalue(),
+            stderr.getvalue(),
+        )
+
+    def test_empty_queue_is_noop(self):
+        stdout, _ = self._call()
+
+        self.assertIn(
+            "founder_coin_worker=EMPTY",
+            stdout,
+        )
+
+    def test_missing_prepared_payload_waits_safely(self):
+        asset = self._create_asset(
+            "wk01"
+        )
+
+        stdout, _ = self._call()
+
+        self.assertIn(
+            (
+                "founder_coin_worker="
+                "WAITING_FOR_PREPARED_PAYLOAD"
+            ),
+            stdout,
+        )
+
+        self.assertIn(
+            f"asset_id={asset.pk}",
+            stdout,
+        )
+
+        asset.refresh_from_db()
+
+        self.assertEqual(
+            asset.status,
+            asset.STATUS_DRAFT,
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_next_founder_coin_publication."
+        "call_command"
+    )
+    def test_prepared_payload_delegates_to_processor(
+        self,
+        nested_call,
+    ):
+        asset = self._create_asset(
+            "wk02"
+        )
+
+        self._payload_path(
+            asset
+        ).write_text("{}")
+
+        stdout, _ = self._call()
+
+        self.assertIn(
+            "founder_coin_worker=PROCESSING",
+            stdout,
+        )
+
+        nested_call.assert_called_once()
+
+        args, kwargs = nested_call.call_args
+
+        self.assertEqual(
+            args[0],
+            "process_founder_coin_publication",
+        )
+
+        self.assertEqual(
+            kwargs["asset_id"],
+            asset.pk,
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_next_founder_coin_publication."
+        "call_command"
+    )
+    def test_only_oldest_pending_asset_is_processed(
+        self,
+        nested_call,
+    ):
+        first = self._create_asset(
+            "wk03"
+        )
+
+        second = self._create_asset(
+            "wk04"
+        )
+
+        self._payload_path(
+            first
+        ).write_text("{}")
+
+        self._payload_path(
+            second
+        ).write_text("{}")
+
+        stdout, _ = self._call()
+
+        self.assertIn(
+            f"asset_id={first.pk}",
+            stdout,
+        )
+
+        self.assertNotIn(
+            f"asset_id={second.pk}",
+            stdout,
+        )
+
+        nested_call.assert_called_once()
+
+        _, kwargs = nested_call.call_args
+
+        self.assertEqual(
+            kwargs["asset_id"],
+            first.pk,
+        )
