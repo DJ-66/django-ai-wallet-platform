@@ -2876,3 +2876,555 @@ class PendingFounderCoinPublicationsCommandTests(TestCase):
             stdout.getvalue().strip(),
             "",
         )
+
+
+class FounderVendingTiendaViewTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import (
+            BidWallet,
+            FounderAccount,
+        )
+
+        User = get_user_model()
+
+        self.buyer = User.objects.create_user(
+            username="vendingwebbuyer",
+            password="test-password",
+        )
+
+        self.other = User.objects.create_user(
+            username="vendingwebother",
+            password="test-password",
+        )
+
+        self.platform = User.objects.create_user(
+            username="vendingwebplatform",
+            password="test-password",
+        )
+
+        BidWallet.objects.create(
+            user=self.buyer,
+            credits=100_000,
+        )
+
+        BidWallet.objects.create(
+            user=self.other,
+            credits=100_000,
+        )
+
+        BidWallet.objects.create(
+            user=self.platform,
+            credits=0,
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="q7xz",
+            status=FounderAccount.STATUS_AVAILABLE,
+            owner_root=None,
+            floor_price_credits=200,
+        )
+
+        self.client.force_login(self.buyer)
+
+    def _quote(
+        self,
+        *,
+        budget=50_000,
+        purchase_mode="self",
+        sui_address="",
+        gift_name="",
+        gift_email="",
+        gift_message="",
+    ):
+        from django.urls import reverse
+
+        return self.client.post(
+            reverse("quote_founder_vending"),
+            {
+                "wanted_handle": "q7xz",
+                "budget_credits": str(budget),
+                "purchase_mode": purchase_mode,
+                "sui_recipient_address": sui_address,
+                "gift_recipient_name": gift_name,
+                "gift_recipient_email": gift_email,
+                "gift_message": gift_message,
+            },
+        )
+
+    def test_quote_creates_funded_reservation_and_redirects_to_item(self):
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+
+        response = self._quote()
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        hold = FounderVendingHold.objects.get(
+            cart_item=item,
+        )
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_QUOTED,
+        )
+
+        self.assertEqual(
+            hold.status,
+            FounderVendingHold.STATUS_HELD,
+        )
+
+        self.assertEqual(
+            hold.amount_credits,
+            50_000,
+        )
+
+        self.assertIn(
+            f"vending_item={item.pk}",
+            response["Location"],
+        )
+
+    def test_gift_quote_preserves_gift_and_sui_fields(self):
+        from auctions.models import FounderCartItem
+
+        response = self._quote(
+            purchase_mode=FounderCartItem.MODE_GIFT,
+            sui_address="0xabc123",
+            gift_name="Gift Recipient",
+            gift_email="gift@example.com",
+            gift_message="Enjoy your Founder property!",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        self.assertEqual(
+            item.purchase_mode,
+            FounderCartItem.MODE_GIFT,
+        )
+        self.assertEqual(
+            item.sui_recipient_address,
+            "0xabc123",
+        )
+        self.assertEqual(
+            item.gift_recipient_name,
+            "Gift Recipient",
+        )
+        self.assertEqual(
+            item.gift_recipient_email,
+            "gift@example.com",
+        )
+        self.assertEqual(
+            item.gift_message,
+            "Enjoy your Founder property!",
+        )
+
+    def test_other_user_cannot_view_vending_item(self):
+        from auctions.models import FounderCartItem
+        from django.urls import reverse
+
+        self._quote()
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        self.client.force_login(self.other)
+
+        response = self.client.get(
+            reverse("founder_tienda"),
+            {
+                "vending_item": item.pk,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertIsNone(
+            response.context["vending_item"],
+        )
+
+    def test_cancel_releases_hold(self):
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+        from django.urls import reverse
+
+        self._quote()
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        response = self.client.post(
+            reverse(
+                "cancel_founder_vending",
+                args=[item.pk],
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        item.refresh_from_db()
+
+        hold = FounderVendingHold.objects.get(
+            cart_item=item,
+        )
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_CANCELLED,
+        )
+
+        self.assertEqual(
+            hold.status,
+            FounderVendingHold.STATUS_RELEASED,
+        )
+
+    def test_other_user_cannot_cancel_vending_item(self):
+        from auctions.models import FounderCartItem
+        from django.urls import reverse
+
+        self._quote()
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        self.client.force_login(self.other)
+
+        response = self.client.post(
+            reverse(
+                "cancel_founder_vending",
+                args=[item.pk],
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            404,
+        )
+
+        item.refresh_from_db()
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_QUOTED,
+        )
+
+    def test_other_user_cannot_buy_vending_item(self):
+        from auctions.models import FounderCartItem
+        from django.urls import reverse
+
+        self._quote()
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        self.client.force_login(self.other)
+
+        response = self.client.post(
+            reverse(
+                "buy_founder_vending",
+                args=[item.pk],
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            404,
+        )
+
+        item.refresh_from_db()
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_QUOTED,
+        )
+
+    def test_buy_settles_founder_and_refunds_unused_budget(self):
+        from auctions.models import (
+            BidWallet,
+            EconomyAsset,
+            FounderCartItem,
+            FounderVendingHold,
+        )
+        from django.urls import reverse
+
+        self._quote(
+            budget=50_000,
+        )
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        sale_price = item.list_price_credits
+        self.assertIsNotNone(sale_price)
+
+        buyer_wallet = BidWallet.objects.get(
+            user=self.buyer,
+        )
+
+        # The full budget is already held at quote time.
+        self.assertEqual(
+            buyer_wallet.credits,
+            50_000,
+        )
+
+        response = self.client.post(
+            reverse(
+                "buy_founder_vending",
+                args=[item.pk],
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        item.refresh_from_db()
+        self.founder.refresh_from_db()
+        buyer_wallet.refresh_from_db()
+
+        hold = FounderVendingHold.objects.get(
+            cart_item=item,
+        )
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_PURCHASED,
+        )
+
+        self.assertEqual(
+            hold.status,
+            FounderVendingHold.STATUS_CONSUMED,
+        )
+
+        self.assertEqual(
+            self.founder.owner_root,
+            self.buyer,
+        )
+
+        self.assertEqual(
+            buyer_wallet.credits,
+            100_000 - sale_price,
+        )
+
+        self.assertFalse(
+            EconomyAsset.objects.filter(
+                founder_account=self.founder,
+            ).exists()
+        )
+
+    def test_gift_buy_with_sui_creates_creator_coin_draft(self):
+        from auctions.models import (
+            EconomyAsset,
+            FounderCartItem,
+        )
+        from django.urls import reverse
+
+        self._quote(
+            budget=50_000,
+            purchase_mode=FounderCartItem.MODE_GIFT,
+            sui_address="0xabc123",
+            gift_name="Gift Recipient",
+            gift_email="gift@example.com",
+            gift_message="Enjoy your Founder property!",
+        )
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        with self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            response = self.client.post(
+                reverse(
+                    "buy_founder_vending",
+                    args=[item.pk],
+                )
+            )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        item.refresh_from_db()
+        self.founder.refresh_from_db()
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_PURCHASED,
+        )
+
+        self.assertEqual(
+            item.purchase_mode,
+            FounderCartItem.MODE_GIFT,
+        )
+
+        self.assertEqual(
+            item.gift_recipient_name,
+            "Gift Recipient",
+        )
+
+        self.assertEqual(
+            item.gift_recipient_email,
+            "gift@example.com",
+        )
+
+        self.assertEqual(
+            item.gift_message,
+            "Enjoy your Founder property!",
+        )
+
+        self.assertEqual(
+            item.sui_recipient_address,
+            "0xabc123",
+        )
+
+        # Current gift semantics preserve the gift intent,
+        # while Founder ownership still settles to purchaser.
+        self.assertEqual(
+            self.founder.owner_root,
+            self.buyer,
+        )
+
+        asset = EconomyAsset.objects.get(
+            founder_account=self.founder,
+        )
+
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_DRAFT,
+        )
+
+        self.assertEqual(
+            asset.chain,
+            "sui",
+        )
+
+        self.assertEqual(
+            asset.decimals,
+            6,
+        )
+
+        self.assertEqual(
+            asset.genesis_supply_base_units,
+            21_000_000_000_000_000,
+        )
+
+        self.assertEqual(
+            asset.metadata.get(
+                "issuance_source"
+            ),
+            "founder_vending",
+        )
+
+        self.assertEqual(
+            asset.metadata.get(
+                "intended_recipient_address"
+            ),
+            "0xabc123",
+        )
+
+    def test_expired_buy_does_not_purchase_founder(self):
+        from datetime import timedelta
+
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+        from django.urls import reverse
+        from django.utils import timezone
+
+        self._quote(
+            budget=50_000,
+        )
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="q7xz",
+        )
+
+        item.reservation_expires_at = (
+            timezone.now()
+            - timedelta(seconds=1)
+        )
+
+        item.save(
+            update_fields=[
+                "reservation_expires_at",
+                "updated_at",
+            ]
+        )
+
+        response = self.client.post(
+            reverse(
+                "buy_founder_vending",
+                args=[item.pk],
+            )
+        )
+
+        # The view must handle expiration as a normal
+        # business outcome rather than raising KeyError.
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        item.refresh_from_db()
+        self.founder.refresh_from_db()
+
+        hold = FounderVendingHold.objects.get(
+            cart_item=item,
+        )
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_EXPIRED,
+        )
+
+        self.assertEqual(
+            hold.status,
+            FounderVendingHold.STATUS_RELEASED,
+        )
+
+        self.assertIsNone(
+            self.founder.owner_root,
+        )

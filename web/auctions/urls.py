@@ -42,6 +42,21 @@ urlpatterns = [
         name="founder_tienda",
     ),
     path(
+        "founder/tienda/vending/quote/",
+        views.quote_founder_vending,
+        name="quote_founder_vending",
+    ),
+    path(
+        "founder/tienda/vending/<int:item_id>/buy/",
+        views.buy_founder_vending,
+        name="buy_founder_vending",
+    ),
+    path(
+        "founder/tienda/vending/<int:item_id>/cancel/",
+        views.cancel_founder_vending,
+        name="cancel_founder_vending",
+    ),
+    path(
         "founder/tienda/<int:listing_id>/buy/",
         views.buy_founder_tienda_listing,
         name="buy_founder_tienda_listing",
