@@ -3972,28 +3972,64 @@ class FounderCoinPublicationProcessorTests(TestCase):
             stdout,
         )
 
-    @patch(
-        "auctions.management.commands."
-        "process_founder_coin_publication."
-        "verify_economy_asset_fixed_supply"
-    )
-    @patch(
-        "auctions.management.commands."
-        "process_founder_coin_publication."
-        "reconcile_confirmed_creator_publication"
-    )
-    @patch(
-        "auctions.management.commands."
-        "process_founder_coin_publication."
-        "get_remote_publication"
-    )
+    def test_finalized_asset_stops_before_sui(self):
+        from django.utils import timezone
+        from unittest.mock import patch
+
+        self.asset.status = (
+            self.asset.STATUS_ACTIVE
+        )
+        self.asset.coin_type = (
+            "0x123::pc01_fanz::PC01_FANZ"
+        )
+        self.asset.genesis_tx_digest = (
+            "digest-123"
+        )
+        self.asset.supply_fixed_at = (
+            timezone.now()
+        )
+
+        self.asset.save(
+            update_fields=[
+                "status",
+                "coin_type",
+                "genesis_tx_digest",
+                "supply_fixed_at",
+                "updated_at",
+            ]
+        )
+
+        with (
+            patch.object(
+                self.processor,
+                "get_remote_publication",
+            ) as get_remote,
+            patch.object(
+                self.processor,
+                "prepare_creator_publication",
+            ) as prepare_publication,
+            patch.object(
+                self.processor,
+                "submit_creator_publication",
+            ) as submit_publication,
+        ):
+            stdout, _ = self._call()
+
+        self.assertIn(
+            "founder_coin_publication=ALREADY_COMPLETE",
+            stdout,
+        )
+
+        get_remote.assert_not_called()
+        prepare_publication.assert_not_called()
+        submit_publication.assert_not_called()
+
     def test_confirmed_publication_runs_django_reconcile_and_supply_verify(
         self,
-        get_remote,
-        reconcile_django,
-        verify_supply,
     ):
-        get_remote.return_value = {
+        from unittest.mock import patch
+
+        remote = {
             "publication_key":
                 self.publication_key,
             "state":
@@ -4022,17 +4058,30 @@ class FounderCoinPublicationProcessorTests(TestCase):
             ).now()
         )
 
-        reconcile_django.return_value = (
-            self.asset,
-            True,
-        )
-
-        verify_supply.return_value = (
-            self.asset,
-            True,
-        )
-
-        stdout, _ = self._call()
+        with (
+            patch.object(
+                self.processor,
+                "get_remote_publication",
+                return_value=remote,
+            ),
+            patch.object(
+                self.processor,
+                "reconcile_confirmed_creator_publication",
+                return_value=(
+                    self.asset,
+                    True,
+                ),
+            ) as reconcile_django,
+            patch.object(
+                self.processor,
+                "verify_economy_asset_fixed_supply",
+                return_value=(
+                    self.asset,
+                    True,
+                ),
+            ) as verify_supply,
+        ):
+            stdout, _ = self._call()
 
         reconcile_django.assert_called_once_with(
             self.asset.pk,
