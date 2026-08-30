@@ -1,7 +1,5 @@
 #!/bin/sh
 
-#!/bin/sh
-
 REMINDER_COUNTER=0
 PAYMENT_COUNTER=0
 
@@ -21,6 +19,11 @@ do
         # advances only pending -> prepared through the private adapter.
         python manage.py process_pending_economy_deliveries
 
+        # Advance at most one prepared Founder creator-coin
+        # publication per minute. The Sui service remains
+        # authoritative for PREPARE/SUBMIT safety gates.
+        python manage.py process_next_founder_coin_publication
+
         PAYMENT_COUNTER=0
     fi
 
@@ -32,4 +35,3 @@ do
 
     sleep 10
 done
-
