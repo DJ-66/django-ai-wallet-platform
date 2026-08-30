@@ -72,6 +72,7 @@ from .forms import (
 from .models import (
     Event,
     FounderBid,
+    FounderCartItem,
     FounderListing,
     FounderAccount,
     FounderOwnershipLedger,
@@ -109,6 +110,12 @@ from .founder_services import (
     purchase_p2p_fixed_listing,
     cancel_founder_listing,
     get_authoritative_root,
+)
+from .founder_cart_services import (
+    FounderCartError,
+    cancel_founder_vending_reservation,
+    create_founder_vending_reservation,
+    purchase_founder_vending_reservation,
 )
 from .founder_valuation import get_founder_valuation
 from .founder_valuation_i18n import (
@@ -1733,6 +1740,190 @@ def founder_knowledge(request, handle):
 
 
 @login_required
+@require_POST
+def quote_founder_vending(request):
+    wanted_handle = (
+        request.POST.get("wanted_handle") or ""
+    ).strip()
+
+    budget_raw = (
+        request.POST.get("budget_credits") or ""
+    ).strip()
+
+    purchase_mode = (
+        request.POST.get("purchase_mode")
+        or FounderCartItem.MODE_SELF
+    ).strip()
+
+    sui_recipient_address = (
+        request.POST.get("sui_recipient_address")
+        or ""
+    ).strip()
+
+    gift_recipient_name = (
+        request.POST.get("gift_recipient_name")
+        or ""
+    ).strip()
+
+    gift_recipient_email = (
+        request.POST.get("gift_recipient_email")
+        or ""
+    ).strip()
+
+    gift_message = (
+        request.POST.get("gift_message")
+        or ""
+    ).strip()
+
+    try:
+        budget_credits = int(budget_raw)
+
+        result = create_founder_vending_reservation(
+            purchaser=request.user,
+            wanted_handle=wanted_handle,
+            budget_credits=budget_credits,
+            purchase_mode=purchase_mode,
+            sui_recipient_address=sui_recipient_address,
+            gift_recipient_name=gift_recipient_name,
+            gift_recipient_email=gift_recipient_email,
+            gift_message=gift_message,
+        )
+
+    except (TypeError, ValueError):
+        messages.error(
+            request,
+            "Budget must be a whole number of FANZ credits.",
+        )
+
+        return redirect("founder_tienda")
+
+    except FounderCartError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect("founder_tienda")
+
+    item = result["item"]
+
+    messages.success(
+        request,
+        (
+            f"@{item.wanted_handle} reserved. "
+            f"List Price: "
+            f"{item.list_price_credits:,} credits."
+        ),
+    )
+
+    return redirect(
+        f"{reverse('founder_tienda')}"
+        f"?vending_item={item.pk}"
+    )
+
+
+@login_required
+@require_POST
+def buy_founder_vending(request, item_id):
+    item = get_object_or_404(
+        FounderCartItem.objects.select_related(
+            "cart",
+        ),
+        pk=item_id,
+        cart__purchaser=request.user,
+    )
+
+    try:
+        result = purchase_founder_vending_reservation(
+            purchaser=request.user,
+            cart_item_id=item.pk,
+        )
+
+        if result.get("expired"):
+            messages.warning(
+                request,
+                (
+                    f"Reservation for "
+                    f"@{item.wanted_handle} expired. "
+                    f"Your held credits were released."
+                ),
+            )
+
+        elif result.get("already_purchased"):
+            messages.info(
+                request,
+                (
+                    f"@{item.wanted_handle} was "
+                    f"already purchased."
+                ),
+            )
+
+        elif result.get("purchased"):
+            messages.success(
+                request,
+                (
+                    f"🏡 You purchased "
+                    f"@{item.wanted_handle} for "
+                    f"{result['sale_price_credits']:,} "
+                    f"credits."
+                ),
+            )
+
+        else:
+            messages.error(
+                request,
+                (
+                    f"Purchase state for "
+                    f"@{item.wanted_handle} "
+                    f"could not be determined."
+                ),
+            )
+
+    except FounderCartError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect("founder_tienda")
+
+
+@login_required
+@require_POST
+def cancel_founder_vending(request, item_id):
+    item = get_object_or_404(
+        FounderCartItem.objects.select_related(
+            "cart",
+        ),
+        pk=item_id,
+        cart__purchaser=request.user,
+    )
+
+    try:
+        cancel_founder_vending_reservation(
+            purchaser=request.user,
+            cart_item_id=item.pk,
+        )
+
+        messages.success(
+            request,
+            (
+                f"Reservation for "
+                f"@{item.wanted_handle} cancelled. "
+                f"Your held credits were released."
+            ),
+        )
+
+    except FounderCartError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    return redirect("founder_tienda")
+
+
+@login_required
 def founder_tienda(request):
     fixed_listings = (
         FounderListing.objects
@@ -1827,6 +2018,25 @@ def founder_tienda(request):
         user=request.user
     ).first()
 
+    vending_item = None
+
+    vending_item_id = request.GET.get(
+        "vending_item"
+    )
+
+    if vending_item_id:
+        vending_item = (
+            FounderCartItem.objects
+            .select_related(
+                "cart",
+            )
+            .filter(
+                pk=vending_item_id,
+                cart__purchaser=request.user,
+            )
+            .first()
+        )
+
     return render(
         request,
         "auctions/founder_tienda.html",
@@ -1836,6 +2046,7 @@ def founder_tienda(request):
             "wasteland_listings": wasteland_listings,
             "p2p_page": p2p_page,
             "wallet": wallet,
+            "vending_item": vending_item,
         },
     )
 
