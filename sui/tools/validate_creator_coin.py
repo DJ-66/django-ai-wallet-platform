@@ -93,6 +93,55 @@ def main():
     )
 
     # ---------------------------------------------------------
+    # Creator custody policy
+    # ---------------------------------------------------------
+
+    recipient_match = re.search(
+        r"const\s+CREATOR_RECIPIENT\s*:\s*address\s*=\s*"
+        r"@(0x[0-9a-f]{64})\s*;",
+        text,
+    )
+
+    require(
+        recipient_match,
+        "Creator package must contain a canonical "
+        "CREATOR_RECIPIENT address.",
+    )
+
+    require(
+        count(
+            r"transfer::public_transfer\s*\(\s*"
+            r"genesis_supply\s*,\s*"
+            r"CREATOR_RECIPIENT\s*,?\s*\)",
+            text,
+        ) == 1,
+        "Genesis supply must transfer exactly once "
+        "to CREATOR_RECIPIENT.",
+    )
+
+    require(
+        count(
+            r"transfer::public_transfer\s*\(\s*"
+            r"metadata_cap\s*,\s*"
+            r"CREATOR_RECIPIENT\s*,?\s*\)",
+            text,
+        ) == 1,
+        "MetadataCap must transfer exactly once "
+        "to CREATOR_RECIPIENT.",
+    )
+
+    require(
+        not re.search(
+            r"transfer::public_transfer\s*\(\s*"
+            r"(?:genesis_supply|metadata_cap)\s*,\s*"
+            r"ctx\.sender\(\)",
+            text,
+        ),
+        "Creator-owned genesis assets may not be "
+        "transferred to the transaction sender.",
+    )
+
+    # ---------------------------------------------------------
     # Public API restrictions
     # ---------------------------------------------------------
 

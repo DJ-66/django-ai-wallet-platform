@@ -671,6 +671,8 @@ class SuiAdapterClientTests(SimpleTestCase):
                 "0x1",
                 "0x2",
             ],
+            "recipient_address":
+                "0xabc",
         }
 
         response = Mock()
@@ -3739,6 +3741,8 @@ class FounderCoinPublicationProcessorTests(TestCase):
                 "0x1",
                 "0x2",
             ],
+            "recipient_address":
+                "0xabc",
         }
 
         from auctions.management.commands import (

@@ -22,6 +22,9 @@ module __PACKAGE_NAME__::__MODULE_NAME__ {
     const GENESIS_SUPPLY_BASE_UNITS: u64 =
         21_000_000_000_000_000;
 
+    const CREATOR_RECIPIENT: address =
+        @__RECIPIENT_ADDRESS__;
+
     fun init(
         witness: __COIN_TYPE__,
         ctx: &mut TxContext,
@@ -56,12 +59,12 @@ module __PACKAGE_NAME__::__MODULE_NAME__ {
 
         transfer::public_transfer(
             genesis_supply,
-            ctx.sender(),
+            CREATOR_RECIPIENT,
         );
 
         transfer::public_transfer(
             metadata_cap,
-            ctx.sender(),
+            CREATOR_RECIPIENT,
         );
     }
 

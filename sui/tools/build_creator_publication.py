@@ -36,7 +36,33 @@ def main():
         help="Destination JSON file.",
     )
 
+    parser.add_argument(
+        "--recipient-address",
+        required=True,
+        help=(
+            "Creator-provided canonical Sui address "
+            "for creator-owned publication assets."
+        ),
+    )
+
     args = parser.parse_args()
+
+    recipient_address = (
+        args.recipient_address
+        .strip()
+        .lower()
+    )
+
+    import re
+
+    if not re.fullmatch(
+        r"0x[0-9a-f]{64}",
+        recipient_address,
+    ):
+        raise SystemExit(
+            "Recipient address must be a canonical "
+            "32-byte lowercase Sui address."
+        )
 
     package_dir = Path(args.package_dir).resolve()
 
@@ -79,6 +105,7 @@ def main():
     payload = {
         "publication_key": args.publication_key,
         "chain": "sui",
+        "recipient_address": recipient_address,
         "module_name": module_name,
         "coin_struct_name": coin_struct_name,
         "source_sha256": sha256_bytes(source_bytes),

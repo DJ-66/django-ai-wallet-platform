@@ -89,6 +89,7 @@ def load_prepared_payload(asset):
         "artifact_sha256",
         "modules",
         "dependency_ids",
+        "recipient_address",
     }
 
     missing = sorted(
@@ -132,6 +133,21 @@ def load_prepared_payload(asset):
     if payload["coin_struct_name"] != expected_struct:
         raise FounderCoinPublicationProcessError(
             "Prepared publication coin struct does not match EconomyAsset."
+        )
+
+    expected_recipient = str(
+        (asset.metadata or {}).get(
+            "intended_recipient_address",
+            "",
+        )
+    ).strip().lower()
+
+    if (
+        str(payload["recipient_address"]).strip().lower()
+        != expected_recipient
+    ):
+        raise FounderCoinPublicationProcessError(
+            "Prepared publication recipient does not match EconomyAsset."
         )
 
     return payload, path
