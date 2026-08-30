@@ -605,6 +605,42 @@ class SuiAdapterClientTests(SimpleTestCase):
         with self.assertRaises(SuiAdapterConflict):
             prepare_delivery(delivery)
 
+    @patch("auctions.sui_adapter.requests.request")
+    def test_http_error_preserves_remote_error_detail(self, request):
+        import requests
+
+        from auctions.sui_adapter import (
+            SuiAdapterError,
+            prepare_creator_publication,
+        )
+
+        response = Mock()
+        response.status_code = 400
+        response.json.return_value = {
+            "error":
+                "Testnet transaction preparation is disabled",
+        }
+
+        response.raise_for_status.side_effect = (
+            requests.HTTPError(
+                response=response
+            )
+        )
+
+        request.return_value = response
+
+        with self.assertRaisesRegex(
+            SuiAdapterError,
+            (
+                "HTTP 400: "
+                "Testnet transaction preparation is disabled"
+            ),
+        ):
+            prepare_creator_publication(
+                "founder-4-luna-v1"
+            )
+
+
     @override_settings(FANZ_SUI_API_TOKEN="")
     def test_missing_configuration_is_rejected(self):
         from auctions.sui_adapter import (
@@ -614,6 +650,208 @@ class SuiAdapterClientTests(SimpleTestCase):
 
         with self.assertRaises(SuiAdapterError):
             get_delivery("test-key")
+
+
+    @patch("auctions.sui_adapter.requests.request")
+    def test_accept_creator_publication_posts_payload(self, request):
+        from auctions.sui_adapter import (
+            accept_creator_publication,
+        )
+
+        payload = {
+            "publication_key":
+                "founder-4-luna-v1",
+            "chain": "sui",
+            "module_name": "luna_fanz",
+            "coin_struct_name": "LUNA_FANZ",
+            "source_sha256": "a" * 64,
+            "artifact_sha256": "b" * 64,
+            "modules": ["module-b64"],
+            "dependency_ids": [
+                "0x1",
+                "0x2",
+            ],
+        }
+
+        response = Mock()
+        response.status_code = 201
+        response.json.return_value = {
+            "created": True,
+            "publication": {
+                "publication_key":
+                    "founder-4-luna-v1",
+                "state": "accepted",
+            },
+        }
+        response.raise_for_status.return_value = None
+        request.return_value = response
+
+        result = accept_creator_publication(
+            payload
+        )
+
+        self.assertTrue(result["created"])
+
+        args, kwargs = request.call_args
+
+        self.assertEqual(
+            args[0],
+            "POST",
+        )
+        self.assertEqual(
+            args[1],
+            (
+                "http://fanz-sui.test:3000"
+                "/v1/creator-publications"
+            ),
+        )
+        self.assertEqual(
+            kwargs["json"],
+            payload,
+        )
+
+    @patch("auctions.sui_adapter.requests.request")
+    def test_prepare_creator_publication_posts_transition(self, request):
+        from auctions.sui_adapter import (
+            prepare_creator_publication,
+        )
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            "publication": {
+                "publication_key":
+                    "founder-4-luna-v1",
+                "state": "prepared",
+            },
+        }
+        response.raise_for_status.return_value = None
+        request.return_value = response
+
+        result = prepare_creator_publication(
+            "founder-4-luna-v1"
+        )
+
+        self.assertEqual(
+            result["publication"]["state"],
+            "prepared",
+        )
+
+        args, kwargs = request.call_args
+
+        self.assertEqual(
+            args[0],
+            "POST",
+        )
+        self.assertEqual(
+            args[1],
+            (
+                "http://fanz-sui.test:3000"
+                "/v1/creator-publications/"
+                "founder-4-luna-v1/prepare"
+            ),
+        )
+        self.assertEqual(
+            kwargs["json"],
+            {},
+        )
+
+    @patch("auctions.sui_adapter.requests.request")
+    def test_submit_creator_publication_posts_transition(self, request):
+        from auctions.sui_adapter import (
+            submit_creator_publication,
+        )
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            "publication": {
+                "publication_key":
+                    "founder-4-luna-v1",
+                "state": "submitted",
+                "tx_digest": "test-digest",
+            },
+        }
+        response.raise_for_status.return_value = None
+        request.return_value = response
+
+        result = submit_creator_publication(
+            "founder-4-luna-v1"
+        )
+
+        self.assertEqual(
+            result["publication"]["state"],
+            "submitted",
+        )
+
+        args, kwargs = request.call_args
+
+        self.assertEqual(
+            args[0],
+            "POST",
+        )
+        self.assertEqual(
+            args[1],
+            (
+                "http://fanz-sui.test:3000"
+                "/v1/creator-publications/"
+                "founder-4-luna-v1/submit"
+            ),
+        )
+        self.assertEqual(
+            kwargs["json"],
+            {},
+        )
+
+    @patch("auctions.sui_adapter.requests.request")
+    def test_reconcile_creator_publication_posts_transition(self, request):
+        from auctions.sui_adapter import (
+            reconcile_creator_publication,
+        )
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            "publication": {
+                "publication_key":
+                    "founder-4-luna-v1",
+                "state": "confirmed",
+                "tx_digest": "test-digest",
+                "package_id": "0x123",
+                "coin_type":
+                    "0x123::luna_fanz::LUNA_FANZ",
+            },
+        }
+        response.raise_for_status.return_value = None
+        request.return_value = response
+
+        result = reconcile_creator_publication(
+            "founder-4-luna-v1"
+        )
+
+        self.assertEqual(
+            result["publication"]["state"],
+            "confirmed",
+        )
+
+        args, kwargs = request.call_args
+
+        self.assertEqual(
+            args[0],
+            "POST",
+        )
+        self.assertEqual(
+            args[1],
+            (
+                "http://fanz-sui.test:3000"
+                "/v1/creator-publications/"
+                "founder-4-luna-v1/reconcile"
+            ),
+        )
+        self.assertEqual(
+            kwargs["json"],
+            {},
+        )
 
 
 class EconomyDeliveryProcessorTests(TestCase):
@@ -3427,4 +3665,386 @@ class FounderVendingTiendaViewTests(TestCase):
 
         self.assertIsNone(
             self.founder.owner_root,
+        )
+
+
+class FounderCoinPublicationProcessorTests(TestCase):
+    def setUp(self):
+        import json
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from django.contrib.auth import get_user_model
+
+        from auctions.models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        User = get_user_model()
+
+        self.owner = User.objects.create_user(
+            username="processor-owner",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="pc01",
+            status=FounderAccount.STATUS_OWNED,
+            owner_root=self.owner,
+            floor_price_credits=200,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Pc01Fanz",
+            symbol="PC01FANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=(
+                21_000_000_000_000_000
+            ),
+            status=EconomyAsset.STATUS_DRAFT,
+            metadata={
+                "issuance_source":
+                    "founder_vending",
+                "generated_package":
+                    "fanz_creator_pc01",
+                "intended_recipient_address":
+                    "0xabc",
+            },
+        )
+
+        self.publication_key = (
+            f"founder-{self.asset.pk}-pc01-v1"
+        )
+
+        self.payload = {
+            "publication_key":
+                self.publication_key,
+            "chain":
+                "sui",
+            "module_name":
+                "pc01_fanz",
+            "coin_struct_name":
+                "PC01_FANZ",
+            "source_sha256":
+                "a" * 64,
+            "artifact_sha256":
+                "b" * 64,
+            "modules": [
+                "module-b64",
+            ],
+            "dependency_ids": [
+                "0x1",
+                "0x2",
+            ],
+        }
+
+        from auctions.management.commands import (
+            process_founder_coin_publication
+            as processor,
+        )
+
+        self.processor = processor
+
+        self.temp_root = Path(
+            "/tmp/fanz-founder-processor-tests"
+        )
+
+        self.temp_root.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        self.payload_path = (
+            self.temp_root
+            / f"{self.publication_key}.json"
+        )
+
+        self.payload_path.write_text(
+            json.dumps(self.payload)
+        )
+
+        self.prepared_root_patch = patch.object(
+            processor,
+            "PREPARED_ROOT",
+            self.temp_root,
+        )
+
+        self.prepared_root_patch.start()
+
+        self.addCleanup(
+            self.prepared_root_patch.stop
+        )
+
+    def tearDown(self):
+        if self.payload_path.exists():
+            self.payload_path.unlink()
+
+    def _call(self):
+        import io
+
+        from django.core.management import call_command
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        call_command(
+            "process_founder_coin_publication",
+            asset_id=self.asset.pk,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        return (
+            stdout.getvalue(),
+            stderr.getvalue(),
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "prepare_creator_publication"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "accept_creator_publication"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "get_remote_publication"
+    )
+    def test_accepts_new_publication_then_stops_at_prepare_gate(
+        self,
+        get_remote,
+        accept,
+        prepare,
+    ):
+        from auctions.sui_adapter import (
+            SuiAdapterError,
+        )
+
+        get_remote.return_value = None
+
+        accept.return_value = {
+            "created": True,
+            "publication": {
+                "publication_key":
+                    self.publication_key,
+                "state":
+                    "accepted",
+            },
+        }
+
+        prepare.side_effect = SuiAdapterError(
+            "FANZ Sui request failed "
+            "with HTTP 400: "
+            "Testnet transaction preparation "
+            "is disabled"
+        )
+
+        stdout, _ = self._call()
+
+        self.assertIn(
+            "founder_coin_publication=ACCEPTED",
+            stdout,
+        )
+
+        self.assertIn(
+            (
+                "founder_coin_publication="
+                "STOP_PREPARE_GATE_CLOSED"
+            ),
+            stdout,
+        )
+
+        accept.assert_called_once_with(
+            self.payload
+        )
+
+        prepare.assert_called_once_with(
+            self.publication_key
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "accept_creator_publication"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "prepare_creator_publication"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "get_remote_publication"
+    )
+    def test_existing_accepted_publication_skips_duplicate_accept(
+        self,
+        get_remote,
+        prepare,
+        accept,
+    ):
+        from auctions.sui_adapter import (
+            SuiAdapterError,
+        )
+
+        get_remote.return_value = {
+            "publication_key":
+                self.publication_key,
+            "state":
+                "accepted",
+        }
+
+        prepare.side_effect = SuiAdapterError(
+            "FANZ Sui request failed "
+            "with HTTP 400: "
+            "Testnet transaction preparation "
+            "is disabled"
+        )
+
+        stdout, _ = self._call()
+
+        accept.assert_not_called()
+
+        self.assertIn(
+            "journal_state=accepted",
+            stdout,
+        )
+
+        self.assertIn(
+            (
+                "founder_coin_publication="
+                "STOP_PREPARE_GATE_CLOSED"
+            ),
+            stdout,
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "submit_creator_publication"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "get_remote_publication"
+    )
+    def test_prepared_publication_stops_at_submit_gate(
+        self,
+        get_remote,
+        submit,
+    ):
+        from auctions.sui_adapter import (
+            SuiAdapterError,
+        )
+
+        get_remote.return_value = {
+            "publication_key":
+                self.publication_key,
+            "state":
+                "prepared",
+        }
+
+        submit.side_effect = SuiAdapterError(
+            "FANZ Sui request failed "
+            "with HTTP 400: "
+            "Creator publication submission "
+            "is disabled"
+        )
+
+        stdout, _ = self._call()
+
+        submit.assert_called_once_with(
+            self.publication_key
+        )
+
+        self.assertIn(
+            (
+                "founder_coin_publication="
+                "STOP_SUBMIT_GATE_CLOSED"
+            ),
+            stdout,
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "verify_economy_asset_fixed_supply"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "reconcile_confirmed_creator_publication"
+    )
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "get_remote_publication"
+    )
+    def test_confirmed_publication_runs_django_reconcile_and_supply_verify(
+        self,
+        get_remote,
+        reconcile_django,
+        verify_supply,
+    ):
+        get_remote.return_value = {
+            "publication_key":
+                self.publication_key,
+            "state":
+                "confirmed",
+            "package_id":
+                "0x123",
+            "coin_type":
+                "0x123::pc01_fanz::PC01_FANZ",
+            "tx_digest":
+                "digest-123",
+        }
+
+        self.asset.status = (
+            self.asset.STATUS_ACTIVE
+        )
+        self.asset.coin_type = (
+            "0x123::pc01_fanz::PC01_FANZ"
+        )
+        self.asset.genesis_tx_digest = (
+            "digest-123"
+        )
+        self.asset.supply_fixed_at = (
+            __import__(
+                "django.utils.timezone",
+                fromlist=["now"],
+            ).now()
+        )
+
+        reconcile_django.return_value = (
+            self.asset,
+            True,
+        )
+
+        verify_supply.return_value = (
+            self.asset,
+            True,
+        )
+
+        stdout, _ = self._call()
+
+        reconcile_django.assert_called_once_with(
+            self.asset.pk,
+            self.publication_key,
+        )
+
+        verify_supply.assert_called_once_with(
+            self.asset.pk,
+            self.publication_key,
+        )
+
+        self.assertIn(
+            "founder_coin_publication=COMPLETE",
+            stdout,
         )

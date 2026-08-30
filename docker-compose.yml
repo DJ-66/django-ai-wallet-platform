@@ -29,6 +29,7 @@ services:
       "
     volumes:
       - ./web:/app
+      - ./sui/prepared-publications:/app/sui/prepared-publications:ro
       - staticfiles:/app/staticfiles
       - ./web/media:/app/media
     networks:
@@ -61,6 +62,7 @@ services:
     command: /app/run_auction_tasks.sh
     volumes:
       - ./web:/app
+      - ./sui/prepared-publications:/app/sui/prepared-publications:ro
       - staticfiles:/app/staticfiles
       - ./web/media:/app/media
     networks:
