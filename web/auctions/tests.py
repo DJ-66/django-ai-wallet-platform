@@ -3670,6 +3670,70 @@ class FounderVendingTiendaViewTests(TestCase):
         )
 
 
+class UserProfileSuiAddressTests(TestCase):
+    def test_sui_address_is_optional(self):
+        from auctions.forms import UserProfileForm
+
+        form = UserProfileForm(
+            data={
+                "sui_address": "",
+            }
+        )
+
+        self.assertTrue(
+            form.is_valid(),
+            form.errors,
+        )
+
+        self.assertEqual(
+            form.cleaned_data["sui_address"],
+            "",
+        )
+
+    def test_sui_address_is_normalized_to_lowercase(self):
+        from auctions.forms import UserProfileForm
+
+        form = UserProfileForm(
+            data={
+                "sui_address":
+                    "0xABCDEF0123456789ABCDEF0123456789"
+                    "ABCDEF0123456789ABCDEF0123456789",
+            }
+        )
+
+        self.assertTrue(
+            form.is_valid(),
+            form.errors,
+        )
+
+        self.assertEqual(
+            form.cleaned_data["sui_address"],
+            (
+                "0xabcdef0123456789abcdef0123456789"
+                "abcdef0123456789abcdef0123456789"
+            ),
+        )
+
+    def test_invalid_sui_address_is_rejected(self):
+        from auctions.forms import UserProfileForm
+
+        form = UserProfileForm(
+            data={
+                "sui_address": "not-a-sui-address",
+            }
+        )
+
+        self.assertFalse(
+            form.is_valid(),
+        )
+
+        self.assertIn(
+            "sui_address",
+            form.errors,
+        )
+
+
+
 class FounderCoinPublicationProcessorTests(TestCase):
     def setUp(self):
         import json
