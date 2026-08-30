@@ -62,12 +62,39 @@ def _request(method, path, **kwargs):
 
     except SuiAdapterConflict:
         raise
+
     except requests.RequestException as exc:
-        status = getattr(exc.response, "status_code", None)
+        status = getattr(
+            exc.response,
+            "status_code",
+            None,
+        )
+
+        detail = ""
+
+        if exc.response is not None:
+            try:
+                body = exc.response.json()
+
+                if isinstance(body, dict):
+                    detail = str(
+                        body.get("error") or ""
+                    ).strip()
+
+            except ValueError:
+                detail = ""
 
         if status:
+            message = (
+                f"FANZ Sui request failed "
+                f"with HTTP {status}"
+            )
+
+            if detail:
+                message += f": {detail}"
+
             raise SuiAdapterError(
-                f"FANZ Sui request failed with HTTP {status}"
+                message
             ) from exc
 
         raise SuiAdapterError(
@@ -121,4 +148,50 @@ def get_creator_publication_supply(publication_key):
     return _request(
         "GET",
         f"/v1/creator-publications/{publication_key}/supply",
+    )
+
+
+def accept_creator_publication(payload):
+    if not isinstance(payload, dict):
+        raise SuiAdapterError(
+            "Creator publication payload must be an object."
+        )
+
+    return _request(
+        "POST",
+        "/v1/creator-publications",
+        json=payload,
+    )
+
+
+def prepare_creator_publication(publication_key):
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/prepare"
+        ),
+        json={},
+    )
+
+
+def submit_creator_publication(publication_key):
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/submit"
+        ),
+        json={},
+    )
+
+
+def reconcile_creator_publication(publication_key):
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/reconcile"
+        ),
+        json={},
     )
