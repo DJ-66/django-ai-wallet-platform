@@ -173,6 +173,15 @@ def main():
         ),
     ])
 
+    output_path = Path(
+        args.output
+    ).resolve()
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     run([
         sys.executable,
         publication_builder,
@@ -180,7 +189,7 @@ def main():
         "--publication-key",
         args.publication_key,
         "--output",
-        Path(args.output).resolve(),
+        output_path,
     ])
 
     print()
@@ -194,7 +203,7 @@ def main():
     )
     print(
         f"publication_payload="
-        f"{Path(args.output).resolve()}"
+        f"{output_path}"
     )
 
 
