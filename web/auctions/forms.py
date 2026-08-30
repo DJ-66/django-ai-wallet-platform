@@ -557,6 +557,8 @@ class SignUpForm(forms.ModelForm):
 
 
 class UserProfileForm(forms.ModelForm):
+    SUI_MIN_CREDITS = 500
+
     class Meta:
         model = UserProfile
         fields = [
@@ -581,9 +583,7 @@ class UserProfileForm(forms.ModelForm):
             "featured_link_2_url",
             "featured_link_3_label",
             "featured_link_3_url",
-
         ]
-
 
         labels = {
             "display_name": _("Display name"),
@@ -603,18 +603,58 @@ class UserProfileForm(forms.ModelForm):
             "tiktok": "TikTok",
             "telegram": "Telegram",
             "whatsapp": "WhatsApp",
-            "featured_link_1_label": _("Featured link 1 label"),
-            "featured_link_1_url": _("Featured link 1 URL"),
-            "featured_link_2_label": _("Featured link 2 label"),
-            "featured_link_2_url": _("Featured link 2 URL"),
-            "featured_link_3_label": _("Featured link 3 label"),
-            "featured_link_3_url": _("Featured link 3 URL"),
+            "featured_link_1_label":
+                _("Featured link 1 label"),
+            "featured_link_1_url":
+                _("Featured link 1 URL"),
+            "featured_link_2_label":
+                _("Featured link 2 label"),
+            "featured_link_2_url":
+                _("Featured link 2 URL"),
+            "featured_link_3_label":
+                _("Featured link 3 label"),
+            "featured_link_3_url":
+                _("Featured link 3 URL"),
+        }
 
-}
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        user=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
 
-        self.fields["sui_address"].widget.attrs.update({
+        self.user = user
+        self.sui_credit_balance = 0
+
+        if user is not None:
+            wallet = getattr(
+                user,
+                "bidwallet",
+                None,
+            )
+
+            if wallet is not None:
+                self.sui_credit_balance = int(
+                    wallet.credits
+                )
+
+        self.sui_wallet_unlocked = (
+            self.sui_credit_balance
+            >= self.SUI_MIN_CREDITS
+        )
+
+        if not self.sui_wallet_unlocked:
+            self.fields.pop(
+                "sui_address",
+                None,
+            )
+            return
+
+        self.fields[
+            "sui_address"
+        ].widget.attrs.update({
             "placeholder": "0x... (optional)",
             "autocomplete": "off",
             "spellcheck": "false",
@@ -646,7 +686,8 @@ class UserProfileForm(forms.ModelForm):
             raise forms.ValidationError(
                 _(
                     "Enter a valid Sui wallet address "
-                    "(0x followed by 64 hexadecimal characters)."
+                    "(0x followed by 64 hexadecimal "
+                    "characters)."
                 )
             )
 

@@ -20,6 +20,20 @@
     {% csrf_token %}
     {{ form.as_p }}
 
+    {% if not sui_wallet_unlocked %}
+        <div class="profile-sui-locked">
+            <strong>{% trans "Sui Wallet" %}</strong>
+            <p>
+                {% blocktrans with minimum=sui_min_credits %}
+                    Available with {{ minimum }} FANZ credits.
+                    Add one Sui wallet address and FANZ can
+                    reuse it for Sui tips, donations,
+                    custom meme coins, and @4char vending.
+                {% endblocktrans %}
+            </p>
+        </div>
+    {% endif %}
+
     <hr>
 
     <div class="profile-setting-row">

@@ -2449,7 +2449,8 @@ def edit_profile(request):
         form = UserProfileForm(
             request.POST,
             request.FILES,
-            instance=profile
+            instance=profile,
+            user=request.user,
         )
 
         if not request.POST.get("tos_accepted"):
@@ -2467,7 +2468,10 @@ def edit_profile(request):
             )
 
     else:
-        form = UserProfileForm(instance=profile)
+        form = UserProfileForm(
+            instance=profile,
+            user=request.user,
+        )
 
     return render(
         request,
@@ -2475,6 +2479,12 @@ def edit_profile(request):
         {
             "form": form,
             "profile": profile,
+            "sui_wallet_unlocked":
+                form.sui_wallet_unlocked,
+            "sui_credit_balance":
+                form.sui_credit_balance,
+            "sui_min_credits":
+                form.SUI_MIN_CREDITS,
         }
     )
 
