@@ -888,6 +888,17 @@ class UserProfile(models.Model):
     
     location = models.CharField(max_length=120, blank=True)
 
+    sui_address = models.CharField(
+        max_length=66,
+        blank=True,
+        default="",
+        help_text=(
+            "Optional public Sui wallet address used for "
+            "Sui tips, donations, custom meme coins, "
+            "and @4char vending."
+        ),
+    )
+
     website = models.URLField(blank=True)
     youtube = models.URLField(blank=True)
     instagram = models.URLField(blank=True)

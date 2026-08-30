@@ -567,6 +567,7 @@ class UserProfileForm(forms.ModelForm):
             "bank_qr_image",
             "bank_payment_notes",
             "location",
+            "sui_address",
             "website",
             "youtube",
             "instagram",
@@ -592,6 +593,7 @@ class UserProfileForm(forms.ModelForm):
             "bank_qr_image": _("Payment QR Code"),
             "bank_payment_notes": _("Payment instructions"),
             "location": _("Location"),
+            "sui_address": _("Sui Wallet Address"),
             "website": _("Website"),
 
             # brand names stay as-is
@@ -609,6 +611,47 @@ class UserProfileForm(forms.ModelForm):
             "featured_link_3_url": _("Featured link 3 URL"),
 
 }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["sui_address"].widget.attrs.update({
+            "placeholder": "0x... (optional)",
+            "autocomplete": "off",
+            "spellcheck": "false",
+        })
+
+        self.fields["sui_address"].help_text = _(
+            "Enter once and FANZ will use this address "
+            "for Sui tips, donations, custom meme coins, "
+            "and @4char vending."
+        )
+
+    def clean_sui_address(self):
+        import re
+
+        value = (
+            self.cleaned_data
+            .get("sui_address", "")
+            .strip()
+            .lower()
+        )
+
+        if not value:
+            return ""
+
+        if not re.fullmatch(
+            r"0x[0-9a-f]{64}",
+            value,
+        ):
+            raise forms.ValidationError(
+                _(
+                    "Enter a valid Sui wallet address "
+                    "(0x followed by 64 hexadecimal characters)."
+                )
+            )
+
+        return value
+
 
 class UserProfileTranslationForm(forms.ModelForm):
     class Meta:
