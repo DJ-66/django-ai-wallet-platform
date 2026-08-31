@@ -511,6 +511,16 @@ class CreditPurchase(models.Model):
 
 
 class PaymentIntent(models.Model):
+    SETTLEMENT_BTCPAY = "btcpay"
+    SETTLEMENT_SUI = "sui"
+    SETTLEMENT_INTERNAL = "internal"
+
+    SETTLEMENT_SOURCE_CHOICES = [
+        (SETTLEMENT_BTCPAY, "BTCPay"),
+        (SETTLEMENT_SUI, "Sui"),
+        (SETTLEMENT_INTERNAL, "Internal"),
+    ]
+
     PURPOSE_CHOICES = [
         ("integration_test", "Integration Test"),
         ("credit_purchase", "Credit Purchase"),
@@ -557,6 +567,18 @@ class PaymentIntent(models.Model):
     currency = models.CharField(
         max_length=10,
         default="USD",
+    )
+
+    settlement_source = models.CharField(
+        max_length=16,
+        choices=SETTLEMENT_SOURCE_CHOICES,
+        default=SETTLEMENT_BTCPAY,
+    )
+
+    settlement_reference = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
     )
 
     btcpay_invoice_id = models.CharField(
@@ -2350,6 +2372,18 @@ class FounderCartItem(models.Model):
     MODE_SELF = "self"
     MODE_GIFT = "gift"
 
+    PAYMENT_CREDITS = "credits"
+    PAYMENT_BTC = "btc"
+    PAYMENT_DOGE = "doge"
+    PAYMENT_SUI = "sui"
+
+    PAYMENT_METHOD_CHOICES = [
+        (PAYMENT_CREDITS, "FANZ Credits"),
+        (PAYMENT_BTC, "Bitcoin"),
+        (PAYMENT_DOGE, "Dogecoin"),
+        (PAYMENT_SUI, "SUI"),
+    ]
+
     MODE_CHOICES = [
         (MODE_SELF, "For Me"),
         (MODE_GIFT, "Send as Gift"),
@@ -2395,6 +2429,20 @@ class FounderCartItem(models.Model):
     list_price_credits = models.PositiveBigIntegerField(
         null=True,
         blank=True,
+    )
+
+    payment_method = models.CharField(
+        max_length=16,
+        choices=PAYMENT_METHOD_CHOICES,
+        default=PAYMENT_CREDITS,
+    )
+
+    payment_intent = models.OneToOneField(
+        "PaymentIntent",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="founder_cart_item",
     )
 
     purchase_mode = models.CharField(

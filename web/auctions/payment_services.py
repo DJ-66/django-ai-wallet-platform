@@ -128,11 +128,36 @@ def fulfill_payment_intent(payment_intent_id):
             "PaymentIntent must be settled before fulfillment."
         )
 
-    # Current payment intents originate from BTCPay.
-    # Keep this invariant until FANZ introduces another settlement source.
-    if not intent.btcpay_invoice_id:
+    if (
+        intent.settlement_source
+        == PaymentIntent.SETTLEMENT_BTCPAY
+    ):
+        if not intent.btcpay_invoice_id:
+            raise PaymentFulfillmentError(
+                "BTCPay PaymentIntent has no invoice id."
+            )
+
+    elif (
+        intent.settlement_source
+        == PaymentIntent.SETTLEMENT_SUI
+    ):
+        if not intent.settlement_reference:
+            raise PaymentFulfillmentError(
+                "Sui PaymentIntent has no transaction digest."
+            )
+
+    elif (
+        intent.settlement_source
+        == PaymentIntent.SETTLEMENT_INTERNAL
+    ):
+        # Internal settlement has no external transaction
+        # identifier requirement.
+        pass
+
+    else:
         raise PaymentFulfillmentError(
-            "PaymentIntent has no BTCPay invoice id."
+            "PaymentIntent has an unsupported "
+            "settlement source."
         )
 
     fulfillment_complete = dispatch_payment_fulfillment(intent)

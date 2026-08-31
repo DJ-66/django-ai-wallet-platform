@@ -24,6 +24,21 @@ const TESTNET_SUBMIT_ENABLED =
 const TESTNET_PUBLICATION_SUBMIT_ENABLED =
   process.env.FANZ_SUI_TESTNET_PUBLICATION_SUBMIT_ENABLED === "true";
 
+const MAINNET_TRANSFER_ENABLED =
+  process.env.FANZ_SUI_MAINNET_TRANSFER_ENABLED === "true";
+
+const MAINNET_TREASURY_ADDRESS =
+  (
+    process.env.FANZ_SUI_MAINNET_TREASURY_ADDRESS ||
+    ""
+  ).trim().toLowerCase();
+
+const MAINNET_SWEEP_FLOOR_MIST =
+  10_000_000_000n;
+
+const MAINNET_SWEEP_EXCESS_BPS =
+  8000n;
+
 
 
 if (!API_TOKEN) {
@@ -57,6 +72,23 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mainnet_transfers (
+    submission_key TEXT PRIMARY KEY,
+    purpose TEXT NOT NULL,
+    recipient_address TEXT NOT NULL,
+    amount_mist TEXT NOT NULL,
+    state TEXT NOT NULL,
+    sender_address TEXT,
+    tx_digest TEXT UNIQUE,
+    submitted_at TEXT,
+    confirmed_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`);
+
 
 function ensureColumn(
   table: string,
@@ -139,6 +171,84 @@ ensureColumn(
   "recipient_address",
   "TEXT",
 );
+
+type MainnetTransferRow = {
+  submission_key: string;
+  purpose: string;
+  recipient_address: string;
+  amount_mist: string;
+  state: string;
+  sender_address: string | null;
+  tx_digest: string | null;
+  submitted_at: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+
+function getMainnetTransfer(
+  submissionKey: string,
+): MainnetTransferRow | undefined {
+  return db.prepare(`
+    SELECT
+      submission_key,
+      purpose,
+      recipient_address,
+      amount_mist,
+      state,
+      sender_address,
+      tx_digest,
+      submitted_at,
+      confirmed_at,
+      created_at,
+      updated_at
+    FROM mainnet_transfers
+    WHERE submission_key = ?
+  `).get(submissionKey) as
+    | MainnetTransferRow
+    | undefined;
+}
+
+
+function publicMainnetTransfer(
+  row: MainnetTransferRow,
+) {
+  return {
+    submission_key: row.submission_key,
+    purpose: row.purpose,
+    recipient_address: row.recipient_address,
+    amount_mist: row.amount_mist,
+    state: row.state,
+    sender_address: row.sender_address,
+    tx_digest: row.tx_digest,
+    submitted_at: row.submitted_at,
+    confirmed_at: row.confirmed_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+
+function calculateMainnetTreasurySweep(
+  balanceMist: bigint,
+): bigint {
+  if (
+    balanceMist <= MAINNET_SWEEP_FLOOR_MIST
+  ) {
+    return 0n;
+  }
+
+  const excess =
+    balanceMist - MAINNET_SWEEP_FLOOR_MIST;
+
+  return (
+    excess
+    * MAINNET_SWEEP_EXCESS_BPS
+    / 10_000n
+  );
+}
+
 
 type DeliveryInput = {
   submission_key: string;
@@ -869,6 +979,488 @@ function testnetClient(): SuiGrpcClient {
     network: "testnet",
     baseUrl: SUI_GRPC_URL,
   });
+}
+
+
+function requireMainnetSigner(): Ed25519Keypair {
+  if (!MAINNET_TRANSFER_ENABLED) {
+    throw new Error(
+      "Mainnet Sui transfers are disabled"
+    );
+  }
+
+  const walletPath =
+    process.env.FANZ_SUI_MAINNET_WALLET_PATH ||
+    "";
+
+  if (!walletPath) {
+    throw new Error(
+      "FANZ_SUI_MAINNET_WALLET_PATH is missing"
+    );
+  }
+
+  const wallet = JSON.parse(
+    fs.readFileSync(walletPath, "utf8")
+  ) as {
+    network?: string;
+    address?: string;
+    private_key?: string;
+  };
+
+  if (
+    wallet.network !== "mainnet" ||
+    !wallet.private_key ||
+    !wallet.address
+  ) {
+    throw new Error(
+      "Mainnet wallet file is invalid"
+    );
+  }
+
+  const keypair =
+    Ed25519Keypair.fromSecretKey(
+      wallet.private_key
+    );
+
+  const derived =
+    keypair.toSuiAddress().toLowerCase();
+
+  if (
+    derived !== wallet.address.toLowerCase()
+  ) {
+    throw new Error(
+      "Mainnet wallet key/address mismatch"
+    );
+  }
+
+  const configuredHot =
+    (
+      process.env.FANZ_SUI_MAINNET_HOT_ADDRESS ||
+      ""
+    ).trim().toLowerCase();
+
+  if (
+    configuredHot &&
+    derived !== configuredHot
+  ) {
+    throw new Error(
+      "Mainnet signer does not match "
+      + "configured hot wallet"
+    );
+  }
+
+  return keypair;
+}
+
+
+function mainnetClient(): SuiGrpcClient {
+  return new SuiGrpcClient({
+    network: "mainnet",
+    baseUrl:
+      process.env.SUI_MAINNET_GRPC_URL ||
+      "https://fullnode.mainnet.sui.io:443",
+  });
+}
+
+
+type SuiPaymentVerificationInput = {
+  tx_digest: string;
+  recipient_address: string;
+  minimum_amount_mist: string;
+};
+
+
+function validateSuiPaymentVerification(
+  input: unknown,
+): SuiPaymentVerificationInput {
+  if (
+    !input ||
+    typeof input !== "object"
+  ) {
+    throw new Error(
+      "Payment verification payload must be an object"
+    );
+  }
+
+  const value = input as Record<string, unknown>;
+
+  const txDigest =
+    String(value.tx_digest || "").trim();
+
+  const recipientAddress =
+    String(value.recipient_address || "")
+      .trim()
+      .toLowerCase();
+
+  const minimumAmountMist =
+    String(value.minimum_amount_mist || "")
+      .trim();
+
+  if (!txDigest) {
+    throw new Error(
+      "tx_digest is required"
+    );
+  }
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      recipientAddress
+    )
+  ) {
+    throw new Error(
+      "recipient_address must be a valid Sui address"
+    );
+  }
+
+  if (
+    !/^[0-9]+$/.test(
+      minimumAmountMist
+    )
+  ) {
+    throw new Error(
+      "minimum_amount_mist must be a positive integer"
+    );
+  }
+
+  if (
+    BigInt(minimumAmountMist) <= 0n
+  ) {
+    throw new Error(
+      "minimum_amount_mist must be greater than zero"
+    );
+  }
+
+  return {
+    tx_digest: txDigest,
+    recipient_address: recipientAddress,
+    minimum_amount_mist: minimumAmountMist,
+  };
+}
+
+
+async function executeMainnetTreasuryTransfer({
+  submissionKey,
+  purpose,
+  amountMist,
+}: {
+  submissionKey: string;
+  purpose: string;
+  amountMist: bigint;
+}): Promise<MainnetTransferRow> {
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      MAINNET_TREASURY_ADDRESS
+    )
+  ) {
+    throw new Error(
+      "Mainnet treasury address is not configured"
+    );
+  }
+
+  if (amountMist <= 0n) {
+    throw new Error(
+      "Mainnet transfer amount must be positive"
+    );
+  }
+
+  const existing =
+    getMainnetTransfer(submissionKey);
+
+  if (existing) {
+    if (
+      existing.purpose !== purpose ||
+      existing.recipient_address !==
+        MAINNET_TREASURY_ADDRESS ||
+      existing.amount_mist !==
+        amountMist.toString()
+    ) {
+      throw new Error(
+        "submission_key already exists "
+        + "with different transfer terms"
+      );
+    }
+
+    return existing;
+  }
+
+  const keypair = requireMainnetSigner();
+  const sender =
+    keypair.toSuiAddress().toLowerCase();
+
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO mainnet_transfers (
+      submission_key,
+      purpose,
+      recipient_address,
+      amount_mist,
+      state,
+      sender_address,
+      tx_digest,
+      submitted_at,
+      confirmed_at,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ?, ?, ?, ?, 'accepted', ?,
+      NULL, NULL, NULL, ?, ?
+    )
+  `).run(
+    submissionKey,
+    purpose,
+    MAINNET_TREASURY_ADDRESS,
+    amountMist.toString(),
+    sender,
+    now,
+    now,
+  );
+
+  const client = mainnetClient();
+  const tx = new Transaction();
+
+  const [paymentCoin] =
+    tx.splitCoins(
+      tx.gas,
+      [amountMist],
+    );
+
+  tx.transferObjects(
+    [paymentCoin],
+    MAINNET_TREASURY_ADDRESS,
+  );
+
+  const result =
+    await client.signAndExecuteTransaction({
+      signer: keypair,
+      transaction: tx,
+      include: {
+        effects: true,
+        balanceChanges: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Mainnet Sui transfer returned "
+      + "no transaction"
+    );
+  }
+
+  const success =
+    transaction.status.success === true;
+
+  const finished =
+    new Date().toISOString();
+
+  db.prepare(`
+    UPDATE mainnet_transfers
+    SET
+      state = ?,
+      tx_digest = ?,
+      submitted_at = ?,
+      confirmed_at = ?,
+      updated_at = ?
+    WHERE submission_key = ?
+      AND tx_digest IS NULL
+  `).run(
+    success ? "confirmed" : "failed",
+    transaction.digest,
+    finished,
+    success ? finished : null,
+    finished,
+    submissionKey,
+  );
+
+  const updated =
+    getMainnetTransfer(submissionKey);
+
+  if (!updated) {
+    throw new Error(
+      "Mainnet transfer journal disappeared"
+    );
+  }
+
+  return updated;
+}
+
+
+async function verifyMainnetSuiPayment(
+  requested: SuiPaymentVerificationInput,
+) {
+  const client = mainnetClient();
+
+  await client.waitForTransaction({
+    digest: requested.tx_digest,
+    timeout: 60_000,
+  });
+
+  const result =
+    await client.getTransaction({
+      digest: requested.tx_digest,
+      include: {
+        effects: true,
+        balanceChanges: true,
+        transaction: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Mainnet Sui payment transaction not found"
+    );
+  }
+
+  if (
+    transaction.digest
+    !== requested.tx_digest
+  ) {
+    throw new Error(
+      "Mainnet Sui payment digest mismatch"
+    );
+  }
+
+  if (
+    transaction.status.success
+    !== true
+  ) {
+    throw new Error(
+      "Mainnet Sui payment transaction failed"
+    );
+  }
+
+  /*
+   * Keep this intentionally read-only.
+   *
+   * The gRPC SDK representation has changed across
+   * versions, so normalize the returned balance-change
+   * objects rather than binding settlement logic to one
+   * generated TypeScript shape.
+   */
+  const balanceChanges =
+    (
+      transaction as unknown as {
+        balanceChanges?: unknown[];
+      }
+    ).balanceChanges || [];
+
+  let receivedMist = 0n;
+
+  for (
+    const rawChange of balanceChanges
+  ) {
+    if (
+      !rawChange ||
+      typeof rawChange !== "object"
+    ) {
+      continue;
+    }
+
+    const change =
+      rawChange as Record<string, unknown>;
+
+    const coinType = String(
+      change.coinType ??
+      change.coin_type ??
+      ""
+    );
+
+    if (
+      coinType
+      !== "0x2::sui::SUI"
+      &&
+      coinType
+      !== (
+        "0x00000000000000000000000000000000" +
+        "00000000000000000000000000000002" +
+        "::sui::SUI"
+      )
+    ) {
+      continue;
+    }
+
+    let address = "";
+
+    if (
+      typeof change.address === "string"
+    ) {
+      address = change.address;
+    } else if (
+      change.owner &&
+      typeof change.owner === "object"
+    ) {
+      const owner =
+        change.owner as Record<string, unknown>;
+
+      address = String(
+        owner.AddressOwner ??
+        owner.addressOwner ??
+        owner.address ??
+        ""
+      );
+    }
+
+    address = address
+      .trim()
+      .toLowerCase();
+
+    if (
+      address
+      !== requested.recipient_address
+    ) {
+      continue;
+    }
+
+    const amountRaw =
+      change.amount ??
+      change.amountMist ??
+      change.amount_mist;
+
+    if (
+      amountRaw === undefined ||
+      amountRaw === null
+    ) {
+      continue;
+    }
+
+    const amount = BigInt(
+      String(amountRaw)
+    );
+
+    if (amount > 0n) {
+      receivedMist += amount;
+    }
+  }
+
+  const minimum =
+    BigInt(
+      requested.minimum_amount_mist
+    );
+
+  return {
+    network: "mainnet",
+    tx_digest:
+      requested.tx_digest,
+    success: true,
+    recipient_address:
+      requested.recipient_address,
+    coin_type: "0x2::sui::SUI",
+    received_mist:
+      receivedMist.toString(),
+    minimum_amount_mist:
+      minimum.toString(),
+    sufficient:
+      receivedMist >= minimum,
+  };
 }
 
 
@@ -1735,6 +2327,234 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/v1", authenticate);
+
+app.post(
+  "/v1/mainnet/treasury/canary",
+  async (_req, res) => {
+    try {
+      const key =
+        "treasury-canary-"
+        + new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-");
+
+      const transfer =
+        await executeMainnetTreasuryTransfer({
+          submissionKey: key,
+          purpose: "treasury_canary",
+          amountMist: 10_000_000n,
+        });
+
+      res.json({
+        transfer:
+          publicMainnetTransfer(transfer),
+      });
+
+    } catch (error) {
+      res.status(422).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Treasury canary failed",
+      });
+    }
+  },
+);
+
+
+app.post(
+  "/v1/mainnet/treasury/sweep",
+  async (_req, res) => {
+    try {
+      const hotAddress =
+        (
+          process.env
+            .FANZ_SUI_MAINNET_HOT_ADDRESS ||
+          ""
+        ).trim().toLowerCase();
+
+      const client = mainnetClient();
+
+      const result =
+        await client.getBalance({
+          owner: hotAddress,
+          coinType: "0x2::sui::SUI",
+        });
+
+      const balanceMist =
+        BigInt(
+          result.balance?.addressBalance ??
+          result.balance?.balance ??
+          "0"
+        );
+
+      const sweepMist =
+        calculateMainnetTreasurySweep(
+          balanceMist
+        );
+
+      if (sweepMist <= 0n) {
+        res.json({
+          action:
+            "NO_SWEEP_BELOW_FLOOR",
+          balance_mist:
+            balanceMist.toString(),
+          sweep_mist: "0",
+        });
+        return;
+      }
+
+      const day =
+        new Date()
+          .toISOString()
+          .slice(0, 10);
+
+      const transfer =
+        await executeMainnetTreasuryTransfer({
+          submissionKey:
+            `treasury-sweep-${day}`,
+          purpose: "treasury_sweep",
+          amountMist: sweepMist,
+        });
+
+      res.json({
+        action: "SWEEP",
+        opening_balance_mist:
+          balanceMist.toString(),
+        transfer:
+          publicMainnetTransfer(transfer),
+      });
+
+    } catch (error) {
+      res.status(422).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Treasury sweep failed",
+      });
+    }
+  },
+);
+
+
+app.get(
+  "/v1/mainnet/treasury/sweep-preview",
+  async (_req, res) => {
+    try {
+      const hotAddress =
+        (
+          process.env.FANZ_SUI_MAINNET_HOT_ADDRESS ||
+          ""
+        ).trim().toLowerCase();
+
+      if (
+        !/^0x[0-9a-f]{64}$/.test(
+          hotAddress
+        )
+      ) {
+        throw new Error(
+          "FANZ_SUI_MAINNET_HOT_ADDRESS "
+          + "is not configured"
+        );
+      }
+
+      const client = mainnetClient();
+
+      const result =
+        await client.getBalance({
+          owner: hotAddress,
+          coinType: "0x2::sui::SUI",
+        });
+
+      const balanceMist =
+        BigInt(
+          result.balance?.addressBalance ??
+          result.balance?.balance ??
+          "0"
+        );
+
+      const sweepMist =
+        calculateMainnetTreasurySweep(
+          balanceMist
+        );
+
+      res.json({
+        network: "mainnet",
+        hot_address: hotAddress,
+        balance_mist:
+          balanceMist.toString(),
+        floor_mist:
+          MAINNET_SWEEP_FLOOR_MIST.toString(),
+        sweep_excess_bps:
+          MAINNET_SWEEP_EXCESS_BPS.toString(),
+        sweep_mist:
+          sweepMist.toString(),
+        retained_mist:
+          (
+            balanceMist - sweepMist
+          ).toString(),
+        action:
+          sweepMist > 0n
+            ? "SWEEP"
+            : "NO_SWEEP_BELOW_FLOOR",
+      });
+
+    } catch (error) {
+      res.status(422).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to preview treasury sweep",
+      });
+    }
+  },
+);
+
+
+app.post(
+  "/v1/payments/verify",
+  async (req, res) => {
+    let requested:
+      SuiPaymentVerificationInput;
+
+    try {
+      requested =
+        validateSuiPaymentVerification(
+          req.body
+        );
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "invalid request",
+      });
+      return;
+    }
+
+    try {
+      const verification =
+        await verifyMainnetSuiPayment(
+          requested
+        );
+
+      res.json({
+        verification,
+      });
+    } catch (error) {
+      res.status(422).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : (
+                "Unable to verify "
+                + "mainnet Sui payment"
+              ),
+      });
+    }
+  },
+);
+
 
 app.post("/v1/deliveries", (req, res) => {
   let requested: DeliveryInput;
