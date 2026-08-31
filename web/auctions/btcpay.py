@@ -119,6 +119,15 @@ def create_payment_intent_invoice(payment_intent):
     if not isinstance(payment_intent, PaymentIntent):
         raise TypeError("payment_intent must be a PaymentIntent")
 
+    if (
+        payment_intent.settlement_source
+        != PaymentIntent.SETTLEMENT_BTCPAY
+    ):
+        raise BTCPayError(
+            "PaymentIntent is not configured "
+            "for BTCPay settlement."
+        )
+
     with transaction.atomic():
         locked = (
             PaymentIntent.objects

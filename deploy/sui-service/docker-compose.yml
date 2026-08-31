@@ -12,14 +12,20 @@ services:
       FANZ_SUI_MODE: ${FANZ_SUI_MODE:-mock}
       SUI_NETWORK: ${SUI_NETWORK:-testnet}
       SUI_GRPC_URL: ${SUI_GRPC_URL:-https://fullnode.testnet.sui.io:443}
+      SUI_MAINNET_GRPC_URL: ${SUI_MAINNET_GRPC_URL:-https://fullnode.mainnet.sui.io:443}
       FANZ_SUI_TESTNET_PREPARE_ENABLED: ${FANZ_SUI_TESTNET_PREPARE_ENABLED:-false}
       FANZ_SUI_TESTNET_SUBMIT_ENABLED: ${FANZ_SUI_TESTNET_SUBMIT_ENABLED:-false}
       FANZ_SUI_TESTNET_PUBLICATION_SUBMIT_ENABLED: ${FANZ_SUI_TESTNET_PUBLICATION_SUBMIT_ENABLED:-false}
       FANZ_SUI_TESTNET_PRIVATE_KEY: ${FANZ_SUI_TESTNET_PRIVATE_KEY:-}
+      FANZ_SUI_MAINNET_HOT_ADDRESS: ${FANZ_SUI_MAINNET_HOT_ADDRESS:-}
+      FANZ_SUI_MAINNET_TRANSFER_ENABLED: ${FANZ_SUI_MAINNET_TRANSFER_ENABLED:-false}
+      FANZ_SUI_MAINNET_WALLET_PATH: /run/secrets/fanz-mainnet-wallet.json
+      FANZ_SUI_MAINNET_TREASURY_ADDRESS: ${FANZ_SUI_MAINNET_TREASURY_ADDRESS:-}
     expose:
       - "3000"
     volumes:
       - sui_journal:/data
+      - ${HOME}/.fanz-wallets/sui-mainnet/fanz-mainnet-wallet.json:/run/secrets/fanz-mainnet-wallet.json:ro
     networks:
       fanz-net:
         aliases:

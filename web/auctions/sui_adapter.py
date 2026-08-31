@@ -195,3 +195,24 @@ def reconcile_creator_publication(publication_key):
         ),
         json={},
     )
+
+def verify_sui_payment(
+    *,
+    tx_digest,
+    recipient_address,
+    minimum_amount_mist,
+):
+    payload = {
+        "tx_digest":
+            str(tx_digest).strip(),
+        "recipient_address":
+            str(recipient_address).strip(),
+        "minimum_amount_mist":
+            str(int(minimum_amount_mist)),
+    }
+
+    return _request(
+        "POST",
+        "/v1/payments/verify",
+        json=payload,
+    )

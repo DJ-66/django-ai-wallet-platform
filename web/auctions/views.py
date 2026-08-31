@@ -1866,6 +1866,11 @@ def quote_founder_vending(request):
         request.POST.get("budget_credits") or ""
     ).strip()
 
+    payment_method = (
+        request.POST.get("payment_method")
+        or FounderCartItem.PAYMENT_CREDITS
+    ).strip().lower()
+
     purchase_mode = (
         request.POST.get("purchase_mode")
         or FounderCartItem.MODE_SELF
@@ -1898,6 +1903,7 @@ def quote_founder_vending(request):
             purchaser=request.user,
             wanted_handle=wanted_handle,
             budget_credits=budget_credits,
+            payment_method=payment_method,
             purchase_mode=purchase_mode,
             sui_recipient_address=sui_recipient_address,
             gift_recipient_name=gift_recipient_name,

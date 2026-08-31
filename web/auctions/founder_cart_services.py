@@ -83,6 +83,7 @@ def create_founder_vending_reservation(
     purchaser,
     wanted_handle,
     budget_credits,
+    payment_method=FounderCartItem.PAYMENT_CREDITS,
     purchase_mode=FounderCartItem.MODE_SELF,
     sui_recipient_address="",
     gift_recipient_name="",
@@ -90,6 +91,18 @@ def create_founder_vending_reservation(
     gift_message="",
 ):
     buyer_root = normalize_owner_root(purchaser)
+
+    valid_payment_methods = {
+        FounderCartItem.PAYMENT_CREDITS,
+        FounderCartItem.PAYMENT_BTC,
+        FounderCartItem.PAYMENT_DOGE,
+        FounderCartItem.PAYMENT_SUI,
+    }
+
+    if payment_method not in valid_payment_methods:
+        raise FounderCartError(
+            "Unsupported Founder payment method."
+        )
 
     identity = founder_coin_identity(
         wanted_handle
@@ -136,22 +149,26 @@ def create_founder_vending_reservation(
     else:
         effective_list_price = proposed_list_price
 
-    wallet = (
-        BidWallet.objects
-        .select_for_update()
-        .filter(user=buyer_root)
-        .first()
-    )
+    wallet = None
 
-    if wallet is None:
-        raise FounderCartError(
-            "Buyer has no FANZ credit wallet."
+    if payment_method == FounderCartItem.PAYMENT_CREDITS:
+        wallet = (
+            BidWallet.objects
+            .select_for_update()
+            .filter(user=buyer_root)
+            .first()
         )
 
-    if wallet.credits < budget:
-        raise FounderCartError(
-            "Available FANZ credits are below the submitted budget."
-        )
+        if wallet is None:
+            raise FounderCartError(
+                "Buyer has no FANZ credit wallet."
+            )
+
+        if wallet.credits < budget:
+            raise FounderCartError(
+                "Available FANZ credits are below "
+                "the submitted budget."
+            )
 
     cart, _ = get_or_create_open_founder_cart(
         purchaser
@@ -231,6 +248,7 @@ def create_founder_vending_reservation(
         wanted_handle=identity.handle,
         budget_credits=budget,
         list_price_credits=effective_list_price,
+        payment_method=payment_method,
         purchase_mode=purchase_mode,
         sui_recipient_address=(
             sui_recipient_address or ""
@@ -261,10 +279,11 @@ def create_founder_vending_reservation(
             str(exc)
         ) from exc
 
-    wallet.credits -= budget
-    wallet.save(
-        update_fields=["credits"]
-    )
+    if payment_method == FounderCartItem.PAYMENT_CREDITS:
+        wallet.credits -= budget
+        wallet.save(
+            update_fields=["credits"]
+        )
 
     item.save()
 
@@ -282,12 +301,15 @@ def create_founder_vending_reservation(
             ]
         )
 
-    hold = FounderVendingHold.objects.create(
-        cart_item=item,
-        wallet=wallet,
-        amount_credits=budget,
-        status=FounderVendingHold.STATUS_HELD,
-    )
+    hold = None
+
+    if payment_method == FounderCartItem.PAYMENT_CREDITS:
+        hold = FounderVendingHold.objects.create(
+            cart_item=item,
+            wallet=wallet,
+            amount_credits=budget,
+            status=FounderVendingHold.STATUS_HELD,
+        )
 
     if memory is None:
         memory = FounderPriceMemory.objects.create(
@@ -597,6 +619,15 @@ def purchase_founder_vending_reservation(
         .select_related("cart__purchaser")
         .get(pk=cart_item_id)
     )
+
+    if (
+        item.payment_method
+        != FounderCartItem.PAYMENT_CREDITS
+    ):
+        raise FounderCartError(
+            "External Founder payment must complete "
+            "through its payment checkout."
+        )
 
     item_buyer_root = normalize_owner_root(
         item.cart.purchaser
