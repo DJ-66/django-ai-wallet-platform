@@ -27,6 +27,12 @@ const TESTNET_PUBLICATION_SUBMIT_ENABLED =
 const MAINNET_TRANSFER_ENABLED =
   process.env.FANZ_SUI_MAINNET_TRANSFER_ENABLED === "true";
 
+const MAINNET_STARTER_GRANT_ENABLED =
+  process.env.FANZ_SUI_MAINNET_STARTER_GRANT_ENABLED === "true";
+
+const MAINNET_STARTER_GRANT_MIST =
+  250_000_000n;
+
 const MAINNET_TREASURY_ADDRESS =
   (
     process.env.FANZ_SUI_MAINNET_TREASURY_ADDRESS ||
@@ -1135,6 +1141,191 @@ function validateSuiPaymentVerification(
     recipient_address: recipientAddress,
     minimum_amount_mist: minimumAmountMist,
   };
+}
+
+
+async function executeMainnetStarterGrant({
+  submissionKey,
+  recipientAddress,
+}: {
+  submissionKey: string;
+  recipientAddress: string;
+}): Promise<MainnetTransferRow> {
+  if (!MAINNET_STARTER_GRANT_ENABLED) {
+    throw new Error(
+      "Mainnet Sui starter grants are disabled"
+    );
+  }
+
+  const recipient =
+    recipientAddress
+      .trim()
+      .toLowerCase();
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(recipient)
+  ) {
+    throw new Error(
+      "Starter grant recipient is not "
+      + "a valid Sui address"
+    );
+  }
+
+  const key =
+    submissionKey.trim();
+
+  if (
+    !/^[A-Za-z0-9._:-]{1,160}$/.test(key)
+  ) {
+    throw new Error(
+      "Starter grant submission_key is invalid"
+    );
+  }
+
+  const purpose =
+    "starter_grant";
+
+  const amountMist =
+    MAINNET_STARTER_GRANT_MIST;
+
+  const existing =
+    getMainnetTransfer(key);
+
+  if (existing) {
+    if (
+      existing.purpose !== purpose ||
+      existing.recipient_address !== recipient ||
+      existing.amount_mist !==
+        amountMist.toString()
+    ) {
+      throw new Error(
+        "submission_key already exists "
+        + "with different starter grant terms"
+      );
+    }
+
+    return existing;
+  }
+
+  const keypair =
+    requireMainnetSigner();
+
+  const sender =
+    keypair
+      .toSuiAddress()
+      .toLowerCase();
+
+  if (sender === recipient) {
+    throw new Error(
+      "Starter grant recipient cannot "
+      + "be the FANZ hot wallet"
+    );
+  }
+
+  const now =
+    new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO mainnet_transfers (
+      submission_key,
+      purpose,
+      recipient_address,
+      amount_mist,
+      state,
+      sender_address,
+      tx_digest,
+      submitted_at,
+      confirmed_at,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ?, ?, ?, ?, 'accepted', ?,
+      NULL, NULL, NULL, ?, ?
+    )
+  `).run(
+    key,
+    purpose,
+    recipient,
+    amountMist.toString(),
+    sender,
+    now,
+    now,
+  );
+
+  const client =
+    mainnetClient();
+
+  const tx =
+    new Transaction();
+
+  const [grantCoin] =
+    tx.splitCoins(
+      tx.gas,
+      [amountMist],
+    );
+
+  tx.transferObjects(
+    [grantCoin],
+    recipient,
+  );
+
+  const result =
+    await client.signAndExecuteTransaction({
+      signer: keypair,
+      transaction: tx,
+      include: {
+        effects: true,
+        balanceChanges: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Starter grant returned "
+      + "no Sui transaction"
+    );
+  }
+
+  const success =
+    transaction.status.success === true;
+
+  const finished =
+    new Date().toISOString();
+
+  db.prepare(`
+    UPDATE mainnet_transfers
+    SET
+      state = ?,
+      tx_digest = ?,
+      submitted_at = ?,
+      confirmed_at = ?,
+      updated_at = ?
+    WHERE submission_key = ?
+      AND tx_digest IS NULL
+  `).run(
+    success ? "confirmed" : "failed",
+    transaction.digest,
+    finished,
+    success ? finished : null,
+    finished,
+    key,
+  );
+
+  const updated =
+    getMainnetTransfer(key);
+
+  if (!updated) {
+    throw new Error(
+      "Starter grant journal disappeared"
+    );
+  }
+
+  return updated;
 }
 
 
@@ -2327,6 +2518,55 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/v1", authenticate);
+
+app.post(
+  "/v1/mainnet/starter-grants",
+  async (req, res) => {
+    try {
+      const body =
+        (
+          req.body &&
+          typeof req.body === "object"
+        )
+          ? req.body as Record<string, unknown>
+          : {};
+
+      const submissionKey =
+        String(
+          body.submission_key || ""
+        ).trim();
+
+      const recipientAddress =
+        String(
+          body.recipient_address || ""
+        ).trim();
+
+      const transfer =
+        await executeMainnetStarterGrant({
+          submissionKey,
+          recipientAddress,
+        });
+
+      res.json({
+        grant: {
+          ...publicMainnetTransfer(
+            transfer
+          ),
+          amount_sui: "0.25",
+        },
+      });
+
+    } catch (error) {
+      res.status(422).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Starter grant failed",
+      });
+    }
+  },
+);
+
 
 app.post(
   "/v1/mainnet/treasury/canary",
