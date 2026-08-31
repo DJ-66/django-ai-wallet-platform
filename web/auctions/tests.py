@@ -1,6 +1,5 @@
 from unittest.mock import Mock, patch
-
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 from .btcpay import (
@@ -4387,3 +4386,296 @@ class FounderCoinPublicationWorkerTests(TestCase):
             kwargs["asset_id"],
             first.pk,
         )
+
+
+class SuiStarterGrantPolicyTests(TestCase):
+    def test_fanz_credits_never_qualify_for_starter_sui(self):
+        from .sui_grant_policy import (
+            qualifies_for_sui_starter_grant,
+        )
+
+        self.assertFalse(
+            qualifies_for_sui_starter_grant(
+                payment_method="credits",
+            )
+        )
+
+    def test_btc_qualifies_for_starter_sui(self):
+        from .sui_grant_policy import (
+            qualifies_for_sui_starter_grant,
+        )
+
+        self.assertTrue(
+            qualifies_for_sui_starter_grant(
+                payment_method="btc",
+            )
+        )
+
+    def test_doge_qualifies_for_starter_sui(self):
+        from .sui_grant_policy import (
+            qualifies_for_sui_starter_grant,
+        )
+
+        self.assertTrue(
+            qualifies_for_sui_starter_grant(
+                payment_method="doge",
+            )
+        )
+
+    def test_sui_qualifies_for_starter_sui(self):
+        from .sui_grant_policy import (
+            qualifies_for_sui_starter_grant,
+        )
+
+        self.assertTrue(
+            qualifies_for_sui_starter_grant(
+                payment_method="sui",
+            )
+        )
+
+    def test_credits_with_sui_address_still_do_not_get_grant(self):
+        from .sui_grant_policy import (
+            starter_grant_is_ready,
+        )
+
+        self.assertFalse(
+            starter_grant_is_ready(
+                payment_method="credits",
+                sui_address=(
+                    "0x"
+                    + "1" * 64
+                ),
+            )
+        )
+
+    def test_external_payment_without_address_waits(self):
+        from .sui_grant_policy import (
+            starter_grant_is_ready,
+        )
+
+        for method in (
+            "btc",
+            "doge",
+            "sui",
+        ):
+            with self.subTest(method=method):
+                self.assertFalse(
+                    starter_grant_is_ready(
+                        payment_method=method,
+                        sui_address="",
+                    )
+                )
+
+    def test_external_payment_with_address_is_ready(self):
+        from .sui_grant_policy import (
+            starter_grant_is_ready,
+        )
+
+        address = "0x" + "2" * 64
+
+        for method in (
+            "btc",
+            "doge",
+            "sui",
+        ):
+            with self.subTest(method=method):
+                self.assertTrue(
+                    starter_grant_is_ready(
+                        payment_method=method,
+                        sui_address=address,
+                    )
+                )
+
+
+class FanzPaymentPolicyTests(SimpleTestCase):
+    def test_platform_founder_accepts_all_payment_rails(self):
+        from .payment_policy import (
+            CONTEXT_PLATFORM_FOUNDER,
+            payment_method_allowed,
+        )
+
+        for method in (
+            "credits",
+            "btc",
+            "doge",
+            "sui",
+        ):
+            with self.subTest(method=method):
+                self.assertTrue(
+                    payment_method_allowed(
+                        context=CONTEXT_PLATFORM_FOUNDER,
+                        payment_method=method,
+                        seller_is_platform=True,
+                    )
+                )
+
+    def test_platform_meme_coin_accepts_all_payment_rails(self):
+        from .payment_policy import (
+            CONTEXT_PLATFORM_MEME_COIN,
+            payment_method_allowed,
+        )
+
+        for method in (
+            "credits",
+            "btc",
+            "doge",
+            "sui",
+        ):
+            with self.subTest(method=method):
+                self.assertTrue(
+                    payment_method_allowed(
+                        context=CONTEXT_PLATFORM_MEME_COIN,
+                        payment_method=method,
+                        seller_is_platform=True,
+                    )
+                )
+
+    def test_non_platform_founder_p2p_is_credits_only(self):
+        from .payment_policy import (
+            CONTEXT_FOUNDER_P2P,
+            payment_method_allowed,
+        )
+
+        self.assertTrue(
+            payment_method_allowed(
+                context=CONTEXT_FOUNDER_P2P,
+                payment_method="credits",
+                seller_is_platform=False,
+            )
+        )
+
+        for method in (
+            "btc",
+            "doge",
+            "sui",
+        ):
+            with self.subTest(method=method):
+                self.assertFalse(
+                    payment_method_allowed(
+                        context=CONTEXT_FOUNDER_P2P,
+                        payment_method=method,
+                        seller_is_platform=False,
+                    )
+                )
+
+    def test_feed_tips_are_credits_only(self):
+        from .payment_policy import (
+            CONTEXT_FEED_TIP,
+            payment_method_allowed,
+        )
+
+        self.assertTrue(
+            payment_method_allowed(
+                context=CONTEXT_FEED_TIP,
+                payment_method="credits",
+            )
+        )
+
+        for method in ("btc", "doge", "sui"):
+            self.assertFalse(
+                payment_method_allowed(
+                    context=CONTEXT_FEED_TIP,
+                    payment_method=method,
+                )
+            )
+
+    def test_post_unlocks_are_credits_only(self):
+        from .payment_policy import (
+            CONTEXT_POST_UNLOCK,
+            payment_method_allowed,
+        )
+
+        self.assertTrue(
+            payment_method_allowed(
+                context=CONTEXT_POST_UNLOCK,
+                payment_method="credits",
+            )
+        )
+
+        for method in ("btc", "doge", "sui"):
+            self.assertFalse(
+                payment_method_allowed(
+                    context=CONTEXT_POST_UNLOCK,
+                    payment_method=method,
+                )
+            )
+
+    def test_unknown_context_fails_closed_to_credits(self):
+        from .payment_policy import (
+            payment_method_allowed,
+        )
+
+        self.assertTrue(
+            payment_method_allowed(
+                context="future_unknown_thing",
+                payment_method="credits",
+            )
+        )
+
+        self.assertFalse(
+            payment_method_allowed(
+                context="future_unknown_thing",
+                payment_method="sui",
+            )
+        )
+
+    def test_fanz_meme_coin_is_not_a_payment_method(self):
+        from .payment_policy import PAYMENT_METHODS
+
+        self.assertNotIn(
+            "fanz",
+            PAYMENT_METHODS,
+        )
+        self.assertNotIn(
+            "fanzmeme",
+            PAYMENT_METHODS,
+        )
+        self.assertNotIn(
+            "meme_coin",
+            PAYMENT_METHODS,
+        )
+
+
+class FounderVendingPaymentPolicyIntegrationTests(
+    SimpleTestCase
+):
+    def test_platform_founder_policy_allows_four_rails(self):
+        from .payment_policy import (
+            CONTEXT_PLATFORM_FOUNDER,
+            payment_method_allowed,
+        )
+
+        for method in (
+            "credits",
+            "btc",
+            "doge",
+            "sui",
+        ):
+            with self.subTest(method=method):
+                self.assertTrue(
+                    payment_method_allowed(
+                        context=CONTEXT_PLATFORM_FOUNDER,
+                        payment_method=method,
+                        seller_is_platform=True,
+                    )
+                )
+
+    def test_platform_founder_rejects_fanz_meme_coin_as_rail(self):
+        from .payment_policy import (
+            CONTEXT_PLATFORM_FOUNDER,
+            payment_method_allowed,
+        )
+
+        for method in (
+            "fanz",
+            "fanzmeme",
+            "meme_coin",
+        ):
+            with self.subTest(method=method):
+                self.assertFalse(
+                    payment_method_allowed(
+                        context=CONTEXT_PLATFORM_FOUNDER,
+                        payment_method=method,
+                        seller_is_platform=True,
+                    )
+                )

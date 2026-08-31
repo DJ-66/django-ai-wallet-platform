@@ -92,14 +92,11 @@ def create_founder_vending_reservation(
 ):
     buyer_root = normalize_owner_root(purchaser)
 
-    valid_payment_methods = {
-        FounderCartItem.PAYMENT_CREDITS,
-        FounderCartItem.PAYMENT_BTC,
-        FounderCartItem.PAYMENT_DOGE,
-        FounderCartItem.PAYMENT_SUI,
-    }
-
-    if payment_method not in valid_payment_methods:
+    if not payment_method_allowed(
+        context=CONTEXT_PLATFORM_FOUNDER,
+        payment_method=payment_method,
+        seller_is_platform=True,
+    ):
         raise FounderCartError(
             "Unsupported Founder payment method."
         )
