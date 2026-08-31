@@ -172,6 +172,66 @@
   outline: none;
   border-color: #8cff00;
 }
+
+.founder-creator-coin-card {
+    margin-bottom: 22px;
+    padding: 20px;
+
+    border: 1px solid rgba(120, 80, 180, .20);
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, .72);
+
+    box-shadow:
+        0 6px 22px rgba(60, 20, 100, .06);
+}
+
+.founder-coin-eyebrow {
+    margin-bottom: 5px;
+    font-weight: 700;
+    opacity: .65;
+}
+
+.founder-coin-symbol {
+    margin-top: -4px;
+    font-size: .85rem;
+    opacity: .65;
+}
+
+.founder-coin-code {
+    overflow-wrap: anywhere;
+    font-family: monospace;
+    font-size: .88rem;
+}
+
+.founder-coin-note {
+    margin-bottom: 0;
+    opacity: .72;
+}
+
+
+/* Founder custom meme coin card is light */
+.founder-creator-coin-card,
+.founder-creator-coin-card h1,
+.founder-creator-coin-card h2,
+.founder-creator-coin-card h3,
+.founder-creator-coin-card p,
+.founder-creator-coin-card strong,
+.founder-creator-coin-card span,
+.founder-creator-coin-card div,
+.founder-coin-eyebrow,
+.founder-coin-symbol,
+.founder-coin-code,
+.founder-coin-note {
+    color: #111827 !important;
+}
+
+
+
+/* Market section sits on the dark Founder card */
+.founder-listed-label {
+    color: #ffffff !important;
+}
 </style>
 {% endblock %}
 {% block content %}
@@ -429,12 +489,60 @@
     background: rgba(15, 23, 42, .95);
     border: 1px solid rgba(148, 163, 184, .22);
   ">
+    {% if creator_coin %}
+    <div class="founder-creator-coin-card">
+
+        <div class="founder-coin-eyebrow">
+            Sui · Custom Meme Coin
+        </div>
+
+        <h2>
+            {% if creator_coin.display_name %}
+                {{ creator_coin.display_name }}
+            {% else %}
+                {{ founder_account.handle|title }}Fanz
+            {% endif %}
+        </h2>
+
+        <div class="founder-coin-symbol">
+            {{ creator_coin.symbol }}
+        </div>
+
+        <p>
+            <strong>Max:</strong>
+            21B
+            {% if creator_coin.supply_fixed_at %}
+                · ✓ Fixed supply
+            {% endif %}
+        </p>
+
+        {% if creator_coin.coin_type %}
+            <p>
+                <strong>Coin Type</strong>
+            </p>
+
+            <div class="founder-coin-code">
+                {{ creator_coin.coin_type }}
+            </div>
+        {% endif %}
+
+        <p class="founder-coin-note">
+            Coin ownership and transfers occur directly
+            between user wallets on the Sui network.
+            FANZ does not custody this custom meme coin.
+        </p>
+
+    </div>
+    {% endif %}
+
     <h2>{% trans "Market" %}</h2>
 
     {% if active_listing %}
 
   <p>
-    <strong>🏷️ {% trans "Listed for sale" %}</strong>
+    <strong class="founder-listed-label">
+      🏷️ {% trans "Listed for sale" %}
+    </strong>
   </p>
 
   <p>

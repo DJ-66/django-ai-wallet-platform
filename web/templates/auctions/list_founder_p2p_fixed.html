@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+
+<div class="founder-list-page">
+
+    <div class="founder-list-card">
+
+        <div class="founder-list-eyebrow">
+            🤝 P2P Marketplace
+        </div>
+
+        <h1>
+            List @{{ founder.handle }} for Sale
+        </h1>
+
+        <p class="founder-list-copy">
+            Set a fixed price in FANZ credits.
+            The @name will appear in the P2P Marketplace
+            immediately after listing.
+        </p>
+
+        <div class="founder-list-property">
+            <strong>@{{ founder.handle }}</strong>
+            <span>{{ founder.status|title }}</span>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            <div class="founder-list-field">
+                <label
+                    for="{{ form.fixed_price_credits.id_for_label }}">
+                    Fixed Price
+                </label>
+
+                {{ form.fixed_price_credits }}
+
+                <div class="founder-list-help">
+                    FANZ Credits · Minimum 200
+                </div>
+
+                {{ form.fixed_price_credits.errors }}
+            </div>
+
+            <div class="founder-list-actions">
+
+                <button
+                    type="submit"
+                    class="auth-primary-btn">
+                    💰 List for Sale
+                </button>
+
+                <a
+                    href="{% url 'platform_accounts_dashboard' %}"
+                    class="auth-primary-btn">
+                    Cancel
+                </a>
+
+            </div>
+        </form>
+
+    </div>
+
+</div>
+
+<style>
+.founder-list-page {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.founder-list-card {
+    padding: 26px;
+    border: 1px solid rgba(120,80,180,.20);
+    border-radius: 20px;
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 8px 28px rgba(60,20,100,.08);
+}
+
+.founder-list-eyebrow {
+    margin-bottom: 8px;
+    font-weight: 700;
+    opacity: .72;
+}
+
+.founder-list-card h1 {
+    margin: 0;
+}
+
+.founder-list-copy {
+    margin-top: 10px;
+    opacity: .75;
+}
+
+.founder-list-property {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 22px 0;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 14px;
+}
+
+.founder-list-field label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 700;
+}
+
+.founder-list-field input {
+    width: 100%;
+    max-width: 340px;
+}
+
+.founder-list-help {
+    margin-top: 6px;
+    opacity: .68;
+}
+
+.founder-list-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+}
+</style>
+
+{% endblock %}

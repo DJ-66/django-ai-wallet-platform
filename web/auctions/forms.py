@@ -556,6 +556,36 @@ class SignUpForm(forms.ModelForm):
         return email
 
 
+class FounderFixedPriceListingForm(forms.Form):
+    include_creator_coin_balance = forms.BooleanField(
+        required=False,
+        label=_(
+            "Include current custom meme coin wallet balance"
+        ),
+        help_text=_(
+            "The coin transfer is P2P on Sui. "
+            "FANZ never receives or holds the custom meme coin. "
+            "Marketplace fees are charged only in FANZ credits."
+        ),
+    )
+
+    fixed_price_credits = forms.IntegerField(
+        min_value=200,
+        label=_("Fixed Price"),
+        help_text=_(
+            "Minimum 200 FANZ credits."
+        ),
+        widget=forms.NumberInput(
+            attrs={
+                "min": "200",
+                "step": "1",
+                "placeholder": "200",
+            }
+        ),
+    )
+
+
+
 class UserProfileForm(forms.ModelForm):
     SUI_MIN_CREDITS = 500
 

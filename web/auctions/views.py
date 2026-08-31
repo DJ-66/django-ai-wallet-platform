@@ -20,6 +20,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import models, transaction
 from django.db.models import Case, IntegerField, Q, Sum, Value, When, Count, Exists, OuterRef
@@ -68,6 +69,7 @@ from .forms import (
     UserProfileForm,
     UserProfileTranslationForm,
     PlatformAccountForm,
+    FounderFixedPriceListingForm,
 )
 from .models import (
     Event,
@@ -75,6 +77,7 @@ from .models import (
     FounderCartItem,
     FounderListing,
     FounderAccount,
+    EconomyAsset,
     FounderOwnershipLedger,
     AuctionTranslation,
     DigitalItemTranslation,
@@ -109,6 +112,7 @@ from .founder_services import (
     purchase_tienda_fixed_listing,
     purchase_p2p_fixed_listing,
     cancel_founder_listing,
+    create_founder_listing,
     get_authoritative_root,
 )
 from .founder_cart_services import (
@@ -920,6 +924,109 @@ def feed_home(request):
     })
 
 @login_required
+def list_founder_p2p_fixed(request, founder_id):
+    founder = get_object_or_404(
+        FounderAccount.objects.select_related(
+            "owner_root"
+        ),
+        pk=founder_id,
+    )
+
+    seller_root = get_authoritative_root(
+        request.user
+    )
+
+    if founder.owner_root_id != seller_root.pk:
+        raise Http404("Not found")
+
+    active_listing = (
+        FounderListing.objects
+        .filter(
+            founder_account=founder,
+            listing_source=FounderListing.SOURCE_P2P,
+            status=FounderListing.STATUS_ACTIVE,
+        )
+        .first()
+    )
+
+    if active_listing is not None:
+        messages.info(
+            request,
+            _(
+                "@%(handle)s already has an active "
+                "P2P listing."
+            ) % {
+                "handle": founder.handle,
+            },
+        )
+
+        return redirect(
+            "platform_accounts_dashboard"
+        )
+
+    if request.method == "POST":
+        form = FounderFixedPriceListingForm(
+            request.POST
+        )
+
+        if form.is_valid():
+            try:
+                listing = create_founder_listing(
+                    founder_account=founder,
+                    seller=request.user,
+                    sale_type=FounderListing.SALE_FIXED,
+                    fixed_price_credits=(
+                        form.cleaned_data[
+                            "fixed_price_credits"
+                        ]
+                    ),
+                )
+
+            except ValidationError as exc:
+                form.add_error(
+                    None,
+                    (
+                        exc.messages[0]
+                        if getattr(
+                            exc,
+                            "messages",
+                            None,
+                        )
+                        else str(exc)
+                    ),
+                )
+
+            else:
+                messages.success(
+                    request,
+                    _(
+                        "@%(handle)s listed for "
+                        "%(price)s FANZ credits."
+                    ) % {
+                        "handle": founder.handle,
+                        "price":
+                            f"{listing.fixed_price_credits:,}",
+                    },
+                )
+
+                return redirect(
+                    "founder_tienda"
+                )
+
+    else:
+        form = FounderFixedPriceListingForm()
+
+    return render(
+        request,
+        "auctions/list_founder_p2p_fixed.html",
+        {
+            "founder": founder,
+            "form": form,
+        },
+    )
+
+
+@login_required
 def cancel_founder_p2p_listing(request, listing_id):
     listing = get_object_or_404(
         FounderListing.objects.select_related(
@@ -1621,6 +1728,14 @@ def founder_knowledge(request, handle):
         handle__iexact=handle,
     )
 
+    creator_coin = (
+        EconomyAsset.objects
+        .filter(
+            founder_account=founder_account,
+        )
+        .first()
+    )
+
     language = request.GET.get(
         "lang",
         getattr(request, "LANGUAGE_CODE", "en"),
@@ -1724,6 +1839,7 @@ def founder_knowledge(request, handle):
         "auctions/founder_knowledge.html",
         {
             "founder_account": founder_account,
+            "creator_coin": creator_coin,
             "valuation": valuation,
             "valuation_presentation": (
                 valuation_presentation
@@ -2013,6 +2129,28 @@ def founder_tienda(request):
         request.GET.get("p2p_page")
     )
 
+    p2p_founder_ids = [
+        listing.founder_account_id
+        for listing in p2p_page.object_list
+    ]
+
+    p2p_creator_coins = {
+        asset.founder_account_id: asset
+        for asset in (
+            EconomyAsset.objects
+            .filter(
+                founder_account_id__in=p2p_founder_ids
+            )
+        )
+    }
+
+    for listing in p2p_page.object_list:
+        listing.creator_coin_display = (
+            p2p_creator_coins.get(
+                listing.founder_account_id
+            )
+        )
+
 
     wallet = BidWallet.objects.filter(
         user=request.user
@@ -2283,18 +2421,133 @@ def platform_accounts_dashboard(request):
     if request.user.username.lower() != "dj":
         raise Http404("Not found")
 
-    platform_accounts = (
+    platform_profiles = list(
         UserProfile.objects
         .select_related("user")
         .filter(is_platform_account=True)
         .order_by("user__username")
     )
 
+    platform_by_username = {
+        profile.user.username.lower(): profile
+        for profile in platform_profiles
+    }
+
+    platform_founders = list(
+        FounderAccount.objects
+        .filter(
+            owner_root=request.user,
+        )
+        .order_by("handle")
+    )
+
+    economy_assets = {
+        asset.founder_account_id: asset
+        for asset in (
+            EconomyAsset.objects
+            .filter(
+                founder_account__in=platform_founders
+            )
+        )
+    }
+
+    active_p2p_listings = {
+        listing.founder_account_id: listing
+        for listing in (
+            FounderListing.objects
+            .filter(
+                founder_account__in=platform_founders,
+                listing_source=FounderListing.SOURCE_P2P,
+                status=FounderListing.STATUS_ACTIVE,
+            )
+        )
+    }
+
+    short_account_rows = []
+
+    for founder in platform_founders:
+        handle = founder.handle
+
+        if len(handle) > 4:
+            continue
+
+        asset = economy_assets.get(
+            founder.id
+        )
+
+        active_listing = (
+            active_p2p_listings.get(
+                founder.id
+            )
+        )
+
+        profile = platform_by_username.get(
+            handle.lower()
+        )
+
+        coin_quantity = None
+        coin_max_supply = None
+
+        if asset:
+            divisor = 10 ** asset.decimals
+
+            coin_quantity = (
+                asset.genesis_supply_base_units
+                / divisor
+            )
+
+            if asset.supply_fixed_at:
+                coin_max_supply = coin_quantity
+
+        short_account_rows.append({
+            "founder": founder,
+            "profile": profile,
+            "asset": asset,
+            "active_listing": active_listing,
+            "has_active_listing":
+                bool(active_listing),
+            "has_coin": bool(asset),
+            "coin_quantity": coin_quantity,
+            "coin_max_supply": coin_max_supply,
+            "coin_active": bool(
+                asset
+                and asset.status
+                == EconomyAsset.STATUS_ACTIVE
+            ),
+            "supply_fixed": bool(
+                asset
+                and asset.supply_fixed_at
+            ),
+        })
+
+    other_platform_accounts = [
+        profile
+        for profile in platform_profiles
+        if len(profile.user.username) >= 5
+    ]
+
+    profile = getattr(
+        request.user,
+        "profile",
+        None,
+    )
+
+    platform_sui_address = (
+        profile.sui_address
+        if profile
+        else ""
+    )
+
     return render(
         request,
         "auctions/platform_accounts.html",
         {
-            "platform_accounts": platform_accounts,
+            "short_account_rows":
+                short_account_rows,
+            "other_platform_accounts":
+                other_platform_accounts,
+            "platform_sui_address":
+                platform_sui_address,
         },
     )
 

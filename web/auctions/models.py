@@ -1828,6 +1828,39 @@ class FounderListing(models.Model):
         blank=True,
     )
 
+    include_creator_coin_balance = models.BooleanField(
+        default=False,
+    )
+
+    creator_coin_amount_base_units = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    creator_coin_type_snapshot = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    creator_coin_name_snapshot = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+    )
+
+    creator_coin_symbol_snapshot = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+    )
+
+    creator_coin_seller_address = models.CharField(
+        max_length=66,
+        blank=True,
+        default="",
+    )
+
     minimum_bid_credits = models.PositiveBigIntegerField(
         null=True,
         blank=True,
