@@ -734,6 +734,81 @@
     }
   }
 
+
+.founder-p2p-coin {
+  margin: 14px 0;
+  padding: 13px 14px;
+
+  border: 1px solid rgba(99, 102, 241, .22);
+  border-radius: 12px;
+
+  background: rgba(99, 102, 241, .06);
+}
+
+.founder-p2p-coin-label {
+  margin-bottom: 5px;
+
+  font-size: .76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+
+  color: #4f46e5;
+}
+
+.founder-p2p-coin-name {
+  font-weight: 700;
+  color: #111827;
+}
+
+.founder-p2p-coin-name span {
+  margin-left: 5px;
+
+  font-size: .78rem;
+  font-weight: 500;
+
+  color: #6b7280;
+}
+
+.founder-p2p-coin-meta {
+  margin-top: 4px;
+  font-size: .82rem;
+  color: #4b5563;
+}
+
+.founder-p2p-coin-included {
+  margin-top: 9px;
+
+  font-weight: 700;
+  color: #166534;
+}
+
+.founder-p2p-coin-note {
+  margin-top: 7px;
+
+  font-size: .78rem;
+  line-height: 1.45;
+
+  color: #6b7280;
+}
+
+
+/* P2P custom meme coin contrast on dark Tienda cards */
+.founder-card--p2p .founder-p2p-coin,
+.founder-card--p2p .founder-p2p-coin-label,
+.founder-card--p2p .founder-p2p-coin-name,
+.founder-card--p2p .founder-p2p-coin-name span,
+.founder-card--p2p .founder-p2p-coin-meta,
+.founder-card--p2p .founder-p2p-coin-included,
+.founder-card--p2p .founder-p2p-coin-note {
+    color: #ffffff;
+}
+
+.founder-card--p2p .founder-p2p-coin {
+    border-color: rgba(255, 255, 255, .22);
+    background: rgba(255, 255, 255, .08);
+}
+
 </style>
 {% endblock %}
 
@@ -1409,6 +1484,65 @@
             {% trans "P2P Blind Offer" %}
           </p>
         {% endif %}
+
+        {% if listing.creator_coin_display %}
+
+          <div class="founder-p2p-coin">
+
+            <div class="founder-p2p-coin-label">
+              🪙 Custom Meme Coin
+            </div>
+
+            <div class="founder-p2p-coin-name">
+              {% if listing.creator_coin_display.display_name %}
+                {{ listing.creator_coin_display.display_name }}
+              {% else %}
+                {{ listing.founder_account.handle|title }}Fanz
+              {% endif %}
+
+              <span>
+                {{ listing.creator_coin_display.symbol }}
+              </span>
+            </div>
+
+            <div class="founder-p2p-coin-meta">
+              Sui · Max 21B
+
+              {% if listing.creator_coin_display.supply_fixed_at %}
+                · ✓ Fixed supply
+              {% endif %}
+            </div>
+
+
+            {% if listing.include_creator_coin_balance %}
+
+              <div class="founder-p2p-coin-included">
+                ✓ Included with this sale
+
+                {% if listing.creator_coin_amount_base_units %}
+                  <br>
+                  Coin balance committed at listing time
+                {% endif %}
+              </div>
+
+              <div class="founder-p2p-coin-note">
+                Seller Sui wallet → Buyer Sui wallet<br>
+                FANZ custody: none · FANZ fee: credits only
+              </div>
+
+            {% else %}
+
+              <div class="founder-p2p-coin-note">
+                Custom coin exists separately on Sui.
+                Not included in this @name listing.
+              </div>
+
+            {% endif %}
+
+          </div>
+
+        {% endif %}
+
 
         <p class="founder-subtext">
           {% trans "Seller" %}:

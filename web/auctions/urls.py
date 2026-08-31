@@ -75,6 +75,12 @@ urlpatterns = [
     ),
     
     path(
+        "founder/<int:founder_id>/p2p/list/",
+        views.list_founder_p2p_fixed,
+        name="list_founder_p2p_fixed",
+    ),
+
+    path(
         "founder/p2p/<int:listing_id>/buy/",
         views.buy_founder_p2p_fixed_listing,
         name="buy_founder_p2p_fixed_listing",

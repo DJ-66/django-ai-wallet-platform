@@ -1,178 +1,711 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load fanz_numbers %}
 
 {% block content %}
 
 <div class="platform-accounts-wrap">
 
-    <h1>✨ {% trans "Platform Accounts" %}</h1>
+    <div class="platform-page-header">
 
-    <p>
-        {% trans "FANZ-controlled platform identities." %}
-    </p>
-    <p>
-    <a
-        class="auth-primary-btn"
-        href="{% url 'create_platform_account' %}">
-        ➕ {% trans "Create Platform Account" %}
-    </a>
-    </p>
-    {% if platform_accounts %}
+        <div>
+            <h1 class="platform-page-title">
+                ✨ {% trans "Platform Accounts" %}
+            </h1>
 
-        <div class="platform-account-list">
-
-            {% for profile in platform_accounts %}
-
-                <div class="platform-account-card">
-
-                   <div class="platform-account-identity">
-
-    {% if profile.avatar %}
-        <img
-            src="{{ profile.avatar.url }}"
-            alt="{{ profile.display_name|default:profile.user.username }}"
-            class="platform-account-avatar"
-        >
-    {% else %}
-        <div class="platform-account-avatar-fallback">
-            {{ profile.user.username|first|upper }}
-        </div>
-    {% endif %}
-
-    <div class="platform-account-meta">
-        <strong>
-            ✨ {{ profile.display_name|default:profile.user.username }}
-        </strong>
-
-        <div class="platform-account-username">
-            @{{ profile.user.username }}
+            <p class="platform-page-subtitle">
+                {% trans "Manage FANZ-controlled platform identities." %}
+            </p>
         </div>
 
-        {% if profile.is_ai_influencer %}
-            <div class="platform-account-type">
-                🤖 {% trans "AI Influencer" %}
-            </div>
-        {% else %}
-            <div class="platform-account-type">
-                ✨ {% trans "Platform Account" %}
-            </div>
-        {% endif %}
+        <a
+            class="auth-primary-btn platform-create-btn"
+            href="{% url 'create_platform_account' %}">
+            ➕ {% trans "Create Platform Account" %}
+        </a>
+
     </div>
 
-</div>
 
-                    <div class="platform-account-actions">
+    {# =================================================== #}
+    {# @4CHAR USERS                                        #}
+    {# =================================================== #}
 
-                        <a
-                            class="auth-primary-btn"
-                            href="{% url 'public_profile_root' profile.user.username %}">
-                            {% trans "View Profile" %}
-                        </a>
-                        {% if profile.user != request.user %}
-                       <form
-    method="post"
-    action="{% url 'login_as_platform_account' profile.user.id %}"
-    style="display:inline;"
->
-    {% csrf_token %}
+    <section class="platform-section">
 
-    <input
-        type="hidden"
-        name="next"
-        value="edit_profile"
-    >
-
-    <button
-        type="submit"
-        class="auth-primary-btn"
-    >
-        ✏️ {% trans "Edit Profile" %}
-    </button>
-</form>
-
-<form
-    method="post"
-    action="{% url 'login_as_platform_account' profile.user.id %}"
-    style="display:inline;"
->
-    {% csrf_token %}
-
-    <input
-        type="hidden"
-        name="next"
-        value="create_post"
-    >
-
-    <button
-        type="submit"
-        class="auth-primary-btn"
-    >
-        📝 {% trans "Create Post" %}
-    </button>
-</form>
-
-                       <form
-                       method="post"
-                       action="{% url 'login_as_platform_account' profile.user.id %}"
-                       style="display:inline;"
-                       >
-                      {% csrf_token %}
-
-                      <button
-                      type="submit"
-                      class="auth-primary-btn"
-                      onclick="return confirm('Login as @{{ profile.user.username }}?');"
-                      >
-                      🔑 {% trans "Login As" %}
-                      </button>
-                      </form>
-                      {% endif %}
-                      </div>
-
+        <div class="platform-section-heading-card">
+            <div class="platform-section-heading">
+                <div>
+                    <h2>@4char Users</h2>
+                    <p>
+                        Platform-owned Founder accounts
+                        with handles of 4 characters or fewer.
+                    </p>
                 </div>
-
-            {% endfor %}
-
+            </div>
         </div>
 
-    {% else %}
+        <div class="platform-sui-card">
+            <strong>
+                Sui Wallet
+            </strong>
 
-        <p>
-            {% trans "No platform accounts yet." %}
-        </p>
+            {% if platform_sui_address %}
 
-    {% endif %}
+                <div class="platform-code">
+                    {{ platform_sui_address }}
+                </div>
+
+                <div class="platform-muted">
+                    Used for all platform-owned @4char accounts.
+                </div>
+
+            {% else %}
+
+                <div class="platform-muted">
+                    No shared Sui wallet configured.
+                </div>
+
+            {% endif %}
+        </div>
+
+
+        {% if short_account_rows %}
+
+            <div class="platform-account-list">
+
+                {% for row in short_account_rows %}
+
+                    <div class="platform-account-card">
+
+                        <div class="platform-account-info">
+
+                            <div class="platform-account-identity">
+
+                                {% if row.profile and row.profile.avatar %}
+
+                                    <img
+                                        src="{{ row.profile.avatar.url }}"
+                                        alt="@{{ row.founder.handle }}"
+                                        class="platform-account-avatar"
+                                    >
+
+                                {% else %}
+
+                                    <div class="platform-account-avatar-fallback">
+                                        {{ row.founder.handle|first|upper }}
+                                    </div>
+
+                                {% endif %}
+
+
+                                <div class="platform-account-meta">
+
+                                    <strong>
+                                        @{{ row.founder.handle }}
+                                    </strong>
+
+                                    <div class="platform-account-type">
+                                        @4char User
+                                    </div>
+
+                                    <div class="platform-founder-status">
+                                        {{ row.founder.status|title }}
+                                    </div>
+
+
+                                    {% if row.asset %}
+
+                                        <div class="platform-coin-info">
+
+                                            <strong>
+                                                {{ row.asset.name }}
+                                            </strong>
+
+                                            {% if row.asset.symbol %}
+                                                <span class="platform-coin-symbol">
+                                                    {{ row.asset.symbol }}
+                                                </span>
+                                            {% endif %}
+
+                                            {% if row.coin_quantity %}
+                                                <div class="platform-coin-supply">
+                                                    Qty:
+                                                    {{ row.coin_quantity|compact_number }}
+
+                                                    {% if row.coin_max_supply %}
+                                                        /
+                                                        Max:
+                                                        {{ row.coin_max_supply|compact_number }}
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+
+                                            {% if row.coin_active %}
+                                                · Active
+                                            {% endif %}
+
+                                            {% if row.supply_fixed %}
+                                                · ✓ Fixed supply
+                                            {% endif %}
+
+                                        </div>
+
+                                        {% if row.asset.coin_type %}
+
+                                            <details class="platform-coin-details">
+
+                                                <summary>
+                                                    Coin details
+                                                </summary>
+
+                                                <div class="platform-detail-row">
+                                                    <strong>
+                                                        Coin Type
+                                                    </strong>
+
+                                                    <div class="platform-code">
+                                                        {{ row.asset.coin_type }}
+                                                    </div>
+                                                </div>
+
+                                                <div class="platform-detail-row">
+                                                    <strong>
+                                                        Genesis Transaction
+                                                    </strong>
+
+                                                    <div class="platform-code">
+                                                        {{ row.asset.genesis_tx_digest }}
+                                                    </div>
+                                                </div>
+
+                                            </details>
+
+                                        {% endif %}
+
+                                    {% else %}
+
+                                        <div class="platform-muted">
+                                            No custom meme coin
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="platform-account-actions">
+
+                            {% if row.profile %}
+
+                                <a
+                                    class="auth-primary-btn"
+                                    href="{% url 'public_profile_root' row.profile.user.username %}">
+                                    {% trans "View Profile" %}
+                                </a>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'login_as_platform_account' row.profile.user.id %}">
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="edit_profile"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn">
+                                        ✏️ {% trans "Edit Profile" %}
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'login_as_platform_account' row.profile.user.id %}">
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="create_post"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn">
+                                        📝 {% trans "Create Post" %}
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'login_as_platform_account' row.profile.user.id %}">
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn"
+                                        onclick="return confirm('Login as @{{ row.profile.user.username }}?');">
+                                        🔑 {% trans "Login As" %}
+                                    </button>
+                                </form>
+
+                            {% else %}
+
+                                <div class="platform-muted">
+                                    No linked platform profile
+                                </div>
+
+                            {% endif %}
+
+                            {% if row.has_active_listing %}
+
+                                <a
+                                    class="auth-primary-btn"
+                                    href="{% url 'founder_knowledge' row.founder.handle %}">
+                                    🤝 View Listing
+                                </a>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'cancel_founder_p2p_listing' row.active_listing.id %}">
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn"
+                                        onclick="return confirm('Cancel listing for @{{ row.founder.handle }}?');">
+                                        Cancel Listing
+                                    </button>
+                                </form>
+
+                            {% else %}
+
+                                <a
+                                    class="auth-primary-btn"
+                                    href="{% url 'list_founder_p2p_fixed' row.founder.id %}">
+                                    💰 List for Sale
+                                </a>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <p>
+                No platform-owned @4char accounts.
+            </p>
+
+        {% endif %}
+
+    </section>
+
+
+    {# =================================================== #}
+    {# 5+ CHARACTER PLATFORM ACCOUNTS                      #}
+    {# =================================================== #}
+
+    <hr>
+
+    <section class="platform-section">
+
+        <div class="platform-section-heading-card">
+            <div class="platform-section-heading">
+                <div>
+                    <h2>
+                        {% trans "Other Platform Accounts" %}
+                    </h2>
+                    <p>
+                        Platform identities with handles
+                        of 5 characters or more.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% if other_platform_accounts %}
+
+            <div class="platform-account-list">
+
+                {% for profile in other_platform_accounts %}
+
+                    <div class="platform-account-card">
+
+                        <div class="platform-account-identity">
+
+                            {% if profile.avatar %}
+
+                                <img
+                                    src="{{ profile.avatar.url }}"
+                                    alt="{{ profile.display_name|default:profile.user.username }}"
+                                    class="platform-account-avatar"
+                                >
+
+                            {% else %}
+
+                                <div class="platform-account-avatar-fallback">
+                                    {{ profile.user.username|first|upper }}
+                                </div>
+
+                            {% endif %}
+
+
+                            <div class="platform-account-meta">
+
+                                <strong>
+                                    ✨ {{ profile.display_name|default:profile.user.username }}
+                                </strong>
+
+                                <div class="platform-account-username">
+                                    @{{ profile.user.username }}
+                                </div>
+
+                                {% if profile.is_ai_influencer %}
+
+                                    <div class="platform-account-type">
+                                        🤖 {% trans "AI Influencer" %}
+                                    </div>
+
+                                {% else %}
+
+                                    <div class="platform-account-type">
+                                        ✨ {% trans "Platform Account" %}
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="platform-account-actions">
+
+                            <a
+                                class="auth-primary-btn"
+                                href="{% url 'public_profile_root' profile.user.username %}">
+                                {% trans "View Profile" %}
+                            </a>
+
+
+                            {% if profile.user != request.user %}
+
+                                <form
+                                    method="post"
+                                    action="{% url 'login_as_platform_account' profile.user.id %}">
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="edit_profile"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn">
+                                        ✏️ {% trans "Edit Profile" %}
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'login_as_platform_account' profile.user.id %}">
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="create_post"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn">
+                                        📝 {% trans "Create Post" %}
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'login_as_platform_account' profile.user.id %}">
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn"
+                                        onclick="return confirm('Login as @{{ profile.user.username }}?');">
+                                        🔑 {% trans "Login As" %}
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <p>
+                {% trans "No other platform accounts yet." %}
+            </p>
+
+        {% endif %}
+
+    </section>
 
 </div>
 
-<style>
-    .platform-accounts-wrap {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 24px;
-    }
 
-    .platform-account-list {
-        display: grid;
-        gap: 16px;
-        margin-top: 24px;
-    }
+<style>
+
+.platform-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+
+    margin-bottom: 30px;
+    padding: 24px;
+
+    border: 1px solid rgba(120, 80, 180, 0.18);
+    border-radius: 20px;
+
+    background: rgba(255, 255, 255, 0.38);
+}
+
+.platform-page-title {
+    margin: 0;
+    font-size: 2rem;
+}
+
+.platform-page-subtitle {
+    margin: 8px 0 0;
+    opacity: 0.72;
+}
+
+.platform-create-btn {
+    flex-shrink: 0;
+}
+
+.platform-section {
+    margin-top: 30px;
+}
+
+.platform-section-heading-card {
+    margin-bottom: 18px;
+    padding: 18px 20px;
+
+    border: 1px solid rgba(120, 80, 180, 0.18);
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.52);
+
+    box-shadow:
+        0 5px 18px rgba(60, 20, 100, 0.05);
+}
+
+.platform-coin-symbol {
+    margin-left: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    opacity: 0.62;
+}
+
+
+.platform-section-heading {
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+
+    border-bottom:
+        1px solid rgba(120, 80, 180, 0.20);
+}
+
+.platform-section-heading h2 {
+    margin: 0;
+    font-size: 1.45rem;
+}
+
+.platform-section-heading p {
+    margin: 5px 0 0;
+    opacity: 0.68;
+}
+
+.platform-sui-card {
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow:
+        0 6px 22px rgba(60, 20, 100, 0.05);
+}
+
+.platform-account-card {
+    background: rgba(255, 255, 255, 0.94);
+
+    box-shadow:
+        0 5px 18px rgba(60, 20, 100, 0.06);
+
+    transition:
+        transform 0.14s ease,
+        box-shadow 0.14s ease;
+}
+
+.platform-account-card:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 24px rgba(60, 20, 100, 0.10);
+}
+
+.platform-account-meta > strong {
+    font-size: 1.05rem;
+}
+
+.platform-account-actions .auth-primary-btn {
+    min-width: 120px;
+}
+
+
+.platform-accounts-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.platform-section {
+    margin-top: 24px;
+}
+
+.platform-sui-card {
+    margin: 16px 0 22px;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+}
+
+.platform-account-list {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.platform-account-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+
+    padding: 18px;
+
+    border: 1px solid #ddd;
+    border-radius: 16px;
+}
+
+.platform-account-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.platform-account-avatar,
+.platform-account-avatar-fallback {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+}
+
+.platform-account-avatar {
+    object-fit: cover;
+}
+
+.platform-account-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(128, 128, 128, 0.12);
+    font-weight: 700;
+}
+
+.platform-account-meta {
+    min-width: 0;
+}
+
+.platform-account-type,
+.platform-founder-status,
+.platform-muted {
+    margin-top: 4px;
+    opacity: 0.72;
+}
+
+.platform-coin-info {
+    margin-top: 8px;
+}
+
+.platform-coin-details {
+    margin-top: 8px;
+}
+
+.platform-detail-row {
+    margin-top: 8px;
+}
+
+.platform-code {
+    margin-top: 4px;
+    max-width: 620px;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    font-family: monospace;
+}
+
+.platform-account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.platform-account-actions form {
+    margin: 0;
+}
+
+@media (max-width: 760px) {
 
     .platform-account-card {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 18px;
-        border: 1px solid #ddd;
-        border-radius: 16px;
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .platform-account-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        justify-content: flex-start;
     }
+
+}
+
 </style>
 
 {% endblock %}
