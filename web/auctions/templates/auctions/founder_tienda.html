@@ -1028,6 +1028,101 @@
           </div>
         </div>
 
+        {% if sui_checkout %}
+          <div
+            class="founder-vending-quote"
+            style="
+              margin-top:18px;
+              border:1px solid #334155;
+              padding:18px;
+              border-radius:12px;
+            "
+          >
+            <h3>💧 {% trans "Pay with SUI" %}</h3>
+
+            <div class="founder-vending-quote-grid">
+              <div class="founder-vending-quote-row">
+                <span>{% trans "Network" %}</span>
+                <strong>Sui Mainnet</strong>
+              </div>
+
+              <div class="founder-vending-quote-row">
+                <span>{% trans "Amount" %}</span>
+                <strong>
+                  {{ sui_checkout.amount_sui }} SUI
+                </strong>
+              </div>
+
+              <div class="founder-vending-quote-row">
+                <span>{% trans "Send to" %}</span>
+                <strong
+                  style="
+                    overflow-wrap:anywhere;
+                    word-break:break-all;
+                  "
+                >
+                  {{ sui_checkout.recipient_address }}
+                </strong>
+              </div>
+
+              <div class="founder-vending-quote-row">
+                <span>{% trans "Quoted SUI / USD" %}</span>
+                <strong>
+                  {{ sui_checkout.sui_usd_price }}
+                </strong>
+              </div>
+
+              <div class="founder-vending-quote-row">
+                <span>{% trans "Quote expires" %}</span>
+                <strong>
+                  {{ sui_checkout.quote_expires_at }}
+                </strong>
+              </div>
+            </div>
+
+            <p class="founder-vending-note">
+              {% trans "Send the exact quoted amount to the FANZ Sui mainnet wallet, then paste the transaction digest below." %}
+            </p>
+
+            <form
+              method="post"
+              action="{% url 'verify_founder_sui_payment' %}"
+            >
+              {% csrf_token %}
+
+              <input
+                type="hidden"
+                name="payment_intent_id"
+                value="{{ sui_checkout.payment_intent_id }}"
+              >
+
+              <div class="founder-vending-field">
+                <label for="sui-tx-digest">
+                  {% trans "Sui transaction digest" %}
+                </label>
+
+                <input
+                  id="sui-tx-digest"
+                  name="tx_digest"
+                  type="text"
+                  required
+                  autocomplete="off"
+                  placeholder="Transaction digest"
+                >
+              </div>
+
+              <div class="founder-vending-submit">
+                <button
+                  type="submit"
+                  class="founder-button founder-button--premium"
+                >
+                  ✅ {% trans "Verify SUI Payment" %}
+                </button>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+
         {% if vending_item.status == "quoted" %}
           <div
             class="founder-actions"

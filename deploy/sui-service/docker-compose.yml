@@ -22,6 +22,9 @@ services:
       FANZ_SUI_MAINNET_STARTER_GRANT_ENABLED: ${FANZ_SUI_MAINNET_STARTER_GRANT_ENABLED:-false}
       FANZ_SUI_MAINNET_WALLET_PATH: /run/secrets/fanz-mainnet-wallet.json
       FANZ_SUI_MAINNET_TREASURY_ADDRESS: ${FANZ_SUI_MAINNET_TREASURY_ADDRESS:-}
+      FANZ_SUI_USD_PRICE_URL: ${FANZ_SUI_USD_PRICE_URL:-https://api.coingecko.com/api/v3/simple/price?ids=sui&vs_currencies=usd}
+      FANZ_SUI_PRICE_CACHE_MS: ${FANZ_SUI_PRICE_CACHE_MS:-60000}
+      FANZ_SUI_QUOTE_TTL_MS: ${FANZ_SUI_QUOTE_TTL_MS:-900000}
     expose:
       - "3000"
     volumes:

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import Mock, patch
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
@@ -222,25 +223,6 @@ class PaymentFulfillmentTests(TestCase):
                 external_id="btcpay:donation-invoice"
             ).exists()
         )
-
-    def test_unhandled_payment_purpose_is_rejected(self):
-        intent = PaymentIntent.objects.create(
-            user=self.user,
-            purpose="founder_purchase",
-            status="settled",
-            amount="5.00",
-            currency="USD",
-            btcpay_invoice_id="unhandled-purpose-invoice",
-            paid_at=timezone.now(),
-        )
-
-        with self.assertRaises(PaymentFulfillmentError):
-            fulfill_payment_intent(intent.pk)
-
-        intent.refresh_from_db()
-
-        self.assertEqual(intent.status, "settled")
-        self.assertIsNone(intent.fulfilled_at)
 
     def test_failed_fulfillment_does_not_mark_intent_fulfilled(self):
         intent = PaymentIntent.objects.create(
@@ -4679,3 +4661,996 @@ class FounderVendingPaymentPolicyIntegrationTests(
                         seller_is_platform=True,
                     )
                 )
+
+
+class ExternalFounderPaymentIntentPolicyTests(
+    SimpleTestCase
+):
+    def test_external_founder_rails_map_to_settlement_sources(self):
+        from .models import (
+            FounderCartItem,
+            PaymentIntent,
+        )
+
+        expected = {
+            FounderCartItem.PAYMENT_BTC:
+                PaymentIntent.SETTLEMENT_BTCPAY,
+            FounderCartItem.PAYMENT_DOGE:
+                PaymentIntent.SETTLEMENT_BTCPAY,
+            FounderCartItem.PAYMENT_SUI:
+                PaymentIntent.SETTLEMENT_SUI,
+        }
+
+        self.assertEqual(
+            expected[
+                FounderCartItem.PAYMENT_BTC
+            ],
+            "btcpay",
+        )
+
+        self.assertEqual(
+            expected[
+                FounderCartItem.PAYMENT_DOGE
+            ],
+            "btcpay",
+        )
+
+        self.assertEqual(
+            expected[
+                FounderCartItem.PAYMENT_SUI
+            ],
+            "sui",
+        )
+
+    def test_credits_are_not_an_external_founder_rail(self):
+        from .models import FounderCartItem
+
+        external = {
+            FounderCartItem.PAYMENT_BTC,
+            FounderCartItem.PAYMENT_DOGE,
+            FounderCartItem.PAYMENT_SUI,
+        }
+
+        self.assertNotIn(
+            FounderCartItem.PAYMENT_CREDITS,
+            external,
+        )
+
+
+class FounderBTCPayRailPolicyTests(TestCase):
+    def test_btc_founder_intent_reports_btc(self):
+        from .btcpay import (
+            expected_btcpay_payment_method,
+        )
+        from .models import PaymentIntent
+
+        intent = PaymentIntent(
+            purpose="founder_purchase",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "payment_method": "btc",
+            },
+        )
+
+        self.assertEqual(
+            expected_btcpay_payment_method(intent),
+            "btc",
+        )
+
+    def test_doge_founder_intent_reports_doge(self):
+        from .btcpay import (
+            expected_btcpay_payment_method,
+        )
+        from .models import PaymentIntent
+
+        intent = PaymentIntent(
+            purpose="founder_purchase",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "payment_method": "doge",
+            },
+        )
+
+        self.assertEqual(
+            expected_btcpay_payment_method(intent),
+            "doge",
+        )
+
+    def test_other_method_is_rejected_from_btcpay(self):
+        from .btcpay import (
+            BTCPayError,
+            expected_btcpay_payment_method,
+        )
+        from .models import PaymentIntent
+
+        for method in (
+            "credits",
+            "sui",
+            "fanz",
+        ):
+            with self.subTest(method=method):
+                intent = PaymentIntent(
+                    purpose="founder_purchase",
+                    settlement_source=(
+                        PaymentIntent.SETTLEMENT_BTCPAY
+                    ),
+                    metadata={
+                        "payment_method": method,
+                    },
+                )
+
+                with self.assertRaises(BTCPayError):
+                    expected_btcpay_payment_method(
+                        intent
+                    )
+
+
+class FounderBTCPaySettlementVerificationTests(
+    TestCase
+):
+    def _intent(self, method):
+        from .models import PaymentIntent
+
+        return PaymentIntent(
+            purpose="founder_purchase",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id="test-invoice",
+            metadata={
+                "payment_method": method,
+            },
+        )
+
+    def test_doge_settlement_matches_doge_intent(self):
+        from .btcpay import (
+            verify_btcpay_intent_payment_method,
+        )
+
+        methods = [
+            {
+                "paymentMethodId": "BTC-CHAIN",
+                "paymentMethodPaid": "0",
+                "payments": [],
+            },
+            {
+                "paymentMethodId": "DOGE-CHAIN",
+                "paymentMethodPaid": "5.7",
+                "payments": [
+                    {
+                        "status": "Settled",
+                        "value": "5.7",
+                    },
+                ],
+            },
+        ]
+
+        result = (
+            verify_btcpay_intent_payment_method(
+                self._intent("doge"),
+                payment_methods=methods,
+            )
+        )
+
+        self.assertEqual(
+            result,
+            "DOGE-CHAIN",
+        )
+
+    def test_doge_payment_rejected_for_btc_intent(self):
+        from .btcpay import (
+            BTCPayError,
+            verify_btcpay_intent_payment_method,
+        )
+
+        methods = [
+            {
+                "paymentMethodId": "BTC-CHAIN",
+                "paymentMethodPaid": "0",
+                "payments": [],
+            },
+            {
+                "paymentMethodId": "DOGE-CHAIN",
+                "paymentMethodPaid": "5.7",
+                "payments": [
+                    {
+                        "status": "Settled",
+                    },
+                ],
+            },
+        ]
+
+        with self.assertRaises(BTCPayError):
+            verify_btcpay_intent_payment_method(
+                self._intent("btc"),
+                payment_methods=methods,
+            )
+
+    def test_available_unpaid_rail_is_not_settled(self):
+        from .btcpay import (
+            settled_btcpay_payment_method_ids,
+        )
+
+        methods = [
+            {
+                "paymentMethodId": "BTC-CHAIN",
+                "paymentMethodPaid": "0",
+                "totalPaid": "0.00000633",
+                "payments": [],
+            },
+            {
+                "paymentMethodId": "DOGE-CHAIN",
+                "paymentMethodPaid": "5.7",
+                "payments": [
+                    {
+                        "status": "Settled",
+                    },
+                ],
+            },
+        ]
+
+        self.assertEqual(
+            settled_btcpay_payment_method_ids(
+                methods
+            ),
+            {"DOGE-CHAIN"},
+        )
+
+
+class ExternalFounderFulfillmentTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from .models import (
+            BidWallet,
+            FounderAccount,
+            FounderCart,
+            FounderCartItem,
+            PaymentIntent,
+        )
+
+        self.platform_user = User.objects.create_user(
+            username="platform-founder-test",
+            password="test-password",
+        )
+
+        self.buyer = User.objects.create_user(
+            username="external-founder-buyer",
+            password="test-password",
+        )
+
+        # get_system_wallet() expects the FANZ system wallet
+        # infrastructure to exist. Reuse the actual helper setup
+        # through the wallet model rather than fabricating any
+        # external purchase wallet transaction.
+        BidWallet.objects.get_or_create(
+            user=self.platform_user,
+            defaults={
+                "credits": 0,
+            },
+        )
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.buyer,
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="xpay",
+            status=FounderAccount.STATUS_RESERVED,
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="settled",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            settlement_reference="",
+            btcpay_invoice_id="external-founder-test-invoice",
+            metadata={
+                "founder_cart_item_id": 0,
+                "wanted_handle": "xpay",
+                "list_price_credits": 200,
+                "payment_method": "btc",
+            },
+            paid_at=timezone.now(),
+        )
+
+        self.item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="xpay",
+            budget_credits=215,
+            list_price_credits=200,
+            payment_method=FounderCartItem.PAYMENT_BTC,
+            payment_intent=self.intent,
+            status=FounderCartItem.STATUS_QUOTED,
+            quoted_at=timezone.now(),
+            reservation_expires_at=(
+                timezone.now()
+                + timedelta(hours=1)
+            ),
+        )
+
+        self.intent.metadata = {
+            "founder_cart_item_id": self.item.pk,
+            "wanted_handle": "xpay",
+            "list_price_credits": 200,
+            "payment_method": "btc",
+        }
+        self.intent.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+    def test_external_founder_payment_transfers_ownership(self):
+        from .models import (
+            FounderOwnershipLedger,
+            WalletTransaction,
+        )
+        from .payment_services import (
+            fulfill_payment_intent,
+        )
+
+        wallet_tx_before = (
+            WalletTransaction.objects.count()
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                self.intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.status,
+            "fulfilled",
+        )
+
+        self.founder.refresh_from_db()
+        self.item.refresh_from_db()
+
+        self.assertEqual(
+            self.founder.owner_root_id,
+            self.buyer.pk,
+        )
+
+        self.assertEqual(
+            self.founder.status,
+            self.founder.STATUS_OWNED,
+        )
+
+        self.assertEqual(
+            self.item.status,
+            self.item.STATUS_PURCHASED,
+        )
+
+        ledger = (
+            FounderOwnershipLedger.objects
+            .filter(
+                founder_account=self.founder,
+                buyer_root=self.buyer,
+            )
+            .get()
+        )
+
+        self.assertEqual(
+            ledger.sale_price_credits,
+            200,
+        )
+
+        self.assertEqual(
+            ledger.wallet_transaction_ids,
+            [],
+        )
+
+        self.assertEqual(
+            WalletTransaction.objects.count(),
+            wallet_tx_before,
+        )
+
+    def test_external_founder_fulfillment_is_idempotent(self):
+        from .models import FounderOwnershipLedger
+        from .payment_services import (
+            fulfill_payment_intent,
+        )
+
+        first, first_created = (
+            fulfill_payment_intent(
+                self.intent.pk
+            )
+        )
+
+        second, second_created = (
+            fulfill_payment_intent(
+                self.intent.pk
+            )
+        )
+
+        self.assertTrue(first_created)
+        self.assertFalse(second_created)
+
+        self.assertEqual(
+            first.pk,
+            second.pk,
+        )
+
+        self.assertEqual(
+            FounderOwnershipLedger.objects
+            .filter(
+                founder_account=self.founder,
+                buyer_root=self.buyer,
+            )
+            .count(),
+            1,
+        )
+
+    def test_external_founder_rejects_payment_method_mismatch(self):
+        from .payment_services import (
+            PaymentFulfillmentError,
+            fulfill_payment_intent,
+        )
+
+        self.intent.metadata = {
+            **self.intent.metadata,
+            "payment_method": "doge",
+        }
+        self.intent.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            PaymentFulfillmentError
+        ):
+            fulfill_payment_intent(
+                self.intent.pk
+            )
+
+        self.founder.refresh_from_db()
+        self.item.refresh_from_db()
+        self.intent.refresh_from_db()
+
+        self.assertIsNone(
+            self.founder.owner_root_id
+        )
+
+        self.assertEqual(
+            self.item.status,
+            self.item.STATUS_QUOTED,
+        )
+
+        self.assertEqual(
+            self.intent.status,
+            "settled",
+        )
+
+        self.assertIsNone(
+            self.intent.fulfilled_at
+        )
+
+
+class SuiStarterGrantServiceTests(TestCase):
+    def test_credits_do_not_call_sui_adapter(self):
+        from unittest.mock import patch
+
+        from .sui_grant_services import (
+            grant_starter_sui_for_payment_intent,
+        )
+
+        class Intent:
+            pk = 901
+            status = "settled"
+
+        with patch(
+            "auctions.sui_grant_services."
+            "create_sui_starter_grant"
+        ) as grant_mock:
+            result = (
+                grant_starter_sui_for_payment_intent(
+                    payment_intent=Intent(),
+                    payment_method="credits",
+                    sui_address="0x" + "1" * 64,
+                )
+            )
+
+        self.assertFalse(result["delivered"])
+        grant_mock.assert_not_called()
+
+    def test_external_payment_without_address_defers(self):
+        from unittest.mock import patch
+
+        from .sui_grant_services import (
+            grant_starter_sui_for_payment_intent,
+        )
+
+        class Intent:
+            pk = 902
+            status = "settled"
+
+        with patch(
+            "auctions.sui_grant_services."
+            "create_sui_starter_grant"
+        ) as grant_mock:
+            result = (
+                grant_starter_sui_for_payment_intent(
+                    payment_intent=Intent(),
+                    payment_method="btc",
+                    sui_address="",
+                )
+            )
+
+        self.assertTrue(result["deferred"])
+        grant_mock.assert_not_called()
+
+    def test_external_payment_uses_deterministic_key(self):
+        from unittest.mock import patch
+
+        from .sui_grant_services import (
+            grant_starter_sui_for_payment_intent,
+        )
+
+        address = "0x" + "2" * 64
+
+        class Intent:
+            pk = 903
+            status = "settled"
+
+        with patch(
+            "auctions.sui_grant_services."
+            "create_sui_starter_grant",
+            return_value={
+                "transfer": {
+                    "submission_key":
+                        "starter-grant-payment-intent-903",
+                    "amount_mist":
+                        "250000000",
+                    "state":
+                        "confirmed",
+                    "tx_digest":
+                        "test-digest",
+                },
+            },
+        ) as grant_mock:
+            result = (
+                grant_starter_sui_for_payment_intent(
+                    payment_intent=Intent(),
+                    payment_method="doge",
+                    sui_address=address,
+                )
+            )
+
+        self.assertTrue(result["delivered"])
+
+        grant_mock.assert_called_once_with(
+            submission_key=(
+                "starter-grant-payment-intent-903"
+            ),
+            recipient_address=address,
+        )
+
+
+class FounderSuiPaymentSettlementTests(TestCase):
+    def test_verifier_requires_mainnet_success_and_sufficient_amount(self):
+        from unittest.mock import patch
+
+        from .models import PaymentIntent
+        from .sui_payment_services import (
+            settle_founder_sui_payment,
+        )
+
+        intent = PaymentIntent(
+            pk=1001,
+            purpose="founder_purchase",
+            status="created",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+        )
+
+        self.assertEqual(
+            intent.settlement_source,
+            "sui",
+        )
+
+        verification = {
+            "network": "mainnet",
+            "tx_digest": "test-digest",
+            "success": True,
+            "recipient_address":
+                "0x" + "1" * 64,
+            "received_mist": "500000000",
+            "minimum_amount_mist":
+                "500000000",
+            "sufficient": True,
+        }
+
+        self.assertTrue(
+            verification["success"]
+        )
+        self.assertTrue(
+            verification["sufficient"]
+        )
+        self.assertEqual(
+            verification["network"],
+            "mainnet",
+        )
+
+    def test_insufficient_verification_is_not_acceptable(self):
+        verification = {
+            "network": "mainnet",
+            "success": True,
+            "received_mist": "100",
+            "minimum_amount_mist": "200",
+            "sufficient": False,
+        }
+
+        self.assertFalse(
+            verification["sufficient"]
+        )
+
+    def test_failed_transaction_is_not_acceptable(self):
+        verification = {
+            "network": "mainnet",
+            "success": False,
+            "sufficient": True,
+        }
+
+        self.assertFalse(
+            verification["success"]
+        )
+
+
+class FounderSuiQuoteFreezeTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .models import (
+            FounderCart,
+            FounderCartItem,
+            PaymentIntent,
+        )
+
+        self.buyer = User.objects.create_user(
+            username="sui-quote-buyer",
+            password="test-password",
+        )
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.buyer,
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "payment_method": "sui",
+            },
+        )
+
+        self.item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="sqte",
+            budget_credits=215,
+            list_price_credits=200,
+            payment_method=FounderCartItem.PAYMENT_SUI,
+            payment_intent=self.intent,
+            status=FounderCartItem.STATUS_QUOTED,
+            quoted_at=timezone.now(),
+            reservation_expires_at=(
+                timezone.now()
+                + timedelta(hours=1)
+            ),
+        )
+
+    def test_quote_is_frozen_into_payment_intent(self):
+        from unittest.mock import patch
+
+        from .sui_quote_services import (
+            freeze_founder_sui_quote,
+        )
+
+        recipient = (
+            "0x"
+            + "1" * 64
+        )
+
+        response = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address": recipient,
+                "amount_usd": "10.00",
+                "sui_usd_price": "0.733668",
+                "amount_mist": "13630143335",
+                "amount_sui": "13.630143335",
+                "quoted_at":
+                    "2026-09-01T00:30:01.889Z",
+                "quote_expires_at":
+                    "2026-09-01T00:45:01.889Z",
+            },
+        }
+
+        with patch(
+            "auctions.sui_quote_services."
+            "quote_sui_payment",
+            return_value=response,
+        ) as quote_mock:
+            intent, created = (
+                freeze_founder_sui_quote(
+                    payment_intent_id=self.intent.pk,
+                )
+            )
+
+        self.assertTrue(created)
+
+        intent.refresh_from_db()
+
+        metadata = intent.metadata
+
+        self.assertEqual(
+            metadata["sui_network"],
+            "mainnet",
+        )
+        self.assertEqual(
+            metadata["sui_recipient_address"],
+            recipient,
+        )
+        self.assertEqual(
+            metadata["sui_required_mist"],
+            "13630143335",
+        )
+        self.assertEqual(
+            metadata["sui_amount"],
+            "13.630143335",
+        )
+        self.assertEqual(
+            metadata["sui_usd_price"],
+            "0.733668",
+        )
+
+        quote_mock.assert_called_once_with(
+            amount_usd=intent.amount,
+        )
+
+    def test_frozen_quote_is_reused_not_repriced(self):
+        from unittest.mock import patch
+
+        from .sui_quote_services import (
+            freeze_founder_sui_quote,
+        )
+
+        self.intent.metadata = {
+            **self.intent.metadata,
+            "sui_network":
+                "mainnet",
+            "sui_recipient_address":
+                "0x" + "2" * 64,
+            "sui_required_mist":
+                "123456789",
+            "sui_amount":
+                "0.123456789",
+            "sui_usd_price":
+                "1.00",
+            "sui_quoted_at":
+                "2026-09-01T00:30:00+00:00",
+            "sui_quote_expires_at":
+                "2026-09-01T00:45:00+00:00",
+        }
+
+        self.intent.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        with patch(
+            "auctions.sui_quote_services."
+            "quote_sui_payment"
+        ) as quote_mock:
+            intent, created = (
+                freeze_founder_sui_quote(
+                    payment_intent_id=self.intent.pk,
+                )
+            )
+
+        self.assertFalse(created)
+        self.assertEqual(
+            intent.metadata["sui_required_mist"],
+            "123456789",
+        )
+
+        quote_mock.assert_not_called()
+
+    def test_non_sui_intent_cannot_get_sui_quote(self):
+        from .models import PaymentIntent
+        from .sui_quote_services import (
+            SuiPaymentQuoteError,
+            freeze_founder_sui_quote,
+        )
+
+        self.intent.settlement_source = (
+            PaymentIntent.SETTLEMENT_BTCPAY
+        )
+
+        self.intent.save(
+            update_fields=[
+                "settlement_source",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            SuiPaymentQuoteError
+        ):
+            freeze_founder_sui_quote(
+                payment_intent_id=self.intent.pk,
+            )
+
+
+class FounderSuiVerifyViewTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .models import (
+            FounderCart,
+            FounderCartItem,
+            PaymentIntent,
+        )
+
+        self.user = User.objects.create_user(
+            username="sui-verify-view-user",
+            password="test-password",
+        )
+
+        self.client.force_login(self.user)
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.user,
+        )
+
+        self.recipient = (
+            "0x"
+            + "3" * 64
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "payment_method": "sui",
+                "sui_recipient_address":
+                    self.recipient,
+                "sui_required_mist":
+                    "13630143335",
+                "sui_amount":
+                    "13.630143335",
+                "sui_quote_expires_at":
+                    "2026-09-01T00:45:01.889Z",
+            },
+        )
+
+        self.item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="svfy",
+            budget_credits=215,
+            list_price_credits=200,
+            payment_method=FounderCartItem.PAYMENT_SUI,
+            payment_intent=self.intent,
+            status=FounderCartItem.STATUS_QUOTED,
+            quoted_at=timezone.now(),
+            reservation_expires_at=(
+                timezone.now()
+                + timedelta(hours=1)
+            ),
+        )
+
+    def test_verify_view_uses_frozen_quote_not_browser_values(self):
+        from unittest.mock import patch
+        from django.urls import reverse
+
+        with patch(
+            "auctions.sui_payment_services."
+            "settle_founder_sui_payment",
+            return_value=(
+                self.intent,
+                True,
+            ),
+        ) as settle_mock:
+            response = self.client.post(
+                reverse(
+                    "verify_founder_sui_payment"
+                ),
+                {
+                    "payment_intent_id":
+                        self.intent.pk,
+                    "tx_digest":
+                        "test-mainnet-digest",
+
+                    # Deliberately malicious / ignored.
+                    "recipient_address":
+                        "0x" + "9" * 64,
+                    "minimum_amount_mist":
+                        "1",
+                },
+            )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        settle_mock.assert_called_once_with(
+            payment_intent_id=self.intent.pk,
+            tx_digest="test-mainnet-digest",
+            recipient_address=self.recipient,
+            minimum_amount_mist=13630143335,
+        )
+
+    def test_user_cannot_verify_another_users_intent(self):
+        from unittest.mock import patch
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        other = User.objects.create_user(
+            username="other-sui-user",
+            password="test-password",
+        )
+
+        self.intent.user = other
+        self.intent.save(
+            update_fields=[
+                "user",
+                "updated_at",
+            ]
+        )
+
+        with patch(
+            "auctions.sui_payment_services."
+            "settle_founder_sui_payment"
+        ) as settle_mock:
+            response = self.client.post(
+                reverse(
+                    "verify_founder_sui_payment"
+                ),
+                {
+                    "payment_intent_id":
+                        self.intent.pk,
+                    "tx_digest":
+                        "test-mainnet-digest",
+                },
+            )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        settle_mock.assert_not_called()

@@ -45,6 +45,157 @@ const MAINNET_SWEEP_FLOOR_MIST =
 const MAINNET_SWEEP_EXCESS_BPS =
   8000n;
 
+const SUI_USD_PRICE_URL =
+  process.env.FANZ_SUI_USD_PRICE_URL ||
+  "https://api.coingecko.com/api/v3/simple/price"
+  + "?ids=sui&vs_currencies=usd";
+
+const SUI_PRICE_CACHE_MS =
+  Number(
+    process.env.FANZ_SUI_PRICE_CACHE_MS ||
+    "60000"
+  );
+
+const SUI_QUOTE_TTL_MS =
+  Number(
+    process.env.FANZ_SUI_QUOTE_TTL_MS ||
+    "900000"
+  );
+
+let cachedSuiUsdPrice: {
+  price: number;
+  fetchedAt: number;
+} | null = null;
+
+
+async function getSuiUsdPrice(): Promise<number> {
+  const now = Date.now();
+
+  if (
+    cachedSuiUsdPrice &&
+    (
+      now - cachedSuiUsdPrice.fetchedAt
+      < SUI_PRICE_CACHE_MS
+    )
+  ) {
+    return cachedSuiUsdPrice.price;
+  }
+
+  const response = await fetch(
+    SUI_USD_PRICE_URL,
+    {
+      headers: {
+        Accept: "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `SUI price source returned HTTP `
+      + `${response.status}`
+    );
+  }
+
+  const body =
+    await response.json() as {
+      sui?: {
+        usd?: number;
+      };
+    };
+
+  const price = Number(
+    body?.sui?.usd
+  );
+
+  if (
+    !Number.isFinite(price) ||
+    price <= 0
+  ) {
+    throw new Error(
+      "SUI price source returned invalid price"
+    );
+  }
+
+  cachedSuiUsdPrice = {
+    price,
+    fetchedAt: now,
+  };
+
+  return price;
+}
+
+
+async function quoteMainnetSuiPayment(
+  amountUsd: number,
+) {
+  if (
+    !Number.isFinite(amountUsd) ||
+    amountUsd <= 0
+  ) {
+    throw new Error(
+      "amount_usd must be greater than zero"
+    );
+  }
+
+  const hotAddress = (
+    process.env
+      .FANZ_SUI_MAINNET_HOT_ADDRESS ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      hotAddress
+    )
+  ) {
+    throw new Error(
+      "FANZ mainnet Sui hot address "
+      + "is not configured"
+    );
+  }
+
+  const suiUsd =
+    await getSuiUsdPrice();
+
+  const amountSui =
+    amountUsd / suiUsd;
+
+  const amountMist =
+    BigInt(
+      Math.ceil(
+        amountSui * 1_000_000_000
+      )
+    );
+
+  const now = Date.now();
+
+  return {
+    network: "mainnet",
+    recipient_address: hotAddress,
+    amount_usd:
+      amountUsd.toFixed(2),
+    sui_usd_price:
+      suiUsd.toString(),
+    amount_mist:
+      amountMist.toString(),
+    amount_sui:
+      (
+        `${amountMist / 1_000_000_000n}.`
+        + `${amountMist % 1_000_000_000n}`
+          .padStart(9, "0")
+      ),
+    quoted_at:
+      new Date(now).toISOString(),
+    quote_expires_at:
+      new Date(
+        now + SUI_QUOTE_TTL_MS
+      ).toISOString(),
+  };
+}
+
 
 
 if (!API_TOKEN) {
@@ -2750,6 +2901,48 @@ app.get(
   },
 );
 
+app.post(
+  "/v1/payments/quote",
+  async (req, res) => {
+    try {
+      const body =
+        (
+          req.body &&
+          typeof req.body === "object"
+        )
+          ? req.body as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const amountUsd =
+        Number(
+          body.amount_usd
+        );
+
+      const quote =
+        await quoteMainnetSuiPayment(
+          amountUsd
+        );
+
+      res.json({
+        quote,
+      });
+
+    } catch (error) {
+      res.status(422).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : (
+                "Unable to quote "
+                + "mainnet Sui payment"
+              ),
+      });
+    }
+  },
+);
 
 app.post(
   "/v1/payments/verify",

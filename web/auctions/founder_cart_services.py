@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from datetime import timedelta
+from decimal import Decimal
 from django.utils import timezone
 from .founder_vending import (
     founder_budget_quote,
@@ -15,6 +16,7 @@ from .models import (
     FounderOwnershipLedger,
     FounderPriceMemory,
     FounderVendingHold,
+    PaymentIntent,
     WalletTransaction,
 )
 from .founder_services import normalize_owner_root
@@ -27,6 +29,27 @@ from .utils import get_system_wallet
 
 class FounderCartError(RuntimeError):
     pass
+
+def _create_post_purchase_starter_grant(
+    payment_intent_id,
+):
+    from .models import PaymentIntent
+    from .sui_grant_services import (
+        grant_starter_sui_for_payment_intent,
+    )
+
+    intent = PaymentIntent.objects.get(
+        pk=payment_intent_id
+    )
+
+    item = intent.founder_cart_item
+
+    grant_starter_sui_for_payment_intent(
+        payment_intent=intent,
+        payment_method=item.payment_method,
+        sui_address=item.sui_recipient_address,
+    )
+
 
 def _create_post_purchase_coin_draft(cart_item_id):
     from .founder_coin_services import (
@@ -331,6 +354,124 @@ def create_founder_vending_reservation(
     }
 
 
+@transaction.atomic
+def create_external_founder_payment_intent(
+    *,
+    purchaser,
+    cart_item_id,
+):
+    """
+    Create the durable PaymentIntent for an externally funded
+    platform Founder vending purchase.
+
+    Credits intentionally never enter this path.
+    """
+
+    buyer_root = normalize_owner_root(purchaser)
+
+    item = (
+        FounderCartItem.objects
+        .select_for_update()
+        .select_related(
+            "cart__purchaser",
+            "payment_intent",
+        )
+        .get(pk=cart_item_id)
+    )
+
+    item_buyer_root = normalize_owner_root(
+        item.cart.purchaser
+    )
+
+    if item_buyer_root.pk != buyer_root.pk:
+        raise FounderCartError(
+            "Founder reservation does not belong "
+            "to this buyer."
+        )
+
+    if item.status != FounderCartItem.STATUS_QUOTED:
+        raise FounderCartError(
+            "Founder reservation is not awaiting payment."
+        )
+
+    if (
+        item.reservation_expires_at is not None
+        and item.reservation_expires_at <= timezone.now()
+    ):
+        raise FounderCartError(
+            "Founder reservation has expired."
+        )
+
+    if (
+        item.payment_method
+        == FounderCartItem.PAYMENT_CREDITS
+    ):
+        raise FounderCartError(
+            "FANZ Credits purchases use the "
+            "internal Founder purchase path."
+        )
+
+    if item.payment_method not in {
+        FounderCartItem.PAYMENT_BTC,
+        FounderCartItem.PAYMENT_DOGE,
+        FounderCartItem.PAYMENT_SUI,
+    }:
+        raise FounderCartError(
+            "Unsupported external Founder payment method."
+        )
+
+    if not item.list_price_credits:
+        raise FounderCartError(
+            "Founder reservation has no List Price."
+        )
+
+    if item.payment_intent_id:
+        return item.payment_intent, False
+
+    amount_usd = (
+        Decimal(item.list_price_credits)
+        / Decimal("20")
+    ).quantize(
+        Decimal("0.01")
+    )
+
+    settlement_source = (
+        PaymentIntent.SETTLEMENT_SUI
+        if (
+            item.payment_method
+            == FounderCartItem.PAYMENT_SUI
+        )
+        else PaymentIntent.SETTLEMENT_BTCPAY
+    )
+
+    intent = PaymentIntent.objects.create(
+        user=buyer_root,
+        purpose="founder_purchase",
+        status="created",
+        amount=amount_usd,
+        currency="USD",
+        settlement_source=settlement_source,
+        metadata={
+            "founder_cart_item_id": item.pk,
+            "wanted_handle": item.wanted_handle,
+            "list_price_credits":
+                item.list_price_credits,
+            "payment_method":
+                item.payment_method,
+        },
+    )
+
+    item.payment_intent = intent
+    item.save(
+        update_fields=[
+            "payment_intent",
+            "updated_at",
+        ]
+    )
+
+    return intent, True
+
+
 def _release_vending_hold(*, item, final_status):
     hold = (
         FounderVendingHold.objects
@@ -597,6 +738,258 @@ def add_founder_cart_item(
         "identity": identity,
         "quote": quote,
         "listing": listing,
+    }
+
+
+@transaction.atomic
+def fulfill_external_founder_vending_purchase(
+    *,
+    payment_intent,
+):
+    """
+    Finalize a platform Founder vending purchase funded
+    through BTC, DOGE, or SUI.
+
+    No FANZ Credits or FounderVendingHold participate in
+    this settlement path.
+    """
+
+    if payment_intent.purpose != "founder_purchase":
+        raise FounderCartError(
+            "PaymentIntent is not a Founder purchase."
+        )
+
+    if payment_intent.status not in {
+        "settled",
+        "fulfilled",
+    }:
+        raise FounderCartError(
+            "Founder PaymentIntent is not settled."
+        )
+
+    try:
+        item = (
+            FounderCartItem.objects
+            .select_for_update()
+            .select_related(
+                "cart__purchaser",
+                "payment_intent",
+            )
+            .get(
+                payment_intent=payment_intent
+            )
+        )
+    except FounderCartItem.DoesNotExist as exc:
+        raise FounderCartError(
+            "Founder PaymentIntent has no cart item."
+        ) from exc
+
+    if item.status == FounderCartItem.STATUS_PURCHASED:
+        return {
+            "purchased": False,
+            "already_purchased": True,
+            "item": item,
+        }
+
+    if item.status != FounderCartItem.STATUS_QUOTED:
+        raise FounderCartError(
+            "Founder reservation is not purchasable."
+        )
+
+    if item.payment_method not in {
+        FounderCartItem.PAYMENT_BTC,
+        FounderCartItem.PAYMENT_DOGE,
+        FounderCartItem.PAYMENT_SUI,
+    }:
+        raise FounderCartError(
+            "Founder external fulfillment requires "
+            "BTC, DOGE, or SUI."
+        )
+
+    buyer_root = normalize_owner_root(
+        item.cart.purchaser
+    )
+
+    if (
+        payment_intent.user_id is None
+        or payment_intent.user_id
+        != buyer_root.pk
+    ):
+        raise FounderCartError(
+            "Founder PaymentIntent buyer does not "
+            "match the reservation buyer."
+        )
+
+    metadata = payment_intent.metadata or {}
+
+    if (
+        str(
+            metadata.get(
+                "payment_method",
+                "",
+            )
+        ).strip().lower()
+        != item.payment_method
+    ):
+        raise FounderCartError(
+            "Founder PaymentIntent payment method "
+            "does not match the reservation."
+        )
+
+    try:
+        metadata_item_id = int(
+            metadata.get(
+                "founder_cart_item_id"
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        raise FounderCartError(
+            "Founder PaymentIntent has invalid "
+            "cart metadata."
+        ) from exc
+
+    if metadata_item_id != item.pk:
+        raise FounderCartError(
+            "Founder PaymentIntent cart metadata "
+            "does not match the reservation."
+        )
+
+    list_price = int(
+        item.list_price_credits or 0
+    )
+
+    if list_price < 200:
+        raise FounderCartError(
+            "Founder List Price is invalid."
+        )
+
+    try:
+        metadata_list_price = int(
+            metadata.get(
+                "list_price_credits"
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        raise FounderCartError(
+            "Founder PaymentIntent has invalid "
+            "List Price metadata."
+        ) from exc
+
+    if metadata_list_price != list_price:
+        raise FounderCartError(
+            "Founder PaymentIntent List Price "
+            "does not match the reservation."
+        )
+
+    founder = (
+        FounderAccount.objects
+        .select_for_update()
+        .get(handle=item.wanted_handle)
+    )
+
+    if (
+        founder.status
+        != FounderAccount.STATUS_RESERVED
+    ):
+        raise FounderCartError(
+            f"@{founder.handle} is no longer reserved."
+        )
+
+    if founder.owner_root_id is not None:
+        raise FounderCartError(
+            f"@{founder.handle} is already owned."
+        )
+
+    system_wallet = get_system_wallet()
+    platform_user = system_wallet.user
+
+    if buyer_root.pk == platform_user.pk:
+        raise FounderCartError(
+            "The FANZ platform cannot purchase "
+            "Founder vending inventory."
+        )
+
+    founder.owner_root = buyer_root
+    founder.status = FounderAccount.STATUS_OWNED
+
+    founder.save(
+        update_fields=[
+            "owner_root",
+            "status",
+            "updated_at",
+        ]
+    )
+
+    ledger_record = append_founder_ownership_ledger(
+        founder_account=founder,
+        seller_root=platform_user,
+        buyer_root=buyer_root,
+        transfer_type=(
+            FounderOwnershipLedger
+            .TRANSFER_TREASURY_RELEASE
+        ),
+        sale_price_credits=list_price,
+        platform_fee_credits=0,
+        seller_proceeds_credits=list_price,
+        wallet_transaction_ids=[],
+        metadata_snapshot={
+            "seller_username":
+                platform_user.username,
+            "buyer_username":
+                buyer_root.username,
+            "handle":
+                founder.handle,
+            "vending":
+                True,
+            "external_payment":
+                True,
+            "cart_item_id":
+                item.pk,
+            "payment_intent_id":
+                payment_intent.pk,
+            "payment_method":
+                item.payment_method,
+            "settlement_source":
+                payment_intent.settlement_source,
+            "settlement_reference":
+                payment_intent.settlement_reference,
+        },
+    )
+
+    item.status = FounderCartItem.STATUS_PURCHASED
+
+    item.save(
+        update_fields=[
+            "status",
+            "updated_at",
+        ]
+    )
+
+    if item.sui_recipient_address:
+        transaction.on_commit(
+            lambda item_id=item.pk: (
+                _create_post_purchase_coin_draft(
+                    item_id
+                )
+            )
+        )
+
+        transaction.on_commit(
+            lambda intent_id=payment_intent.pk: (
+                _create_post_purchase_starter_grant(
+                    intent_id
+                )
+            )
+        )
+
+    return {
+        "purchased": True,
+        "already_purchased": False,
+        "item": item,
+        "founder_account": founder,
+        "buyer_root": buyer_root,
+        "sale_price_credits": list_price,
+        "ledger_record": ledger_record,
     }
 
 

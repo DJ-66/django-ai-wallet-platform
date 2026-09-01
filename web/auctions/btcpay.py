@@ -138,14 +138,42 @@ def create_payment_intent_invoice(payment_intent):
         if locked.btcpay_invoice_id:
             return locked
 
+        metadata = {
+            "payment_intent_id": locked.pk,
+            "purpose": locked.purpose,
+            "source": "FANZ",
+        }
+
+        funding_method = str(
+            (locked.metadata or {}).get(
+                "payment_method",
+                "",
+            )
+        ).strip().lower()
+
+        if funding_method:
+            metadata["payment_method"] = funding_method
+
+        checkout = None
+
+        if locked.purpose == "founder_purchase":
+            payment_method_id = (
+                expected_btcpay_payment_method_id(
+                    locked
+                )
+            )
+
+            checkout = {
+                "paymentMethods": [
+                    payment_method_id,
+                ],
+            }
+
         invoice = create_invoice(
             amount=locked.amount,
             currency=locked.currency,
-            metadata={
-                "payment_intent_id": locked.pk,
-                "purpose": locked.purpose,
-                "source": "FANZ",
-            },
+            metadata=metadata,
+            checkout=checkout,
         )
 
         invoice_id = invoice.get("id")
@@ -170,3 +198,150 @@ def create_payment_intent_invoice(payment_intent):
         )
 
         return locked
+
+
+def expected_btcpay_payment_method(payment_intent):
+    """
+    Return FANZ's intended BTCPay funding rail.
+
+    Only BTC and DOGE are valid for the current FANZ
+    BTCPay Founder checkout.
+    """
+    from .models import PaymentIntent
+
+    if not isinstance(payment_intent, PaymentIntent):
+        raise TypeError(
+            "payment_intent must be a PaymentIntent"
+        )
+
+    method = str(
+        (payment_intent.metadata or {}).get(
+            "payment_method",
+            "",
+        )
+    ).strip().lower()
+
+    if method not in {"btc", "doge"}:
+        raise BTCPayError(
+            "PaymentIntent has no valid BTCPay "
+            "payment method."
+        )
+
+    return method
+
+
+BTCPAY_PAYMENT_METHOD_IDS = {
+    "btc": "BTC-CHAIN",
+    "doge": "DOGE-CHAIN",
+}
+
+
+def expected_btcpay_payment_method_id(
+    payment_intent,
+):
+    method = expected_btcpay_payment_method(
+        payment_intent
+    )
+
+    try:
+        return BTCPAY_PAYMENT_METHOD_IDS[method]
+    except KeyError as exc:
+        raise BTCPayError(
+            "Unsupported FANZ BTCPay payment method."
+        ) from exc
+
+
+def get_invoice_payment_methods(invoice_id):
+    return _request(
+        "GET",
+        (
+            f"/api/v1/invoices/"
+            f"{invoice_id}"
+            f"/payment-methods"
+        ),
+    )
+
+
+def settled_btcpay_payment_method_ids(
+    payment_methods,
+):
+    """
+    Return payment-method IDs that actually received
+    settled funds.
+
+    Do not use totalPaid here. BTCPay may report the
+    invoice's paid value converted into another available
+    currency even when that rail received no payment.
+    """
+
+    settled = set()
+
+    for method in payment_methods or []:
+        if not isinstance(method, dict):
+            continue
+
+        method_id = str(
+            method.get("paymentMethodId") or ""
+        ).strip()
+
+        if not method_id:
+            continue
+
+        payments = method.get("payments") or []
+
+        has_settled_payment = any(
+            isinstance(payment, dict)
+            and payment.get("status") == "Settled"
+            for payment in payments
+        )
+
+        if has_settled_payment:
+            settled.add(method_id)
+
+    return settled
+
+
+def verify_btcpay_intent_payment_method(
+    payment_intent,
+    *,
+    payment_methods=None,
+):
+    expected_id = (
+        expected_btcpay_payment_method_id(
+            payment_intent
+        )
+    )
+
+    if payment_methods is None:
+        if not payment_intent.btcpay_invoice_id:
+            raise BTCPayError(
+                "PaymentIntent has no BTCPay invoice id."
+            )
+
+        payment_methods = (
+            get_invoice_payment_methods(
+                payment_intent.btcpay_invoice_id
+            )
+        )
+
+    settled_ids = (
+        settled_btcpay_payment_method_ids(
+            payment_methods
+        )
+    )
+
+    if expected_id not in settled_ids:
+        raise BTCPayError(
+            "Settled BTCPay rail does not match "
+            "the FANZ payment method."
+        )
+
+    unexpected = settled_ids - {expected_id}
+
+    if unexpected:
+        raise BTCPayError(
+            "BTCPay invoice contains settlement "
+            "on an unexpected payment rail."
+        )
+
+    return expected_id

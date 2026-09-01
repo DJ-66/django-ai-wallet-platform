@@ -216,3 +216,41 @@ def verify_sui_payment(
         "/v1/payments/verify",
         json=payload,
     )
+
+
+def create_sui_starter_grant(
+    *,
+    submission_key,
+    recipient_address,
+):
+    payload = {
+        "submission_key": str(
+            submission_key
+        ).strip(),
+        "recipient_address": str(
+            recipient_address
+        ).strip().lower(),
+    }
+
+    return _request(
+        "POST",
+        "/v1/mainnet/starter-grants",
+        json=payload,
+    )
+
+
+def quote_sui_payment(
+    *,
+    amount_usd,
+):
+    payload = {
+        "amount_usd": str(
+            amount_usd
+        ).strip(),
+    }
+
+    return _request(
+        "POST",
+        "/v1/payments/quote",
+        json=payload,
+    )

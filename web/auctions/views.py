@@ -1956,10 +1956,92 @@ def buy_founder_vending(request, item_id):
     )
 
     try:
-        result = purchase_founder_vending_reservation(
-            purchaser=request.user,
-            cart_item_id=item.pk,
-        )
+        if (
+            item.payment_method
+            == FounderCartItem.PAYMENT_CREDITS
+        ):
+            result = purchase_founder_vending_reservation(
+                purchaser=request.user,
+                cart_item_id=item.pk,
+            )
+
+        elif item.payment_method in {
+            FounderCartItem.PAYMENT_BTC,
+            FounderCartItem.PAYMENT_DOGE,
+        }:
+            from .btcpay import (
+                BTCPayError,
+                create_payment_intent_invoice,
+            )
+            from .founder_cart_services import (
+                create_external_founder_payment_intent,
+            )
+
+            intent, _ = (
+                create_external_founder_payment_intent(
+                    purchaser=request.user,
+                    cart_item_id=item.pk,
+                )
+            )
+
+            try:
+                intent = create_payment_intent_invoice(
+                    intent
+                )
+            except BTCPayError as exc:
+                raise FounderCartError(
+                    "Unable to create external "
+                    "Founder checkout."
+                ) from exc
+
+            if not intent.btcpay_checkout_link:
+                raise FounderCartError(
+                    "BTCPay checkout link is unavailable."
+                )
+
+            return redirect(
+                intent.btcpay_checkout_link
+            )
+
+        elif (
+            item.payment_method
+            == FounderCartItem.PAYMENT_SUI
+        ):
+            from .founder_cart_services import (
+                create_external_founder_payment_intent,
+            )
+
+            intent, _ = (
+                create_external_founder_payment_intent(
+                    purchaser=request.user,
+                    cart_item_id=item.pk,
+                )
+            )
+
+            from .sui_quote_services import (
+                SuiPaymentQuoteError,
+                freeze_founder_sui_quote,
+            )
+
+            try:
+                intent, _ = freeze_founder_sui_quote(
+                    payment_intent_id=intent.pk,
+                )
+            except SuiPaymentQuoteError as exc:
+                raise FounderCartError(
+                    "Unable to prepare SUI checkout."
+                ) from exc
+
+            return redirect(
+                f"{reverse('founder_tienda')}"
+                f"?vending_item={item.pk}"
+                f"&sui_payment_intent={intent.pk}"
+            )
+
+        else:
+            raise FounderCartError(
+                "Unsupported Founder payment method."
+            )
 
         if result.get("expired"):
             messages.warning(
@@ -2043,6 +2125,134 @@ def cancel_founder_vending(request, item_id):
         )
 
     return redirect("founder_tienda")
+
+
+@login_required
+@require_POST
+def verify_founder_sui_payment(request):
+    from .models import PaymentIntent
+    from .sui_payment_services import (
+        SuiPaymentSettlementError,
+        settle_founder_sui_payment,
+    )
+
+    payment_intent_id = (
+        request.POST.get(
+            "payment_intent_id"
+        )
+    )
+
+    tx_digest = (
+        request.POST.get(
+            "tx_digest",
+            ""
+        )
+        .strip()
+    )
+
+    try:
+        intent = (
+            PaymentIntent.objects
+            .select_related("user")
+            .get(
+                pk=payment_intent_id,
+                user=request.user,
+                purpose="founder_purchase",
+                settlement_source=(
+                    PaymentIntent.SETTLEMENT_SUI
+                ),
+            )
+        )
+    except (
+        PaymentIntent.DoesNotExist,
+        ValueError,
+        TypeError,
+    ):
+        messages.error(
+            request,
+            "SUI payment checkout was not found.",
+        )
+
+        return redirect(
+            "founder_tienda"
+        )
+
+    metadata = intent.metadata or {}
+
+    recipient_address = str(
+        metadata.get(
+            "sui_recipient_address",
+            "",
+        )
+    ).strip()
+
+    try:
+        minimum_amount_mist = int(
+            metadata.get(
+                "sui_required_mist",
+                "0",
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        minimum_amount_mist = 0
+
+    if (
+        not recipient_address
+        or minimum_amount_mist <= 0
+    ):
+        messages.error(
+            request,
+            "SUI payment quote is missing "
+            "or invalid.",
+        )
+
+        return redirect(
+            (
+                f"{reverse('founder_tienda')}"
+                f"?sui_payment_intent={intent.pk}"
+            )
+        )
+
+    try:
+        intent, settled_now = (
+            settle_founder_sui_payment(
+                payment_intent_id=intent.pk,
+                tx_digest=tx_digest,
+                recipient_address=recipient_address,
+                minimum_amount_mist=minimum_amount_mist,
+            )
+        )
+    except SuiPaymentSettlementError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect(
+            (
+                f"{reverse('founder_tienda')}"
+                f"?sui_payment_intent={intent.pk}"
+            )
+        )
+
+    if settled_now:
+        messages.success(
+            request,
+            "SUI payment verified. "
+            "Your Founder purchase is settling.",
+        )
+    else:
+        messages.info(
+            request,
+            "This SUI payment was already verified.",
+        )
+
+    return redirect(
+        "founder_tienda"
+    )
 
 
 @login_required
@@ -2181,6 +2391,69 @@ def founder_tienda(request):
             .first()
         )
 
+    sui_checkout = None
+
+    sui_payment_intent_id = (
+        request.GET.get(
+            "sui_payment_intent"
+        )
+    )
+
+    if sui_payment_intent_id:
+        try:
+            sui_intent = (
+                PaymentIntent.objects
+                .select_related("user")
+                .get(
+                    pk=sui_payment_intent_id,
+                    user=request.user,
+                    purpose="founder_purchase",
+                    settlement_source=(
+                        PaymentIntent.SETTLEMENT_SUI
+                    ),
+                )
+            )
+
+            sui_metadata = (
+                sui_intent.metadata or {}
+            )
+
+            sui_checkout = {
+                "payment_intent_id":
+                    sui_intent.pk,
+                "amount_sui":
+                    sui_metadata.get(
+                        "sui_amount",
+                        "",
+                    ),
+                "required_mist":
+                    sui_metadata.get(
+                        "sui_required_mist",
+                        "",
+                    ),
+                "recipient_address":
+                    sui_metadata.get(
+                        "sui_recipient_address",
+                        "",
+                    ),
+                "sui_usd_price":
+                    sui_metadata.get(
+                        "sui_usd_price",
+                        "",
+                    ),
+                "quote_expires_at":
+                    sui_metadata.get(
+                        "sui_quote_expires_at",
+                        "",
+                    ),
+            }
+
+        except (
+            PaymentIntent.DoesNotExist,
+            ValueError,
+        ):
+            sui_checkout = None
+
     return render(
         request,
         "auctions/founder_tienda.html",
@@ -2191,6 +2464,7 @@ def founder_tienda(request):
             "p2p_page": p2p_page,
             "wallet": wallet,
             "vending_item": vending_item,
+            "sui_checkout": sui_checkout,
         },
     )
 
@@ -4471,7 +4745,11 @@ def delete_conversation(request, conversation_id):
 @csrf_exempt
 @require_POST
 def btcpay_webhook(request):
-    from .btcpay import BTCPayError, get_invoice
+    from .btcpay import (
+        BTCPayError,
+        get_invoice,
+        verify_btcpay_intent_payment_method,
+    )
     from .models import PaymentIntent
 
     secret = settings.BTCPAY_WEBHOOK_SECRET
@@ -4561,6 +4839,25 @@ def btcpay_webhook(request):
                 "ignored_status": btcpay_status,
             }
         )
+
+    if (
+        new_status == "settled"
+        and intent.purpose == "founder_purchase"
+    ):
+        try:
+            verify_btcpay_intent_payment_method(
+                intent
+            )
+        except BTCPayError:
+            return JsonResponse(
+                {
+                    "error": (
+                        "Settled BTCPay payment method "
+                        "does not match Founder checkout."
+                    ),
+                },
+                status=409,
+            )
 
     with transaction.atomic():
         intent = (
