@@ -42,6 +42,11 @@ urlpatterns = [
         name="founder_tienda",
     ),
     path(
+        "founder/tienda/sui/verify/",
+        views.verify_founder_sui_payment,
+        name="verify_founder_sui_payment",
+    ),
+    path(
         "founder/tienda/vending/quote/",
         views.quote_founder_vending,
         name="quote_founder_vending",

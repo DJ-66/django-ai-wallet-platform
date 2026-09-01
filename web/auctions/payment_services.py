@@ -7,6 +7,10 @@ from .models import (
     PaymentIntent,
 )
 from .services import process_credit_purchase
+from .founder_cart_services import (
+    FounderCartError,
+    fulfill_external_founder_vending_purchase,
+)
 
 
 class PaymentFulfillmentError(RuntimeError):
@@ -37,6 +41,18 @@ def dispatch_payment_fulfillment(intent):
             package=intent.credit_package,
             external_id=f"btcpay:{intent.btcpay_invoice_id}",
         )
+
+        return True
+
+    elif intent.purpose == "founder_purchase":
+        try:
+            fulfill_external_founder_vending_purchase(
+                payment_intent=intent,
+            )
+        except FounderCartError as exc:
+            raise PaymentFulfillmentError(
+                str(exc)
+            ) from exc
 
         return True
 
