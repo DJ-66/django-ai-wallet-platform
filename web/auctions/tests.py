@@ -5654,3 +5654,314 @@ class FounderSuiVerifyViewTests(TestCase):
         )
 
         settle_mock.assert_not_called()
+
+
+class AuthorizedFanzSellerPolicyTests(TestCase):
+    def test_dj_is_authorized_fanz_seller(self):
+        from django.contrib.auth.models import User
+        from .payment_policy import seller_is_platform
+
+        self.assertTrue(
+            seller_is_platform(
+                User(username="DJ")
+            )
+        )
+
+    def test_platform_is_authorized_fanz_seller(self):
+        from django.contrib.auth.models import User
+        from .payment_policy import seller_is_platform
+
+        self.assertTrue(
+            seller_is_platform(
+                User(username="platform")
+            )
+        )
+
+    def test_authorized_sellers_are_case_insensitive(self):
+        from django.contrib.auth.models import User
+        from .payment_policy import seller_is_platform
+
+        self.assertTrue(
+            seller_is_platform(
+                User(username="dj")
+            )
+        )
+
+    def test_ordinary_user_is_not_authorized(self):
+        from django.contrib.auth.models import User
+        from .payment_policy import seller_is_platform
+
+        self.assertFalse(
+            seller_is_platform(
+                User(username="bob")
+            )
+        )
+
+    def test_none_is_not_authorized(self):
+        from .payment_policy import seller_is_platform
+
+        self.assertFalse(
+            seller_is_platform(None)
+        )
+
+
+class P2PExternalPaymentServicePolicyTests(TestCase):
+    def test_200_credits_is_ten_usd(self):
+        from .p2p_payment_services import (
+            _credits_to_usd,
+        )
+
+        self.assertEqual(
+            str(_credits_to_usd(200)),
+            "10.00",
+        )
+
+    def test_external_methods_do_not_include_credits(self):
+        from .p2p_payment_services import (
+            EXTERNAL_P2P_METHODS,
+        )
+
+        self.assertEqual(
+            EXTERNAL_P2P_METHODS,
+            frozenset({
+                "btc",
+                "doge",
+                "sui",
+            }),
+        )
+
+        self.assertNotIn(
+            "credits",
+            EXTERNAL_P2P_METHODS,
+        )
+
+    def test_meme_coin_is_not_external_payment_rail(self):
+        from .p2p_payment_services import (
+            EXTERNAL_P2P_METHODS,
+        )
+
+        for method in (
+            "fanz",
+            "fanzmeme",
+            "meme_coin",
+        ):
+            self.assertNotIn(
+                method,
+                EXTERNAL_P2P_METHODS,
+            )
+
+
+class P2PFounderPaymentDispatcherTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="p2p-dispatch-buyer",
+            password="test-password",
+        )
+
+    @patch(
+        "auctions.p2p_payment_services."
+        "fulfill_p2p_external_founder_purchase"
+    )
+    def test_p2p_founder_purchase_dispatches(
+        self,
+        mock_fulfill,
+    ):
+        from auctions.payment_services import (
+            dispatch_payment_fulfillment,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="founder_purchase",
+            status="settled",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=(
+                "p2p-dispatch-invoice"
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "payment_method": "btc",
+            },
+        )
+
+        result = dispatch_payment_fulfillment(
+            intent
+        )
+
+        self.assertTrue(result)
+
+        mock_fulfill.assert_called_once_with(
+            payment_intent=intent,
+        )
+
+    def test_unknown_founder_purchase_fails_closed(
+        self,
+    ):
+        from auctions.payment_services import (
+            PaymentFulfillmentError,
+            dispatch_payment_fulfillment,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="founder_purchase",
+            status="settled",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=(
+                "unknown-founder-purpose"
+            ),
+            metadata={},
+        )
+
+        with self.assertRaises(
+            PaymentFulfillmentError
+        ):
+            dispatch_payment_fulfillment(
+                intent
+            )
+
+
+class P2PBTCPayRailLockTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="p2p-btcpay-buyer",
+            password="test-password",
+        )
+
+    def _intent(self, payment_method):
+        return PaymentIntent.objects.create(
+            user=self.user,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id": 114,
+                "payment_method": payment_method,
+            },
+        )
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_btc_p2p_invoice_is_btc_only(
+        self,
+        mock_create_invoice,
+    ):
+        from auctions.btcpay import (
+            create_payment_intent_invoice,
+        )
+
+        mock_create_invoice.return_value = {
+            "id": "btc-only-invoice",
+            "checkoutLink":
+                "https://pay.example/btc",
+        }
+
+        intent = self._intent("btc")
+
+        create_payment_intent_invoice(
+            intent
+        )
+
+        kwargs = (
+            mock_create_invoice
+            .call_args
+            .kwargs
+        )
+
+        self.assertEqual(
+            kwargs["checkout"],
+            {
+                "paymentMethods": [
+                    "BTC-CHAIN",
+                ],
+            },
+        )
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_doge_p2p_invoice_is_doge_only(
+        self,
+        mock_create_invoice,
+    ):
+        from auctions.btcpay import (
+            create_payment_intent_invoice,
+        )
+
+        mock_create_invoice.return_value = {
+            "id": "doge-only-invoice",
+            "checkoutLink":
+                "https://pay.example/doge",
+        }
+
+        intent = self._intent("doge")
+
+        create_payment_intent_invoice(
+            intent
+        )
+
+        kwargs = (
+            mock_create_invoice
+            .call_args
+            .kwargs
+        )
+
+        self.assertEqual(
+            kwargs["checkout"],
+            {
+                "paymentMethods": [
+                    "DOGE-CHAIN",
+                ],
+            },
+        )
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_non_p2p_invoice_keeps_default_methods(
+        self,
+        mock_create_invoice,
+    ):
+        from auctions.btcpay import (
+            create_payment_intent_invoice,
+        )
+
+        mock_create_invoice.return_value = {
+            "id": "normal-invoice",
+            "checkoutLink":
+                "https://pay.example/default",
+        }
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="integration_test",
+            status="created",
+            amount="1.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={},
+        )
+
+        create_payment_intent_invoice(
+            intent
+        )
+
+        kwargs = (
+            mock_create_invoice
+            .call_args
+            .kwargs
+        )
+
+        self.assertIsNone(
+            kwargs["checkout"]
+        )

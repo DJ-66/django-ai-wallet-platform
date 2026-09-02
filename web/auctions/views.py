@@ -1719,6 +1719,70 @@ def confirm_founder_tienda_purchase(request, listing_id):
     )
 
 @login_required
+def confirm_founder_p2p_purchase(
+    request,
+    listing_id,
+):
+    from .payment_policy import (
+        CONTEXT_FOUNDER_P2P,
+        allowed_payment_methods,
+        seller_is_platform,
+    )
+
+    listing = get_object_or_404(
+        FounderListing.objects.select_related(
+            "founder_account",
+            "seller_root",
+        ),
+        pk=listing_id,
+        listing_source=FounderListing.SOURCE_P2P,
+        status=FounderListing.STATUS_ACTIVE,
+        sale_type=FounderListing.SALE_FIXED,
+    )
+
+    wallet, _ = BidWallet.objects.get_or_create(
+        user=request.user
+    )
+
+    price = int(
+        listing.fixed_price_credits or 0
+    )
+
+    authorized_seller = seller_is_platform(
+        listing.seller_root
+    )
+
+    payment_methods = allowed_payment_methods(
+        context=CONTEXT_FOUNDER_P2P,
+        seller_is_platform=authorized_seller,
+    )
+
+    balance_after = (
+        wallet.credits - price
+    )
+
+    can_afford = (
+        wallet.credits >= price
+    )
+
+    return render(
+        request,
+        "auctions/founder_purchase_confirm.html",
+        {
+            "listing": listing,
+            "wallet": wallet,
+            "price": price,
+            "balance_after": balance_after,
+            "can_afford": can_afford,
+            "payment_methods": payment_methods,
+            "seller_is_platform":
+                authorized_seller,
+            "is_p2p_checkout": True,
+        },
+    )
+
+
+@login_required
 def founder_knowledge(request, handle):
     founder_account = get_object_or_404(
         FounderAccount.objects.select_related(
@@ -1818,9 +1882,21 @@ def founder_knowledge(request, handle):
             active_listing.listing_source
             == FounderListing.SOURCE_P2P
         ):
-            # P2P listing data is canonical already, but there
-            # is not yet a public P2P marketplace route.
-            market_action = "p2p"
+            if (
+                active_listing.sale_type
+                == FounderListing.SALE_FIXED
+            ):
+                market_url = reverse(
+                    "confirm_founder_p2p_purchase",
+                    kwargs={
+                        "listing_id":
+                            active_listing.pk,
+                    },
+                )
+                market_action = "buy"
+
+            else:
+                market_action = "p2p"
 
     ownership_history = (
         FounderOwnershipLedger.objects
@@ -2467,6 +2543,186 @@ def founder_tienda(request):
             "sui_checkout": sui_checkout,
         },
     )
+
+@login_required
+@require_POST
+def buy_founder_p2p_listing(
+    request,
+    listing_id,
+):
+    from .payment_policy import (
+        CONTEXT_FOUNDER_P2P,
+        payment_method_allowed,
+        seller_is_platform,
+    )
+
+    listing = get_object_or_404(
+        FounderListing.objects.select_related(
+            "founder_account",
+            "seller_root",
+        ),
+        pk=listing_id,
+        listing_source=FounderListing.SOURCE_P2P,
+        status=FounderListing.STATUS_ACTIVE,
+        sale_type=FounderListing.SALE_FIXED,
+    )
+
+    if request.POST.get("confirm") != "yes":
+        messages.error(
+            request,
+            _("Founder purchase confirmation is required."),
+        )
+
+        return redirect(
+            "confirm_founder_p2p_purchase",
+            listing_id=listing.pk,
+        )
+
+    payment_method = str(
+        request.POST.get(
+            "payment_method",
+            "credits",
+        )
+    ).strip().lower()
+
+    authorized_seller = seller_is_platform(
+        listing.seller_root
+    )
+
+    if not payment_method_allowed(
+        context=CONTEXT_FOUNDER_P2P,
+        payment_method=payment_method,
+        seller_is_platform=authorized_seller,
+    ):
+        messages.error(
+            request,
+            _(
+                "That payment method is not available "
+                "for this Owner Listing."
+            ),
+        )
+
+        return redirect(
+            "confirm_founder_p2p_purchase",
+            listing_id=listing.pk,
+        )
+
+    # Ordinary-user P2P remains Credits-only.
+    if payment_method == "credits":
+        try:
+            result = purchase_p2p_fixed_listing(
+                listing=listing,
+                buyer=request.user,
+            )
+
+            messages.success(
+                request,
+                _(
+                    "🏡 You now own @%(handle)s "
+                    "for %(credits)s credits."
+                ) % {
+                    "handle":
+                        result["founder_account"].handle,
+                    "credits":
+                        result["sale_price_credits"],
+                },
+            )
+
+        except Exception as exc:
+            messages.error(
+                request,
+                str(exc),
+            )
+
+        return redirect(
+            "founder_tienda"
+        )
+
+    # External rails are available only for an
+    # authorized FANZ-operated seller.
+    if not authorized_seller:
+        messages.error(
+            request,
+            _(
+                "External payment rails are not "
+                "available for this Owner Listing."
+            ),
+        )
+
+        return redirect(
+            "confirm_founder_p2p_purchase",
+            listing_id=listing.pk,
+        )
+
+    try:
+        from .p2p_payment_services import (
+            create_p2p_external_payment_intent,
+            freeze_p2p_sui_quote,
+        )
+
+        intent, _ = (
+            create_p2p_external_payment_intent(
+                listing=listing,
+                buyer=request.user,
+                payment_method=payment_method,
+                sui_recipient_address=(
+                    request.POST.get(
+                        "sui_recipient_address",
+                        "",
+                    )
+                ),
+            )
+        )
+
+        if payment_method in {
+            "btc",
+            "doge",
+        }:
+            from .btcpay import (
+                create_payment_intent_invoice,
+            )
+
+            intent = (
+                create_payment_intent_invoice(
+                    intent
+                )
+            )
+
+            if not intent.btcpay_checkout_link:
+                raise RuntimeError(
+                    "BTCPay returned no checkout link."
+                )
+
+            return redirect(
+                intent.btcpay_checkout_link
+            )
+
+        if payment_method == "sui":
+            intent, _ = freeze_p2p_sui_quote(
+                payment_intent_id=intent.pk,
+            )
+
+            return redirect(
+                f"{reverse('confirm_founder_p2p_purchase', kwargs={'listing_id': listing.pk})}"
+                f"?sui_payment_intent={intent.pk}"
+            )
+
+        raise RuntimeError(
+            "Unsupported external "
+            "Owner Listing payment method."
+        )
+
+    except Exception as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect(
+            "confirm_founder_p2p_purchase",
+            listing_id=listing.pk,
+        )
+
 
 @login_required
 def buy_founder_tienda_listing(request, listing_id):

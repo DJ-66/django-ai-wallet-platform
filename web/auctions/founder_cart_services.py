@@ -7,6 +7,12 @@ from .founder_vending import (
     founder_budget_quote,
     founder_coin_identity,
 )
+from .payment_policy import (
+    CONTEXT_PLATFORM_FOUNDER,
+    payment_method_allowed,
+    seller_is_platform,
+)
+
 from .models import (
     BidWallet,
     FounderAccount,
@@ -237,16 +243,46 @@ def create_founder_vending_reservation(
     )
 
     if founder is not None:
-        if founder.owner_root_id is not None:
+        active_listing = (
+            FounderListing.objects
+            .select_for_update()
+            .filter(
+                founder_account=founder,
+                status=FounderListing.STATUS_ACTIVE,
+            )
+            .first()
+        )
+
+        platform_user = (
+            get_system_wallet().user
+        )
+
+        platform_tienda_inventory = (
+            founder.owner_root_id
+            == platform_user.pk
+            and active_listing is not None
+            and active_listing.listing_source
+            == FounderListing.SOURCE_TIENDA
+            and active_listing.seller_root_id
+            == platform_user.pk
+        )
+
+        if (
+            founder.owner_root_id is not None
+            and not platform_tienda_inventory
+        ):
             raise FounderCartError(
                 f"@{identity.handle} is already owned."
             )
 
-        if founder.status not in {
-            FounderAccount.STATUS_AVAILABLE,
-            FounderAccount.STATUS_TREASURY,
-            FounderAccount.STATUS_RESERVED,
-        }:
+        if (
+            not platform_tienda_inventory
+            and founder.status not in {
+                FounderAccount.STATUS_AVAILABLE,
+                FounderAccount.STATUS_TREASURY,
+                FounderAccount.STATUS_RESERVED,
+            }
+        ):
             raise FounderCartError(
                 f"@{identity.handle} is not available "
                 "for vending."
@@ -895,13 +931,16 @@ def fulfill_external_founder_vending_purchase(
             f"@{founder.handle} is no longer reserved."
         )
 
-    if founder.owner_root_id is not None:
+    system_wallet = get_system_wallet()
+    platform_user = system_wallet.user
+
+    if (
+        founder.owner_root_id is not None
+        and founder.owner_root_id != platform_user.pk
+    ):
         raise FounderCartError(
             f"@{founder.handle} is already owned."
         )
-
-    system_wallet = get_system_wallet()
-    platform_user = system_wallet.user
 
     if buyer_root.pk == platform_user.pk:
         raise FounderCartError(
@@ -1095,13 +1134,16 @@ def purchase_founder_vending_reservation(
             f"@{founder.handle} is no longer reserved."
         )
 
-    if founder.owner_root_id is not None:
+    system_wallet = get_system_wallet()
+    platform_user = system_wallet.user
+
+    if (
+        founder.owner_root_id is not None
+        and founder.owner_root_id != platform_user.pk
+    ):
         raise FounderCartError(
             f"@{founder.handle} is already owned."
         )
-
-    system_wallet = get_system_wallet()
-    platform_user = system_wallet.user
 
     if buyer_root.pk == platform_user.pk:
         raise FounderCartError(
