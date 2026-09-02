@@ -88,17 +88,16 @@ urlpatterns = [
         views.buy_founder_p2p_listing,
         name="buy_founder_p2p_listing",
     ),
+    path(
+        "founder/p2p/<int:listing_id>/sui/verify/",
+        views.verify_founder_p2p_sui_payment,
+        name="verify_founder_p2p_sui_payment",
+    ),
     
     path(
         "founder/<int:founder_id>/p2p/list/",
         views.list_founder_p2p_fixed,
         name="list_founder_p2p_fixed",
-    ),
-
-    path(
-        "founder/p2p/<int:listing_id>/buy/",
-        views.buy_founder_p2p_fixed_listing,
-        name="buy_founder_p2p_fixed_listing",
     ),
 
     path(

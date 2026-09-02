@@ -204,31 +204,191 @@
         {% trans "Cancel" %}
       </a>
 
-      <form
-        method="post"
-        action="{% url 'buy_founder_tienda_listing' listing.id %}"
-      >
-        {% csrf_token %}
-
-        <input
-          type="hidden"
-          name="confirm"
-          value="yes"
+      {% if is_p2p_checkout %}
+        <form
+          method="post"
+          action="{% url 'buy_founder_p2p_listing' listing.id %}"
         >
+          {% csrf_token %}
 
-        <button
-          type="submit"
-          class="founder-confirm-buy"
-          style="width:100%;"
-          {% if not can_afford %}disabled{% endif %}
+          <input
+            type="hidden"
+            name="confirm"
+            value="yes"
+          >
+
+          {% if "credits" in payment_methods %}
+            <button
+              type="submit"
+              name="payment_method"
+              value="credits"
+              class="founder-confirm-buy"
+              style="width:100%; margin-bottom:10px;"
+              {% if not can_afford %}disabled{% endif %}
+            >
+              {% blocktrans trimmed with price=price %}
+              Pay {{ price }} Credits
+              {% endblocktrans %}
+            </button>
+          {% endif %}
+
+          {% if "btc" in payment_methods %}
+            <button
+              type="submit"
+              name="payment_method"
+              value="btc"
+              class="founder-confirm-buy"
+              style="width:100%; margin-bottom:10px;"
+            >
+              ₿ {% trans "Pay with BTC" %}
+            </button>
+          {% endif %}
+
+          {% if "doge" in payment_methods %}
+            <button
+              type="submit"
+              name="payment_method"
+              value="doge"
+              class="founder-confirm-buy"
+              style="width:100%; margin-bottom:10px;"
+            >
+              Ð {% trans "Pay with DOGE" %}
+            </button>
+          {% endif %}
+
+          {% if "sui" in payment_methods %}
+            <button
+              type="submit"
+              name="payment_method"
+              value="sui"
+              class="founder-confirm-buy"
+              style="width:100%;"
+            >
+              💧 {% trans "Pay with SUI" %}
+            </button>
+          {% endif %}
+        </form>
+
+      {% else %}
+
+        <form
+          method="post"
+          action="{% url 'buy_founder_tienda_listing' listing.id %}"
         >
-          {% blocktrans trimmed with price=price %}
-          Confirm Purchase — {{ price }} cr
-          {% endblocktrans %}
-        </button>
-      </form>
+          {% csrf_token %}
+
+          <input
+            type="hidden"
+            name="confirm"
+            value="yes"
+          >
+
+          <button
+            type="submit"
+            class="founder-confirm-buy"
+            style="width:100%;"
+            {% if not can_afford %}disabled{% endif %}
+          >
+            {% blocktrans trimmed with price=price %}
+            Confirm Purchase — {{ price }} cr
+            {% endblocktrans %}
+          </button>
+        </form>
+
+      {% endif %}
 
     </div>
+
+
+    {% if is_p2p_checkout and sui_checkout %}
+      <div class="founder-confirm-summary">
+
+        <div class="founder-confirm-row">
+          <span>{% trans "Network" %}</span>
+          <strong>Sui Mainnet</strong>
+        </div>
+
+        <div class="founder-confirm-row">
+          <span>{% trans "Amount" %}</span>
+          <strong>
+            {{ sui_checkout.amount_sui }} SUI
+          </strong>
+        </div>
+
+        <div class="founder-confirm-row">
+          <span>{% trans "Send to" %}</span>
+          <strong
+            style="
+              overflow-wrap:anywhere;
+              word-break:break-all;
+            "
+          >
+            {{ sui_checkout.recipient_address }}
+          </strong>
+        </div>
+
+        <div class="founder-confirm-row">
+          <span>{% trans "Quoted SUI / USD" %}</span>
+          <strong>
+            {{ sui_checkout.sui_usd_price }}
+          </strong>
+        </div>
+
+        <div class="founder-confirm-row">
+          <span>{% trans "Quote expires" %}</span>
+          <strong>
+            {{ sui_checkout.quote_expires_at }}
+          </strong>
+        </div>
+
+        <p class="founder-confirm-warning">
+          {% trans "Send the exact quoted amount to the FANZ Sui mainnet wallet, then paste the transaction digest below." %}
+        </p>
+
+        <form
+          method="post"
+          action="{% url 'verify_founder_p2p_sui_payment' listing.id %}"
+        >
+          {% csrf_token %}
+
+          <input
+            type="hidden"
+            name="payment_intent_id"
+            value="{{ sui_checkout.payment_intent_id }}"
+          >
+
+          <label for="p2p-sui-tx-digest">
+            <strong>
+              {% trans "Sui transaction digest" %}
+            </strong>
+          </label>
+
+          <input
+            id="p2p-sui-tx-digest"
+            name="tx_digest"
+            type="text"
+            required
+            autocomplete="off"
+            placeholder="Transaction digest"
+            style="
+              width:100%;
+              margin:10px 0 14px;
+              padding:12px;
+              border-radius:8px;
+            "
+          >
+
+          <button
+            type="submit"
+            class="founder-confirm-buy"
+            style="width:100%;"
+          >
+            ✅ {% trans "Verify SUI Payment" %}
+          </button>
+        </form>
+
+      </div>
+    {% endif %}
 
 
     <p class="founder-confirm-warning">
