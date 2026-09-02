@@ -78,6 +78,16 @@ urlpatterns = [
         views.confirm_founder_tienda_purchase,
         name="confirm_founder_tienda_purchase",
     ),
+    path(
+        "founder/p2p/<int:listing_id>/confirm/",
+        views.confirm_founder_p2p_purchase,
+        name="confirm_founder_p2p_purchase",
+    ),
+    path(
+        "founder/p2p/<int:listing_id>/buy/",
+        views.buy_founder_p2p_listing,
+        name="buy_founder_p2p_listing",
+    ),
     
     path(
         "founder/<int:founder_id>/p2p/list/",

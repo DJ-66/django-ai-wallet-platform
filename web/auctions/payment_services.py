@@ -45,6 +45,33 @@ def dispatch_payment_fulfillment(intent):
         return True
 
     elif intent.purpose == "founder_purchase":
+        metadata = intent.metadata or {}
+
+        if (
+            metadata.get("purchase_channel")
+            == "p2p"
+        ):
+            from .p2p_payment_services import (
+                P2PPaymentError,
+                fulfill_p2p_external_founder_purchase,
+            )
+
+            try:
+                fulfill_p2p_external_founder_purchase(
+                    payment_intent=intent,
+                )
+            except P2PPaymentError as exc:
+                raise PaymentFulfillmentError(
+                    str(exc)
+                ) from exc
+
+            return True
+
+        from .founder_cart_services import (
+            FounderCartError,
+            fulfill_external_founder_vending_purchase,
+        )
+
         try:
             fulfill_external_founder_vending_purchase(
                 payment_intent=intent,
