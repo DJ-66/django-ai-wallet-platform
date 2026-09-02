@@ -5965,3 +5965,115 @@ class P2PBTCPayRailLockTests(TestCase):
         self.assertIsNone(
             kwargs["checkout"]
         )
+
+class P2PBTCPayOutageViewTests(TestCase):
+    def setUp(self):
+        from .models import (
+            FounderAccount,
+            FounderListing,
+        )
+
+        self.seller = User.objects.create_user(
+            username="DJ",
+            password="test-password",
+        )
+        self.buyer = User.objects.create_user(
+            username="p2p-outage-buyer",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="777",
+            owner_root=self.seller,
+            status=FounderAccount.STATUS_LISTED,
+        )
+
+        self.listing = FounderListing.objects.create(
+            founder_account=self.founder,
+            seller_root=self.seller,
+            listing_source=FounderListing.SOURCE_P2P,
+            sale_type=FounderListing.SALE_FIXED,
+            status=FounderListing.STATUS_ACTIVE,
+            fixed_price_credits=200,
+        )
+
+        self.client.force_login(self.buyer)
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_btc_outage_keeps_reusable_intent(
+        self,
+        mock_create_invoice,
+    ):
+        from django.urls import reverse
+
+        from auctions.btcpay import BTCPayError
+
+        mock_create_invoice.side_effect = BTCPayError(
+            "BTCPay request failed with HTTP 503"
+        )
+
+        url = reverse(
+            "buy_founder_p2p_listing",
+            kwargs={
+                "listing_id": self.listing.pk,
+            },
+        )
+
+        payload = {
+            "confirm": "yes",
+            "payment_method": "btc",
+        }
+
+        response = self.client.post(
+            url,
+            payload,
+            follow=True,
+        )
+
+        self.assertContains(
+            response,
+            (
+                "BTC payments are temporarily "
+                "unavailable. Please try again later."
+            ),
+        )
+
+        intents = PaymentIntent.objects.filter(
+            user=self.buyer,
+            purpose="founder_purchase",
+            metadata__purchase_channel="p2p",
+            metadata__founder_listing_id=self.listing.pk,
+            metadata__payment_method="btc",
+        )
+
+        self.assertEqual(intents.count(), 1)
+
+        intent = intents.get()
+
+        self.assertEqual(
+            intent.status,
+            "created",
+        )
+
+        self.assertFalse(
+            intent.btcpay_invoice_id
+        )
+
+        response = self.client.post(
+            url,
+            payload,
+            follow=True,
+        )
+
+        self.assertContains(
+            response,
+            (
+                "BTC payments are temporarily "
+                "unavailable. Please try again later."
+            ),
+        )
+
+        self.assertEqual(
+            intents.count(),
+            1,
+        )

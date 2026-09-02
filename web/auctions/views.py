@@ -2656,6 +2656,7 @@ def buy_founder_p2p_listing(
 
     try:
         from .p2p_payment_services import (
+            P2PPaymentError,
             create_p2p_external_payment_intent,
             freeze_p2p_sui_quote,
         )
@@ -2679,18 +2680,28 @@ def buy_founder_p2p_listing(
             "doge",
         }:
             from .btcpay import (
+                BTCPayError,
                 create_payment_intent_invoice,
             )
 
-            intent = (
-                create_payment_intent_invoice(
-                    intent
+            try:
+                intent = (
+                    create_payment_intent_invoice(
+                        intent
+                    )
                 )
-            )
+            except BTCPayError as exc:
+                raise P2PPaymentError(
+                    f"{payment_method.upper()} payments "
+                    "are temporarily unavailable. "
+                    "Please try again later."
+                ) from exc
 
             if not intent.btcpay_checkout_link:
-                raise RuntimeError(
-                    "BTCPay returned no checkout link."
+                raise P2PPaymentError(
+                    f"{payment_method.upper()} checkout "
+                    "is temporarily unavailable. "
+                    "Please try again later."
                 )
 
             return redirect(
