@@ -341,6 +341,28 @@
           </strong>
         </div>
 
+        <form
+          method="post"
+          action="{% url 'refresh_founder_p2p_sui_quote' listing.id %}"
+          style="margin: 14px 0;"
+        >
+          {% csrf_token %}
+
+          <input
+            type="hidden"
+            name="payment_intent_id"
+            value="{{ sui_checkout.payment_intent_id }}"
+          >
+
+          <button
+            type="submit"
+            class="founder-confirm-cancel"
+            style="width:100%;"
+          >
+            🔄 {% trans "Get New SUI Quote" %}
+          </button>
+        </form>
+
         <p class="founder-confirm-warning">
           {% trans "Send the exact quoted amount to the FANZ Sui mainnet wallet, then paste the transaction digest below." %}
         </p>

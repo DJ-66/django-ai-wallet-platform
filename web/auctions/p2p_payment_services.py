@@ -26,6 +26,10 @@ from .sui_adapter import (
     quote_sui_payment,
     verify_sui_payment,
 )
+from .sui_quote_services import (
+    SuiPaymentQuoteError,
+    _parse_quote_datetime,
+)
 
 
 CREDITS_PER_USD = Decimal("20")
@@ -356,6 +360,22 @@ def freeze_p2p_sui_quote(
             "SUI quote is incomplete."
         )
 
+    quote_expires_at = str(
+        quote.get(
+            "quote_expires_at",
+            "",
+        )
+    ).strip()
+
+    try:
+        _parse_quote_datetime(
+            quote_expires_at
+        )
+    except SuiPaymentQuoteError as exc:
+        raise P2PPaymentError(
+            str(exc)
+        ) from exc
+
     metadata.update({
         "sui_network":
             "mainnet",
@@ -392,12 +412,7 @@ def freeze_p2p_sui_quote(
             ),
 
         "sui_quote_expires_at":
-            str(
-                quote.get(
-                    "quote_expires_at",
-                    "",
-                )
-            ),
+            quote_expires_at,
     })
 
     intent.metadata = metadata
@@ -410,6 +425,90 @@ def freeze_p2p_sui_quote(
     )
 
     return intent, True
+
+
+@transaction.atomic
+def refresh_p2p_sui_quote(
+    *,
+    payment_intent_id,
+):
+    intent = (
+        PaymentIntent.objects
+        .select_for_update()
+        .get(pk=payment_intent_id)
+    )
+
+    metadata = dict(
+        intent.metadata or {}
+    )
+
+    if (
+        intent.purpose
+        != "founder_purchase"
+        or metadata.get(
+            "purchase_channel"
+        ) != "p2p"
+        or metadata.get(
+            "payment_method"
+        ) != "sui"
+        or intent.settlement_source
+        != PaymentIntent.SETTLEMENT_SUI
+    ):
+        raise P2PPaymentError(
+            "PaymentIntent is not a P2P "
+            "SUI Founder purchase."
+        )
+
+    if intent.status not in {
+        "created",
+        "invoice_created",
+        "processing",
+    }:
+        raise P2PPaymentError(
+            "PaymentIntent cannot refresh "
+            f"SUI quote from status {intent.status}."
+        )
+
+    try:
+        expires_at = _parse_quote_datetime(
+            metadata.get(
+                "sui_quote_expires_at"
+            )
+        )
+    except SuiPaymentQuoteError as exc:
+        raise P2PPaymentError(
+            str(exc)
+        ) from exc
+
+    if timezone.now() < expires_at:
+        raise P2PPaymentError(
+            "Current SUI payment quote "
+            "has not expired."
+        )
+
+    for key in (
+        "sui_network",
+        "sui_payment_address",
+        "sui_required_mist",
+        "sui_amount",
+        "sui_usd_price",
+        "sui_quoted_at",
+        "sui_quote_expires_at",
+    ):
+        metadata.pop(key, None)
+
+    intent.metadata = metadata
+
+    intent.save(
+        update_fields=[
+            "metadata",
+            "updated_at",
+        ]
+    )
+
+    return freeze_p2p_sui_quote(
+        payment_intent_id=intent.pk,
+    )
 
 
 @transaction.atomic
@@ -462,6 +561,35 @@ def settle_p2p_sui_payment(
             )
 
         return intent, False
+
+    quote_expires_at = metadata.get(
+        "sui_quote_expires_at"
+    )
+
+    try:
+        expires_at = _parse_quote_datetime(
+            quote_expires_at
+        )
+    except SuiPaymentQuoteError as exc:
+        raise P2PPaymentError(
+            str(exc)
+        ) from exc
+
+    if timezone.now() >= expires_at:
+        raise P2PPaymentError(
+            "SUI payment quote has expired. "
+            "Please request a new quote."
+        )
+
+    if intent.status not in {
+        "created",
+        "invoice_created",
+        "processing",
+    }:
+        raise P2PPaymentError(
+            "PaymentIntent cannot accept SUI "
+            f"settlement from status {intent.status}."
+        )
 
     recipient = str(
         metadata.get(
