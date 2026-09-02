@@ -604,21 +604,14 @@
 
   {% if active_listing.sale_type == "fixed" %}
 
-    <form
-      method="post"
-      action="{% url 'buy_founder_p2p_fixed_listing' active_listing.id %}"
-      style="margin-top: 18px;"
-    >
-      {% csrf_token %}
-
-      <button
-        type="submit"
+    <p style="margin-top: 18px;">
+      <a
+        href="{% url 'confirm_founder_p2p_purchase' active_listing.id %}"
         class="founder-market-button"
-        onclick="return confirm('{% trans "Purchase this Founder property at the listed price?" %}');"
       >
-        🏷️ {% trans "Buy Property" %}
-      </button>
-    </form>
+        🏷️ {% trans "View listing / Buy Property" %}
+      </a>
+    </p>
 
       {% elif active_listing.sale_type == "blind" %}
 

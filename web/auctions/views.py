@@ -1072,58 +1072,6 @@ def cancel_founder_p2p_listing(request, listing_id):
 
 
 @login_required
-def buy_founder_p2p_fixed_listing(request, listing_id):
-    if request.method != "POST":
-        return redirect(
-            "founder_knowledge",
-            handle=FounderListing.objects.get(
-                pk=listing_id
-            ).founder_account.handle,
-        )
-
-    listing = get_object_or_404(
-        FounderListing.objects.select_related(
-            "founder_account",
-        ),
-        pk=listing_id,
-    )
-
-    handle = listing.founder_account.handle
-
-    try:
-        result = purchase_p2p_fixed_listing(
-            listing=listing,
-            buyer=request.user,
-        )
-
-        messages.success(
-            request,
-            _(
-                "🏡 You purchased @%(handle)s for "
-                "%(credits)s credits."
-            ) % {
-                "handle": result[
-                    "founder_account"
-                ].handle,
-                "credits": result[
-                    "sale_price_credits"
-                ],
-            },
-        )
-
-    except Exception as exc:
-        messages.error(
-            request,
-            str(exc),
-        )
-
-    return redirect(
-        "founder_knowledge",
-        handle=handle,
-    )
-
-
-@login_required
 def bid_founder_p2p_blind_listing(request, listing_id):
     listing = get_object_or_404(
         FounderListing.objects.select_related(
@@ -1723,6 +1671,8 @@ def confirm_founder_p2p_purchase(
     request,
     listing_id,
 ):
+    from .models import PaymentIntent
+
     from .payment_policy import (
         CONTEXT_FOUNDER_P2P,
         allowed_payment_methods,
@@ -1765,6 +1715,74 @@ def confirm_founder_p2p_purchase(
         wallet.credits >= price
     )
 
+    sui_checkout = None
+
+    sui_payment_intent_id = (
+        request.GET.get(
+            "sui_payment_intent"
+        )
+    )
+
+    if sui_payment_intent_id:
+        try:
+            sui_intent = (
+                PaymentIntent.objects
+                .get(
+                    pk=sui_payment_intent_id,
+                    user=request.user,
+                    purpose="founder_purchase",
+                    settlement_source=(
+                        PaymentIntent.SETTLEMENT_SUI
+                    ),
+                    metadata__purchase_channel="p2p",
+                    metadata__founder_listing_id=(
+                        listing.pk
+                    ),
+                    metadata__payment_method="sui",
+                )
+            )
+
+            sui_metadata = (
+                sui_intent.metadata or {}
+            )
+
+            sui_checkout = {
+                "payment_intent_id":
+                    sui_intent.pk,
+                "amount_sui":
+                    sui_metadata.get(
+                        "sui_amount",
+                        "",
+                    ),
+                "required_mist":
+                    sui_metadata.get(
+                        "sui_required_mist",
+                        "",
+                    ),
+                "recipient_address":
+                    sui_metadata.get(
+                        "sui_payment_address",
+                        "",
+                    ),
+                "sui_usd_price":
+                    sui_metadata.get(
+                        "sui_usd_price",
+                        "",
+                    ),
+                "quote_expires_at":
+                    sui_metadata.get(
+                        "sui_quote_expires_at",
+                        "",
+                    ),
+            }
+
+        except (
+            PaymentIntent.DoesNotExist,
+            ValueError,
+            TypeError,
+        ):
+            sui_checkout = None
+
     return render(
         request,
         "auctions/founder_purchase_confirm.html",
@@ -1778,7 +1796,112 @@ def confirm_founder_p2p_purchase(
             "seller_is_platform":
                 authorized_seller,
             "is_p2p_checkout": True,
+            "sui_checkout": sui_checkout,
         },
+    )
+
+
+@login_required
+@require_POST
+def verify_founder_p2p_sui_payment(
+    request,
+    listing_id,
+):
+    from .models import PaymentIntent
+
+    from .p2p_payment_services import (
+        P2PPaymentError,
+        settle_p2p_sui_payment,
+    )
+
+    listing = get_object_or_404(
+        FounderListing,
+        pk=listing_id,
+        listing_source=FounderListing.SOURCE_P2P,
+        status=FounderListing.STATUS_ACTIVE,
+        sale_type=FounderListing.SALE_FIXED,
+    )
+
+    payment_intent_id = (
+        request.POST.get(
+            "payment_intent_id"
+        )
+    )
+
+    tx_digest = str(
+        request.POST.get(
+            "tx_digest",
+            "",
+        )
+    ).strip()
+
+    try:
+        intent = (
+            PaymentIntent.objects
+            .get(
+                pk=payment_intent_id,
+                user=request.user,
+                purpose="founder_purchase",
+                settlement_source=(
+                    PaymentIntent.SETTLEMENT_SUI
+                ),
+                metadata__purchase_channel="p2p",
+                metadata__founder_listing_id=(
+                    listing.pk
+                ),
+                metadata__payment_method="sui",
+            )
+        )
+    except (
+        PaymentIntent.DoesNotExist,
+        ValueError,
+        TypeError,
+    ):
+        messages.error(
+            request,
+            "SUI payment checkout was not found.",
+        )
+
+        return redirect(
+            "confirm_founder_p2p_purchase",
+            listing_id=listing.pk,
+        )
+
+    try:
+        intent, settled_now = (
+            settle_p2p_sui_payment(
+                payment_intent_id=intent.pk,
+                tx_digest=tx_digest,
+            )
+        )
+    except P2PPaymentError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect(
+            (
+                f"{reverse('confirm_founder_p2p_purchase', kwargs={'listing_id': listing.pk})}"
+                f"?sui_payment_intent={intent.pk}"
+            )
+        )
+
+    if settled_now:
+        messages.success(
+            request,
+            "SUI payment verified. "
+            "Your Founder purchase is settling.",
+        )
+    else:
+        messages.info(
+            request,
+            "This SUI payment was already verified.",
+        )
+
+    return redirect(
+        "confirm_founder_p2p_purchase",
+        listing_id=listing.pk,
     )
 
 

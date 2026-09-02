@@ -6293,3 +6293,285 @@ class P2PBTCPaySettlementWorkerIntegrationTests(TestCase):
         )
 
         mock_verify_method.assert_called_once()
+
+
+class P2PSuiCheckoutViewTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from .models import (
+            FounderAccount,
+            FounderListing,
+        )
+
+        self.seller = User.objects.create_user(
+            username="DJ",
+            password="test-password",
+        )
+        self.buyer = User.objects.create_user(
+            username="p2p-sui-buyer",
+            password="test-password",
+        )
+        self.other_buyer = User.objects.create_user(
+            username="p2p-sui-other",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="sui1",
+            owner_root=self.seller,
+            status=FounderAccount.STATUS_LISTED,
+        )
+
+        self.listing = FounderListing.objects.create(
+            founder_account=self.founder,
+            seller_root=self.seller,
+            listing_source=FounderListing.SOURCE_P2P,
+            sale_type=FounderListing.SALE_FIXED,
+            status=FounderListing.STATUS_ACTIVE,
+            fixed_price_credits=200,
+        )
+
+        self.client.force_login(self.buyer)
+
+    def test_authorized_p2p_confirm_renders_four_rails(
+        self,
+    ):
+        from django.urls import reverse
+
+        response = self.client.get(
+            reverse(
+                "confirm_founder_p2p_purchase",
+                kwargs={
+                    "listing_id": self.listing.pk,
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            "Pay 200 Credits",
+        )
+        self.assertContains(
+            response,
+            "Pay with BTC",
+        )
+        self.assertContains(
+            response,
+            "Pay with DOGE",
+        )
+        self.assertContains(
+            response,
+            "Pay with SUI",
+        )
+
+    def test_sui_quote_renders_only_for_correct_buyer_and_listing(
+        self,
+    ):
+        from django.urls import reverse
+
+        from .models import PaymentIntent
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "payment_method": "sui",
+                "sui_amount": "2.500000000",
+                "sui_required_mist":
+                    "2500000000",
+                "sui_payment_address":
+                    "0xabc123",
+                "sui_usd_price": "4.00",
+                "sui_quote_expires_at":
+                    "2026-09-02T20:00:00Z",
+            },
+        )
+
+        url = (
+            reverse(
+                "confirm_founder_p2p_purchase",
+                kwargs={
+                    "listing_id": self.listing.pk,
+                },
+            )
+            + f"?sui_payment_intent={intent.pk}"
+        )
+
+        response = self.client.get(url)
+
+        self.assertContains(
+            response,
+            "2.500000000 SUI",
+        )
+        self.assertContains(
+            response,
+            "0xabc123",
+        )
+        self.assertContains(
+            response,
+            "Verify SUI Payment",
+        )
+
+        self.client.force_login(
+            self.other_buyer
+        )
+
+        response = self.client.get(url)
+
+        self.assertNotContains(
+            response,
+            "2.500000000 SUI",
+        )
+        self.assertNotContains(
+            response,
+            "0xabc123",
+        )
+
+    @patch(
+        "auctions.p2p_payment_services."
+        "verify_sui_payment"
+    )
+    def test_valid_sui_digest_settles_then_worker_transfers(
+        self,
+        mock_verify_sui_payment,
+    ):
+        from django.core.management import call_command
+        from django.urls import reverse
+
+        from .models import (
+            FounderListing,
+            PaymentIntent,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "wanted_handle":
+                    self.founder.handle,
+                "seller_root_id":
+                    self.seller.pk,
+                "seller_username":
+                    self.seller.username,
+                "list_price_credits": 200,
+                "payment_method": "sui",
+                "sui_payment_address":
+                    "0xabc123",
+                "sui_required_mist":
+                    "2500000000",
+                "sui_amount":
+                    "2.500000000",
+                "sui_usd_price":
+                    "4.00",
+                "sui_quote_expires_at":
+                    "2026-09-02T20:00:00Z",
+                "sui_recipient_address":
+                    "",
+            },
+        )
+
+        digest = "test-p2p-sui-digest"
+
+        mock_verify_sui_payment.return_value = {
+            "verification": {
+                "network": "mainnet",
+                "success": True,
+                "sufficient": True,
+                "tx_digest": digest,
+                "recipient_address":
+                    "0xabc123",
+                "received_mist":
+                    "2500000000",
+            },
+        }
+
+        response = self.client.post(
+            reverse(
+                "verify_founder_p2p_sui_payment",
+                kwargs={
+                    "listing_id": self.listing.pk,
+                },
+            ),
+            {
+                "payment_intent_id":
+                    intent.pk,
+                "tx_digest":
+                    digest,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        intent.refresh_from_db()
+        self.founder.refresh_from_db()
+        self.listing.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "settled",
+        )
+        self.assertEqual(
+            intent.settlement_reference,
+            digest,
+        )
+
+        # Verification settles payment only.
+        self.assertEqual(
+            self.founder.owner_root_id,
+            self.seller.pk,
+        )
+        self.assertEqual(
+            self.listing.status,
+            FounderListing.STATUS_ACTIVE,
+        )
+
+        call_command(
+            "fulfill_settled_payments",
+            verbosity=0,
+        )
+
+        intent.refresh_from_db()
+        self.founder.refresh_from_db()
+        self.listing.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "fulfilled",
+        )
+        self.assertEqual(
+            self.founder.owner_root_id,
+            self.buyer.pk,
+        )
+        self.assertEqual(
+            self.listing.status,
+            FounderListing.STATUS_SOLD,
+        )
