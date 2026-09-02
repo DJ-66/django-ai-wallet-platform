@@ -6077,3 +6077,219 @@ class P2PBTCPayOutageViewTests(TestCase):
             intents.count(),
             1,
         )
+
+
+class P2PBTCPaySettlementWorkerIntegrationTests(TestCase):
+    @patch(
+        "auctions.btcpay.verify_btcpay_intent_payment_method"
+    )
+    @patch(
+        "auctions.btcpay.get_invoice"
+    )
+    def test_btc_webhook_then_worker_transfers_p2p_founder(
+        self,
+        mock_get_invoice,
+        mock_verify_method,
+    ):
+        import hashlib
+        import hmac
+        import json
+
+        from django.contrib.auth.models import User
+        from django.core.management import call_command
+        from django.test import override_settings
+        from django.urls import reverse
+
+        from .models import (
+            FounderAccount,
+            FounderListing,
+            FounderOwnershipLedger,
+            PaymentIntent,
+            WalletTransaction,
+        )
+        from .p2p_payment_services import (
+            create_p2p_external_payment_intent,
+        )
+
+        seller = User.objects.create_user(
+            username="DJ",
+            password="test-password",
+        )
+        buyer = User.objects.create_user(
+            username="p2p-btc-settlement-buyer",
+            password="test-password",
+        )
+
+        founder = FounderAccount.objects.create(
+            handle="btc1",
+            owner_root=seller,
+            status=FounderAccount.STATUS_LISTED,
+        )
+
+        listing = FounderListing.objects.create(
+            founder_account=founder,
+            seller_root=seller,
+            listing_source=FounderListing.SOURCE_P2P,
+            sale_type=FounderListing.SALE_FIXED,
+            status=FounderListing.STATUS_ACTIVE,
+            fixed_price_credits=200,
+        )
+
+        intent, created = (
+            create_p2p_external_payment_intent(
+                listing=listing,
+                buyer=buyer,
+                payment_method="btc",
+            )
+        )
+
+        self.assertTrue(created)
+
+        intent.btcpay_invoice_id = (
+            "p2p-btc-settlement-invoice"
+        )
+        intent.status = "invoice_created"
+        intent.save(
+            update_fields=[
+                "btcpay_invoice_id",
+                "status",
+                "updated_at",
+            ]
+        )
+
+        mock_get_invoice.return_value = {
+            "id": intent.btcpay_invoice_id,
+            "status": "Settled",
+        }
+
+        mock_verify_method.return_value = (
+            "BTC-CHAIN"
+        )
+
+        payload = {
+            "storeId": "test-store",
+            "invoiceId":
+                intent.btcpay_invoice_id,
+        }
+
+        body = json.dumps(
+            payload,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+        secret = "test-webhook-secret"
+
+        signature = (
+            "sha256="
+            + hmac.new(
+                secret.encode("utf-8"),
+                body,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+
+        wallet_tx_before = (
+            WalletTransaction.objects.count()
+        )
+
+        with override_settings(
+            BTCPAY_WEBHOOK_SECRET=secret,
+            BTCPAY_STORE_ID="test-store",
+        ):
+            response = self.client.post(
+                reverse("btcpay_webhook"),
+                data=body,
+                content_type="application/json",
+                HTTP_BTCPAY_SIG=signature,
+            )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        intent.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "settled",
+        )
+
+        self.assertIsNotNone(
+            intent.paid_at
+        )
+
+        # Webhook settlement must not transfer
+        # ownership directly.
+        founder.refresh_from_db()
+        listing.refresh_from_db()
+
+        self.assertEqual(
+            founder.owner_root_id,
+            seller.pk,
+        )
+
+        self.assertEqual(
+            listing.status,
+            FounderListing.STATUS_ACTIVE,
+        )
+
+        call_command(
+            "fulfill_settled_payments",
+            verbosity=0,
+        )
+
+        intent.refresh_from_db()
+        founder.refresh_from_db()
+        listing.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "fulfilled",
+        )
+
+        self.assertIsNotNone(
+            intent.fulfilled_at
+        )
+
+        self.assertEqual(
+            founder.owner_root_id,
+            buyer.pk,
+        )
+
+        self.assertEqual(
+            founder.status,
+            FounderAccount.STATUS_OWNED,
+        )
+
+        self.assertEqual(
+            listing.status,
+            FounderListing.STATUS_SOLD,
+        )
+
+        ledger = (
+            FounderOwnershipLedger.objects
+            .filter(
+                founder_account=founder,
+                seller_root=seller,
+                buyer_root=buyer,
+            )
+            .get()
+        )
+
+        self.assertEqual(
+            ledger.sale_price_credits,
+            200,
+        )
+
+        self.assertEqual(
+            ledger.wallet_transaction_ids,
+            [],
+        )
+
+        self.assertEqual(
+            WalletTransaction.objects.count(),
+            wallet_tx_before,
+        )
+
+        mock_verify_method.assert_called_once()
