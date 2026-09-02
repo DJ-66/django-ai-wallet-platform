@@ -6955,3 +6955,94 @@ class P2PSuiQuoteRefreshTests(TestCase):
             ],
             "4000000000",
         )
+
+
+class FounderSuiSettlementExpiryTests(TestCase):
+    @patch(
+        "auctions.sui_payment_services."
+        "verify_sui_payment"
+    )
+    def test_expired_tienda_quote_rejected_before_verification(
+        self,
+        mock_verify,
+    ):
+        from datetime import timedelta
+
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .models import (
+            FounderCart,
+            FounderCartItem,
+            PaymentIntent,
+        )
+        from .sui_payment_services import (
+            SuiPaymentSettlementError,
+            settle_founder_sui_payment,
+        )
+
+        user = User.objects.create_user(
+            username="sui-expired-tienda",
+            password="test-password",
+        )
+
+        cart = FounderCart.objects.create(
+            purchaser=user,
+        )
+
+        expired = (
+            timezone.now()
+            - timedelta(minutes=1)
+        ).isoformat()
+
+        recipient = "0x" + "4" * 64
+
+        intent = PaymentIntent.objects.create(
+            user=user,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "payment_method": "sui",
+                "sui_recipient_address":
+                    recipient,
+                "sui_required_mist":
+                    "1000000000",
+                "sui_quote_expires_at":
+                    expired,
+            },
+        )
+
+        FounderCartItem.objects.create(
+            cart=cart,
+            wanted_handle="sexp",
+            budget_credits=215,
+            list_price_credits=200,
+            payment_method=(
+                FounderCartItem.PAYMENT_SUI
+            ),
+            payment_intent=intent,
+            status=FounderCartItem.STATUS_QUOTED,
+            quoted_at=timezone.now(),
+            reservation_expires_at=(
+                timezone.now()
+                + timedelta(hours=1)
+            ),
+        )
+
+        with self.assertRaisesMessage(
+            SuiPaymentSettlementError,
+            "SUI payment quote has expired.",
+        ):
+            settle_founder_sui_payment(
+                payment_intent_id=intent.pk,
+                tx_digest="expired-tienda-digest",
+                recipient_address=recipient,
+                minimum_amount_mist=1000000000,
+            )
+
+        mock_verify.assert_not_called()

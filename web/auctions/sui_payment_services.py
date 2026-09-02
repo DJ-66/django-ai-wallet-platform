@@ -9,6 +9,10 @@ from .sui_adapter import (
     SuiAdapterError,
     verify_sui_payment,
 )
+from .sui_quote_services import (
+    SuiPaymentQuoteError,
+    _parse_quote_datetime,
+)
 
 
 class SuiPaymentSettlementError(RuntimeError):
@@ -35,7 +39,6 @@ def settle_founder_sui_payment(
     intent = (
         PaymentIntent.objects
         .select_for_update()
-        .select_related("user")
         .get(pk=payment_intent_id)
     )
 
@@ -101,6 +104,25 @@ def settle_founder_sui_payment(
             )
 
         return intent, False
+
+    metadata = intent.metadata or {}
+
+    try:
+        expires_at = _parse_quote_datetime(
+            metadata.get(
+                "sui_quote_expires_at"
+            )
+        )
+    except SuiPaymentQuoteError as exc:
+        raise SuiPaymentSettlementError(
+            str(exc)
+        ) from exc
+
+    if timezone.now() >= expires_at:
+        raise SuiPaymentSettlementError(
+            "SUI payment quote has expired. "
+            "Please request a new quote."
+        )
 
     if intent.status not in {
         "created",
