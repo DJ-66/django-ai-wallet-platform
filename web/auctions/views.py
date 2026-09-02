@@ -1803,6 +1803,95 @@ def confirm_founder_p2p_purchase(
 
 @login_required
 @require_POST
+def refresh_founder_p2p_sui_quote(
+    request,
+    listing_id,
+):
+    from .models import PaymentIntent
+
+    from .p2p_payment_services import (
+        P2PPaymentError,
+        refresh_p2p_sui_quote,
+    )
+
+    listing = get_object_or_404(
+        FounderListing,
+        pk=listing_id,
+        listing_source=FounderListing.SOURCE_P2P,
+        status=FounderListing.STATUS_ACTIVE,
+        sale_type=FounderListing.SALE_FIXED,
+    )
+
+    payment_intent_id = (
+        request.POST.get(
+            "payment_intent_id"
+        )
+    )
+
+    try:
+        intent = (
+            PaymentIntent.objects
+            .get(
+                pk=payment_intent_id,
+                user=request.user,
+                purpose="founder_purchase",
+                settlement_source=(
+                    PaymentIntent.SETTLEMENT_SUI
+                ),
+                metadata__purchase_channel="p2p",
+                metadata__founder_listing_id=(
+                    listing.pk
+                ),
+                metadata__payment_method="sui",
+            )
+        )
+    except (
+        PaymentIntent.DoesNotExist,
+        ValueError,
+        TypeError,
+    ):
+        messages.error(
+            request,
+            "SUI payment checkout was not found.",
+        )
+
+        return redirect(
+            "confirm_founder_p2p_purchase",
+            listing_id=listing.pk,
+        )
+
+    try:
+        intent, _ = refresh_p2p_sui_quote(
+            payment_intent_id=intent.pk,
+        )
+    except P2PPaymentError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect(
+            (
+                f"{reverse('confirm_founder_p2p_purchase', kwargs={'listing_id': listing.pk})}"
+                f"?sui_payment_intent={intent.pk}"
+            )
+        )
+
+    messages.success(
+        request,
+        "A new SUI payment quote is ready.",
+    )
+
+    return redirect(
+        (
+            f"{reverse('confirm_founder_p2p_purchase', kwargs={'listing_id': listing.pk})}"
+            f"?sui_payment_intent={intent.pk}"
+        )
+    )
+
+
+@login_required
+@require_POST
 def verify_founder_p2p_sui_payment(
     request,
     listing_id,

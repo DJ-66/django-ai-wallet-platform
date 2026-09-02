@@ -89,6 +89,11 @@ urlpatterns = [
         name="buy_founder_p2p_listing",
     ),
     path(
+        "founder/p2p/<int:listing_id>/sui/refresh/",
+        views.refresh_founder_p2p_sui_quote,
+        name="refresh_founder_p2p_sui_quote",
+    ),
+    path(
         "founder/p2p/<int:listing_id>/sui/verify/",
         views.verify_founder_p2p_sui_payment,
         name="verify_founder_p2p_sui_payment",

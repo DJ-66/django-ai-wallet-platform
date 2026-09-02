@@ -6575,3 +6575,383 @@ class P2PSuiCheckoutViewTests(TestCase):
             self.listing.status,
             FounderListing.STATUS_SOLD,
         )
+
+
+class P2PSuiQuoteExpiryTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from .models import (
+            FounderAccount,
+            FounderListing,
+            PaymentIntent,
+        )
+
+        self.seller = User.objects.create_user(
+            username="DJ",
+            password="test-password",
+        )
+        self.buyer = User.objects.create_user(
+            username="p2p-sui-expiry-buyer",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="sxpy",
+            owner_root=self.seller,
+            status=FounderAccount.STATUS_LISTED,
+        )
+
+        self.listing = FounderListing.objects.create(
+            founder_account=self.founder,
+            seller_root=self.seller,
+            listing_source=FounderListing.SOURCE_P2P,
+            sale_type=FounderListing.SALE_FIXED,
+            status=FounderListing.STATUS_ACTIVE,
+            fixed_price_credits=200,
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "list_price_credits": 200,
+                "payment_method": "sui",
+            },
+        )
+
+    @patch(
+        "auctions.p2p_payment_services."
+        "quote_sui_payment"
+    )
+    def test_quote_rejects_invalid_expiration(
+        self,
+        mock_quote,
+    ):
+        from .p2p_payment_services import (
+            P2PPaymentError,
+            freeze_p2p_sui_quote,
+        )
+
+        mock_quote.return_value = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address":
+                    "0x" + "1" * 64,
+                "amount_mist":
+                    "2500000000",
+                "amount_sui":
+                    "2.500000000",
+                "sui_usd_price":
+                    "4.00",
+                "quoted_at":
+                    "2026-09-02T16:00:00Z",
+                "quote_expires_at":
+                    "not-a-date",
+            },
+        }
+
+        with self.assertRaises(
+            P2PPaymentError
+        ):
+            freeze_p2p_sui_quote(
+                payment_intent_id=self.intent.pk,
+            )
+
+    @patch(
+        "auctions.p2p_payment_services."
+        "verify_sui_payment"
+    )
+    def test_expired_quote_rejected_before_chain_verification(
+        self,
+        mock_verify,
+    ):
+        from django.utils import timezone
+
+        from .p2p_payment_services import (
+            P2PPaymentError,
+            settle_p2p_sui_payment,
+        )
+
+        expired = (
+            timezone.now()
+            - timezone.timedelta(minutes=1)
+        ).isoformat()
+
+        self.intent.metadata = {
+            **self.intent.metadata,
+            "sui_payment_address":
+                "0x" + "2" * 64,
+            "sui_required_mist":
+                "2500000000",
+            "sui_quote_expires_at":
+                expired,
+        }
+
+        self.intent.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaisesMessage(
+            P2PPaymentError,
+            "SUI payment quote has expired.",
+        ):
+            settle_p2p_sui_payment(
+                payment_intent_id=self.intent.pk,
+                tx_digest="expired-test-digest",
+            )
+
+        mock_verify.assert_not_called()
+
+
+class P2PSuiQuoteRefreshTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .models import (
+            FounderAccount,
+            FounderListing,
+            PaymentIntent,
+        )
+
+        self.seller = User.objects.create_user(
+            username="DJ",
+            password="test-password",
+        )
+        self.buyer = User.objects.create_user(
+            username="p2p-sui-refresh-buyer",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="srfr",
+            owner_root=self.seller,
+            status=FounderAccount.STATUS_LISTED,
+        )
+
+        self.listing = FounderListing.objects.create(
+            founder_account=self.founder,
+            seller_root=self.seller,
+            listing_source=FounderListing.SOURCE_P2P,
+            sale_type=FounderListing.SALE_FIXED,
+            status=FounderListing.STATUS_ACTIVE,
+            fixed_price_credits=200,
+        )
+
+        expired = (
+            timezone.now()
+            - timezone.timedelta(minutes=1)
+        ).isoformat()
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "list_price_credits": 200,
+                "payment_method": "sui",
+                "sui_network": "mainnet",
+                "sui_payment_address":
+                    "0x" + "1" * 64,
+                "sui_required_mist":
+                    "2500000000",
+                "sui_amount":
+                    "2.500000000",
+                "sui_usd_price":
+                    "4.00",
+                "sui_quoted_at":
+                    expired,
+                "sui_quote_expires_at":
+                    expired,
+            },
+        )
+
+        self.client.force_login(
+            self.buyer
+        )
+
+    @patch(
+        "auctions.p2p_payment_services."
+        "quote_sui_payment"
+    )
+    def test_expired_quote_refresh_reuses_same_intent(
+        self,
+        mock_quote,
+    ):
+        from django.utils import timezone
+
+        from .p2p_payment_services import (
+            refresh_p2p_sui_quote,
+        )
+
+        future = (
+            timezone.now()
+            + timezone.timedelta(minutes=15)
+        ).isoformat()
+
+        mock_quote.return_value = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address":
+                    "0x" + "2" * 64,
+                "amount_mist":
+                    "3000000000",
+                "amount_sui":
+                    "3.000000000",
+                "sui_usd_price":
+                    "3.333333",
+                "quoted_at":
+                    timezone.now().isoformat(),
+                "quote_expires_at":
+                    future,
+            },
+        }
+
+        original_id = self.intent.pk
+
+        refreshed, created = (
+            refresh_p2p_sui_quote(
+                payment_intent_id=(
+                    self.intent.pk
+                ),
+            )
+        )
+
+        self.assertTrue(created)
+
+        self.assertEqual(
+            refreshed.pk,
+            original_id,
+        )
+
+        refreshed.refresh_from_db()
+
+        self.assertEqual(
+            refreshed.metadata[
+                "sui_required_mist"
+            ],
+            "3000000000",
+        )
+
+        self.assertEqual(
+            refreshed.metadata[
+                "sui_payment_address"
+            ],
+            "0x" + "2" * 64,
+        )
+
+        self.assertEqual(
+            refreshed.metadata[
+                "founder_listing_id"
+            ],
+            self.listing.pk,
+        )
+
+        self.assertEqual(
+            refreshed.metadata[
+                "seller_root_id"
+            ],
+            self.seller.pk,
+        )
+
+    @patch(
+        "auctions.p2p_payment_services."
+        "quote_sui_payment"
+    )
+    def test_refresh_view_keeps_same_payment_intent(
+        self,
+        mock_quote,
+    ):
+        from django.urls import reverse
+        from django.utils import timezone
+
+        from .models import PaymentIntent
+
+        future = (
+            timezone.now()
+            + timezone.timedelta(minutes=15)
+        ).isoformat()
+
+        mock_quote.return_value = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address":
+                    "0x" + "3" * 64,
+                "amount_mist":
+                    "4000000000",
+                "amount_sui":
+                    "4.000000000",
+                "sui_usd_price":
+                    "2.50",
+                "quoted_at":
+                    timezone.now().isoformat(),
+                "quote_expires_at":
+                    future,
+            },
+        }
+
+        before_count = (
+            PaymentIntent.objects.count()
+        )
+
+        response = self.client.post(
+            reverse(
+                "refresh_founder_p2p_sui_quote",
+                kwargs={
+                    "listing_id":
+                        self.listing.pk,
+                },
+            ),
+            {
+                "payment_intent_id":
+                    self.intent.pk,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            before_count,
+        )
+
+        self.intent.refresh_from_db()
+
+        self.assertEqual(
+            self.intent.metadata[
+                "sui_required_mist"
+            ],
+            "4000000000",
+        )
