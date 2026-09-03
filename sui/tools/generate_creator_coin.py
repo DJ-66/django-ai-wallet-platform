@@ -22,7 +22,12 @@ def identifier(value: str) -> str:
         raise ValueError("Identifier cannot be empty")
 
     if value[0].isdigit():
-        value = "_" + value
+        # Move declaration identifiers cannot begin
+        # with a digit or underscore. Numeric Founder
+        # handles therefore receive an internal
+        # alphabetic prefix only; the public symbol
+        # and display name remain unchanged.
+        value = "f" + value
 
     return value
 
