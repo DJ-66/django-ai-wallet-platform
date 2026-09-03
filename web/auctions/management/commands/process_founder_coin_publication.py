@@ -233,10 +233,14 @@ class Command(BaseCommand):
 
         if (
             metadata.get("issuance_source")
-            != "founder_vending"
+            not in {
+                "founder_vending",
+                "founder_ownership",
+            }
         ):
             raise CommandError(
-                "EconomyAsset is not a Founder vending asset."
+                "EconomyAsset is not an eligible "
+                "Founder coin asset."
             )
 
         if (
