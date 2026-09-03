@@ -20,6 +20,7 @@ def create_founder_coin_draft(
     *,
     founder_account_id,
     recipient_address,
+    issuance_source="founder_vending",
 ):
     recipient_address = (
         recipient_address or ""
@@ -105,7 +106,7 @@ def create_founder_coin_draft(
             "intended_recipient_address":
                 recipient_address,
             "issuance_source":
-                "founder_vending",
+                issuance_source,
         },
     )
 

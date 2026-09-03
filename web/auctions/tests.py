@@ -6398,7 +6398,10 @@ class P2PSuiCheckoutViewTests(TestCase):
                     "0xabc123",
                 "sui_usd_price": "4.00",
                 "sui_quote_expires_at":
-                    "2026-09-02T20:00:00Z",
+                    (
+                        timezone.now()
+                        + timedelta(minutes=15)
+                    ).isoformat(),
             },
         )
 
@@ -6451,7 +6454,10 @@ class P2PSuiCheckoutViewTests(TestCase):
         mock_verify_sui_payment,
     ):
         from django.core.management import call_command
+        from datetime import timedelta
+
         from django.urls import reverse
+        from django.utils import timezone
 
         from .models import (
             FounderListing,
@@ -6490,7 +6496,10 @@ class P2PSuiCheckoutViewTests(TestCase):
                 "sui_usd_price":
                     "4.00",
                 "sui_quote_expires_at":
-                    "2026-09-02T20:00:00Z",
+                    (
+                        timezone.now()
+                        + timedelta(minutes=15)
+                    ).isoformat(),
                 "sui_recipient_address":
                     "",
             },
@@ -6504,6 +6513,8 @@ class P2PSuiCheckoutViewTests(TestCase):
                 "success": True,
                 "sufficient": True,
                 "tx_digest": digest,
+                "sender_address":
+                    "0x" + "7" * 64,
                 "recipient_address":
                     "0xabc123",
                 "received_mist":
@@ -6543,6 +6554,12 @@ class P2PSuiCheckoutViewTests(TestCase):
             intent.settlement_reference,
             digest,
         )
+        self.assertEqual(
+            intent.metadata[
+                "sui_sender_address"
+            ],
+            "0x" + "7" * 64,
+        )
 
         # Verification settles payment only.
         self.assertEqual(
@@ -6574,6 +6591,422 @@ class P2PSuiCheckoutViewTests(TestCase):
         self.assertEqual(
             self.listing.status,
             FounderListing.STATUS_SOLD,
+        )
+
+
+    def test_missing_verified_sender_does_not_settle(
+        self,
+    ):
+        from datetime import timedelta
+        from unittest.mock import patch
+
+        from django.utils import timezone
+
+        from .models import PaymentIntent
+        from .p2p_payment_services import (
+            P2PPaymentError,
+            settle_p2p_sui_payment,
+        )
+
+        recipient = "0x" + "3" * 64
+        digest = "missing-sender-digest"
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "payment_method": "sui",
+                "sui_payment_address":
+                    recipient,
+                "sui_required_mist":
+                    "2500000000",
+                "sui_quote_expires_at":
+                    (
+                        timezone.now()
+                        + timedelta(minutes=15)
+                    ).isoformat(),
+            },
+        )
+
+        with patch(
+            "auctions.p2p_payment_services."
+            "verify_sui_payment",
+            return_value={
+                "verification": {
+                    "network": "mainnet",
+                    "success": True,
+                    "sufficient": True,
+                    "tx_digest": digest,
+                    "recipient_address":
+                        recipient,
+                    "received_mist":
+                        "2500000000",
+                },
+            },
+        ):
+            with self.assertRaises(
+                P2PPaymentError
+            ):
+                settle_p2p_sui_payment(
+                    payment_intent_id=intent.pk,
+                    tx_digest=digest,
+                )
+
+        intent.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "created",
+        )
+        self.assertEqual(
+            intent.settlement_reference,
+            "",
+        )
+        self.assertNotIn(
+            "sui_sender_address",
+            intent.metadata,
+        )
+
+    def test_malformed_verified_sender_does_not_settle(
+        self,
+    ):
+        from datetime import timedelta
+        from unittest.mock import patch
+
+        from django.utils import timezone
+
+        from .models import PaymentIntent
+        from .p2p_payment_services import (
+            P2PPaymentError,
+            settle_p2p_sui_payment,
+        )
+
+        recipient = "0x" + "4" * 64
+        digest = "malformed-sender-digest"
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="created",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "payment_method": "sui",
+                "sui_payment_address":
+                    recipient,
+                "sui_required_mist":
+                    "2500000000",
+                "sui_quote_expires_at":
+                    (
+                        timezone.now()
+                        + timedelta(minutes=15)
+                    ).isoformat(),
+            },
+        )
+
+        with patch(
+            "auctions.p2p_payment_services."
+            "verify_sui_payment",
+            return_value={
+                "verification": {
+                    "network": "mainnet",
+                    "success": True,
+                    "sufficient": True,
+                    "tx_digest": digest,
+                    "sender_address":
+                        "not-a-sui-address",
+                    "recipient_address":
+                        recipient,
+                    "received_mist":
+                        "2500000000",
+                },
+            },
+        ):
+            with self.assertRaises(
+                P2PPaymentError
+            ):
+                settle_p2p_sui_payment(
+                    payment_intent_id=intent.pk,
+                    tx_digest=digest,
+                )
+
+        intent.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "created",
+        )
+        self.assertEqual(
+            intent.settlement_reference,
+            "",
+        )
+        self.assertNotIn(
+            "sui_sender_address",
+            intent.metadata,
+        )
+
+
+    def test_sui_fulfillment_autofills_blank_profile_address(
+        self,
+    ):
+        from .models import PaymentIntent
+        from .p2p_payment_services import (
+            fulfill_p2p_external_founder_purchase,
+        )
+
+        sender = "0x" + "8" * 64
+
+        profile = self.buyer.profile
+        profile.sui_address = ""
+        profile.save(
+            update_fields=["sui_address"]
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="settled",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference="profile-autofill-digest",
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "seller_username":
+                    self.seller.username,
+                "list_price_credits": 200,
+                "payment_method": "sui",
+                "sui_sender_address":
+                    sender,
+                "sui_recipient_address":
+                    "",
+            },
+        )
+
+        with self.captureOnCommitCallbacks(
+            execute=True,
+        ):
+            fulfill_p2p_external_founder_purchase(
+                payment_intent=intent,
+            )
+
+        profile.refresh_from_db()
+
+        self.assertEqual(
+            profile.sui_address,
+            sender,
+        )
+
+    def test_sui_fulfillment_does_not_overwrite_existing_profile_address(
+        self,
+    ):
+        from .models import PaymentIntent
+        from .p2p_payment_services import (
+            fulfill_p2p_external_founder_purchase,
+        )
+
+        existing = "0x" + "9" * 64
+        sender = "0x" + "8" * 64
+
+        profile = self.buyer.profile
+        profile.sui_address = existing
+        profile.save(
+            update_fields=["sui_address"]
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="settled",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference="profile-preserve-digest",
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "seller_username":
+                    self.seller.username,
+                "list_price_credits": 200,
+                "payment_method": "sui",
+                "sui_sender_address":
+                    sender,
+                "sui_recipient_address":
+                    "",
+            },
+        )
+
+        with self.captureOnCommitCallbacks(
+            execute=True,
+        ):
+            fulfill_p2p_external_founder_purchase(
+                payment_intent=intent,
+            )
+
+        profile.refresh_from_db()
+
+        self.assertEqual(
+            profile.sui_address,
+            existing,
+        )
+
+
+    def test_sui_fulfillment_creates_one_founder_coin_draft(
+        self,
+    ):
+        from .models import (
+            EconomyAsset,
+            PaymentIntent,
+        )
+        from .p2p_payment_services import (
+            fulfill_p2p_external_founder_purchase,
+        )
+
+        sender = "0x" + "a" * 64
+
+        profile = self.buyer.profile
+        profile.sui_address = ""
+        profile.save(
+            update_fields=["sui_address"]
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="founder_purchase",
+            status="settled",
+            amount="10.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference=(
+                "coin-draft-macro-digest"
+            ),
+            metadata={
+                "purchase_channel": "p2p",
+                "founder_listing_id":
+                    self.listing.pk,
+                "founder_account_id":
+                    self.founder.pk,
+                "seller_root_id":
+                    self.seller.pk,
+                "seller_username":
+                    self.seller.username,
+                "list_price_credits": 200,
+                "payment_method": "sui",
+                "sui_sender_address":
+                    sender,
+                "sui_recipient_address":
+                    "",
+            },
+        )
+
+        with self.captureOnCommitCallbacks(
+            execute=True,
+        ):
+            fulfill_p2p_external_founder_purchase(
+                payment_intent=intent,
+            )
+
+        profile.refresh_from_db()
+
+        self.assertEqual(
+            profile.sui_address,
+            sender,
+        )
+
+        assets = EconomyAsset.objects.filter(
+            founder_account=self.founder
+        )
+
+        self.assertEqual(
+            assets.count(),
+            1,
+        )
+
+        asset = assets.get()
+
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_DRAFT,
+        )
+        self.assertEqual(
+            asset.metadata[
+                "issuance_source"
+            ],
+            "founder_ownership",
+        )
+        self.assertEqual(
+            asset.metadata[
+                "intended_recipient_address"
+            ],
+            sender,
+        )
+
+        # The canonical Founder economy is idempotent:
+        # asking for the draft again must reuse it.
+        from .founder_coin_services import (
+            create_founder_coin_draft,
+        )
+
+        same_asset, created = (
+            create_founder_coin_draft(
+                founder_account_id=
+                    self.founder.pk,
+                recipient_address=sender,
+                issuance_source=
+                    "founder_ownership",
+            )
+        )
+
+        self.assertFalse(created)
+        self.assertEqual(
+            same_asset.pk,
+            asset.pk,
+        )
+        self.assertEqual(
+            EconomyAsset.objects.filter(
+                founder_account=self.founder
+            ).count(),
+            1,
         )
 
 
