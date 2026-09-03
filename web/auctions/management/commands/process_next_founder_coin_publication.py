@@ -26,7 +26,10 @@ class Command(BaseCommand):
                 status=EconomyAsset.STATUS_DRAFT,
                 coin_type__isnull=True,
                 genesis_tx_digest__isnull=True,
-                metadata__issuance_source="founder_vending",
+                metadata__issuance_source__in=[
+                    "founder_vending",
+                    "founder_ownership",
+                ],
             )
             .order_by("pk")
         )

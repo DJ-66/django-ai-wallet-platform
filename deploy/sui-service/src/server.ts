@@ -1680,6 +1680,32 @@ async function verifyMainnetSuiPayment(
     );
   }
 
+  const transactionData =
+    (
+      transaction as unknown as {
+        transaction?: {
+          sender?: unknown;
+        };
+      }
+    ).transaction;
+
+  const senderAddress =
+    String(
+      transactionData?.sender ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      senderAddress
+    )
+  ) {
+    throw new Error(
+      "Mainnet Sui payment sender is invalid"
+    );
+  }
+
   /*
    * Keep this intentionally read-only.
    *
@@ -1792,6 +1818,8 @@ async function verifyMainnetSuiPayment(
     network: "mainnet",
     tx_digest:
       requested.tx_digest,
+    sender_address:
+      senderAddress,
     success: true,
     recipient_address:
       requested.recipient_address,

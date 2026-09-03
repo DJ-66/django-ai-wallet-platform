@@ -679,6 +679,31 @@ def settle_p2p_sui_payment(
             "SUI payment recipient mismatch."
         )
 
+    sender_address = str(
+        verification.get(
+            "sender_address",
+            "",
+        )
+    ).strip().lower()
+
+    if (
+        len(sender_address) != 66
+        or not sender_address.startswith("0x")
+    ):
+        raise P2PPaymentError(
+            "SUI verifier returned invalid sender."
+        )
+
+    try:
+        int(
+            sender_address[2:],
+            16,
+        )
+    except ValueError as exc:
+        raise P2PPaymentError(
+            "SUI verifier returned invalid sender."
+        ) from exc
+
     try:
         received_mist = int(
             verification.get(
@@ -696,6 +721,15 @@ def settle_p2p_sui_payment(
             "SUI payment amount is insufficient."
         )
 
+    metadata = dict(
+        intent.metadata or {}
+    )
+
+    metadata["sui_sender_address"] = (
+        sender_address
+    )
+
+    intent.metadata = metadata
     intent.status = "settled"
     intent.settlement_reference = digest
 
@@ -704,6 +738,7 @@ def settle_p2p_sui_payment(
 
     intent.save(
         update_fields=[
+            "metadata",
             "status",
             "settlement_reference",
             "paid_at",
@@ -712,6 +747,114 @@ def settle_p2p_sui_payment(
     )
 
     return intent, True
+
+
+def _post_commit_p2p_founder_coin_draft(
+    payment_intent_id,
+):
+    from .founder_coin_services import (
+        create_founder_coin_draft,
+    )
+
+    intent = (
+        PaymentIntent.objects
+        .select_related(
+            "user",
+            "user__profile",
+        )
+        .get(pk=payment_intent_id)
+    )
+
+    metadata = intent.metadata or {}
+
+    try:
+        founder_account_id = int(
+            metadata["founder_account_id"]
+        )
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+    ):
+        return None, False
+
+    profile = getattr(
+        intent.user,
+        "profile",
+        None,
+    )
+
+    if profile is None:
+        return None, False
+
+    recipient = str(
+        profile.sui_address or ""
+    ).strip().lower()
+
+    if not recipient:
+        return None, False
+
+    return create_founder_coin_draft(
+        founder_account_id=founder_account_id,
+        recipient_address=recipient,
+        issuance_source="founder_ownership",
+    )
+
+
+def _post_commit_p2p_sui_profile_autofill(
+    payment_intent_id,
+):
+    intent = (
+        PaymentIntent.objects
+        .select_related(
+            "user",
+            "user__profile",
+        )
+        .get(pk=payment_intent_id)
+    )
+
+    metadata = intent.metadata or {}
+
+    if metadata.get(
+        "payment_method"
+    ) != "sui":
+        return False
+
+    sender_address = str(
+        metadata.get(
+            "sui_sender_address",
+            "",
+        )
+    ).strip().lower()
+
+    if not sender_address:
+        return False
+
+    profile = getattr(
+        intent.user,
+        "profile",
+        None,
+    )
+
+    if profile is None:
+        return False
+
+    existing_address = str(
+        profile.sui_address or ""
+    ).strip().lower()
+
+    if existing_address:
+        return False
+
+    profile.sui_address = sender_address
+
+    profile.save(
+        update_fields=[
+            "sui_address",
+        ]
+    )
+
+    return True
 
 
 def _post_commit_p2p_starter_grant(
@@ -950,6 +1093,30 @@ def fulfill_p2p_external_founder_purchase(
             "status",
             "updated_at",
         ]
+    )
+
+    if (
+        metadata.get(
+            "payment_method"
+        ) == "sui"
+        and metadata.get(
+            "sui_sender_address"
+        )
+    ):
+        transaction.on_commit(
+            lambda intent_id=payment_intent.pk: (
+                _post_commit_p2p_sui_profile_autofill(
+                    intent_id
+                )
+            )
+        )
+
+    transaction.on_commit(
+        lambda intent_id=payment_intent.pk: (
+            _post_commit_p2p_founder_coin_draft(
+                intent_id
+            )
+        )
     )
 
     if metadata.get(
