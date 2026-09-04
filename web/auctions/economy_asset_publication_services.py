@@ -11,14 +11,32 @@ class EconomyAssetPublicationError(RuntimeError):
     pass
 
 
+def _founder_move_handle(asset):
+    handle = str(
+        asset.founder_account.handle
+    ).strip().lower()
+
+    if not handle:
+        raise EconomyAssetPublicationError(
+            "Founder handle is empty."
+        )
+
+    if handle[0].isdigit():
+        handle = "f" + handle
+
+    return handle
+
+
 def _expected_module_name(asset):
-    return f"{asset.founder_account.handle}_fanz"
+    return (
+        f"{_founder_move_handle(asset)}_fanz"
+    )
 
 
 def _expected_coin_struct_name(asset):
-    return (
-        f"{asset.founder_account.handle.upper()}_FANZ"
-    )
+    return _expected_module_name(
+        asset
+    ).upper()
 
 
 def _validate_confirmed_publication(
