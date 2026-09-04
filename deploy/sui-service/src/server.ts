@@ -329,6 +329,12 @@ ensureColumn(
   "TEXT",
 );
 
+ensureColumn(
+  "creator_publications",
+  "network",
+  "TEXT",
+);
+
 type MainnetTransferRow = {
   submission_key: string;
   purpose: string;
@@ -431,6 +437,7 @@ type DeliveryRow = DeliveryInput & {
 type CreatorPublicationInput = {
   publication_key: string;
   chain: string;
+  network: string;
   recipient_address: string;
   module_name: string;
   coin_struct_name: string;
@@ -443,6 +450,7 @@ type CreatorPublicationInput = {
 type CreatorPublicationRow = {
   publication_key: string;
   chain: string;
+  network: string | null;
   recipient_address: string | null;
   module_name: string;
   coin_struct_name: string;
@@ -547,6 +555,7 @@ function validateCreatorPublication(
   const requiredStrings = [
     "publication_key",
     "chain",
+    "network",
     "recipient_address",
     "module_name",
     "coin_struct_name",
@@ -565,6 +574,15 @@ function validateCreatorPublication(
 
   if (value.chain !== "sui") {
     throw new Error("chain must be sui");
+  }
+
+  if (
+    value.network !== "testnet" &&
+    value.network !== "mainnet"
+  ) {
+    throw new Error(
+      "network must be testnet or mainnet"
+    );
   }
 
   if (
@@ -649,6 +667,7 @@ function validateCreatorPublication(
   return {
     publication_key: value.publication_key as string,
     chain: value.chain as string,
+    network: value.network as string,
     recipient_address: value.recipient_address as string,
     module_name: value.module_name as string,
     coin_struct_name: value.coin_struct_name as string,
@@ -667,6 +686,7 @@ function getCreatorPublication(
     SELECT
       publication_key,
       chain,
+      network,
       recipient_address,
       module_name,
       coin_struct_name,
@@ -700,6 +720,7 @@ function creatorPublicationImmutableFieldsMatch(
 ): boolean {
   return (
     existing.chain === requested.chain &&
+    existing.network === requested.network &&
     existing.recipient_address === requested.recipient_address &&
     existing.module_name === requested.module_name &&
     existing.coin_struct_name === requested.coin_struct_name &&
@@ -718,6 +739,7 @@ function publicCreatorPublication(
   return {
     publication_key: row.publication_key,
     chain: row.chain,
+    network: row.network,
     recipient_address: row.recipient_address,
     module_name: row.module_name,
     coin_struct_name: row.coin_struct_name,
@@ -3165,6 +3187,7 @@ app.post("/v1/creator-publications", (req, res) => {
     INSERT INTO creator_publications (
       publication_key,
       chain,
+      network,
       recipient_address,
       module_name,
       coin_struct_name,
@@ -3186,7 +3209,7 @@ app.post("/v1/creator-publications", (req, res) => {
       updated_at
     )
     VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
       'accepted',
       NULL, NULL, NULL, NULL,
       NULL, NULL, NULL, NULL, NULL,
@@ -3195,6 +3218,7 @@ app.post("/v1/creator-publications", (req, res) => {
   `).run(
     requested.publication_key,
     requested.chain,
+    requested.network,
     requested.recipient_address,
     requested.module_name,
     requested.coin_struct_name,

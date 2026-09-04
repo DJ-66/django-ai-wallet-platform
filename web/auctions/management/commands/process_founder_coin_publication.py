@@ -99,6 +99,7 @@ def load_prepared_payload(asset):
     required = {
         "publication_key",
         "chain",
+        "network",
         "module_name",
         "coin_struct_name",
         "source_sha256",
@@ -142,6 +143,26 @@ def load_prepared_payload(asset):
     if payload["chain"] != asset.chain:
         raise FounderCoinPublicationProcessError(
             "Prepared publication chain does not match EconomyAsset."
+        )
+
+    expected_network = str(
+        (asset.metadata or {}).get(
+            "publication_network",
+            "",
+        )
+    ).strip().lower()
+
+    if expected_network not in {
+        "testnet",
+        "mainnet",
+    }:
+        raise FounderCoinPublicationProcessError(
+            "EconomyAsset has no valid publication network."
+        )
+
+    if payload["network"] != expected_network:
+        raise FounderCoinPublicationProcessError(
+            "Prepared publication network does not match EconomyAsset."
         )
 
     if payload["module_name"] != expected_module:

@@ -81,6 +81,7 @@ def validate_job(job):
         "symbol",
         "generated_package",
         "publication_key",
+        "network",
         "recipient_address",
     }
 
@@ -153,6 +154,8 @@ def prepare_job(job, *, force=False):
         job["name"],
         "--publication-key",
         job["publication_key"],
+        "--network",
+        job["network"],
         "--recipient-address",
         job["recipient_address"],
         "--output",

@@ -59,6 +59,19 @@ class Command(BaseCommand):
                 )
             )
 
+            publication_network = str(
+                metadata.get(
+                    "publication_network",
+                    "",
+                )
+            ).strip().lower()
+
+            if publication_network not in {
+                "testnet",
+                "mainnet",
+            }:
+                continue
+
             record = {
                 "economy_asset_id": asset.pk,
                 "founder_account_id": (
@@ -68,6 +81,7 @@ class Command(BaseCommand):
                 "name": asset.name,
                 "symbol": asset.symbol,
                 "chain": asset.chain,
+                "network": publication_network,
                 "decimals": asset.decimals,
                 "genesis_supply_base_units": (
                     asset.genesis_supply_base_units
