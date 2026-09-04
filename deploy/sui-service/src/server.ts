@@ -321,6 +321,9 @@ db.exec(`
     tx_digest TEXT UNIQUE,
     package_id TEXT,
     coin_type TEXT,
+    registration_tx_digest TEXT,
+    registered_currency_object_id TEXT,
+    registered_at TEXT,
     prepared_at TEXT,
     submitted_at TEXT,
     confirmed_at TEXT,
@@ -338,6 +341,24 @@ ensureColumn(
 ensureColumn(
   "creator_publications",
   "network",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "registration_tx_digest",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "registered_currency_object_id",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "registered_at",
   "TEXT",
 );
 
@@ -471,6 +492,9 @@ type CreatorPublicationRow = {
   tx_digest: string | null;
   package_id: string | null;
   coin_type: string | null;
+  registration_tx_digest: string | null;
+  registered_currency_object_id: string | null;
+  registered_at: string | null;
   prepared_at: string | null;
   submitted_at: string | null;
   confirmed_at: string | null;
@@ -707,6 +731,9 @@ function getCreatorPublication(
       tx_digest,
       package_id,
       coin_type,
+      registration_tx_digest,
+      registered_currency_object_id,
+      registered_at,
       prepared_at,
       submitted_at,
       confirmed_at,
@@ -756,6 +783,11 @@ function publicCreatorPublication(
     tx_digest: row.tx_digest,
     package_id: row.package_id,
     coin_type: row.coin_type,
+    registration_tx_digest:
+      row.registration_tx_digest,
+    registered_currency_object_id:
+      row.registered_currency_object_id,
+    registered_at: row.registered_at,
     prepared_at: row.prepared_at,
     submitted_at: row.submitted_at,
     confirmed_at: row.confirmed_at,
@@ -2412,6 +2444,260 @@ async function recoverCreatorPublication(
   return recovered;
 }
 
+async function verifyCreatorCurrencyRegistration(
+  publication: CreatorPublicationRow,
+  registrationTxDigest: string,
+): Promise<string> {
+  if (
+    publication.state !== "confirmed" ||
+    !publication.coin_type ||
+    !publication.tx_digest
+  ) {
+    throw new Error(
+      "Creator publication has no confirmed on-chain identity"
+    );
+  }
+
+  if (!registrationTxDigest) {
+    throw new Error(
+      "Creator Currency registration digest is required"
+    );
+  }
+
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
+
+  await client.waitForTransaction({
+    digest: registrationTxDigest,
+    timeout: 60_000,
+  });
+
+  const result =
+    await client.getTransaction({
+      digest: registrationTxDigest,
+      include: {
+        effects: true,
+        objectTypes: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Creator Currency registration transaction not found"
+    );
+  }
+
+  if (
+    transaction.digest !==
+    registrationTxDigest
+  ) {
+    throw new Error(
+      "Creator Currency registration digest mismatch"
+    );
+  }
+
+  if (transaction.status.success !== true) {
+    throw new Error(
+      "Creator Currency registration transaction failed on Sui"
+    );
+  }
+
+  const expectedCurrencyType =
+    `0x0000000000000000000000000000000000000000000000000000000000000002` +
+    `::coin_registry::Currency<${publication.coin_type}>`;
+
+  const createdCurrencies =
+    transaction.effects?.changedObjects.filter(
+      (changed) =>
+        changed.outputState === "ObjectWrite" &&
+        changed.idOperation === "Created" &&
+        transaction.objectTypes?.[
+          changed.objectId
+        ] === expectedCurrencyType,
+    ) ?? [];
+
+  if (createdCurrencies.length !== 1) {
+    throw new Error(
+      `Expected exactly one registered creator Currency object; found ${createdCurrencies.length}`
+    );
+  }
+
+  const registeredCurrencyObjectId =
+    createdCurrencies[0].objectId;
+
+  const { object } =
+    await client.getObject({
+      objectId:
+        registeredCurrencyObjectId,
+      include: {
+        owner: true,
+        type: true,
+        previousTransaction: true,
+      },
+    });
+
+  if (
+    object.type !==
+    expectedCurrencyType
+  ) {
+    throw new Error(
+      "Registered creator Currency type mismatch"
+    );
+  }
+
+  if (
+    object.previousTransaction !==
+    registrationTxDigest
+  ) {
+    throw new Error(
+      "Registered creator Currency transaction mismatch"
+    );
+  }
+
+  if (
+    object.owner?.$kind !== "Shared"
+  ) {
+    throw new Error(
+      "Registered creator Currency is not shared"
+    );
+  }
+
+  return registeredCurrencyObjectId;
+}
+
+
+async function recoverCreatorCurrencyRegistration(
+  publicationKey: string,
+  registrationTxDigest: string,
+): Promise<CreatorPublicationRow> {
+  const publication =
+    getCreatorPublication(publicationKey);
+
+  if (!publication) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (!registrationTxDigest) {
+    throw new Error(
+      "Creator Currency registration digest is required"
+    );
+  }
+
+  const hasAnyRegistration =
+    publication.registration_tx_digest !== null ||
+    publication.registered_currency_object_id !== null ||
+    publication.registered_at !== null;
+
+  const hasCompleteRegistration =
+    publication.registration_tx_digest !== null &&
+    publication.registered_currency_object_id !== null &&
+    publication.registered_at !== null;
+
+  if (
+    hasAnyRegistration &&
+    !hasCompleteRegistration
+  ) {
+    throw new Error(
+      "Creator Currency registration journal is incomplete"
+    );
+  }
+
+  if (hasCompleteRegistration) {
+    if (
+      publication.registration_tx_digest !==
+      registrationTxDigest
+    ) {
+      throw new Error(
+        "Creator Currency registration digest conflicts with journal"
+      );
+    }
+
+    const verifiedCurrencyObjectId =
+      await verifyCreatorCurrencyRegistration(
+        publication,
+        registrationTxDigest,
+      );
+
+    if (
+      verifiedCurrencyObjectId !==
+      publication.registered_currency_object_id
+    ) {
+      throw new Error(
+        "Registered creator Currency object conflicts with journal"
+      );
+    }
+
+    return publication;
+  }
+
+  const registeredCurrencyObjectId =
+    await verifyCreatorCurrencyRegistration(
+      publication,
+      registrationTxDigest,
+    );
+
+  const now =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      registration_tx_digest = ?,
+      registered_currency_object_id = ?,
+      registered_at = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND registration_tx_digest IS NULL
+      AND registered_currency_object_id IS NULL
+      AND registered_at IS NULL
+  `).run(
+    registrationTxDigest,
+    registeredCurrencyObjectId,
+    now,
+    now,
+    publicationKey,
+  );
+
+  if (update.changes !== 1) {
+    const raced =
+      getCreatorPublication(publicationKey);
+
+    if (
+      raced?.registration_tx_digest ===
+        registrationTxDigest &&
+      raced.registered_currency_object_id ===
+        registeredCurrencyObjectId &&
+      raced.registered_at
+    ) {
+      return raced;
+    }
+
+    throw new Error(
+      "Creator Currency registration journal update failed"
+    );
+  }
+
+  const recovered =
+    getCreatorPublication(publicationKey);
+
+  if (!recovered) {
+    throw new Error(
+      "Recovered creator Currency registration disappeared from journal"
+    );
+  }
+
+  return recovered;
+}
+
+
 async function getCreatorPublicationSupply(
   publicationKey: string,
 ) {
@@ -2444,68 +2730,90 @@ async function getCreatorPublicationSupply(
       publication.network
     );
 
-  const transactionResult =
-    await client.getTransaction({
-      digest: publication.tx_digest,
-      include: {
-        effects: true,
-        objectTypes: true,
-      },
-    });
-
-  const transaction =
-    transactionResult.Transaction ??
-    transactionResult.FailedTransaction;
-
-  if (!transaction) {
-    throw new Error(
-      "Creator publication transaction not found"
-    );
-  }
-
-  if (
-    transaction.digest !==
-    publication.tx_digest
-  ) {
-    throw new Error(
-      "Creator publication transaction digest mismatch"
-    );
-  }
-
-  if (transaction.status.success !== true) {
-    throw new Error(
-      "Creator publication transaction failed on Sui"
-    );
-  }
-
   const expectedCurrencyType =
     `0x0000000000000000000000000000000000000000000000000000000000000002` +
     `::coin_registry::Currency<${publication.coin_type}>`;
 
-  const currencyObjects =
-    transaction.effects?.changedObjects.filter(
-      (changed) =>
-        changed.outputState === "ObjectWrite" &&
-        changed.idOperation === "Created" &&
-        transaction.objectTypes?.[
-          changed.objectId
-        ] === expectedCurrencyType,
-    ) ?? [];
+  let currencyObjectId: string;
+  let expectedPreviousTransaction: string;
+  let requireShared = false;
 
-  if (currencyObjects.length !== 1) {
-    throw new Error(
-      `Expected exactly one creator Currency object; found ${currencyObjects.length}`
-    );
+  if (
+    publication.registered_currency_object_id &&
+    publication.registration_tx_digest &&
+    publication.registered_at
+  ) {
+    currencyObjectId =
+      publication.registered_currency_object_id;
+
+    expectedPreviousTransaction =
+      publication.registration_tx_digest;
+
+    requireShared = true;
+  } else {
+    const transactionResult =
+      await client.getTransaction({
+        digest: publication.tx_digest,
+        include: {
+          effects: true,
+          objectTypes: true,
+        },
+      });
+
+    const transaction =
+      transactionResult.Transaction ??
+      transactionResult.FailedTransaction;
+
+    if (!transaction) {
+      throw new Error(
+        "Creator publication transaction not found"
+      );
+    }
+
+    if (
+      transaction.digest !==
+      publication.tx_digest
+    ) {
+      throw new Error(
+        "Creator publication transaction digest mismatch"
+      );
+    }
+
+    if (transaction.status.success !== true) {
+      throw new Error(
+        "Creator publication transaction failed on Sui"
+      );
+    }
+
+    const currencyObjects =
+      transaction.effects?.changedObjects.filter(
+        (changed) =>
+          changed.outputState === "ObjectWrite" &&
+          changed.idOperation === "Created" &&
+          transaction.objectTypes?.[
+            changed.objectId
+          ] === expectedCurrencyType,
+      ) ?? [];
+
+    if (currencyObjects.length !== 1) {
+      throw new Error(
+        `Expected exactly one creator Currency object; found ${currencyObjects.length}`
+      );
+    }
+
+    currencyObjectId =
+      currencyObjects[0].objectId;
+
+    expectedPreviousTransaction =
+      publication.tx_digest;
   }
-
-  const currencyObjectId =
-    currencyObjects[0].objectId;
 
   const { object } =
     await client.getObject({
       objectId: currencyObjectId,
       include: {
         json: true,
+        owner: true,
         previousTransaction: true,
       },
     });
@@ -2518,10 +2826,19 @@ async function getCreatorPublicationSupply(
 
   if (
     object.previousTransaction !==
-    publication.tx_digest
+    expectedPreviousTransaction
   ) {
     throw new Error(
-      "Creator Currency genesis transaction mismatch"
+      "Creator Currency transaction mismatch"
+    );
+  }
+
+  if (
+    requireShared &&
+    object.owner?.$kind !== "Shared"
+  ) {
+    throw new Error(
+      "Registered creator Currency is not shared"
     );
   }
 
@@ -2600,6 +2917,8 @@ async function getCreatorPublicationSupply(
       supplyBaseUnits,
     previous_transaction:
       object.previousTransaction,
+    registered:
+      requireShared,
   };
 }
 
@@ -3432,6 +3751,37 @@ app.post(
     }
   },
 );
+
+app.post(
+  "/v1/creator-publications/:publicationKey/registration/recover",
+  async (req, res) => {
+    try {
+      const txDigest =
+        typeof req.body?.tx_digest === "string"
+          ? req.body.tx_digest.trim()
+          : "";
+
+      const publication =
+        await recoverCreatorCurrencyRegistration(
+          req.params.publicationKey,
+          txDigest,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator Currency registration recovery failed",
+      });
+    }
+  },
+);
+
 
 app.get(
   "/v1/creator-publications/:publicationKey/supply",
