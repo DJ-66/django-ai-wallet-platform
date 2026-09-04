@@ -327,9 +327,14 @@ db.exec(`
     tx_digest TEXT UNIQUE,
     package_id TEXT,
     coin_type TEXT,
+    metadata_cap_object_id TEXT,
     registration_tx_digest TEXT,
     registered_currency_object_id TEXT,
     registered_at TEXT,
+    coin_image_url TEXT,
+    coin_image_tx_digest TEXT,
+    coin_image_set_at TEXT,
+    coin_image_change_count INTEGER NOT NULL DEFAULT 0,
     prepared_at TEXT,
     submitted_at TEXT,
     confirmed_at TEXT,
@@ -352,6 +357,12 @@ ensureColumn(
 
 ensureColumn(
   "creator_publications",
+  "metadata_cap_object_id",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
   "registration_tx_digest",
   "TEXT",
 );
@@ -366,6 +377,30 @@ ensureColumn(
   "creator_publications",
   "registered_at",
   "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_url",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_tx_digest",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_set_at",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_change_count",
+  "INTEGER NOT NULL DEFAULT 0",
 );
 
 type MainnetTransferRow = {
@@ -498,9 +533,14 @@ type CreatorPublicationRow = {
   tx_digest: string | null;
   package_id: string | null;
   coin_type: string | null;
+  metadata_cap_object_id: string | null;
   registration_tx_digest: string | null;
   registered_currency_object_id: string | null;
   registered_at: string | null;
+  coin_image_url: string | null;
+  coin_image_tx_digest: string | null;
+  coin_image_set_at: string | null;
+  coin_image_change_count: number;
   prepared_at: string | null;
   submitted_at: string | null;
   confirmed_at: string | null;
@@ -737,9 +777,14 @@ function getCreatorPublication(
       tx_digest,
       package_id,
       coin_type,
+      metadata_cap_object_id,
       registration_tx_digest,
       registered_currency_object_id,
       registered_at,
+      coin_image_url,
+      coin_image_tx_digest,
+      coin_image_set_at,
+      coin_image_change_count,
       prepared_at,
       submitted_at,
       confirmed_at,
@@ -789,11 +834,24 @@ function publicCreatorPublication(
     tx_digest: row.tx_digest,
     package_id: row.package_id,
     coin_type: row.coin_type,
+    metadata_cap_object_id:
+      row.metadata_cap_object_id,
     registration_tx_digest:
       row.registration_tx_digest,
     registered_currency_object_id:
       row.registered_currency_object_id,
     registered_at: row.registered_at,
+    coin_image_url: row.coin_image_url,
+    coin_image_tx_digest:
+      row.coin_image_tx_digest,
+    coin_image_set_at:
+      row.coin_image_set_at,
+    coin_image_change_count:
+      row.coin_image_change_count,
+    coin_image_next_price_usd:
+      row.coin_image_change_count === 0
+        ? "0.00"
+        : "5.00",
     prepared_at: row.prepared_at,
     submitted_at: row.submitted_at,
     confirmed_at: row.confirmed_at,
@@ -2631,6 +2689,194 @@ async function registerCreatorCurrency(
 }
 
 
+async function recoverCreatorMetadataCap(
+  publicationKey: string,
+): Promise<CreatorPublicationRow> {
+  const publication =
+    getCreatorPublication(publicationKey);
+
+  if (!publication) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (
+    publication.state !== "confirmed" ||
+    !publication.coin_type ||
+    !publication.tx_digest ||
+    !publication.recipient_address
+  ) {
+    throw new Error(
+      "Creator publication has no confirmed metadata identity"
+    );
+  }
+
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
+
+  if (publication.metadata_cap_object_id) {
+    const { object } =
+      await client.getObject({
+        objectId:
+          publication.metadata_cap_object_id,
+      });
+
+    const expectedMetadataCapType =
+      `0x0000000000000000000000000000000000000000000000000000000000000002` +
+      `::coin_registry::MetadataCap<${publication.coin_type}>`;
+
+    if (
+      object.type !==
+      expectedMetadataCapType
+    ) {
+      throw new Error(
+        "Creator MetadataCap type mismatch"
+      );
+    }
+
+    if (
+      object.owner?.AddressOwner?.toLowerCase() !==
+      publication.recipient_address.toLowerCase()
+    ) {
+      throw new Error(
+        "Creator MetadataCap owner mismatch"
+      );
+    }
+
+    return publication;
+  }
+
+  const result =
+    await client.getTransaction({
+      digest: publication.tx_digest,
+      include: {
+        effects: true,
+        objectTypes: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Creator publication transaction not found"
+    );
+  }
+
+  if (
+    transaction.digest !==
+    publication.tx_digest
+  ) {
+    throw new Error(
+      "Creator publication transaction digest mismatch"
+    );
+  }
+
+  if (
+    transaction.status.success !== true
+  ) {
+    throw new Error(
+      "Creator publication transaction failed on Sui"
+    );
+  }
+
+  const expectedMetadataCapType =
+    `0x0000000000000000000000000000000000000000000000000000000000000002` +
+    `::coin_registry::MetadataCap<${publication.coin_type}>`;
+
+  const caps =
+    transaction.effects?.changedObjects.filter(
+      (changed) =>
+        changed.outputState === "ObjectWrite" &&
+        changed.idOperation === "Created" &&
+        transaction.objectTypes?.[
+          changed.objectId
+        ] === expectedMetadataCapType,
+    ) ?? [];
+
+  if (caps.length !== 1) {
+    throw new Error(
+      `Expected exactly one creator MetadataCap; found ${caps.length}`
+    );
+  }
+
+  const metadataCapObjectId =
+    caps[0].objectId;
+
+  const { object } =
+    await client.getObject({
+      objectId:
+        metadataCapObjectId,
+    });
+
+  if (
+    object.type !==
+    expectedMetadataCapType
+  ) {
+    throw new Error(
+      "Creator MetadataCap type mismatch"
+    );
+  }
+
+  if (
+    object.owner?.AddressOwner?.toLowerCase() !==
+    publication.recipient_address.toLowerCase()
+  ) {
+    throw new Error(
+      "Creator MetadataCap owner mismatch"
+    );
+  }
+
+  const now =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      metadata_cap_object_id = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND metadata_cap_object_id IS NULL
+  `).run(
+    metadataCapObjectId,
+    now,
+    publicationKey,
+  );
+
+  if (update.changes !== 1) {
+    const raced =
+      getCreatorPublication(publicationKey);
+
+    if (
+      raced?.metadata_cap_object_id ===
+      metadataCapObjectId
+    ) {
+      return raced;
+    }
+
+    throw new Error(
+      "Creator MetadataCap journal update failed"
+    );
+  }
+
+  const recovered =
+    getCreatorPublication(publicationKey);
+
+  if (!recovered) {
+    throw new Error(
+      "Recovered creator MetadataCap disappeared from journal"
+    );
+  }
+
+  return recovered;
+}
+
+
 async function verifyCreatorCurrencyRegistration(
   publication: CreatorPublicationRow,
   registrationTxDigest: string,
@@ -3965,6 +4211,31 @@ app.post(
 
 
 app.post(
+  "/v1/creator-publications/:publicationKey/metadata-cap/recover",
+  async (req, res) => {
+    try {
+      const publication =
+        await recoverCreatorMetadataCap(
+          req.params.publicationKey,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator MetadataCap recovery failed",
+      });
+    }
+  },
+);
+
+
+app.post(
   "/v1/creator-publications/:publicationKey/registration/recover",
   async (req, res) => {
     try {
@@ -3991,6 +4262,75 @@ app.post(
             : "creator Currency registration recovery failed",
       });
     }
+  },
+);
+
+
+app.get(
+  "/v1/creator-publications/:publicationKey/coin-image",
+  (req, res) => {
+    const publication =
+      getCreatorPublication(
+        req.params.publicationKey,
+      );
+
+    if (!publication) {
+      res.status(404).json({
+        error: "creator publication not found",
+      });
+      return;
+    }
+
+    if (
+      publication.state !== "confirmed" ||
+      !publication.coin_type
+    ) {
+      res.status(400).json({
+        error:
+          "creator publication is not confirmed",
+      });
+      return;
+    }
+
+    if (
+      !publication.registered_currency_object_id ||
+      !publication.registration_tx_digest ||
+      !publication.registered_at
+    ) {
+      res.status(400).json({
+        error:
+          "creator Currency is not registered",
+      });
+      return;
+    }
+
+    const changeCount =
+      publication.coin_image_change_count;
+
+    res.json({
+      coin_image: {
+        publication_key:
+          publication.publication_key,
+        coin_type:
+          publication.coin_type,
+        registered_currency_object_id:
+          publication.registered_currency_object_id,
+        coin_image_url:
+          publication.coin_image_url,
+        coin_image_tx_digest:
+          publication.coin_image_tx_digest,
+        coin_image_set_at:
+          publication.coin_image_set_at,
+        coin_image_change_count:
+          changeCount,
+        first_image_free:
+          changeCount === 0,
+        next_price_usd:
+          changeCount === 0
+            ? "0.00"
+            : "5.00",
+      },
+    });
   },
 );
 
