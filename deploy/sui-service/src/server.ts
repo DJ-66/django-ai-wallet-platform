@@ -30,6 +30,12 @@ const MAINNET_PUBLICATION_PREPARE_ENABLED =
 const MAINNET_PUBLICATION_SUBMIT_ENABLED =
   process.env.FANZ_SUI_MAINNET_PUBLICATION_SUBMIT_ENABLED === "true";
 
+const TESTNET_CURRENCY_REGISTRATION_ENABLED =
+  process.env.FANZ_SUI_TESTNET_CURRENCY_REGISTRATION_ENABLED === "true";
+
+const MAINNET_CURRENCY_REGISTRATION_ENABLED =
+  process.env.FANZ_SUI_MAINNET_CURRENCY_REGISTRATION_ENABLED === "true";
+
 const MAINNET_TRANSFER_ENABLED =
   process.env.FANZ_SUI_MAINNET_TRANSFER_ENABLED === "true";
 
@@ -1200,13 +1206,7 @@ function testnetClient(): SuiGrpcClient {
 }
 
 
-function requireMainnetSigner(): Ed25519Keypair {
-  if (!MAINNET_TRANSFER_ENABLED) {
-    throw new Error(
-      "Mainnet Sui transfers are disabled"
-    );
-  }
-
+function loadMainnetSigner(): Ed25519Keypair {
   const walletPath =
     process.env.FANZ_SUI_MAINNET_WALLET_PATH ||
     "";
@@ -1262,12 +1262,43 @@ function requireMainnetSigner(): Ed25519Keypair {
     derived !== configuredHot
   ) {
     throw new Error(
-      "Mainnet signer does not match "
-      + "configured hot wallet"
+      "Mainnet signer does not match configured hot wallet"
     );
   }
 
   return keypair;
+}
+
+
+function requireMainnetSigner(): Ed25519Keypair {
+  if (!MAINNET_TRANSFER_ENABLED) {
+    throw new Error(
+      "Mainnet Sui transfers are disabled"
+    );
+  }
+
+  return loadMainnetSigner();
+}
+
+
+function requireCreatorCurrencyRegistrationSigner(
+  network: string | null,
+): Ed25519Keypair {
+  requireCreatorCurrencyRegistrationEnabled(
+    network
+  );
+
+  if (network === "testnet") {
+    return requireTestnetSigner();
+  }
+
+  if (network === "mainnet") {
+    return loadMainnetSigner();
+  }
+
+  throw new Error(
+    "Creator publication has no valid network"
+  );
 }
 
 
@@ -1319,6 +1350,35 @@ function requireCreatorPublicationSigner(
     }
 
     return requireMainnetSigner();
+  }
+
+  throw new Error(
+    "Creator publication has no valid network"
+  );
+}
+
+
+function requireCreatorCurrencyRegistrationEnabled(
+  network: string | null,
+): void {
+  if (network === "testnet") {
+    if (!TESTNET_CURRENCY_REGISTRATION_ENABLED) {
+      throw new Error(
+        "Testnet creator Currency registration is disabled"
+      );
+    }
+
+    return;
+  }
+
+  if (network === "mainnet") {
+    if (!MAINNET_CURRENCY_REGISTRATION_ENABLED) {
+      throw new Error(
+        "Mainnet creator Currency registration is disabled"
+      );
+    }
+
+    return;
   }
 
   throw new Error(
@@ -2443,6 +2503,133 @@ async function recoverCreatorPublication(
 
   return recovered;
 }
+
+async function registerCreatorCurrency(
+  publicationKey: string,
+): Promise<CreatorPublicationRow> {
+  const publication =
+    getCreatorPublication(publicationKey);
+
+  if (!publication) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  const hasAnyRegistration =
+    publication.registration_tx_digest !== null ||
+    publication.registered_currency_object_id !== null ||
+    publication.registered_at !== null;
+
+  const hasCompleteRegistration =
+    publication.registration_tx_digest !== null &&
+    publication.registered_currency_object_id !== null &&
+    publication.registered_at !== null;
+
+  if (
+    hasAnyRegistration &&
+    !hasCompleteRegistration
+  ) {
+    throw new Error(
+      "Creator Currency registration journal is incomplete"
+    );
+  }
+
+  if (hasCompleteRegistration) {
+    const verifiedCurrencyObjectId =
+      await verifyCreatorCurrencyRegistration(
+        publication,
+        publication.registration_tx_digest!,
+      );
+
+    if (
+      verifiedCurrencyObjectId !==
+      publication.registered_currency_object_id
+    ) {
+      throw new Error(
+        "Registered creator Currency object conflicts with journal"
+      );
+    }
+
+    return publication;
+  }
+
+  if (
+    publication.state !== "confirmed" ||
+    !publication.coin_type ||
+    !publication.tx_digest
+  ) {
+    throw new Error(
+      "Creator publication has no confirmed on-chain identity"
+    );
+  }
+
+  const signer =
+    requireCreatorCurrencyRegistrationSigner(
+      publication.network
+    );
+
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
+
+  const supply =
+    await getCreatorPublicationSupply(
+      publicationKey
+    );
+
+  const tx = new Transaction();
+
+  tx.moveCall({
+    target:
+      "0x2::coin_registry::finalize_registration",
+    typeArguments: [
+      publication.coin_type,
+    ],
+    arguments: [
+      tx.object(
+        "0x000000000000000000000000000000000000000000000000000000000000000c"
+      ),
+      tx.object(
+        supply.currency_object_id
+      ),
+    ],
+  });
+
+  const result =
+    await client.signAndExecuteTransaction({
+      signer,
+      transaction: tx,
+      include: {
+        effects: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Creator Currency registration returned no transaction"
+    );
+  }
+
+  if (
+    transaction.status.success !== true
+  ) {
+    throw new Error(
+      "Creator Currency registration transaction failed"
+    );
+  }
+
+  return recoverCreatorCurrencyRegistration(
+    publicationKey,
+    transaction.digest,
+  );
+}
+
 
 async function verifyCreatorCurrencyRegistration(
   publication: CreatorPublicationRow,
@@ -3751,6 +3938,31 @@ app.post(
     }
   },
 );
+
+app.post(
+  "/v1/creator-publications/:publicationKey/register",
+  async (req, res) => {
+    try {
+      const publication =
+        await registerCreatorCurrency(
+          req.params.publicationKey,
+        );
+
+      res.json({
+        publication:
+          publicCreatorPublication(publication),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator Currency registration failed",
+      });
+    }
+  },
+);
+
 
 app.post(
   "/v1/creator-publications/:publicationKey/registration/recover",
