@@ -335,6 +335,10 @@ db.exec(`
     coin_image_tx_digest TEXT,
     coin_image_set_at TEXT,
     coin_image_change_count INTEGER NOT NULL DEFAULT 0,
+    coin_image_pending_url TEXT,
+    coin_image_pending_owner_address TEXT,
+    coin_image_transaction_bytes_b64 TEXT,
+    coin_image_prepared_at TEXT,
     prepared_at TEXT,
     submitted_at TEXT,
     confirmed_at TEXT,
@@ -401,6 +405,30 @@ ensureColumn(
   "creator_publications",
   "coin_image_change_count",
   "INTEGER NOT NULL DEFAULT 0",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_pending_url",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_pending_owner_address",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_transaction_bytes_b64",
+  "TEXT",
+);
+
+ensureColumn(
+  "creator_publications",
+  "coin_image_prepared_at",
+  "TEXT",
 );
 
 type MainnetTransferRow = {
@@ -541,6 +569,10 @@ type CreatorPublicationRow = {
   coin_image_tx_digest: string | null;
   coin_image_set_at: string | null;
   coin_image_change_count: number;
+  coin_image_pending_url: string | null;
+  coin_image_pending_owner_address: string | null;
+  coin_image_transaction_bytes_b64: string | null;
+  coin_image_prepared_at: string | null;
   prepared_at: string | null;
   submitted_at: string | null;
   confirmed_at: string | null;
@@ -785,6 +817,10 @@ function getCreatorPublication(
       coin_image_tx_digest,
       coin_image_set_at,
       coin_image_change_count,
+      coin_image_pending_url,
+      coin_image_pending_owner_address,
+      coin_image_transaction_bytes_b64,
+      coin_image_prepared_at,
       prepared_at,
       submitted_at,
       confirmed_at,
@@ -2877,6 +2913,248 @@ async function recoverCreatorMetadataCap(
 }
 
 
+async function getCreatorMetadataCapOwner(
+  publication: CreatorPublicationRow,
+): Promise<string> {
+  if (
+    !publication.coin_type ||
+    !publication.metadata_cap_object_id
+  ) {
+    throw new Error(
+      "Creator MetadataCap identity is missing"
+    );
+  }
+
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
+
+  const { object } =
+    await client.getObject({
+      objectId:
+        publication.metadata_cap_object_id,
+    });
+
+  const expectedMetadataCapType =
+    `0x0000000000000000000000000000000000000000000000000000000000000002` +
+    `::coin_registry::MetadataCap<${publication.coin_type}>`;
+
+  if (
+    object.type !==
+    expectedMetadataCapType
+  ) {
+    throw new Error(
+      "Creator MetadataCap type mismatch"
+    );
+  }
+
+  const owner =
+    object.owner?.AddressOwner;
+
+  if (!owner) {
+    throw new Error(
+      "Creator MetadataCap is not address-owned"
+    );
+  }
+
+  return owner.toLowerCase();
+}
+
+
+async function prepareCreatorCoinImage(
+  publicationKey: string,
+  iconUrl: string,
+) {
+  const publication =
+    getCreatorPublication(publicationKey);
+
+  if (!publication) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (
+    publication.state !== "confirmed" ||
+    !publication.coin_type ||
+    !publication.registered_currency_object_id ||
+    !publication.metadata_cap_object_id
+  ) {
+    throw new Error(
+      "Creator coin image authority is incomplete"
+    );
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(iconUrl);
+  } catch {
+    throw new Error(
+      "coin image URL is invalid"
+    );
+  }
+
+  if (parsedUrl.protocol !== "https:") {
+    throw new Error(
+      "coin image URL must use https"
+    );
+  }
+
+  const normalizedUrl =
+    parsedUrl.toString();
+
+  const owner =
+    await getCreatorMetadataCapOwner(
+      publication
+    );
+
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
+
+  let gasOwner: string;
+
+  if (publication.network === "mainnet") {
+    gasOwner =
+      (
+        process.env.FANZ_SUI_MAINNET_HOT_ADDRESS ||
+        ""
+      ).trim().toLowerCase();
+  } else if (publication.network === "testnet") {
+    gasOwner =
+      requireTestnetSigner()
+        .toSuiAddress()
+        .toLowerCase();
+  } else {
+    throw new Error(
+      "Creator publication has no valid network"
+    );
+  }
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      gasOwner
+    )
+  ) {
+    throw new Error(
+      "FANZ Sui gas owner is not configured"
+    );
+  }
+
+  const tx = new Transaction();
+
+  tx.setSender(owner);
+  tx.setGasOwner(gasOwner);
+  tx.setGasPayment([]);
+
+  tx.moveCall({
+    target:
+      "0x2::coin_registry::set_icon_url",
+    typeArguments: [
+      publication.coin_type,
+    ],
+    arguments: [
+      tx.object(
+        publication.registered_currency_object_id
+      ),
+      tx.object(
+        publication.metadata_cap_object_id
+      ),
+      tx.pure.string(
+        normalizedUrl
+      ),
+    ],
+  });
+
+  const bytes =
+    await tx.build({
+      client,
+    });
+
+  const simulation =
+    await client.simulateTransaction({
+      transaction: tx,
+      include: {
+        effects: true,
+        balanceChanges: true,
+        commandResults: true,
+      },
+    });
+
+  const simulatedTransaction =
+    simulation.Transaction ??
+    simulation.FailedTransaction;
+
+  if (!simulatedTransaction) {
+    throw new Error(
+      "Coin image simulation returned no transaction"
+    );
+  }
+
+  if (
+    simulatedTransaction.status.success !== true
+  ) {
+    throw new Error(
+      "Coin image simulation failed"
+    );
+  }
+
+  const bytesB64 =
+    Buffer.from(bytes).toString("base64");
+
+  const now =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      coin_image_pending_url = ?,
+      coin_image_pending_owner_address = ?,
+      coin_image_transaction_bytes_b64 = ?,
+      coin_image_prepared_at = ?,
+      updated_at = ?
+    WHERE publication_key = ?
+  `).run(
+    normalizedUrl,
+    owner,
+    bytesB64,
+    now,
+    now,
+    publicationKey,
+  );
+
+  if (update.changes !== 1) {
+    throw new Error(
+      "Coin image preparation journal update failed"
+    );
+  }
+
+  return {
+    publication_key:
+      publication.publication_key,
+    owner_address:
+      owner,
+    gas_owner_address:
+      gasOwner,
+    icon_url:
+      normalizedUrl,
+    transaction_bytes_b64:
+      bytesB64,
+    prepared_at:
+      now,
+    first_image_free:
+      publication.coin_image_change_count === 0,
+    price_usd:
+      publication.coin_image_change_count === 0
+        ? "0.00"
+        : "5.00",
+  };
+}
+
+
 async function verifyCreatorCurrencyRegistration(
   publication: CreatorPublicationRow,
   registrationTxDigest: string,
@@ -4260,6 +4538,36 @@ app.post(
           error instanceof Error
             ? error.message
             : "creator Currency registration recovery failed",
+      });
+    }
+  },
+);
+
+
+app.post(
+  "/v1/creator-publications/:publicationKey/coin-image/prepare",
+  async (req, res) => {
+    try {
+      const iconUrl =
+        typeof req.body?.icon_url === "string"
+          ? req.body.icon_url.trim()
+          : "";
+
+      const prepared =
+        await prepareCreatorCoinImage(
+          req.params.publicationKey,
+          iconUrl,
+        );
+
+      res.json({
+        prepared,
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "coin image preparation failed",
       });
     }
   },
