@@ -24,6 +24,12 @@ const TESTNET_SUBMIT_ENABLED =
 const TESTNET_PUBLICATION_SUBMIT_ENABLED =
   process.env.FANZ_SUI_TESTNET_PUBLICATION_SUBMIT_ENABLED === "true";
 
+const MAINNET_PUBLICATION_PREPARE_ENABLED =
+  process.env.FANZ_SUI_MAINNET_PUBLICATION_PREPARE_ENABLED === "true";
+
+const MAINNET_PUBLICATION_SUBMIT_ENABLED =
+  process.env.FANZ_SUI_MAINNET_PUBLICATION_SUBMIT_ENABLED === "true";
+
 const MAINNET_TRANSFER_ENABLED =
   process.env.FANZ_SUI_MAINNET_TRANSFER_ENABLED === "true";
 
@@ -816,12 +822,6 @@ function publicDelivery(row: DeliveryRow) {
 async function prepareCreatorPublication(
   publicationKey: string,
 ): Promise<CreatorPublicationRow> {
-  if (!TESTNET_PREPARE_ENABLED) {
-    throw new Error(
-      "Testnet transaction preparation is disabled"
-    );
-  }
-
   const existing =
     getCreatorPublication(publicationKey);
 
@@ -856,7 +856,11 @@ async function prepareCreatorPublication(
     );
   }
 
-  const keypair = requireTestnetSigner();
+  const keypair =
+    requireCreatorPublicationSigner(
+      existing.network
+    );
+
   const sender = keypair.toSuiAddress();
 
   const modules =
@@ -954,7 +958,10 @@ async function prepareCreatorPublication(
     existing.recipient_address,
   );
 
-  const client = testnetClient();
+  const client =
+    creatorPublicationClient(
+      existing.network
+    );
 
   const bytes = await tx.build({
     client,
@@ -1022,12 +1029,6 @@ async function prepareCreatorPublication(
 async function submitPreparedCreatorPublication(
   publicationKey: string,
 ): Promise<CreatorPublicationRow> {
-  if (!TESTNET_PUBLICATION_SUBMIT_ENABLED) {
-    throw new Error(
-      "Testnet creator publication submission is disabled"
-    );
-  }
-
   const row =
     getCreatorPublication(publicationKey);
 
@@ -1036,6 +1037,10 @@ async function submitPreparedCreatorPublication(
       "Creator publication not found"
     );
   }
+
+  requireCreatorPublicationSubmitEnabled(
+    row.network
+  );
 
   if (row.tx_digest) {
     // Once the chain returns an authoritative digest,
@@ -1064,7 +1069,9 @@ async function submitPreparedCreatorPublication(
   );
 
   const result =
-    await testnetClient().executeTransaction({
+    await creatorPublicationClient(
+      row.network
+    ).executeTransaction({
       transaction: bytes,
       signatures: [row.signature],
       include: {
@@ -1239,6 +1246,81 @@ function mainnetClient(): SuiGrpcClient {
       process.env.SUI_MAINNET_GRPC_URL ||
       "https://fullnode.mainnet.sui.io:443",
   });
+}
+
+
+function creatorPublicationClient(
+  network: string | null,
+): SuiGrpcClient {
+  if (network === "testnet") {
+    return testnetClient();
+  }
+
+  if (network === "mainnet") {
+    return mainnetClient();
+  }
+
+  throw new Error(
+    "Creator publication has no valid network"
+  );
+}
+
+
+function requireCreatorPublicationSigner(
+  network: string | null,
+): Ed25519Keypair {
+  if (network === "testnet") {
+    if (!TESTNET_PREPARE_ENABLED) {
+      throw new Error(
+        "Testnet transaction preparation is disabled"
+      );
+    }
+
+    return requireTestnetSigner();
+  }
+
+  if (network === "mainnet") {
+    if (!MAINNET_PUBLICATION_PREPARE_ENABLED) {
+      throw new Error(
+        "Mainnet creator publication preparation is disabled"
+      );
+    }
+
+    return requireMainnetSigner();
+  }
+
+  throw new Error(
+    "Creator publication has no valid network"
+  );
+}
+
+
+function requireCreatorPublicationSubmitEnabled(
+  network: string | null,
+): void {
+  if (network === "testnet") {
+    if (!TESTNET_PUBLICATION_SUBMIT_ENABLED) {
+      throw new Error(
+        "Testnet creator publication submission is disabled"
+      );
+    }
+
+    return;
+  }
+
+  if (network === "mainnet") {
+    if (!MAINNET_PUBLICATION_SUBMIT_ENABLED) {
+      throw new Error(
+        "Mainnet creator publication submission is disabled"
+      );
+    }
+
+    return;
+  }
+
+  throw new Error(
+    "Creator publication has no valid network"
+  );
 }
 
 
@@ -2029,7 +2111,10 @@ async function reconcileCreatorPublication(
     );
   }
 
-  const client = testnetClient();
+  const client =
+    creatorPublicationClient(
+      row.network
+    );
 
   await client.waitForTransaction({
     digest: row.tx_digest,
@@ -2192,7 +2277,10 @@ async function recoverCreatorPublication(
     );
   }
 
-  const client = testnetClient();
+  const client =
+    creatorPublicationClient(
+      row.network
+    );
 
   await client.waitForTransaction({
     digest: txDigest,
