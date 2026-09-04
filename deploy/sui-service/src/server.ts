@@ -2439,7 +2439,10 @@ async function getCreatorPublicationSupply(
     );
   }
 
-  const client = testnetClient();
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
 
   const transactionResult =
     await client.getTransaction({
