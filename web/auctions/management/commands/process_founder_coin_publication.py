@@ -41,6 +41,22 @@ class FounderCoinPublicationProcessError(
     pass
 
 
+def founder_move_identifier(handle):
+    value = str(
+        handle or ""
+    ).strip().lower()
+
+    if not value:
+        raise FounderCoinPublicationProcessError(
+            "Founder handle is empty."
+        )
+
+    if value[0].isdigit():
+        value = "f" + value
+
+    return value
+
+
 def publication_key_for_asset(asset):
     metadata = dict(asset.metadata or {})
 
@@ -106,13 +122,16 @@ def load_prepared_payload(asset):
         asset
     )
 
+    move_handle = founder_move_identifier(
+        asset.founder_account.handle
+    )
+
     expected_module = (
-        f"{asset.founder_account.handle}_fanz"
+        f"{move_handle}_fanz"
     )
 
     expected_struct = (
-        f"{asset.founder_account.handle.upper()}"
-        "_FANZ"
+        expected_module.upper()
     )
 
     if payload["publication_key"] != expected_key:

@@ -4148,6 +4148,117 @@ class FounderCoinPublicationProcessorTests(TestCase):
         )
 
 
+    def test_numeric_founder_handle_accepts_move_safe_identifiers(
+        self,
+    ):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from django.contrib.auth.models import User
+
+        from .models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+        from .management.commands import (
+            process_founder_coin_publication as processor,
+        )
+
+        owner = User.objects.create_user(
+            username="numeric-founder-owner",
+            password="test-password",
+        )
+
+        founder = FounderAccount.objects.create(
+            handle="777",
+            owner_root=owner,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        asset = EconomyAsset.objects.create(
+            founder_account=founder,
+            name="777Fanz",
+            symbol="777FANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=(
+                21_000_000_000_000_000
+            ),
+            status=EconomyAsset.STATUS_DRAFT,
+            metadata={
+                "generated_package":
+                    "fanz_creator_777",
+                "intended_recipient_address":
+                    "0x" + "7" * 64,
+                "issuance_source":
+                    "founder_ownership",
+            },
+        )
+
+        payload = {
+            "publication_key":
+                f"founder-{asset.pk}-777-v1",
+            "chain": "sui",
+            "module_name":
+                "f777_fanz",
+            "coin_struct_name":
+                "F777_FANZ",
+            "source_sha256":
+                "source-hash",
+            "artifact_sha256":
+                "artifact-hash",
+            "modules": [
+                "module-bytes",
+            ],
+            "dependency_ids": [
+                "0x1",
+                "0x2",
+            ],
+            "recipient_address":
+                "0x" + "7" * 64,
+        }
+
+        with TemporaryDirectory() as tmp:
+            old_root = processor.PREPARED_ROOT
+            processor.PREPARED_ROOT = Path(tmp)
+
+            try:
+                payload_path = (
+                    processor.prepared_payload_path(
+                        asset
+                    )
+                )
+
+                payload_path.write_text(
+                    json.dumps(payload)
+                )
+
+                loaded, loaded_path = (
+                    processor.load_prepared_payload(
+                        asset
+                    )
+                )
+
+            finally:
+                processor.PREPARED_ROOT = (
+                    old_root
+                )
+
+        self.assertEqual(
+            loaded["module_name"],
+            "f777_fanz",
+        )
+        self.assertEqual(
+            loaded["coin_struct_name"],
+            "F777_FANZ",
+        )
+        self.assertEqual(
+            loaded_path.name,
+            f"founder-{asset.pk}-777-v1.json",
+        )
+
+
 class FounderCoinPublicationWorkerTests(TestCase):
     def setUp(self):
         import tempfile
