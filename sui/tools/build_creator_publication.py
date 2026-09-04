@@ -37,6 +37,12 @@ def main():
     )
 
     parser.add_argument(
+        "--network",
+        required=True,
+        choices=("testnet", "mainnet"),
+    )
+
+    parser.add_argument(
         "--recipient-address",
         required=True,
         help=(
@@ -105,6 +111,7 @@ def main():
     payload = {
         "publication_key": args.publication_key,
         "chain": "sui",
+        "network": args.network,
         "recipient_address": recipient_address,
         "module_name": module_name,
         "coin_struct_name": coin_struct_name,

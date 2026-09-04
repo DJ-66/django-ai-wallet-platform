@@ -2946,6 +2946,8 @@ class PendingFounderCoinPublicationsCommandTests(TestCase):
                     "0xabc",
                 "issuance_source":
                     "founder_vending",
+                "publication_network":
+                    "testnet",
             },
         )
 
@@ -3759,6 +3761,8 @@ class FounderCoinPublicationProcessorTests(TestCase):
                     "fanz_creator_pc01",
                 "intended_recipient_address":
                     "0xabc",
+                "publication_network":
+                    "testnet",
             },
         )
 
@@ -3771,6 +3775,8 @@ class FounderCoinPublicationProcessorTests(TestCase):
                 self.publication_key,
             "chain":
                 "sui",
+            "network":
+                "testnet",
             "module_name":
                 "pc01_fanz",
             "coin_struct_name":
@@ -4193,6 +4199,8 @@ class FounderCoinPublicationProcessorTests(TestCase):
                     "0x" + "7" * 64,
                 "issuance_source":
                     "founder_ownership",
+                "publication_network":
+                    "mainnet",
             },
         )
 
@@ -4200,6 +4208,7 @@ class FounderCoinPublicationProcessorTests(TestCase):
             "publication_key":
                 f"founder-{asset.pk}-777-v1",
             "chain": "sui",
+            "network": "mainnet",
             "module_name":
                 "f777_fanz",
             "coin_struct_name":

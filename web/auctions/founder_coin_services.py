@@ -107,6 +107,13 @@ def create_founder_coin_draft(
                 recipient_address,
             "issuance_source":
                 issuance_source,
+            "publication_network":
+                (
+                    "mainnet"
+                    if issuance_source
+                    == "founder_ownership"
+                    else "testnet"
+                ),
         },
     )
 

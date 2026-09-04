@@ -54,6 +54,12 @@ def main():
     )
 
     parser.add_argument(
+        "--network",
+        required=True,
+        choices=("testnet", "mainnet"),
+    )
+
+    parser.add_argument(
         "--recipient-address",
         required=True,
     )
@@ -195,6 +201,8 @@ def main():
         package_dir,
         "--publication-key",
         args.publication_key,
+        "--network",
+        args.network,
         "--recipient-address",
         args.recipient_address,
         "--output",
