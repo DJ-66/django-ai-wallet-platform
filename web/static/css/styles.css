@@ -3877,8 +3877,8 @@ body {
 
 .page-qr-button {
   position: fixed;
-  top: 7.25rem;
-  right: 1rem;
+  top: 3.625rem;
+  right: calc(1rem + 8px);
   z-index: 1150;
 
   display: grid;
@@ -4021,8 +4021,8 @@ body.page-qr-open {
 
 @media (max-width: 600px) {
   .page-qr-button {
-    top: 6.75rem;
-    right: 0.75rem;
+    top: 3.375rem;
+    right: calc(0.75rem + 8px);
 
     width: 3rem;
     height: 3rem;

@@ -2543,6 +2543,355 @@ def verify_founder_sui_payment(request):
     )
 
 
+def _bakery_asset_for_user(
+    *,
+    user,
+    asset_id,
+):
+    asset = get_object_or_404(
+        EconomyAsset.objects.select_related(
+            "founder_account"
+        ),
+        pk=asset_id,
+        founder_account__owner_root=user,
+        status=EconomyAsset.STATUS_ACTIVE,
+        chain="sui",
+    )
+
+    publication_key = str(
+        (asset.metadata or {}).get(
+            "publication_key",
+            ""
+        )
+    ).strip()
+
+    if (
+        not publication_key
+        or not asset.coin_type
+    ):
+        raise Http404(
+            "Founder coin is not available for rebranding."
+        )
+
+    return asset, publication_key
+
+
+@login_required
+@require_POST
+def prepare_founder_coin_rebrand(request):
+    asset_id = request.POST.get(
+        "asset_id"
+    )
+
+    icon_url = str(
+        request.POST.get(
+            "icon_url",
+            ""
+        )
+    ).strip()
+
+    if not icon_url:
+        messages.error(
+            request,
+            "Coin image URL is required.",
+        )
+        return redirect(
+            f"{reverse('founder_tienda')}#coin-rebrands"
+        )
+
+    try:
+        asset, publication_key = (
+            _bakery_asset_for_user(
+                user=request.user,
+                asset_id=asset_id,
+            )
+        )
+
+        from .coin_rebrand_services import (
+            CoinRebrandPaymentError,
+            purchase_coin_rebrand_with_credits,
+        )
+
+        from .sui_adapter import (
+            SuiAdapterError,
+            get_creator_coin_image_status,
+            prepare_creator_coin_image_rebrand,
+        )
+
+        #
+        # Sui is authoritative for whether the next
+        # image operation is genesis or paid rebrand.
+        #
+        status_response = (
+            get_creator_coin_image_status(
+                publication_key
+            )
+        )
+
+        coin_image = status_response.get(
+            "coin_image"
+        )
+
+        if not isinstance(
+            coin_image,
+            dict,
+        ):
+            raise SuiAdapterError(
+                "Sui service returned no Coin Image status."
+            )
+
+        image_action = str(
+            coin_image.get(
+                "next_image_action",
+                "",
+            )
+        ).strip().lower()
+
+        price_usd = str(
+            coin_image.get(
+                "next_image_price_usd",
+                "",
+            )
+        ).strip()
+
+        if image_action not in {
+            "genesis",
+            "rebrand",
+        }:
+            raise SuiAdapterError(
+                "Sui service returned an invalid "
+                "Coin Image action."
+            )
+
+        payment_intent = None
+        payment_created = False
+
+        #
+        # Genesis branding is included.
+        #
+        # Every later image operation requires
+        # one exact $5 / 100-credit entitlement.
+        #
+        if image_action == "rebrand":
+            (
+                payment_intent,
+                payment_created,
+            ) = (
+                purchase_coin_rebrand_with_credits(
+                    user=request.user,
+                    asset_id=asset.pk,
+                    publication_key=publication_key,
+                    icon_url=icon_url,
+                )
+            )
+
+        #
+        # Never ask Sui to prepare a paid rebrand
+        # until the entitlement above succeeded.
+        #
+        response = (
+            prepare_creator_coin_image_rebrand(
+                publication_key,
+                icon_url=icon_url,
+            )
+        )
+
+        prepared = response.get(
+            "prepared"
+        )
+
+        if not isinstance(
+            prepared,
+            dict,
+        ):
+            raise SuiAdapterError(
+                "Sui service returned no prepared "
+                "Coin Image transaction."
+            )
+
+        prepared_action = str(
+            prepared.get(
+                "image_action",
+                "",
+            )
+        ).strip().lower()
+
+        #
+        # Detect a race where chain state changed
+        # between status lookup and preparation.
+        #
+        if prepared_action != image_action:
+            raise SuiAdapterError(
+                "Coin Image state changed while "
+                "preparing the transaction. "
+                "Please try again."
+            )
+
+    except (
+        CoinRebrandPaymentError,
+        SuiAdapterError,
+        ValueError,
+    ) as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+        return redirect(
+            f"{reverse('founder_tienda')}#coin-rebrands"
+        )
+
+    request.session[
+        "founder_coin_rebrand"
+    ] = {
+        "asset_id":
+            asset.pk,
+        "publication_key":
+            publication_key,
+        "handle":
+            asset.founder_account.handle,
+        "name":
+            asset.name,
+        "symbol":
+            asset.symbol,
+        "icon_url":
+            prepared.get(
+                "icon_url",
+                icon_url,
+            ),
+        "owner_address":
+            prepared.get(
+                "owner_address",
+                "",
+            ),
+        "transaction_bytes_b64":
+            prepared.get(
+                "transaction_bytes_b64",
+                "",
+            ),
+        "prepared_at":
+            prepared.get(
+                "prepared_at",
+                "",
+            ),
+        "image_action":
+            prepared_action,
+        "price_usd":
+            prepared.get(
+                "price_usd",
+                price_usd,
+            ),
+        "payment_intent_id":
+            (
+                payment_intent.pk
+                if payment_intent
+                else None
+            ),
+    }
+
+    if image_action == "genesis":
+        messages.success(
+            request,
+            "Genesis coin image prepared. "
+            "This image is included with vending. "
+            "Approve the Sui transaction with the "
+            "current owner wallet.",
+        )
+    elif payment_created:
+        messages.success(
+            request,
+            "100 FANZ Credits charged for the "
+            "$5.00 Coin Rebrand. "
+            "Approve the Sui transaction with the "
+            "current owner wallet.",
+        )
+    else:
+        messages.success(
+            request,
+            "Existing paid Coin Rebrand entitlement "
+            "reused. Approve the Sui transaction with "
+            "the current owner wallet.",
+        )
+
+    return redirect(
+        f"{reverse('founder_tienda')}#coin-rebrands"
+    )
+
+
+@login_required
+@require_POST
+def verify_founder_coin_rebrand(request):
+    asset_id = request.POST.get(
+        "asset_id"
+    )
+    tx_digest = str(
+        request.POST.get(
+            "tx_digest",
+            ""
+        )
+    ).strip()
+
+    try:
+        asset, publication_key = (
+            _bakery_asset_for_user(
+                user=request.user,
+                asset_id=asset_id,
+            )
+        )
+
+        from .sui_adapter import (
+            SuiAdapterError,
+            verify_creator_coin_image_rebrand,
+        )
+
+        response = (
+            verify_creator_coin_image_rebrand(
+                publication_key,
+                tx_digest=tx_digest,
+            )
+        )
+
+        verification = response.get(
+            "verification"
+        )
+
+        if not isinstance(
+            verification,
+            dict,
+        ):
+            raise SuiAdapterError(
+                "Sui service returned no rebrand verification."
+            )
+
+    except (
+        SuiAdapterError,
+        ValueError,
+    ) as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+        return redirect(
+            f"{reverse('founder_tienda')}#coin-rebrands"
+        )
+
+    request.session.pop(
+        "founder_coin_rebrand",
+        None,
+    )
+
+    messages.success(
+        request,
+        (
+            f"{asset.symbol} coin rebrand verified "
+            f"on Sui. Transaction: {tx_digest}"
+        ),
+    )
+
+    return redirect(
+        f"{reverse('founder_tienda')}#coin-rebrands"
+    )
+
+
 @login_required
 def founder_tienda(request):
     fixed_listings = (
@@ -2742,6 +3091,33 @@ def founder_tienda(request):
         ):
             sui_checkout = None
 
+    bakery_assets = (
+        EconomyAsset.objects
+        .filter(
+            founder_account__owner_root=request.user,
+            status=EconomyAsset.STATUS_ACTIVE,
+            chain="sui",
+            coin_type__isnull=False,
+        )
+        .select_related("founder_account")
+        .order_by(
+            "founder_account__handle_length",
+            "founder_account__handle",
+        )
+    )
+
+    bakery_assets = [
+        asset
+        for asset in bakery_assets
+        if (asset.metadata or {}).get(
+            "publication_key"
+        )
+    ]
+
+    bakery_rebrand = request.session.get(
+        "founder_coin_rebrand"
+    )
+
     return render(
         request,
         "auctions/founder_tienda.html",
@@ -2753,8 +3129,11 @@ def founder_tienda(request):
             "wallet": wallet,
             "vending_item": vending_item,
             "sui_checkout": sui_checkout,
+            "bakery_assets": bakery_assets,
+            "bakery_rebrand": bakery_rebrand,
         },
     )
+
 
 @login_required
 @require_POST

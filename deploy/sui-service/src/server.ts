@@ -885,9 +885,7 @@ function publicCreatorPublication(
     coin_image_change_count:
       row.coin_image_change_count,
     coin_image_next_price_usd:
-      row.coin_image_change_count === 0
-        ? "0.00"
-        : "5.00",
+      "5.00",
     prepared_at: row.prepared_at,
     submitted_at: row.submitted_at,
     confirmed_at: row.confirmed_at,
@@ -3015,40 +3013,9 @@ async function prepareCreatorCoinImage(
       publication.network
     );
 
-  let gasOwner: string;
-
-  if (publication.network === "mainnet") {
-    gasOwner =
-      (
-        process.env.FANZ_SUI_MAINNET_HOT_ADDRESS ||
-        ""
-      ).trim().toLowerCase();
-  } else if (publication.network === "testnet") {
-    gasOwner =
-      requireTestnetSigner()
-        .toSuiAddress()
-        .toLowerCase();
-  } else {
-    throw new Error(
-      "Creator publication has no valid network"
-    );
-  }
-
-  if (
-    !/^0x[0-9a-f]{64}$/.test(
-      gasOwner
-    )
-  ) {
-    throw new Error(
-      "FANZ Sui gas owner is not configured"
-    );
-  }
-
   const tx = new Transaction();
 
   tx.setSender(owner);
-  tx.setGasOwner(gasOwner);
-  tx.setGasPayment([]);
 
   tx.moveCall({
     target:
@@ -3132,25 +3099,319 @@ async function prepareCreatorCoinImage(
     );
   }
 
+  const imageAction =
+    publication.coin_image_url
+      ? "rebrand"
+      : "genesis";
+
   return {
     publication_key:
       publication.publication_key,
     owner_address:
       owner,
-    gas_owner_address:
-      gasOwner,
+    gas_payer_address:
+      owner,
+    owner_pays_network_gas:
+      true,
     icon_url:
       normalizedUrl,
     transaction_bytes_b64:
       bytesB64,
     prepared_at:
       now,
-    first_image_free:
-      publication.coin_image_change_count === 0,
+    image_action:
+      imageAction,
     price_usd:
-      publication.coin_image_change_count === 0
+      imageAction === "genesis"
         ? "0.00"
         : "5.00",
+    genesis_image_included:
+      imageAction === "genesis",
+  };
+}
+
+
+async function verifyCreatorCoinImageRebrand(
+  publicationKey: string,
+  txDigest: string,
+) {
+  const publication =
+    getCreatorPublication(publicationKey);
+
+  if (!publication) {
+    throw new Error(
+      "Creator publication not found"
+    );
+  }
+
+  if (
+    publication.state !== "confirmed" ||
+    !publication.coin_type ||
+    !publication.registered_currency_object_id ||
+    !publication.metadata_cap_object_id
+  ) {
+    throw new Error(
+      "Creator coin image authority is incomplete"
+    );
+  }
+
+  if (
+    !publication.coin_image_pending_url ||
+    !publication.coin_image_pending_owner_address ||
+    !publication.coin_image_prepared_at
+  ) {
+    throw new Error(
+      "Creator coin image rebrand is not prepared"
+    );
+  }
+
+  const digest =
+    String(txDigest || "").trim();
+
+  if (!digest) {
+    throw new Error(
+      "Creator coin image transaction digest is required"
+    );
+  }
+
+  /*
+   * Idempotent retry of the exact already-accepted rebrand.
+   */
+  if (
+    publication.coin_image_tx_digest === digest &&
+    publication.coin_image_url ===
+      publication.coin_image_pending_url
+  ) {
+    return {
+      publication_key:
+        publication.publication_key,
+      tx_digest:
+        digest,
+      icon_url:
+        publication.coin_image_url,
+      coin_image_change_count:
+        publication.coin_image_change_count,
+      changed:
+        false,
+    };
+  }
+
+  const client =
+    creatorPublicationClient(
+      publication.network
+    );
+
+  await client.waitForTransaction({
+    digest,
+    timeout: 60_000,
+  });
+
+  const result =
+    await client.getTransaction({
+      digest,
+      include: {
+        effects: true,
+        transaction: true,
+      },
+    });
+
+  const transaction =
+    result.Transaction ??
+    result.FailedTransaction;
+
+  if (!transaction) {
+    throw new Error(
+      "Creator coin image transaction not found"
+    );
+  }
+
+  if (transaction.digest !== digest) {
+    throw new Error(
+      "Creator coin image transaction digest mismatch"
+    );
+  }
+
+  if (transaction.status.success !== true) {
+    throw new Error(
+      "Creator coin image transaction failed on Sui"
+    );
+  }
+
+  const transactionData =
+    (
+      transaction as unknown as {
+        transaction?: {
+          sender?: unknown;
+        };
+      }
+    ).transaction;
+
+  const sender =
+    String(
+      transactionData?.sender ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const expectedOwner =
+    publication
+      .coin_image_pending_owner_address
+      .toLowerCase();
+
+  if (sender !== expectedOwner) {
+    throw new Error(
+      "Creator coin image transaction sender mismatch"
+    );
+  }
+
+  const changedObjects =
+    transaction.effects?.changedObjects ?? [];
+
+  const currencyChanged =
+    changedObjects.some(
+      (changed) =>
+        changed.objectId ===
+          publication.registered_currency_object_id &&
+        changed.outputState === "ObjectWrite",
+    );
+
+  if (!currencyChanged) {
+    throw new Error(
+      "Creator Currency was not changed by transaction"
+    );
+  }
+
+  const metadataCapChanged =
+    changedObjects.some(
+      (changed) =>
+        changed.objectId ===
+          publication.metadata_cap_object_id,
+    );
+
+  if (!metadataCapChanged) {
+    throw new Error(
+      "Creator MetadataCap did not participate in transaction"
+    );
+  }
+
+  const { object: currencyObject } =
+    await client.getObject({
+      objectId:
+        publication.registered_currency_object_id,
+      include: {
+        json: true,
+        previousTransaction: true,
+      },
+    });
+
+  if (
+    currencyObject.previousTransaction !==
+    digest
+  ) {
+    throw new Error(
+      "Creator Currency was not last changed by submitted transaction"
+    );
+  }
+
+  const json =
+    currencyObject.json;
+
+  if (
+    !json ||
+    typeof json !== "object"
+  ) {
+    throw new Error(
+      "Creator Currency has no JSON representation"
+    );
+  }
+
+  const record =
+    json as Record<string, unknown>;
+
+  const onChainIconUrl =
+    typeof record.iconUrl === "string"
+      ? record.iconUrl
+      : typeof record.icon_url === "string"
+        ? record.icon_url
+        : "";
+
+  if (
+    onChainIconUrl !==
+    publication.coin_image_pending_url
+  ) {
+    throw new Error(
+      "Creator coin image URL does not match prepared rebrand"
+    );
+  }
+
+  const isGenesisImage =
+    !publication.coin_image_url;
+
+  const rebrandIncrement =
+    isGenesisImage ? 0 : 1;
+
+  const now =
+    new Date().toISOString();
+
+  const update = db.prepare(`
+    UPDATE creator_publications
+    SET
+      coin_image_url = ?,
+      coin_image_tx_digest = ?,
+      coin_image_set_at = ?,
+      coin_image_change_count =
+        coin_image_change_count + ?,
+      coin_image_transaction_bytes_b64 = NULL,
+      coin_image_prepared_at = NULL,
+      updated_at = ?
+    WHERE publication_key = ?
+      AND coin_image_pending_url = ?
+      AND coin_image_pending_owner_address = ?
+  `).run(
+    publication.coin_image_pending_url,
+    digest,
+    now,
+    rebrandIncrement,
+    now,
+    publicationKey,
+    publication.coin_image_pending_url,
+    publication.coin_image_pending_owner_address,
+  );
+
+  if (update.changes !== 1) {
+    throw new Error(
+      "Creator coin image journal update failed"
+    );
+  }
+
+  const updated =
+    getCreatorPublication(publicationKey);
+
+  if (!updated) {
+    throw new Error(
+      "Updated creator publication disappeared from journal"
+    );
+  }
+
+  return {
+    publication_key:
+      updated.publication_key,
+    tx_digest:
+      digest,
+    icon_url:
+      updated.coin_image_url,
+    image_action:
+      isGenesisImage
+        ? "genesis"
+        : "rebrand",
+    price_usd:
+      isGenesisImage
+        ? "0.00"
+        : "5.00",
+    coin_image_change_count:
+      updated.coin_image_change_count,
+    changed:
+      true,
   };
 }
 
@@ -4574,6 +4835,36 @@ app.post(
 );
 
 
+app.post(
+  "/v1/creator-publications/:publicationKey/coin-image/verify",
+  async (req, res) => {
+    try {
+      const txDigest =
+        typeof req.body?.tx_digest === "string"
+          ? req.body.tx_digest.trim()
+          : "";
+
+      const verification =
+        await verifyCreatorCoinImageRebrand(
+          req.params.publicationKey,
+          txDigest,
+        );
+
+      res.json({
+        verification,
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "creator coin image verification failed",
+      });
+    }
+  },
+);
+
+
 app.get(
   "/v1/creator-publications/:publicationKey/coin-image",
   (req, res) => {
@@ -4631,12 +4922,16 @@ app.get(
           publication.coin_image_set_at,
         coin_image_change_count:
           changeCount,
-        first_image_free:
-          changeCount === 0,
-        next_price_usd:
-          changeCount === 0
-            ? "0.00"
-            : "5.00",
+        genesis_image_complete:
+          publication.coin_image_url !== null,
+        next_image_action:
+          publication.coin_image_url
+            ? "rebrand"
+            : "genesis",
+        next_image_price_usd:
+          publication.coin_image_url
+            ? "5.00"
+            : "0.00",
       },
     });
   },

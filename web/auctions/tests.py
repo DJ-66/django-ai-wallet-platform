@@ -7599,3 +7599,285 @@ class FounderSuiSettlementExpiryTests(TestCase):
             )
 
         mock_verify.assert_not_called()
+
+
+class CoinRebrandCreditsPaymentTests(TestCase):
+    def setUp(self):
+        from auctions.models import (
+            BidWallet,
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        self.user = User.objects.create_user(
+            username="bakery-owner",
+            password="test-password",
+        )
+
+        self.wallet = BidWallet.objects.create(
+            user=self.user,
+            credits=500,
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="bake",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="BakeFanz",
+            symbol="BAKEFANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+            chain="sui",
+            coin_type="mock::bake::BAKEFANZ",
+            metadata={
+                "publication_key":
+                    "founder-bake-v1",
+            },
+        )
+
+    def purchase(self, icon_url):
+        from auctions.coin_rebrand_services import (
+            purchase_coin_rebrand_with_credits,
+        )
+
+        return purchase_coin_rebrand_with_credits(
+            user=self.user,
+            asset_id=self.asset.pk,
+            publication_key="founder-bake-v1",
+            icon_url=icon_url,
+        )
+
+    def test_exact_rebrand_is_charged_once(self):
+        from auctions.models import (
+            PaymentIntent,
+            WalletTransaction,
+        )
+        from auctions.utils import get_system_wallet
+
+        platform_wallet = get_system_wallet()
+        platform_before = platform_wallet.credits
+
+        first, created = self.purchase(
+            "https://example.test/bake-one.jpg"
+        )
+
+        self.assertTrue(created)
+
+        self.wallet.refresh_from_db()
+        platform_wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            400,
+        )
+        self.assertEqual(
+            platform_wallet.credits,
+            platform_before + 100,
+        )
+
+        self.assertEqual(
+            first.purpose,
+            "platform_service",
+        )
+        self.assertEqual(
+            first.status,
+            "fulfilled",
+        )
+        self.assertEqual(
+            str(first.amount),
+            "5.00",
+        )
+        self.assertEqual(
+            first.settlement_source,
+            PaymentIntent.SETTLEMENT_INTERNAL,
+        )
+        self.assertIsNotNone(first.paid_at)
+        self.assertIsNotNone(first.fulfilled_at)
+
+        self.assertEqual(
+            first.metadata["service"],
+            "founder_coin_rebrand",
+        )
+        self.assertEqual(
+            first.metadata["credits_charged"],
+            100,
+        )
+
+        tx_count = (
+            WalletTransaction.objects.count()
+        )
+        intent_count = (
+            PaymentIntent.objects.count()
+        )
+
+        second, created = self.purchase(
+            "https://example.test/bake-one.jpg"
+        )
+
+        self.assertFalse(created)
+        self.assertEqual(
+            second.pk,
+            first.pk,
+        )
+
+        self.wallet.refresh_from_db()
+        platform_wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            400,
+        )
+        self.assertEqual(
+            platform_wallet.credits,
+            platform_before + 100,
+        )
+        self.assertEqual(
+            WalletTransaction.objects.count(),
+            tx_count,
+        )
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            intent_count,
+        )
+
+    def test_different_image_is_new_charge(self):
+        from auctions.utils import get_system_wallet
+
+        platform_wallet = get_system_wallet()
+        platform_before = platform_wallet.credits
+
+        first, first_created = self.purchase(
+            "https://example.test/bake-one.jpg"
+        )
+
+        second, second_created = self.purchase(
+            "https://example.test/bake-two.jpg"
+        )
+
+        self.assertTrue(first_created)
+        self.assertTrue(second_created)
+        self.assertNotEqual(
+            first.pk,
+            second.pk,
+        )
+
+        self.wallet.refresh_from_db()
+        platform_wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            300,
+        )
+        self.assertEqual(
+            platform_wallet.credits,
+            platform_before + 200,
+        )
+
+    def test_insufficient_credits_does_not_charge(self):
+        from auctions.coin_rebrand_services import (
+            CoinRebrandPaymentError,
+        )
+        from auctions.models import (
+            PaymentIntent,
+            WalletTransaction,
+        )
+        from auctions.utils import get_system_wallet
+
+        self.wallet.credits = 99
+        self.wallet.save(
+            update_fields=["credits"]
+        )
+
+        platform_wallet = get_system_wallet()
+        platform_before = platform_wallet.credits
+
+        intent_before = (
+            PaymentIntent.objects.count()
+        )
+        tx_before = (
+            WalletTransaction.objects.count()
+        )
+
+        with self.assertRaises(
+            CoinRebrandPaymentError
+        ):
+            self.purchase(
+                "https://example.test/nope.jpg"
+            )
+
+        self.wallet.refresh_from_db()
+        platform_wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            99,
+        )
+        self.assertEqual(
+            platform_wallet.credits,
+            platform_before,
+        )
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            intent_before,
+        )
+        self.assertEqual(
+            WalletTransaction.objects.count(),
+            tx_before,
+        )
+
+    def test_previous_owner_cannot_purchase_rebrand(self):
+        from auctions.coin_rebrand_services import (
+            CoinRebrandPaymentError,
+        )
+        from auctions.models import (
+            PaymentIntent,
+            WalletTransaction,
+        )
+
+        new_owner = User.objects.create_user(
+            username="bakery-new-owner",
+            password="test-password",
+        )
+
+        self.founder.current_account = new_owner
+        self.founder.owner_root = new_owner
+        self.founder.save(
+            update_fields=[
+                "current_account",
+                "owner_root",
+                "updated_at",
+            ]
+        )
+
+        intent_before = (
+            PaymentIntent.objects.count()
+        )
+        tx_before = (
+            WalletTransaction.objects.count()
+        )
+
+        with self.assertRaises(
+            CoinRebrandPaymentError
+        ):
+            self.purchase(
+                "https://example.test/stolen.jpg"
+            )
+
+        self.wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.wallet.credits,
+            500,
+        )
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            intent_before,
+        )
+        self.assertEqual(
+            WalletTransaction.objects.count(),
+            tx_before,
+        )

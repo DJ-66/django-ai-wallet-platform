@@ -196,6 +196,58 @@ def reconcile_creator_publication(publication_key):
         json={},
     )
 
+def get_creator_coin_image_status(
+    publication_key,
+):
+    return _request(
+        "GET",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/coin-image"
+        ),
+    )
+
+
+def prepare_creator_coin_image_rebrand(
+    publication_key,
+    *,
+    icon_url,
+):
+    payload = {
+        "icon_url":
+            str(icon_url).strip(),
+    }
+
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/coin-image/prepare"
+        ),
+        json=payload,
+    )
+
+
+def verify_creator_coin_image_rebrand(
+    publication_key,
+    *,
+    tx_digest,
+):
+    payload = {
+        "tx_digest":
+            str(tx_digest).strip(),
+    }
+
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/coin-image/verify"
+        ),
+        json=payload,
+    )
+
+
 def verify_sui_payment(
     *,
     tx_digest,

@@ -1,6 +1,7 @@
 
 {% extends "base.html" %}
 {% load i18n %}
+{% load static %}
 {% block extra_css %}
 <style>
   .founder-tienda {
@@ -35,6 +36,95 @@
 
   .founder-hero h1::first-line {
     color: #f8fafc;
+  }
+
+
+  #coin-rebrands .founder-rebrand-step strong {
+    color: #f8fafc;
+  }
+
+  #coin-rebrands .founder-rebrand-step .founder-vending-note {
+    color: #cbd5e1;
+  }
+
+
+  .founder-bakery-card {
+    background: #ffffff;
+    border: 1px solid rgba(124, 58, 237, 0.18);
+    border-radius: 20px;
+    padding: 22px 24px;
+    box-shadow:
+      0 12px 32px rgba(76, 29, 149, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    color: #111827;
+  }
+
+  .founder-bakery-card h2,
+  .founder-bakery-card h3,
+  .founder-bakery-card strong {
+    color: #111827;
+  }
+
+  .founder-bakery-card p,
+  .founder-bakery-card .founder-vending-note {
+    color: #64748b;
+  }
+
+  .founder-bakery-eyebrow {
+    color: #7c3aed;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+
+  .founder-bakery-title {
+    margin: 0;
+    color: #111827;
+    font-size: clamp(1.55rem, 3vw, 2.1rem);
+    line-height: 1.05;
+  }
+
+  .founder-bakery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .founder-bakery-copy {
+    margin: 8px 0 0;
+    max-width: 720px;
+    line-height: 1.55;
+  }
+
+  .founder-bakery-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(124, 58, 237, 0.22);
+    background: #7c3aed;
+    color: #ffffff !important;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .founder-bakery-button:hover {
+    filter: brightness(1.05);
+  }
+
+  @media (max-width: 640px) {
+    .founder-bakery-card {
+      padding: 20px 18px;
+    }
+
+    .founder-bakery-button {
+      width: 100%;
+    }
   }
 
   .founder-hero p {
@@ -815,6 +905,35 @@
 
 {% block content %}
 <div class="founder-tienda">
+
+  <section
+    class="founder-bakery-card"
+    aria-label="{% trans 'FANZ Bakery Coin Rebrands' %}"
+    style="margin-bottom:18px;"
+  >
+    <div class="founder-bakery-header">
+      <div>
+        <div class="founder-bakery-eyebrow">
+          🧁 FANZ Bakery
+        </div>
+
+        <h2 class="founder-bakery-title">
+          {% trans "Coin Rebrands" %}
+        </h2>
+
+        <p class="founder-bakery-copy">
+          {% trans "Give your Founder coin a new look. Genesis branding is included with vending; every later on-chain image change is a rebrand." %}
+        </p>
+      </div>
+
+      <a
+        href="#coin-rebrands"
+        class="founder-bakery-button"
+      >
+        {% trans "Go to Rebrands" %} ↓
+      </a>
+    </div>
+  </section>
 
   <header class="founder-hero">
     <h1>{% trans "FANZ Founder Tienda" %}</h1>
@@ -1697,6 +1816,345 @@
   {% endif %}
 </section>
 
+
+<section
+  id="coin-rebrands"
+  class="founder-section"
+  style="
+    scroll-margin-top:24px;
+    margin-top:42px;
+  "
+>
+  <div
+    class="founder-bakery-card"
+    style="margin-bottom:18px;"
+  >
+    <div class="founder-bakery-header">
+      <div>
+        <div class="founder-bakery-eyebrow">
+          🧁 FANZ Bakery
+        </div>
+
+        <h2 class="founder-bakery-title">
+          {% trans "Coin Rebrands" %}
+        </h2>
+
+        <p class="founder-bakery-copy">
+          {% trans "Give your Founder coin a new look. Genesis branding is included with vending; every later on-chain image change is a $5 rebrand." %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="founder-card"
+    style="
+      padding:24px;
+      margin-top:0;
+    "
+  >
+    <div
+      class="founder-vending-quote-grid"
+      style="margin-bottom:20px;"
+    >
+      <div class="founder-vending-quote-row">
+        <span>{% trans "Genesis image" %}</span>
+        <strong>{% trans "Included with vending" %}</strong>
+      </div>
+
+      <div class="founder-vending-quote-row">
+        <span>{% trans "Rebrand fee" %}</span>
+        <strong>$5.00</strong>
+      </div>
+
+      <div class="founder-vending-quote-row">
+        <span>{% trans "Network" %}</span>
+        <strong>Sui Mainnet</strong>
+      </div>
+
+      <div class="founder-vending-quote-row">
+        <span>{% trans "Network gas" %}</span>
+        <strong>{% trans "Paid by current owner wallet" %}</strong>
+      </div>
+    </div>
+
+    <p class="founder-vending-note">
+      {% trans "Changing your FANZ profile avatar does not automatically change your coin. A coin image changes only when the current owner deliberately starts a rebrand here in the FANZ Bakery." %}
+    </p>
+
+    <div
+      style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+        gap:16px;
+        margin-top:22px;
+      "
+    >
+      <div
+        class="founder-rebrand-step"
+        style="
+          border:1px solid rgba(148,163,184,.24);
+          border-radius:16px;
+          padding:18px;
+        "
+      >
+        <strong>
+          1. {% trans "Prepare Rebrand" %}
+        </strong>
+
+        <p class="founder-vending-note">
+          {% trans "Choose an owned Founder coin and the new HTTPS image URL. FANZ prepares and validates the intended on-chain image change." %}
+        </p>
+      </div>
+
+      <div
+        class="founder-rebrand-step"
+        style="
+          border:1px solid rgba(148,163,184,.24);
+          border-radius:16px;
+          padding:18px;
+        "
+      >
+        <strong>
+          2. {% trans "Verify Transaction" %}
+        </strong>
+
+        <p class="founder-vending-note">
+          {% trans "After your wallet performs the rebrand, submit the Sui transaction digest. FANZ independently verifies the exact on-chain change." %}
+        </p>
+      </div>
+    </div>
+
+    <div
+      style="
+        margin-top:24px;
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+        gap:18px;
+      "
+    >
+      <form
+        method="post"
+        action="{% url 'prepare_founder_coin_rebrand' %}"
+        class="founder-rebrand-step"
+        style="
+          border:1px solid rgba(148,163,184,.24);
+          border-radius:16px;
+          padding:18px;
+        "
+      >
+        {% csrf_token %}
+
+        <strong>
+          🧁 {% trans "Prepare Coin Rebrand" %}
+        </strong>
+
+        {% if bakery_assets %}
+          <div
+            class="founder-vending-field"
+            style="margin-top:16px;"
+          >
+            <label for="bakery-asset">
+              {% trans "Founder coin" %}
+            </label>
+
+            <select
+              id="bakery-asset"
+              name="asset_id"
+              required
+            >
+              <option value="">
+                {% trans "Choose your coin" %}
+              </option>
+
+              {% for asset in bakery_assets %}
+                <option value="{{ asset.pk }}">
+                  @{{ asset.founder_account.handle }}
+                  — {{ asset.symbol }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="founder-vending-field">
+            <label for="bakery-icon-url">
+              {% trans "New image URL" %}
+            </label>
+
+            <input
+              id="bakery-icon-url"
+              name="icon_url"
+              type="url"
+              required
+              autocomplete="off"
+              placeholder="https://..."
+            >
+          </div>
+
+          <p class="founder-vending-note">
+            {% trans "Rebrand fee: $5.00 / 100 FANZ Credits. The image URL must use HTTPS." %}
+          </p>
+
+          <div class="founder-vending-submit">
+            <button
+              type="submit"
+              class="founder-button founder-button--premium"
+            >
+              🧁 {% trans "Prepare Rebrand" %}
+            </button>
+          </div>
+        {% else %}
+          <p
+            class="founder-vending-note"
+            style="margin-top:14px;"
+          >
+            {% trans "You do not currently own an active Founder coin available for rebranding." %}
+          </p>
+        {% endif %}
+      </form>
+
+
+      <form
+        method="post"
+        action="{% url 'verify_founder_coin_rebrand' %}"
+        class="founder-rebrand-step"
+        style="
+          border:1px solid rgba(148,163,184,.24);
+          border-radius:16px;
+          padding:18px;
+        "
+      >
+        {% csrf_token %}
+
+        <strong>
+          🪙 {% trans "Sign & Publish Rebrand" %}
+        </strong>
+
+        {% if bakery_rebrand %}
+          <div
+            class="founder-vending-quote-grid"
+            style="margin-bottom:18px;"
+          >
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Image action" %}</span>
+              <strong>
+                {{ bakery_rebrand.image_action|default:"rebrand"|title }}
+              </strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "FANZ service fee" %}</span>
+              <strong>
+                ${{ bakery_rebrand.price_usd|default:"5.00" }}
+              </strong>
+            </div>
+
+            {% if bakery_rebrand.payment_intent_id %}
+              <div class="founder-vending-quote-row">
+                <span>{% trans "Payment entitlement" %}</span>
+                <strong>
+                  #{{ bakery_rebrand.payment_intent_id }}
+                  · {% trans "Paid" %}
+                </strong>
+              </div>
+            {% endif %}
+          </div>
+          <input
+            type="hidden"
+            name="asset_id"
+            value="{{ bakery_rebrand.asset_id }}"
+          >
+
+          <div
+            class="founder-vending-quote-grid"
+            style="margin-top:16px;"
+          >
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Founder" %}</span>
+              <strong>
+                @{{ bakery_rebrand.handle }}
+              </strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Coin" %}</span>
+              <strong>
+                {{ bakery_rebrand.symbol }}
+              </strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "New image" %}</span>
+              <strong
+                style="
+                  overflow-wrap:anywhere;
+                  word-break:break-word;
+                "
+              >
+                {{ bakery_rebrand.icon_url }}
+              </strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Owner wallet" %}</span>
+              <strong
+                style="
+                  overflow-wrap:anywhere;
+                  word-break:break-all;
+                "
+              >
+                {{ bakery_rebrand.owner_address }}
+              </strong>
+            </div>
+          </div>
+
+          <p class="founder-vending-note">
+            {% trans "Approve the prepared image change with the current owner wallet. FANZ captures the transaction digest and verifies the on-chain rebrand automatically." %}
+          </p>
+
+          <div
+            class="founder-vending-submit"
+            style="margin:18px 0;"
+          >
+            <button
+              type="button"
+              id="bakery-wallet-publish"
+              class="founder-button founder-button--premium"
+              data-owner-address="{{ bakery_rebrand.owner_address }}"
+              data-transaction-bytes="{{ bakery_rebrand.transaction_bytes_b64 }}"
+              data-image-action="{{ bakery_rebrand.image_action }}"
+              data-payment-intent-id="{{ bakery_rebrand.payment_intent_id|default:'' }}"
+            >
+              🪙 {% trans "Sign & Publish with Sui Wallet" %}
+            </button>
+
+            <p
+              id="bakery-wallet-status"
+              class="founder-vending-note"
+              style="margin-top:10px;"
+            ></p>
+          </div>
+
+          <input
+            id="bakery-tx-digest"
+            name="tx_digest"
+            type="hidden"
+            value=""
+          >
+        {% else %}
+          <p
+            class="founder-vending-note"
+            style="margin-top:14px;"
+          >
+            {% trans "Prepare a coin rebrand first. FANZ will then connect the current owner wallet for signing and automatic verification." %}
+          </p>
+        {% endif %}
+      </form>
+    </div>
+
+  </div>
+</section>
+
 </div>
 
 <script>
@@ -1752,5 +2210,127 @@
   updateGiftFields();
 })();
 </script>
+
+<script>
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    const button =
+      document.getElementById(
+        "bakery-wallet-publish"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const status =
+      document.getElementById(
+        "bakery-wallet-status"
+      );
+
+    const digestInput =
+      document.getElementById(
+        "bakery-tx-digest"
+      );
+
+    const verifyForm =
+      button.closest("form");
+
+    button.addEventListener(
+      "click",
+      async function () {
+        const originalText =
+          button.textContent;
+
+        try {
+          button.disabled = true;
+
+          if (status) {
+            status.textContent =
+              "Connecting to Sui wallet…";
+          }
+
+          const ownerAddress =
+            button.dataset.ownerAddress || "";
+
+          const transactionBytesB64 =
+            button.dataset.transactionBytes || "";
+
+          const imageAction =
+            button.dataset.imageAction || "";
+
+          const paymentIntentId =
+            button.dataset.paymentIntentId || "";
+
+          if (
+            imageAction === "rebrand" &&
+            !paymentIntentId
+          ) {
+            throw new Error(
+              "Paid Coin Rebrand entitlement is missing."
+            );
+          }
+
+          if (
+            !window.FANZSuiWallet
+          ) {
+            throw new Error(
+              "Sui wallet bridge is not loaded."
+            );
+          }
+
+          const result =
+            await window.FANZSuiWallet
+              .signAndPublish({
+                ownerAddress,
+                transactionBytesB64,
+              });
+
+          if (!result?.digest) {
+            throw new Error(
+              "Wallet returned no transaction digest."
+            );
+          }
+
+          if (digestInput) {
+            digestInput.value =
+              result.digest;
+          }
+
+          if (status) {
+            status.textContent =
+              "Transaction published. FANZ is verifying it…";
+          }
+
+          verifyForm.submit();
+
+        } catch (error) {
+          console.error(
+            "[FANZ Bakery]",
+            error
+          );
+
+          if (status) {
+            status.textContent =
+              error instanceof Error
+                ? error.message
+                : "Unable to publish transaction.";
+          }
+
+          button.disabled = false;
+          button.textContent =
+            originalText;
+        }
+      }
+    );
+  }
+);
+</script>
+
+<script
+  type="module"
+  src="{% static 'js/fanz-sui-wallet.js' %}?v=7"
+></script>
 
 {% endblock %}

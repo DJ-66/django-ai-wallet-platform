@@ -1,0 +1,17 @@
+{
+  "name": "gql-tada-testing",
+  "private": true,
+  "version": "0.0.0",
+  "main": "../dist/gql-tada-testing.js",
+  "module": "../dist/gql-tada-testing.mjs",
+  "types": "../dist/gql-tada-testing.d.ts",
+  "source": "../src/testing.ts",
+  "exports": {
+    ".": {
+      "types": "../dist/gql-tada-testing.d.ts",
+      "import": "../dist/gql-tada-testing.mjs",
+      "require": "../dist/gql-tada-testing.js",
+      "source": "../src/testing.ts"
+    }
+  }
+}

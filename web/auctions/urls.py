@@ -47,6 +47,16 @@ urlpatterns = [
         name="verify_founder_sui_payment",
     ),
     path(
+        "founder/tienda/rebrand/prepare/",
+        views.prepare_founder_coin_rebrand,
+        name="prepare_founder_coin_rebrand",
+    ),
+    path(
+        "founder/tienda/rebrand/verify/",
+        views.verify_founder_coin_rebrand,
+        name="verify_founder_coin_rebrand",
+    ),
+    path(
         "founder/tienda/vending/quote/",
         views.quote_founder_vending,
         name="quote_founder_vending",
