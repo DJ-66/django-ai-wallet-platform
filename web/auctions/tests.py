@@ -2732,6 +2732,45 @@ class FounderCoinDraftServiceTests(TestCase):
             "founder_vending",
         )
 
+        self.assertEqual(
+            asset.metadata[
+                "publication_network"
+            ],
+            "mainnet",
+        )
+
+    def test_explicit_testnet_coin_draft_is_supported(self):
+        from auctions.founder_coin_services import (
+            create_founder_coin_draft,
+        )
+
+        asset, created = create_founder_coin_draft(
+            founder_account_id=self.founder.pk,
+            recipient_address="0xabc",
+            publication_network="testnet",
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            asset.metadata[
+                "publication_network"
+            ],
+            "testnet",
+        )
+
+    def test_invalid_publication_network_is_rejected(self):
+        from auctions.founder_coin_services import (
+            FounderCoinError,
+            create_founder_coin_draft,
+        )
+
+        with self.assertRaises(FounderCoinError):
+            create_founder_coin_draft(
+                founder_account_id=self.founder.pk,
+                recipient_address="0xabc",
+                publication_network="banana",
+            )
+
     def test_missing_sui_address_rejects_direct_draft_creation(self):
         from auctions.founder_coin_services import (
             FounderCoinError,

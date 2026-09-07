@@ -21,10 +21,24 @@ def create_founder_coin_draft(
     founder_account_id,
     recipient_address,
     issuance_source="founder_vending",
+    publication_network="mainnet",
 ):
     recipient_address = (
         recipient_address or ""
     ).strip()
+
+    publication_network = str(
+        publication_network or ""
+    ).strip().lower()
+
+    if publication_network not in {
+        "testnet",
+        "mainnet",
+    }:
+        raise FounderCoinError(
+            "Founder coin publication network must be "
+            "testnet or mainnet."
+        )
 
     if not recipient_address:
         raise FounderCoinError(
@@ -108,12 +122,7 @@ def create_founder_coin_draft(
             "issuance_source":
                 issuance_source,
             "publication_network":
-                (
-                    "mainnet"
-                    if issuance_source
-                    == "founder_ownership"
-                    else "testnet"
-                ),
+                publication_network,
         },
     )
 
