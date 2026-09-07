@@ -1299,7 +1299,8 @@ class EconomyAssetSupplyTests(TestCase):
                 "supply_state": "fixed",
                 "supply_base_units": "21000000000000000",
                 "previous_transaction":
-                    self.asset.genesis_tx_digest,
+                    "registration-transaction-digest",
+                "registered": True,
             }
         }
 
@@ -1408,6 +1409,128 @@ class EconomyAssetSupplyTests(TestCase):
         self.asset.refresh_from_db()
 
         self.assertIsNone(self.asset.supply_fixed_at)
+
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_unregistered_currency_is_rejected(
+        self,
+        get_supply,
+    ):
+        remote = {
+            "supply": dict(
+                self.remote["supply"],
+                registered=False,
+            )
+        }
+
+        get_supply.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetSupplyError
+        ):
+            verify_economy_asset_fixed_supply(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+        self.assertIsNone(
+            self.asset.supply_fixed_at
+        )
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_missing_previous_transaction_is_rejected(
+        self,
+        get_supply,
+    ):
+        remote = {
+            "supply": dict(
+                self.remote["supply"],
+                previous_transaction="",
+            )
+        }
+
+        get_supply.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetSupplyError
+        ):
+            verify_economy_asset_fixed_supply(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+        self.assertIsNone(
+            self.asset.supply_fixed_at
+        )
+
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_unregistered_currency_is_rejected(
+        self,
+        get_supply,
+    ):
+        remote = {
+            "supply": dict(
+                self.remote["supply"],
+                registered=False,
+            )
+        }
+
+        get_supply.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetSupplyError
+        ):
+            verify_economy_asset_fixed_supply(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+        self.assertIsNone(
+            self.asset.supply_fixed_at
+        )
+
+    @patch(
+        "auctions.economy_asset_supply_services."
+        "get_creator_publication_supply"
+    )
+    def test_missing_previous_transaction_is_rejected(
+        self,
+        get_supply,
+    ):
+        remote = {
+            "supply": dict(
+                self.remote["supply"],
+                previous_transaction="",
+            )
+        }
+
+        get_supply.return_value = remote
+
+        with self.assertRaises(
+            EconomyAssetSupplyError
+        ):
+            verify_economy_asset_fixed_supply(
+                self.asset.pk,
+                "lisa-prepare-test-v1",
+            )
+
+        self.asset.refresh_from_db()
+        self.assertIsNone(
+            self.asset.supply_fixed_at
+        )
 
 
 class FounderVendingTests(TestCase):

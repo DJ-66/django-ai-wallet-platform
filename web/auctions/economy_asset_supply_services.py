@@ -57,8 +57,6 @@ def verify_economy_asset_fixed_supply(
         "supply_base_units": str(
             asset.genesis_supply_base_units
         ),
-        "previous_transaction":
-            asset.genesis_tx_digest,
     }
 
     for key, expected_value in expected.items():
@@ -66,6 +64,20 @@ def verify_economy_asset_fixed_supply(
             raise EconomyAssetSupplyError(
                 f"FANZ Sui supply mismatch for {key}."
             )
+
+    if remote.get("registered") is not True:
+        raise EconomyAssetSupplyError(
+            "FANZ Sui Currency is not registered."
+        )
+
+    previous_transaction = str(
+        remote.get("previous_transaction") or ""
+    ).strip()
+
+    if not previous_transaction:
+        raise EconomyAssetSupplyError(
+            "FANZ Sui supply response has no previous transaction."
+        )
 
     currency_object_id = remote.get(
         "currency_object_id"
