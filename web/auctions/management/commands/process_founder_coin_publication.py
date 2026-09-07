@@ -22,6 +22,7 @@ from auctions.sui_adapter import (
     get_creator_publication,
     prepare_creator_publication,
     reconcile_creator_publication,
+    register_creator_currency,
     submit_creator_publication,
 )
 
@@ -248,6 +249,17 @@ def is_submit_gate_closed(exc):
     )
 
 
+
+def is_registration_gate_closed(exc):
+    message = str(exc).lower()
+
+    return (
+        "http 400" in message
+        and "currency registration is disabled"
+        in message
+    )
+
+
 class Command(BaseCommand):
     help = (
         "Advance one prepared Founder vending "
@@ -283,19 +295,45 @@ class Command(BaseCommand):
                 "Founder coin asset."
             )
 
+        publication_key = (
+            publication_key_for_asset(asset)
+        )
+
         if (
             asset.coin_type
             and asset.genesis_tx_digest
             and asset.supply_fixed_at
         ):
-            self.stdout.write(
-                "founder_coin_publication=ALREADY_COMPLETE"
-            )
-            return
+            try:
+                completed_remote = (
+                    get_remote_publication(
+                        publication_key
+                    )
+                )
+            except SuiAdapterError as exc:
+                raise CommandError(
+                    str(exc)
+                ) from exc
 
-        publication_key = (
-            publication_key_for_asset(asset)
-        )
+            if (
+                isinstance(completed_remote, dict)
+                and completed_remote.get("state")
+                == "confirmed"
+                and completed_remote.get(
+                    "registration_tx_digest"
+                )
+                and completed_remote.get(
+                    "registered_currency_object_id"
+                )
+                and completed_remote.get(
+                    "registered_at"
+                )
+            ):
+                self.stdout.write(
+                    "founder_coin_publication="
+                    "ALREADY_COMPLETE"
+                )
+                return
 
         payload, payload_path = (
             load_prepared_payload(asset)
@@ -433,6 +471,55 @@ class Command(BaseCommand):
                 "founder_coin_publication=STOP_NOT_CONFIRMED"
             )
             return
+
+        registration_complete = (
+            remote.get("registration_tx_digest")
+            and remote.get(
+                "registered_currency_object_id"
+            )
+            and remote.get("registered_at")
+        )
+
+        if not registration_complete:
+            try:
+                response = register_creator_currency(
+                    publication_key
+                )
+            except SuiAdapterError as exc:
+                if is_registration_gate_closed(exc):
+                    self.stdout.write(
+                        "founder_coin_publication="
+                        "STOP_REGISTRATION_GATE_CLOSED"
+                    )
+                    return
+
+                raise CommandError(
+                    str(exc)
+                ) from exc
+
+            remote = publication_from_response(
+                response
+            )
+
+            if (
+                not remote.get(
+                    "registration_tx_digest"
+                )
+                or not remote.get(
+                    "registered_currency_object_id"
+                )
+                or not remote.get(
+                    "registered_at"
+                )
+            ):
+                raise CommandError(
+                    "Creator Currency registration "
+                    "did not complete."
+                )
+
+            self.stdout.write(
+                "creator_currency_registration=COMPLETE"
+            )
 
         try:
             asset, publication_changed = (

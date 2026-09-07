@@ -4097,6 +4097,15 @@ class FounderCoinPublicationProcessorTests(TestCase):
             patch.object(
                 self.processor,
                 "get_remote_publication",
+                return_value={
+                    "state": "confirmed",
+                    "registration_tx_digest":
+                        "registration-digest",
+                    "registered_currency_object_id":
+                        "0xcurrency",
+                    "registered_at":
+                        "2026-09-07T00:00:00Z",
+                },
             ) as get_remote,
             patch.object(
                 self.processor,
@@ -4114,7 +4123,9 @@ class FounderCoinPublicationProcessorTests(TestCase):
             stdout,
         )
 
-        get_remote.assert_not_called()
+        get_remote.assert_called_once_with(
+            self.publication_key,
+        )
         prepare_publication.assert_not_called()
         submit_publication.assert_not_called()
 
@@ -4160,6 +4171,21 @@ class FounderCoinPublicationProcessorTests(TestCase):
             ),
             patch.object(
                 self.processor,
+                "register_creator_currency",
+                return_value={
+                    "publication": {
+                        **remote,
+                        "registration_tx_digest":
+                            "registration-digest",
+                        "registered_currency_object_id":
+                            "0xcurrency",
+                        "registered_at":
+                            "2026-09-07T00:00:00Z",
+                    },
+                },
+            ) as register_currency,
+            patch.object(
+                self.processor,
                 "reconcile_confirmed_creator_publication",
                 return_value=(
                     self.asset,
@@ -4177,6 +4203,10 @@ class FounderCoinPublicationProcessorTests(TestCase):
         ):
             stdout, _ = self._call()
 
+        register_currency.assert_called_once_with(
+            self.publication_key,
+        )
+
         reconcile_django.assert_called_once_with(
             self.asset.pk,
             self.publication_key,
@@ -4189,6 +4219,63 @@ class FounderCoinPublicationProcessorTests(TestCase):
 
         self.assertIn(
             "founder_coin_publication=COMPLETE",
+            stdout,
+        )
+
+
+    def test_confirmed_publication_stops_when_registration_gate_closed(
+        self,
+    ):
+        from unittest.mock import patch
+
+        from auctions.sui_adapter import SuiAdapterError
+
+        remote = {
+            "publication_key":
+                self.publication_key,
+            "state":
+                "confirmed",
+            "registration_tx_digest": None,
+            "registered_currency_object_id": None,
+            "registered_at": None,
+        }
+
+        with (
+            patch.object(
+                self.processor,
+                "get_remote_publication",
+                return_value=remote,
+            ),
+            patch.object(
+                self.processor,
+                "register_creator_currency",
+                side_effect=SuiAdapterError(
+                    "FANZ Sui request failed with HTTP 400: "
+                    "Mainnet creator Currency registration "
+                    "is disabled"
+                ),
+            ) as register_currency,
+            patch.object(
+                self.processor,
+                "reconcile_confirmed_creator_publication",
+            ) as reconcile_django,
+            patch.object(
+                self.processor,
+                "verify_economy_asset_fixed_supply",
+            ) as verify_supply,
+        ):
+            stdout, _ = self._call()
+
+        register_currency.assert_called_once_with(
+            self.publication_key,
+        )
+
+        reconcile_django.assert_not_called()
+        verify_supply.assert_not_called()
+
+        self.assertIn(
+            "founder_coin_publication="
+            "STOP_REGISTRATION_GATE_CLOSED",
             stdout,
         )
 

@@ -196,6 +196,28 @@ def reconcile_creator_publication(publication_key):
         json={},
     )
 
+
+def register_creator_currency(publication_key):
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/register"
+        ),
+        json={},
+    )
+
+
+def register_creator_currency(publication_key):
+    return _request(
+        "POST",
+        (
+            f"/v1/creator-publications/"
+            f"{publication_key}/register"
+        ),
+        json={},
+    )
+
 def get_creator_coin_image_status(
     publication_key,
 ):
