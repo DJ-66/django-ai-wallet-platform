@@ -7920,3 +7920,269 @@ class CoinRebrandCreditsPaymentTests(TestCase):
             WalletTransaction.objects.count(),
             tx_before,
         )
+
+
+class EconomyAssetMainnetPromotionTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+
+        from auctions.models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        User = get_user_model()
+
+        self.owner = User.objects.create_user(
+            username="promotion-owner",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="prom",
+            status=FounderAccount.STATUS_OWNED,
+            owner_root=self.owner,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="PromFanz",
+            symbol="PROMFANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=(
+                21_000_000_000_000_000
+            ),
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type=(
+                "0xtest::prom_fanz::"
+                "PROM_FANZ"
+            ),
+            genesis_tx_digest="testnet-genesis-digest",
+            supply_fixed_at=timezone.now(),
+            metadata={
+                "issuance_source":
+                    "founder_vending",
+                "generated_package":
+                    "fanz_creator_prom",
+                "intended_recipient_address":
+                    "0xabc",
+                "publication_network":
+                    "testnet",
+                "publication_key":
+                    "founder-testnet-prom-v1",
+                "package_id":
+                    "0xtest",
+                "currency_object_id":
+                    "0xcurrency",
+            },
+        )
+
+    def test_completed_testnet_asset_promotes_to_mainnet(self):
+        from auctions.economy_asset_network_services import (
+            promote_founder_economy_asset_to_mainnet,
+        )
+
+        asset = promote_founder_economy_asset_to_mainnet(
+            self.asset.pk
+        )
+
+        self.assertEqual(
+            asset.status,
+            asset.STATUS_DRAFT,
+        )
+        self.assertIsNone(asset.coin_type)
+        self.assertIsNone(asset.genesis_tx_digest)
+        self.assertIsNone(asset.supply_fixed_at)
+
+        self.assertEqual(
+            asset.metadata["publication_network"],
+            "mainnet",
+        )
+
+        self.assertEqual(
+            asset.metadata["publication_key"],
+            (
+                f"founder-{asset.pk}-"
+                "prom-mainnet-v1"
+            ),
+        )
+
+        self.assertNotIn(
+            "package_id",
+            asset.metadata,
+        )
+        self.assertNotIn(
+            "currency_object_id",
+            asset.metadata,
+        )
+
+        history = asset.metadata[
+            "publication_history"
+        ]
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(
+            history[0]["network"],
+            "testnet",
+        )
+        self.assertEqual(
+            history[0]["coin_type"],
+            (
+                "0xtest::prom_fanz::"
+                "PROM_FANZ"
+            ),
+        )
+        self.assertEqual(
+            history[0]["genesis_tx_digest"],
+            "testnet-genesis-digest",
+        )
+
+        # Non-chain identity survives promotion.
+        self.assertEqual(
+            asset.metadata[
+                "intended_recipient_address"
+            ],
+            "0xabc",
+        )
+        self.assertEqual(
+            asset.metadata[
+                "generated_package"
+            ],
+            "fanz_creator_prom",
+        )
+
+    def test_non_testnet_asset_cannot_be_promoted(self):
+        from auctions.economy_asset_network_services import (
+            EconomyAssetNetworkPromotionError,
+            promote_founder_economy_asset_to_mainnet,
+        )
+
+        metadata = dict(self.asset.metadata)
+        metadata["publication_network"] = "mainnet"
+
+        self.asset.metadata = metadata
+        self.asset.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            EconomyAssetNetworkPromotionError
+        ):
+            promote_founder_economy_asset_to_mainnet(
+                self.asset.pk
+            )
+
+    def test_incomplete_testnet_identity_cannot_be_promoted(self):
+        from auctions.economy_asset_network_services import (
+            EconomyAssetNetworkPromotionError,
+            promote_founder_economy_asset_to_mainnet,
+        )
+
+        self.asset.genesis_tx_digest = None
+        self.asset.save(
+            update_fields=[
+                "genesis_tx_digest",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            EconomyAssetNetworkPromotionError
+        ):
+            promote_founder_economy_asset_to_mainnet(
+                self.asset.pk
+            )
+
+
+class PromoteFounderEconomyAssetToMainnetCommandTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+
+        from auctions.models import (
+            EconomyAsset,
+            FounderAccount,
+        )
+
+        User = get_user_model()
+
+        owner = User.objects.create_user(
+            username="promotion-command-owner",
+            password="test-password",
+        )
+
+        founder = FounderAccount.objects.create(
+            handle="cmd",
+            status=FounderAccount.STATUS_OWNED,
+            owner_root=owner,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=founder,
+            name="CmdFanz",
+            symbol="CMDFANZ",
+            chain="sui",
+            decimals=6,
+            genesis_supply_base_units=(
+                21_000_000_000_000_000
+            ),
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="0xtest::cmd_fanz::CMD_FANZ",
+            genesis_tx_digest="cmd-testnet-genesis",
+            supply_fixed_at=timezone.now(),
+            metadata={
+                "issuance_source": "founder_vending",
+                "generated_package": "fanz_creator_cmd",
+                "intended_recipient_address": "0xabc",
+                "publication_network": "testnet",
+                "publication_key":
+                    "founder-cmd-testnet-v1",
+                "package_id": "0xtest",
+                "currency_object_id": "0xcurrency",
+            },
+        )
+
+    def test_command_requires_exact_confirmation(self):
+        from django.core.management import (
+            call_command,
+        )
+        from django.core.management.base import (
+            CommandError,
+        )
+
+        with self.assertRaises(CommandError):
+            call_command(
+                "promote_founder_economy_asset_to_mainnet",
+                asset_id=self.asset.pk,
+                confirm="WRONG",
+            )
+
+    def test_command_promotes_completed_testnet_asset(self):
+        from django.core.management import call_command
+
+        call_command(
+            "promote_founder_economy_asset_to_mainnet",
+            asset_id=self.asset.pk,
+            confirm=(
+                f"PROMOTE-{self.asset.pk}-"
+                "cmd-TO-MAINNET"
+            ),
+        )
+
+        self.asset.refresh_from_db()
+
+        self.assertEqual(
+            self.asset.status,
+            self.asset.STATUS_DRAFT,
+        )
+        self.assertEqual(
+            self.asset.metadata[
+                "publication_network"
+            ],
+            "mainnet",
+        )
