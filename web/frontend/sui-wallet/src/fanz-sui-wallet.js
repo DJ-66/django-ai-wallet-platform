@@ -170,6 +170,153 @@ window.FANZSuiWallet = {
     };
   },
 
+  async paySui({
+    walletName = null,
+    recipientAddress,
+    amountMist,
+  }) {
+    const wallets = registry.get();
+
+    const compatibleWallets =
+      wallets.filter(
+        (candidate) =>
+          (candidate.chains || []).includes(
+            SUI_MAINNET_CHAIN
+          ) &&
+          Boolean(
+            candidate.features?.[
+              StandardConnect
+            ]
+          ) &&
+          Boolean(
+            candidate.features?.[
+              SuiSignAndExecuteTransaction
+            ]
+          )
+      );
+
+    let wallet = null;
+
+    if (walletName) {
+      wallet = compatibleWallets.find(
+        (candidate) =>
+          candidate.name === walletName
+      );
+    } else {
+      wallet =
+        compatibleWallets.find(
+          (candidate) =>
+            candidate.name === "Slush"
+        ) ||
+        compatibleWallets.find(
+          (candidate) =>
+            candidate.name === "Suiet"
+        ) ||
+        compatibleWallets[0];
+    }
+
+    if (!wallet) {
+      throw new Error(
+        `Sui wallet ${walletName || ""} is not available.`
+      );
+    }
+
+    if (!wallet.accounts?.length) {
+      await wallet.features[
+        StandardConnect
+      ].connect();
+    }
+
+    const account =
+      (wallet.accounts || []).find(
+        (candidate) =>
+          (candidate.chains || []).includes(
+            SUI_MAINNET_CHAIN
+          )
+      );
+
+    if (!account) {
+      throw new Error(
+        `${wallet.name} has no Sui Mainnet account available.`
+      );
+    }
+
+    const recipient =
+      String(recipientAddress || "").trim();
+
+    if (!recipient) {
+      throw new Error(
+        "SUI payment recipient is missing."
+      );
+    }
+
+    let amount;
+
+    try {
+      amount = BigInt(
+        String(amountMist || "").trim()
+      );
+    } catch {
+      throw new Error(
+        "SUI payment amount is invalid."
+      );
+    }
+
+    if (amount <= 0n) {
+      throw new Error(
+        "SUI payment amount must be greater than zero."
+      );
+    }
+
+    const transaction = new Transaction();
+
+    const [paymentCoin] =
+      transaction.splitCoins(
+        transaction.gas,
+        [transaction.pure.u64(amount)]
+      );
+
+    transaction.transferObjects(
+      [paymentCoin],
+      transaction.pure.address(recipient)
+    );
+
+    const result =
+      await signAndExecuteTransaction(
+        wallet,
+        {
+          account,
+          chain: SUI_MAINNET_CHAIN,
+          transaction,
+        },
+      );
+
+    if (!result?.digest) {
+      throw new Error(
+        "Wallet returned no transaction digest."
+      );
+    }
+
+    console.log(
+      "[FANZ Sui] payment published:",
+      {
+        wallet: wallet.name,
+        account: account.address,
+        recipient,
+        amountMist: amount.toString(),
+        digest: result.digest,
+      },
+    );
+
+    return {
+      wallet: wallet.name,
+      account: account.address,
+      recipient,
+      amountMist: amount.toString(),
+      digest: result.digest,
+    };
+  },
+
   async signAndPublish({
     walletName = null,
     ownerAddress,

@@ -1200,12 +1200,13 @@
             </div>
 
             <p class="founder-vending-note">
-              {% trans "Send the exact quoted amount to the FANZ Sui mainnet wallet, then paste the transaction digest below." %}
+              {% trans "Pay from your Sui wallet. FANZ captures the transaction digest and verifies the payment automatically." %}
             </p>
 
             <form
               method="post"
               action="{% url 'verify_founder_sui_payment' %}"
+              id="founder-sui-payment-form"
             >
               {% csrf_token %}
 
@@ -1215,29 +1216,30 @@
                 value="{{ sui_checkout.payment_intent_id }}"
               >
 
-              <div class="founder-vending-field">
-                <label for="sui-tx-digest">
-                  {% trans "Sui transaction digest" %}
-                </label>
-
-                <input
-                  id="sui-tx-digest"
-                  name="tx_digest"
-                  type="text"
-                  required
-                  autocomplete="off"
-                  placeholder="Transaction digest"
-                >
-              </div>
+              <input
+                id="sui-tx-digest"
+                name="tx_digest"
+                type="hidden"
+                value=""
+              >
 
               <div class="founder-vending-submit">
                 <button
-                  type="submit"
+                  type="button"
+                  id="founder-sui-wallet-pay"
                   class="founder-button founder-button--premium"
+                  data-recipient-address="{{ sui_checkout.recipient_address }}"
+                  data-required-mist="{{ sui_checkout.required_mist }}"
                 >
-                  ✅ {% trans "Verify SUI Payment" %}
+                  💧 {% trans "Pay with Sui Wallet" %}
                 </button>
               </div>
+
+              <p
+                id="founder-sui-wallet-status"
+                class="founder-vending-note"
+                style="margin-top:10px;"
+              ></p>
             </form>
           </div>
         {% endif %}
@@ -2217,6 +2219,123 @@ document.addEventListener(
   function () {
     const button =
       document.getElementById(
+        "founder-sui-wallet-pay"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const status =
+      document.getElementById(
+        "founder-sui-wallet-status"
+      );
+
+    const digestInput =
+      document.getElementById(
+        "sui-tx-digest"
+      );
+
+    const verifyForm =
+      document.getElementById(
+        "founder-sui-payment-form"
+      );
+
+    button.addEventListener(
+      "click",
+      async function () {
+        const originalText =
+          button.textContent;
+
+        try {
+          button.disabled = true;
+
+          if (status) {
+            status.textContent =
+              "Connecting to Sui wallet…";
+          }
+
+          if (!window.FANZSuiWallet) {
+            throw new Error(
+              "Sui wallet bridge is not loaded."
+            );
+          }
+
+          const recipientAddress =
+            button.dataset.recipientAddress || "";
+
+          const amountMist =
+            button.dataset.requiredMist || "";
+
+          if (!recipientAddress) {
+            throw new Error(
+              "SUI payment recipient is missing."
+            );
+          }
+
+          if (!amountMist) {
+            throw new Error(
+              "SUI payment amount is missing."
+            );
+          }
+
+          if (status) {
+            status.textContent =
+              "Approve the SUI payment in your wallet…";
+          }
+
+          const result =
+            await window.FANZSuiWallet
+              .paySui({
+                recipientAddress,
+                amountMist,
+              });
+
+          if (!result?.digest) {
+            throw new Error(
+              "Wallet returned no transaction digest."
+            );
+          }
+
+          digestInput.value =
+            result.digest;
+
+          if (status) {
+            status.textContent =
+              "Payment published. FANZ is verifying it…";
+          }
+
+          verifyForm.submit();
+
+        } catch (error) {
+          console.error(
+            "[FANZ Sui Payment]",
+            error
+          );
+
+          if (status) {
+            status.textContent =
+              error instanceof Error
+                ? error.message
+                : "Unable to complete SUI payment.";
+          }
+
+          button.disabled = false;
+          button.textContent =
+            originalText;
+        }
+      }
+    );
+  }
+);
+</script>
+
+<script>
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    const button =
+      document.getElementById(
         "bakery-wallet-publish"
       );
 
@@ -2330,7 +2449,7 @@ document.addEventListener(
 
 <script
   type="module"
-  src="{% static 'js/fanz-sui-wallet.js' %}?v=7"
+  src="{% static 'js/fanz-sui-wallet.js' %}?v=8"
 ></script>
 
 {% endblock %}
