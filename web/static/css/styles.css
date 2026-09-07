@@ -4044,6 +4044,29 @@ body.page-qr-open {
   }
 }
 
+@media (max-width: 699px) {
+  .page-qr-button {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-6px);
+
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0.16s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+  }
+
+  .page-qr-button.page-qr-button--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
 .business-tos-field {
     margin: 1.25rem 0;
 }
@@ -7459,6 +7482,5 @@ Allow the content to wrap safely in every language.
         padding-bottom: 1px;
     }
 }
-
 
 /* end_css */

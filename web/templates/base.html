@@ -11,7 +11,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=381">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=382">
   {% block extra_css %}{% endblock %}
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
@@ -503,6 +503,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (!button || !modal || !image) return;
 
+  const mobileQuery = window.matchMedia("(max-width: 699px)");
+
+  function updateQrButtonVisibility() {
+    if (!mobileQuery.matches) {
+      button.classList.remove("page-qr-button--visible");
+      return;
+    }
+
+    button.classList.toggle(
+      "page-qr-button--visible",
+      window.scrollY >= 8
+    );
+  }
+
   function openQrModal() {
     const currentUrl = window.location.href;
     const qrEndpoint =
@@ -535,10 +549,25 @@ document.addEventListener("DOMContentLoaded", function () {
       closeQrModal();
     }
   });
+
+  window.addEventListener(
+    "scroll",
+    updateQrButtonVisibility,
+    { passive: true }
+  );
+
+  mobileQuery.addEventListener(
+    "change",
+    updateQrButtonVisibility
+  );
+
+  updateQrButtonVisibility();
 });
 </script>
+
+
 {% include "components/_fanz_lightbox.html" %}
-<script src="{% static 'js/fanz-lightbox.js' %}?v=42" defer></script>
+<script src="{% static 'js/fanz-lightbox.js' %}?v=43" defer></script>
 
 {% block extra_js %}{% endblock %}
 </body>
