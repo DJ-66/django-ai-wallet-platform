@@ -80,6 +80,15 @@ def main():
         "--icon-url",
         default="",
     )
+    parser.add_argument(
+        "--reuse-existing-package",
+        action="store_true",
+        help=(
+            "Reuse an already generated creator package "
+            "instead of regenerating it. Intended for an "
+            "explicit cross-network republication."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -118,22 +127,35 @@ def main():
         "build_creator_publication.py"
     )
 
-    run([
-        sys.executable,
-        generator,
-        "--handle",
-        handle,
-        "--symbol",
-        args.symbol,
-        "--name",
-        args.name,
-        "--description",
-        args.description,
-        "--icon-url",
-        args.icon_url,
-        "--recipient-address",
-        args.recipient_address,
-    ])
+    if package_dir.exists():
+        if not args.reuse_existing_package:
+            raise SystemExit(
+                "Generated creator package already exists: "
+                f"{package_dir}. Pass --reuse-existing-package "
+                "only for an intentional republication."
+            )
+
+        print(
+            "founder_coin_prepare=REUSE_EXISTING_PACKAGE "
+            f"package_dir={package_dir}"
+        )
+    else:
+        run([
+            sys.executable,
+            generator,
+            "--handle",
+            handle,
+            "--symbol",
+            args.symbol,
+            "--name",
+            args.name,
+            "--description",
+            args.description,
+            "--icon-url",
+            args.icon_url,
+            "--recipient-address",
+            args.recipient_address,
+        ])
 
     run([
         sys.executable,
