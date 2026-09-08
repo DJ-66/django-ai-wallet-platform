@@ -96,7 +96,23 @@ def verify_economy_asset_fixed_supply(
         )
 
         if locked.supply_fixed_at:
-            return locked, False
+            metadata = dict(locked.metadata or {})
+
+            if metadata.get("currency_object_id") == currency_object_id:
+                return locked, False
+
+            metadata["currency_object_id"] = currency_object_id
+            locked.metadata = metadata
+
+            locked.save(
+                update_fields=[
+                    "metadata",
+                    "updated_at",
+                ]
+            )
+
+            return locked, True
+
 
         locked.supply_fixed_at = timezone.now()
 

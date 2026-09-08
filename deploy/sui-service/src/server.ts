@@ -3797,8 +3797,9 @@ async function getCreatorPublicationSupply(
   }
 
   if (
+    !requireShared &&
     object.previousTransaction !==
-    expectedPreviousTransaction
+      expectedPreviousTransaction
   ) {
     throw new Error(
       "Creator Currency transaction mismatch"
