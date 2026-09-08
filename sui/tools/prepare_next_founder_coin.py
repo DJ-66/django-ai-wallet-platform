@@ -21,6 +21,12 @@ PUBLICATION_ROOT = (
     / "prepared-publications"
 )
 
+GENERATED_ROOT = (
+    REPO_ROOT
+    / "sui"
+    / "generated"
+)
+
 
 class QueueError(RuntimeError):
     pass
@@ -134,10 +140,51 @@ def prepare_job(job, *, force=False):
         / f"{job['publication_key']}.json"
     )
 
+    package_dir = (
+        GENERATED_ROOT
+        / job["generated_package"]
+    )
+
     if output.exists() and not force:
+        result = {
+            "economy_asset_id":
+                job["economy_asset_id"],
+            "founder_account_id":
+                job["founder_account_id"],
+            "handle":
+                handle,
+            "name":
+                job["name"],
+            "symbol":
+                job["symbol"],
+            "publication_key":
+                job["publication_key"],
+            "generated_package":
+                job["generated_package"],
+            "recipient_address":
+                job["recipient_address"],
+            "publication_payload":
+                str(output),
+        }
+
+        print(
+            "founder_coin_prepare_queue="
+            "ALREADY_PREPARED "
+            f"asset_id={job['economy_asset_id']} "
+            f"handle=@{handle}"
+        )
+
+        return result
+
+    if (
+        package_dir.exists()
+        and not output.exists()
+        and not force
+    ):
         raise QueueError(
-            "Prepared publication already exists: "
-            f"{output}"
+            "Generated creator package exists without "
+            "prepared publication; manual review required: "
+            f"{package_dir}"
         )
 
     if force and output.exists():

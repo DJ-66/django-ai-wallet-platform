@@ -49,6 +49,19 @@ class Command(BaseCommand):
             if not recipient:
                 continue
 
+            publication_network = str(
+                metadata.get(
+                    "publication_network",
+                    "",
+                )
+            ).strip().lower()
+
+            if publication_network not in {
+                "testnet",
+                "mainnet",
+            }:
+                continue
+
             found_candidate = True
 
             payload_path = prepared_payload_path(

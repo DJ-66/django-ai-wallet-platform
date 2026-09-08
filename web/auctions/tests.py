@@ -4588,6 +4588,8 @@ class FounderCoinPublicationWorkerTests(TestCase):
                     f"fanz_creator_{handle}",
                 "intended_recipient_address":
                     "0xabc",
+                "publication_network":
+                    "mainnet",
             },
         )
 
@@ -4736,6 +4738,59 @@ class FounderCoinPublicationWorkerTests(TestCase):
         self.assertEqual(
             kwargs["asset_id"],
             first.pk,
+        )
+
+    @patch(
+        "auctions.management.commands."
+        "process_next_founder_coin_publication."
+        "call_command"
+    )
+    def test_invalid_network_draft_does_not_block_next_valid_asset(
+        self,
+        nested_call,
+    ):
+        invalid = self._create_asset(
+            "wk05"
+        )
+
+        invalid.metadata = {
+            **invalid.metadata,
+            "publication_network": "",
+        }
+        invalid.save(
+            update_fields=[
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        valid = self._create_asset(
+            "wk06"
+        )
+
+        self._payload_path(
+            valid
+        ).write_text("{}")
+
+        stdout, _ = self._call()
+
+        self.assertNotIn(
+            f"asset_id={invalid.pk}",
+            stdout,
+        )
+
+        self.assertIn(
+            f"asset_id={valid.pk}",
+            stdout,
+        )
+
+        nested_call.assert_called_once()
+
+        _, kwargs = nested_call.call_args
+
+        self.assertEqual(
+            kwargs["asset_id"],
+            valid.pk,
         )
 
 
