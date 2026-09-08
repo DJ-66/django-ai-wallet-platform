@@ -1,11 +1,21 @@
 from datetime import timedelta
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
-from auctions.models import Auction, FavoriteAuction, Bid, Notification, Conversation, DirectMessage
+from auctions.models import (
+    Auction,
+    FavoriteAuction,
+    Bid,
+    Notification,
+    Conversation,
+    DirectMessage,
+    FounderListing,
+)
+from auctions.founder_services import close_founder_blind_listing
 from django.contrib.auth import get_user_model
 
 
@@ -123,6 +133,27 @@ class Command(BaseCommand):
 
             closed_count += 1
 
+        expired_founder_listings = FounderListing.objects.filter(
+            listing_source=FounderListing.SOURCE_TIENDA,
+            tienda_lane=FounderListing.TIENDA_BLIND,
+            sale_type=FounderListing.SALE_BLIND,
+            status=FounderListing.STATUS_ACTIVE,
+            ends_at__lte=now,
+        )
+
+        founder_closed_count = 0
+
+        for listing in expired_founder_listings:
+            close_founder_blind_listing(
+                listing=listing,
+            )
+            founder_closed_count += 1
+
+        if founder_closed_count:
+            call_command(
+                "replenish_founder_tienda",
+            )
+
         relist_cutoff = now - timedelta(
             days=settings.AUCTION_RELIST_DAYS
         )
@@ -172,6 +203,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Closed {closed_count} auctions. "
+                f"Closed {founder_closed_count} Founder listings. "
                 f"Relisted {relisted_count} auctions."
             )
         )

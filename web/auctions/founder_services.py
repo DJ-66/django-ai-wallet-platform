@@ -994,7 +994,14 @@ def close_founder_blind_listing(
             ]
         )
 
-        locked_asset.status = FounderAccount.STATUS_OWNED
+        if (
+            locked_listing.listing_source
+            == FounderListing.SOURCE_TIENDA
+        ):
+            locked_asset.status = FounderAccount.STATUS_TREASURY
+        else:
+            locked_asset.status = FounderAccount.STATUS_OWNED
+
         locked_asset.save(
             update_fields=[
                 "status",

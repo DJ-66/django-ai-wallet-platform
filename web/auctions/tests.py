@@ -8396,3 +8396,171 @@ class PromoteFounderEconomyAssetToMainnetCommandTests(TestCase):
             ],
             "mainnet",
         )
+
+
+class FounderTiendaBlindExpiryTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+
+        from auctions.models import (
+            BidWallet,
+            FounderAccount,
+            FounderListing,
+        )
+        from auctions.utils import get_system_wallet
+
+        User = get_user_model()
+
+        self.platform_wallet = get_system_wallet()
+        self.platform = self.platform_wallet.user
+
+        self.bidder = User.objects.create_user(
+            username="tienda-blind-bidder",
+            password="test-password",
+        )
+
+        self.bidder_wallet = BidWallet.objects.create(
+            user=self.bidder,
+            credits=2_000,
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="tblx",
+            owner_root=self.platform,
+            status=FounderAccount.STATUS_LISTED,
+            floor_price_credits=200,
+        )
+
+        self.listing = FounderListing.objects.create(
+            founder_account=self.founder,
+            seller_root=self.platform,
+            listing_source=FounderListing.SOURCE_TIENDA,
+            tienda_lane=FounderListing.TIENDA_BLIND,
+            sale_type=FounderListing.SALE_BLIND,
+            minimum_bid_credits=500,
+            starts_at=(
+                timezone.now()
+                - timezone.timedelta(days=1)
+            ),
+            ends_at=(
+                timezone.now()
+                + timezone.timedelta(hours=1)
+            ),
+            status=FounderListing.STATUS_ACTIVE,
+        )
+
+    def expire_listing(self):
+        from django.utils import timezone
+
+        self.listing.ends_at = (
+            timezone.now()
+            - timezone.timedelta(seconds=1)
+        )
+        self.listing.save(
+            update_fields=[
+                "ends_at",
+                "updated_at",
+            ]
+        )
+
+    def test_expired_tienda_listing_without_bid_returns_to_treasury(self):
+        from auctions.founder_services import (
+            close_founder_blind_listing,
+        )
+        from auctions.models import (
+            FounderAccount,
+            FounderListing,
+        )
+
+        self.expire_listing()
+
+        result = close_founder_blind_listing(
+            listing=self.listing,
+        )
+
+        self.listing.refresh_from_db()
+        self.founder.refresh_from_db()
+
+        self.assertFalse(result["sold"])
+
+        self.assertEqual(
+            self.listing.status,
+            FounderListing.STATUS_EXPIRED,
+        )
+
+        self.assertEqual(
+            self.founder.status,
+            FounderAccount.STATUS_TREASURY,
+        )
+
+        self.assertEqual(
+            self.founder.owner_root_id,
+            self.platform.pk,
+        )
+
+    def test_expired_tienda_listing_with_funded_bid_settles(self):
+        from auctions.founder_services import (
+            close_founder_blind_listing,
+            place_founder_blind_bid,
+        )
+        from auctions.models import (
+            FounderBid,
+            FounderCreditHold,
+            FounderListing,
+        )
+
+        platform_before = self.platform_wallet.credits
+
+        placed = place_founder_blind_bid(
+            listing=self.listing,
+            bidder=self.bidder,
+            amount_credits=600,
+        )
+
+        self.bidder_wallet.refresh_from_db()
+
+        self.assertEqual(
+            self.bidder_wallet.credits,
+            1_400,
+        )
+
+        self.expire_listing()
+
+        result = close_founder_blind_listing(
+            listing=self.listing,
+        )
+
+        self.listing.refresh_from_db()
+        self.founder.refresh_from_db()
+        self.platform_wallet.refresh_from_db()
+
+        placed["bid"].refresh_from_db()
+        placed["hold"].refresh_from_db()
+
+        self.assertTrue(result["sold"])
+
+        self.assertEqual(
+            self.listing.status,
+            FounderListing.STATUS_SOLD,
+        )
+
+        self.assertEqual(
+            self.founder.owner_root_id,
+            self.bidder.pk,
+        )
+
+        self.assertEqual(
+            placed["bid"].status,
+            FounderBid.STATUS_WON,
+        )
+
+        self.assertEqual(
+            placed["hold"].status,
+            FounderCreditHold.STATUS_CONSUMED,
+        )
+
+        self.assertEqual(
+            self.platform_wallet.credits,
+            platform_before + 600,
+        )

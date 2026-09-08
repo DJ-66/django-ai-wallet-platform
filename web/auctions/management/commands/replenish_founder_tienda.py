@@ -61,6 +61,18 @@ BLIND_RESERVE_HANDLES = [
     "wild",
     "wave",
     "fire",
+    "ace",
+    "boss",
+    "go",
+    "pro",
+    "app",
+    "web",
+    "dev",
+    "btc",
+    "sui",
+    "doge",
+    "coin",
+    "play",
 ]
 
 WASTELAND_RESERVE_HANDLES = [
@@ -117,10 +129,13 @@ class Command(BaseCommand):
             )
 
             if existing_user is not None:
-                raise CommandError(
-                    f"Cannot seed @{handle}: Django user "
-                    f"@{existing_user.username} already exists."
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Skipping @{handle}: Django user "
+                        f"@{existing_user.username} already exists."
+                    )
                 )
+                continue
 
             asset, created = FounderAccount.objects.get_or_create(
                 handle=handle,
@@ -179,7 +194,7 @@ class Command(BaseCommand):
                     ]
                 )
         def eligible_handles(handles):
-            return list(
+            eligible = set(
                 FounderAccount.objects
                 .filter(
                     handle__in=handles,
@@ -197,6 +212,12 @@ class Command(BaseCommand):
                     flat=True,
                 )
             )
+
+            return [
+                handle
+                for handle in handles
+                if handle in eligible
+            ]
 
         fixed_candidates = eligible_handles(
             PREMIUM_HANDLES
