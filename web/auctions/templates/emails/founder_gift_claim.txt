@@ -1,0 +1,19 @@
+You received a FANZ Founder property!
+
+{% if claim.recipient_name %}
+Hello {{ claim.recipient_name }},
+{% endif %}
+
+{{ purchaser.username }} sent you the Founder property @{{ founder.handle }}.
+
+{% if claim.gift_message %}
+Message:
+{{ claim.gift_message }}
+{% endif %}
+
+Claim your Founder property:
+{{ claim_url }}
+
+If you do not have a FANZ account yet, create one first and then return to this claim link.
+
+Your normal FANZ username does not need to match @{{ founder.handle }}.

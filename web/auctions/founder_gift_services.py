@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
@@ -23,6 +24,44 @@ def gift_token_hash(raw_token):
     return hashlib.sha256(
         raw_token.encode("utf-8")
     ).hexdigest()
+
+
+@transaction.atomic
+def reissue_founder_gift_claim_token(
+    *,
+    claim_id,
+):
+    claim = (
+        FounderGiftClaim.objects
+        .select_for_update()
+        .get(pk=claim_id)
+    )
+
+    if claim.status != FounderGiftClaim.STATUS_PENDING:
+        raise FounderGiftError(
+            "Only pending Founder gifts can be reissued."
+        )
+
+    raw_token = secrets.token_urlsafe(32)
+
+    claim.token_hash = gift_token_hash(
+        raw_token
+    )
+
+    claim.expires_at = (
+        timezone.now()
+        + timezone.timedelta(days=30)
+    )
+
+    claim.save(
+        update_fields=[
+            "token_hash",
+            "expires_at",
+            "updated_at",
+        ]
+    )
+
+    return claim, raw_token
 
 
 def send_founder_gift_claim_email(

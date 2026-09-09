@@ -3522,6 +3522,63 @@ class FounderGiftClaimServiceTests(TestCase):
             )
 
 
+    def test_pending_claim_token_can_be_reissued(self):
+        from .founder_gift_services import (
+            gift_token_hash,
+            reissue_founder_gift_claim_token,
+        )
+
+        old_hash = self.claim.token_hash
+        old_expiry = self.claim.expires_at
+
+        claim, raw_token = (
+            reissue_founder_gift_claim_token(
+                claim_id=self.claim.pk,
+            )
+        )
+
+        claim.refresh_from_db()
+
+        self.assertNotEqual(
+            claim.token_hash,
+            old_hash,
+        )
+
+        self.assertEqual(
+            claim.token_hash,
+            gift_token_hash(raw_token),
+        )
+
+        self.assertGreater(
+            claim.expires_at,
+            old_expiry,
+        )
+
+    def test_claimed_gift_token_cannot_be_reissued(self):
+        from .founder_gift_services import (
+            FounderGiftError,
+            reissue_founder_gift_claim_token,
+        )
+
+        self.claim.status = (
+            self.claim.STATUS_CLAIMED
+        )
+
+        self.claim.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            FounderGiftError
+        ):
+            reissue_founder_gift_claim_token(
+                claim_id=self.claim.pk,
+            )
+
+
 class FounderGiftClaimViewTests(TestCase):
     def setUp(self):
         from datetime import timedelta

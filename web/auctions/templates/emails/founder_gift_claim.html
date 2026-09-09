@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <body>
+    <h2>🎁 You received @{{ founder.handle }} on FANZ</h2>
+
+    {% if claim.recipient_name %}
+      <p>Hello {{ claim.recipient_name }},</p>
+    {% endif %}
+
+    <p>
+      <strong>{{ purchaser.username }}</strong>
+      sent you the Founder property
+      <strong>@{{ founder.handle }}</strong>.
+    </p>
+
+    {% if claim.gift_message %}
+      <blockquote>
+        {{ claim.gift_message }}
+      </blockquote>
+    {% endif %}
+
+    <p>
+      <a href="{{ claim_url }}">
+        Claim @{{ founder.handle }}
+      </a>
+    </p>
+
+    <p>
+      If you do not have a FANZ account yet,
+      create one first and then return to this claim link.
+    </p>
+
+    <p>
+      Your normal FANZ username does not need to
+      match @{{ founder.handle }}.
+    </p>
+  </body>
+</html>
