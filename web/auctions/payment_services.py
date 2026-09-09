@@ -36,10 +36,43 @@ def dispatch_payment_fulfillment(intent):
                 "Credit purchase has no CreditPackage."
             )
 
+        if (
+            intent.settlement_source
+            == PaymentIntent.SETTLEMENT_BTCPAY
+        ):
+            if not intent.btcpay_invoice_id:
+                raise PaymentFulfillmentError(
+                    "Credit purchase has no BTCPay invoice id."
+                )
+
+            external_id = (
+                f"btcpay:{intent.btcpay_invoice_id}"
+            )
+
+        elif (
+            intent.settlement_source
+            == PaymentIntent.SETTLEMENT_SUI
+        ):
+            digest = str(
+                intent.settlement_reference or ""
+            ).strip()
+
+            if not digest:
+                raise PaymentFulfillmentError(
+                    "Credit purchase has no SUI transaction digest."
+                )
+
+            external_id = f"sui:{digest}"
+
+        else:
+            raise PaymentFulfillmentError(
+                "Credit purchase has unsupported settlement source."
+            )
+
         process_credit_purchase(
             user=intent.user,
             package=intent.credit_package,
-            external_id=f"btcpay:{intent.btcpay_invoice_id}",
+            external_id=external_id,
         )
 
         return True

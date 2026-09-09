@@ -4286,6 +4286,111 @@ def public_profile(request, username):
         and request.user == profile_user
         )
 
+    is_credit_storefront = (
+        profile_user.username.lower() == "buycredits"
+    )
+
+    credit_storefront_packages = []
+
+    if is_credit_storefront:
+        from .models import CreditPackage
+
+        credit_storefront_packages = (
+            CreditPackage.objects
+            .filter(is_active=True)
+            .order_by("price_usd", "credits", "pk")
+        )
+
+    credit_sui_checkout = None
+
+    if (
+        is_credit_storefront
+        and request.user.is_authenticated
+    ):
+        from .models import PaymentIntent
+
+        sui_payment_intent_id = (
+            request.GET.get(
+                "sui_payment_intent"
+            )
+        )
+
+        if sui_payment_intent_id:
+            try:
+                sui_intent = (
+                    PaymentIntent.objects
+                    .select_related("credit_package")
+                    .get(
+                        pk=sui_payment_intent_id,
+                        user=request.user,
+                        purpose="credit_purchase",
+                        settlement_source=(
+                            PaymentIntent.SETTLEMENT_SUI
+                        ),
+                    )
+                )
+            except (
+                PaymentIntent.DoesNotExist,
+                ValueError,
+                TypeError,
+            ):
+                sui_intent = None
+
+            if sui_intent is not None:
+                metadata = (
+                    sui_intent.metadata or {}
+                )
+
+                try:
+                    required_mist = int(
+                        metadata.get(
+                            "sui_required_mist",
+                            "0",
+                        )
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    required_mist = 0
+
+                recipient_address = str(
+                    metadata.get(
+                        "sui_recipient_address",
+                        "",
+                    )
+                ).strip()
+
+                if (
+                    required_mist > 0
+                    and recipient_address
+                ):
+                    credit_sui_checkout = {
+                        "payment_intent_id":
+                            sui_intent.pk,
+                        "package":
+                            sui_intent.credit_package,
+                        "amount_sui":
+                            metadata.get(
+                                "sui_amount",
+                                "",
+                            ),
+                        "required_mist":
+                            required_mist,
+                        "recipient_address":
+                            recipient_address,
+                        "sui_usd_price":
+                            metadata.get(
+                                "sui_usd_price",
+                                "",
+                            ),
+                        "quote_expires_at":
+                            metadata.get(
+                                "sui_quote_expires_at",
+                                "",
+                            ),
+                    }
+
     return render(
         request,
         "auctions/public_profile.html",
@@ -4308,6 +4413,11 @@ def public_profile(request, username):
             "language": language,
             "display_bio": display_bio,
             "display_payment_notes": display_payment_notes,
+            "is_credit_storefront": is_credit_storefront,
+            "credit_storefront_packages":
+                credit_storefront_packages,
+            "credit_sui_checkout":
+                credit_sui_checkout,
         }
     )
 
@@ -5985,4 +6095,240 @@ def btcpay_webhook(request):
             "payment_intent_id": intent.pk,
             "status": intent.status,
         }
+    )
+
+
+@login_required
+@require_POST
+def buy_credit_package(request, package_id):
+    from .btcpay import BTCPayError, create_payment_intent_invoice
+    from .models import CreditPackage, PaymentIntent
+
+    package = get_object_or_404(
+        CreditPackage,
+        pk=package_id,
+        is_active=True,
+    )
+
+    payment_method = str(
+        request.POST.get("payment_method", "")
+    ).strip().lower()
+
+    if payment_method not in {
+        "btc",
+        "sui",
+        "doge",
+    }:
+        messages.error(
+            request,
+            "Unsupported payment method.",
+        )
+        return redirect(
+            "public_profile_root",
+            username="BuyCredits",
+        )
+
+    if payment_method == "sui":
+        from .sui_quote_services import (
+            SuiPaymentQuoteError,
+            freeze_sui_quote,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=request.user,
+            purpose="credit_purchase",
+            amount=package.price_usd,
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            credit_package=package,
+            metadata={
+                "payment_method": "sui",
+                "storefront": "buycredits",
+            },
+        )
+
+        try:
+            intent, _ = freeze_sui_quote(
+                payment_intent_id=intent.pk,
+            )
+        except SuiPaymentQuoteError:
+            messages.error(
+                request,
+                "Unable to prepare SUI checkout.",
+            )
+
+            return redirect(
+                "public_profile_root",
+                username="BuyCredits",
+            )
+
+        return redirect(
+            f"{reverse('public_profile_root', kwargs={'username': 'BuyCredits'})}"
+            f"?sui_payment_intent={intent.pk}"
+        )
+
+    intent = PaymentIntent.objects.create(
+        user=request.user,
+        purpose="credit_purchase",
+        amount=package.price_usd,
+        currency="USD",
+        settlement_source=(
+            PaymentIntent.SETTLEMENT_BTCPAY
+        ),
+        credit_package=package,
+        metadata={
+            "payment_method": payment_method,
+            "storefront": "buycredits",
+        },
+    )
+
+    try:
+        intent = create_payment_intent_invoice(
+            intent
+        )
+    except BTCPayError:
+        messages.error(
+            request,
+            "Unable to create crypto checkout.",
+        )
+
+        return redirect(
+            "public_profile_root",
+            username="BuyCredits",
+        )
+
+    if not intent.btcpay_checkout_link:
+        messages.error(
+            request,
+            "BTCPay checkout link was not returned.",
+        )
+
+        return redirect(
+            "public_profile_root",
+            username="BuyCredits",
+        )
+
+    return redirect(
+        intent.btcpay_checkout_link
+    )
+
+
+@login_required
+@require_POST
+def verify_credit_sui_payment(request):
+    from .models import PaymentIntent
+    from .payment_services import fulfill_payment_intent
+    from .sui_payment_services import (
+        SuiPaymentSettlementError,
+        settle_sui_payment,
+    )
+
+    payment_intent_id = request.POST.get(
+        "payment_intent_id"
+    )
+
+    tx_digest = str(
+        request.POST.get(
+            "tx_digest",
+            "",
+        )
+    ).strip()
+
+    try:
+        intent = (
+            PaymentIntent.objects
+            .select_related("credit_package")
+            .get(
+                pk=payment_intent_id,
+                user=request.user,
+                purpose="credit_purchase",
+                settlement_source=(
+                    PaymentIntent.SETTLEMENT_SUI
+                ),
+            )
+        )
+    except (
+        PaymentIntent.DoesNotExist,
+        ValueError,
+        TypeError,
+    ):
+        messages.error(
+            request,
+            "SUI credit checkout was not found.",
+        )
+
+        return redirect(
+            "public_profile_root",
+            username="BuyCredits",
+        )
+
+    metadata = intent.metadata or {}
+
+    recipient_address = str(
+        metadata.get(
+            "sui_recipient_address",
+            "",
+        )
+    ).strip()
+
+    try:
+        minimum_amount_mist = int(
+            metadata.get(
+                "sui_required_mist",
+                "0",
+            )
+        )
+    except (TypeError, ValueError):
+        minimum_amount_mist = 0
+
+    if (
+        not recipient_address
+        or minimum_amount_mist <= 0
+    ):
+        messages.error(
+            request,
+            "SUI payment quote is missing or invalid.",
+        )
+
+        return redirect(
+            "public_profile_root",
+            username="BuyCredits",
+        )
+
+    try:
+        intent, _ = settle_sui_payment(
+            payment_intent_id=intent.pk,
+            tx_digest=tx_digest,
+            recipient_address=recipient_address,
+            minimum_amount_mist=minimum_amount_mist,
+        )
+
+        fulfill_payment_intent(
+            intent.pk
+        )
+    except SuiPaymentSettlementError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect(
+            f"{reverse('public_profile_root', kwargs={'username': 'BuyCredits'})}"
+            f"?sui_payment_intent={intent.pk}"
+        )
+
+    messages.success(
+        request,
+        (
+            f"Payment verified. "
+            f"{intent.credit_package.credits:,} "
+            f"FANZ Credits added to your wallet."
+        ),
+    )
+
+    return redirect(
+        "public_profile_root",
+        username="BuyCredits",
     )

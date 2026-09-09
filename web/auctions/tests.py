@@ -243,6 +243,89 @@ class PaymentFulfillmentTests(TestCase):
         self.assertEqual(intent.status, "settled")
         self.assertIsNone(intent.fulfilled_at)
 
+    def test_credit_purchase_logs_incoming_wallet_credit(self):
+        from .models import WalletTransaction
+
+        intent = self.create_settled_credit_intent()
+
+        fulfill_payment_intent(
+            intent.pk
+        )
+
+        tx = WalletTransaction.objects.get(
+            receiver__user=self.user,
+            transaction_type="credit_purchase",
+        )
+
+        self.assertIsNone(
+            tx.sender
+        )
+
+        self.assertEqual(
+            tx.amount,
+            self.package.credits,
+        )
+
+        self.assertIn(
+            "package=Test Package",
+            tx.reference,
+        )
+
+    def test_sui_credit_purchase_uses_digest_external_id(self):
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference=(
+                "test-sui-credit-digest"
+            ),
+            credit_package=self.package,
+            paid_at=timezone.now(),
+            metadata={
+                "payment_method": "sui",
+            },
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertTrue(
+            created
+        )
+
+        self.assertEqual(
+            fulfilled.status,
+            "fulfilled",
+        )
+
+        purchase = CreditPurchase.objects.get(
+            external_id=(
+                "sui:test-sui-credit-digest"
+            )
+        )
+
+        self.assertEqual(
+            purchase.package,
+            self.package,
+        )
+
+        wallet = BidWallet.objects.get(
+            user=self.user
+        )
+
+        self.assertEqual(
+            wallet.credits,
+            100,
+        )
+
 
 class EconomyAssetModelTests(TestCase):
     def setUp(self):
@@ -9481,3 +9564,961 @@ class FeedPostContentRendererTests(SimpleTestCase):
 
         self.assertIn("affiliate=mia123", rendered)
         self.assertIn("campaign=summer", rendered)
+
+
+class BuyCreditsStorefrontProfileTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from .models import CreditPackage, UserProfile
+
+        self.store_user = User.objects.create_user(
+            username="BuyCredits",
+        )
+
+        store_profile, _ = UserProfile.objects.get_or_create(
+            user=self.store_user,
+        )
+        store_profile.is_official = True
+        store_profile.is_platform_account = True
+        store_profile.save(
+            update_fields=[
+                "is_official",
+                "is_platform_account",
+            ]
+        )
+
+        self.regular_user = User.objects.create_user(
+            username="mia",
+        )
+
+        UserProfile.objects.get_or_create(
+            user=self.regular_user,
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="Test Pack",
+            credits=500,
+            price_usd="20.00",
+            is_active=True,
+        )
+
+    def test_buycredits_profile_has_active_packages(self):
+        from django.urls import reverse
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "BuyCredits",
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            "Test Pack",
+        )
+
+        self.assertContains(
+            response,
+            "500",
+        )
+
+        packages = list(
+            response.context[
+                "credit_storefront_packages"
+            ]
+        )
+
+        self.assertEqual(
+            len(packages),
+            1,
+        )
+
+        from decimal import Decimal
+
+        self.assertEqual(
+            packages[0].price_usd,
+            Decimal("20.00"),
+        )
+
+    def test_ordinary_profile_has_no_credit_storefront(self):
+        from django.urls import reverse
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "mia",
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertNotContains(
+            response,
+            "Test Pack",
+        )
+
+    def test_inactive_package_is_not_displayed(self):
+        from django.urls import reverse
+        from .models import CreditPackage
+
+        CreditPackage.objects.create(
+            name="Hidden Pack",
+            credits=999,
+            price_usd="99.00",
+            is_active=False,
+        )
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "BuyCredits",
+                },
+            )
+        )
+
+        self.assertNotContains(
+            response,
+            "Hidden Pack",
+        )
+
+
+@override_settings(**BTCPAY_TEST_SETTINGS)
+class CreditPurchaseBTCPayRailTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="credit-rail-user",
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="Rail Test Pack",
+            credits=250,
+            price_usd="12.00",
+            is_active=True,
+        )
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_credit_purchase_btc_invoice_is_btc_only(
+        self,
+        create_invoice_mock,
+    ):
+        from .btcpay import create_payment_intent_invoice
+
+        create_invoice_mock.return_value = {
+            "id": "credit-btc-invoice",
+            "checkoutLink":
+                "https://pay.example.test/btc",
+        }
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            amount=self.package.price_usd,
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            credit_package=self.package,
+            metadata={
+                "payment_method": "btc",
+                "storefront": "buycredits",
+            },
+        )
+
+        returned = create_payment_intent_invoice(
+            intent
+        )
+
+        self.assertEqual(
+            returned.status,
+            "invoice_created",
+        )
+
+        kwargs = create_invoice_mock.call_args.kwargs
+
+        self.assertEqual(
+            kwargs["checkout"],
+            {
+                "paymentMethods": [
+                    "BTC-CHAIN",
+                ],
+            },
+        )
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_credit_purchase_doge_invoice_is_doge_only(
+        self,
+        create_invoice_mock,
+    ):
+        from .btcpay import create_payment_intent_invoice
+
+        create_invoice_mock.return_value = {
+            "id": "credit-doge-invoice",
+            "checkoutLink":
+                "https://pay.example.test/doge",
+        }
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            amount=self.package.price_usd,
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            credit_package=self.package,
+            metadata={
+                "payment_method": "doge",
+                "storefront": "buycredits",
+            },
+        )
+
+        create_payment_intent_invoice(
+            intent
+        )
+
+        kwargs = create_invoice_mock.call_args.kwargs
+
+        self.assertEqual(
+            kwargs["checkout"],
+            {
+                "paymentMethods": [
+                    "DOGE-CHAIN",
+                ],
+            },
+        )
+
+    @patch("auctions.btcpay.create_invoice")
+    def test_invalid_credit_purchase_btcpay_rail_fails_closed(
+        self,
+        create_invoice_mock,
+    ):
+        from .btcpay import (
+            BTCPayError,
+            create_payment_intent_invoice,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            amount=self.package.price_usd,
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            credit_package=self.package,
+            metadata={
+                "payment_method": "ltc",
+                "storefront": "buycredits",
+            },
+        )
+
+        with self.assertRaises(BTCPayError):
+            create_payment_intent_invoice(
+                intent
+            )
+
+        create_invoice_mock.assert_not_called()
+
+
+@override_settings(**BTCPAY_TEST_SETTINGS)
+class BuyCreditPackageViewTests(TestCase):
+    def setUp(self):
+        from django.urls import reverse
+
+        self.reverse = reverse
+        self.user = User.objects.create_user(
+            username="credit-buyer",
+            password="test-password",
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="Popular",
+            credits=250,
+            price_usd="12.00",
+            is_active=True,
+        )
+
+        self.client.force_login(self.user)
+
+    @patch("auctions.btcpay.create_payment_intent_invoice")
+    def test_btc_creates_server_priced_credit_intent(
+        self,
+        invoice_mock,
+    ):
+        invoice_mock.side_effect = (
+            lambda intent: self._invoice(intent, "btc")
+        )
+
+        response = self.client.post(
+            self.reverse(
+                "buy_credit_package",
+                kwargs={
+                    "package_id": self.package.pk,
+                },
+            ),
+            {
+                "payment_method": "btc",
+                "amount": "0.01",
+            },
+        )
+
+        intent = PaymentIntent.objects.get()
+
+        from decimal import Decimal
+
+        self.assertEqual(
+            intent.amount,
+            Decimal("12.00"),
+        )
+
+        self.assertEqual(
+            intent.purpose,
+            "credit_purchase",
+        )
+
+        self.assertEqual(
+            intent.credit_package,
+            self.package,
+        )
+
+        self.assertEqual(
+            intent.metadata["payment_method"],
+            "btc",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+    def test_sui_creates_sui_intent(self):
+        response = self.client.post(
+            self.reverse(
+                "buy_credit_package",
+                kwargs={
+                    "package_id": self.package.pk,
+                },
+            ),
+            {
+                "payment_method": "sui",
+            },
+        )
+
+        intent = PaymentIntent.objects.get()
+
+        self.assertEqual(
+            intent.settlement_source,
+            PaymentIntent.SETTLEMENT_SUI,
+        )
+
+        self.assertEqual(
+            intent.metadata["payment_method"],
+            "sui",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+    def test_inactive_package_cannot_be_bought(self):
+        self.package.is_active = False
+        self.package.save(
+            update_fields=["is_active"]
+        )
+
+        response = self.client.post(
+            self.reverse(
+                "buy_credit_package",
+                kwargs={
+                    "package_id": self.package.pk,
+                },
+            ),
+            {
+                "payment_method": "btc",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            404,
+        )
+
+    def test_invalid_payment_method_creates_no_intent(self):
+        response = self.client.post(
+            self.reverse(
+                "buy_credit_package",
+                kwargs={
+                    "package_id": self.package.pk,
+                },
+            ),
+            {
+                "payment_method": "ltc",
+            },
+        )
+
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            0,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+    def _invoice(self, intent, method):
+        intent.btcpay_invoice_id = (
+            f"test-{method}-invoice"
+        )
+        intent.btcpay_checkout_link = (
+            f"https://pay.example.test/{method}"
+        )
+        intent.status = "invoice_created"
+        intent.save(
+            update_fields=[
+                "btcpay_invoice_id",
+                "btcpay_checkout_link",
+                "status",
+            ]
+        )
+        return intent
+
+
+class CreditPurchaseSuiQuoteTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="credit-sui-quote-user",
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="SUI Quote Pack",
+            credits=250,
+            price_usd="12.00",
+            is_active=True,
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="created",
+            amount="12.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            credit_package=self.package,
+            metadata={
+                "payment_method": "sui",
+                "storefront": "buycredits",
+            },
+        )
+
+    @patch(
+        "auctions.sui_quote_services.quote_sui_payment"
+    )
+    def test_credit_purchase_gets_frozen_sui_quote(
+        self,
+        quote_mock,
+    ):
+        from .sui_quote_services import freeze_sui_quote
+
+        recipient = "0x" + "7" * 64
+
+        quote_mock.return_value = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address": recipient,
+                "amount_usd": "12.00",
+                "sui_usd_price": "1.20",
+                "amount_mist": "10000000000",
+                "amount_sui": "10.000000000",
+                "quoted_at":
+                    "2026-09-09T21:00:00Z",
+                "quote_expires_at":
+                    "2026-09-09T21:15:00Z",
+            },
+        }
+
+        intent, created = freeze_sui_quote(
+            payment_intent_id=self.intent.pk,
+        )
+
+        self.assertTrue(created)
+
+        intent.refresh_from_db()
+
+        self.assertEqual(
+            intent.metadata["sui_recipient_address"],
+            recipient,
+        )
+
+        self.assertEqual(
+            intent.metadata["sui_required_mist"],
+            "10000000000",
+        )
+
+        quote_mock.assert_called_once_with(
+            amount_usd=intent.amount,
+        )
+
+    def test_non_sui_method_fails_closed(self):
+        from .sui_quote_services import (
+            SuiPaymentQuoteError,
+            freeze_sui_quote,
+        )
+
+        self.intent.metadata = {
+            "payment_method": "btc",
+        }
+        self.intent.save(
+            update_fields=["metadata"]
+        )
+
+        with self.assertRaises(
+            SuiPaymentQuoteError
+        ):
+            freeze_sui_quote(
+                payment_intent_id=self.intent.pk,
+            )
+
+
+class CreditPurchaseSuiSettlementTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+
+        self.user = User.objects.create_user(
+            username="credit-sui-settle-user",
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="SUI Settle Pack",
+            credits=250,
+            price_usd="12.00",
+            is_active=True,
+        )
+
+        self.recipient = "0x" + "8" * 64
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="created",
+            amount="12.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            credit_package=self.package,
+            metadata={
+                "payment_method": "sui",
+                "storefront": "buycredits",
+                "sui_network": "mainnet",
+                "sui_recipient_address":
+                    self.recipient,
+                "sui_required_mist":
+                    "10000000000",
+                "sui_amount":
+                    "10.000000000",
+                "sui_quote_expires_at":
+                    (
+                        timezone.now()
+                        + timedelta(minutes=15)
+                    ).isoformat(),
+            },
+        )
+
+    @patch(
+        "auctions.sui_payment_services.verify_sui_payment"
+    )
+    def test_credit_purchase_sui_settles(
+        self,
+        verify_mock,
+    ):
+        from .sui_payment_services import (
+            settle_sui_payment,
+        )
+
+        verify_mock.return_value = {
+            "verification": {
+                "network": "mainnet",
+                "tx_digest": "credit-sui-digest",
+                "recipient_address":
+                    self.recipient,
+                "success": True,
+                "sufficient": True,
+                "received_mist":
+                    "10000000000",
+            },
+        }
+
+        intent, settled_now = settle_sui_payment(
+            payment_intent_id=self.intent.pk,
+            tx_digest="credit-sui-digest",
+            recipient_address=self.recipient,
+            minimum_amount_mist=10000000000,
+        )
+
+        self.assertTrue(settled_now)
+        self.assertEqual(
+            intent.status,
+            "settled",
+        )
+        self.assertEqual(
+            intent.settlement_reference,
+            "credit-sui-digest",
+        )
+
+    def test_browser_cannot_change_frozen_amount(self):
+        from .sui_payment_services import (
+            SuiPaymentSettlementError,
+            settle_sui_payment,
+        )
+
+        with self.assertRaises(
+            SuiPaymentSettlementError
+        ):
+            settle_sui_payment(
+                payment_intent_id=self.intent.pk,
+                tx_digest="credit-sui-digest",
+                recipient_address=self.recipient,
+                minimum_amount_mist=1,
+            )
+
+    def test_browser_cannot_change_frozen_recipient(self):
+        from .sui_payment_services import (
+            SuiPaymentSettlementError,
+            settle_sui_payment,
+        )
+
+        with self.assertRaises(
+            SuiPaymentSettlementError
+        ):
+            settle_sui_payment(
+                payment_intent_id=self.intent.pk,
+                tx_digest="credit-sui-digest",
+                recipient_address=(
+                    "0x" + "9" * 64
+                ),
+                minimum_amount_mist=10000000000,
+            )
+
+
+class BuyCreditsSuiFlowTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .models import CreditPackage, PaymentIntent
+
+        self.user = User.objects.create_user(
+            username="buycredits-sui-user",
+            password="test-password",
+        )
+
+        self.other_user = User.objects.create_user(
+            username="buycredits-sui-other",
+            password="test-password",
+        )
+
+        self.store_user = User.objects.create_user(
+            username="BuyCredits",
+        )
+
+        from .models import UserProfile
+
+        store_profile, _ = UserProfile.objects.get_or_create(
+            user=self.store_user,
+        )
+
+        store_profile.display_name = "Buy FANZ Credits"
+        store_profile.is_official = True
+        store_profile.is_verified = True
+        store_profile.is_platform_account = True
+        store_profile.save(
+            update_fields=[
+                "display_name",
+                "is_official",
+                "is_verified",
+                "is_platform_account",
+            ]
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="Popular",
+            credits=250,
+            price_usd="12.00",
+            is_active=True,
+        )
+
+        self.recipient = (
+            "0x" + "a" * 64
+        )
+
+        self.intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="created",
+            amount="12.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            credit_package=self.package,
+            metadata={
+                "payment_method": "sui",
+                "storefront": "buycredits",
+                "sui_network": "mainnet",
+                "sui_recipient_address":
+                    self.recipient,
+                "sui_required_mist":
+                    "10000000000",
+                "sui_amount":
+                    "10.000000000",
+                "sui_usd_price":
+                    "1.20",
+                "sui_quote_expires_at":
+                    (
+                        timezone.now()
+                        + timedelta(minutes=15)
+                    ).isoformat(),
+            },
+        )
+
+    def test_owner_can_load_sui_checkout(self):
+        from django.urls import reverse
+
+        self.client.force_login(
+            self.user
+        )
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "BuyCredits",
+                },
+            ),
+            {
+                "sui_payment_intent":
+                    self.intent.pk,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        checkout = response.context[
+            "credit_sui_checkout"
+        ]
+
+        self.assertIsNotNone(
+            checkout
+        )
+
+        self.assertEqual(
+            checkout["payment_intent_id"],
+            self.intent.pk,
+        )
+
+        self.assertEqual(
+            checkout["recipient_address"],
+            self.recipient,
+        )
+
+        self.assertEqual(
+            checkout["required_mist"],
+            10000000000,
+        )
+
+    def test_other_user_cannot_load_sui_checkout(self):
+        from django.urls import reverse
+
+        self.client.force_login(
+            self.other_user
+        )
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "BuyCredits",
+                },
+            ),
+            {
+                "sui_payment_intent":
+                    self.intent.pk,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertIsNone(
+            response.context[
+                "credit_sui_checkout"
+            ]
+        )
+
+    @patch(
+        "auctions.sui_payment_services."
+        "verify_sui_payment"
+    )
+    def test_verify_uses_frozen_quote_values(
+        self,
+        verify_mock,
+    ):
+        from django.urls import reverse
+
+        verify_mock.return_value = {
+            "verification": {
+                "network": "mainnet",
+                "tx_digest":
+                    "credit-flow-digest",
+                "recipient_address":
+                    self.recipient,
+                "success": True,
+                "sufficient": True,
+                "received_mist":
+                    "10000000000",
+            },
+        }
+
+        self.client.force_login(
+            self.user
+        )
+
+        response = self.client.post(
+            reverse(
+                "verify_credit_sui_payment"
+            ),
+            {
+                "payment_intent_id":
+                    self.intent.pk,
+                "tx_digest":
+                    "credit-flow-digest",
+
+                # Deliberately malicious browser values.
+                "recipient_address":
+                    "0x" + "9" * 64,
+                "minimum_amount_mist":
+                    "1",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        verify_mock.assert_called_once_with(
+            tx_digest="credit-flow-digest",
+            recipient_address=self.recipient,
+            minimum_amount_mist=10000000000,
+        )
+
+    @patch(
+        "auctions.payment_services."
+        "fulfill_payment_intent"
+    )
+    @patch(
+        "auctions.sui_payment_services."
+        "settle_sui_payment"
+    )
+    def test_successful_verification_fulfills_credit_intent(
+        self,
+        settle_mock,
+        fulfill_mock,
+    ):
+        from django.urls import reverse
+
+        self.client.force_login(
+            self.user
+        )
+
+        settle_mock.return_value = (
+            self.intent,
+            True,
+        )
+
+        response = self.client.post(
+            reverse(
+                "verify_credit_sui_payment"
+            ),
+            {
+                "payment_intent_id":
+                    self.intent.pk,
+                "tx_digest":
+                    "credit-success-digest",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        settle_mock.assert_called_once_with(
+            payment_intent_id=self.intent.pk,
+            tx_digest="credit-success-digest",
+            recipient_address=self.recipient,
+            minimum_amount_mist=10000000000,
+        )
+
+        fulfill_mock.assert_called_once_with(
+            self.intent.pk
+        )
+
+    def test_other_user_cannot_verify_intent(self):
+        from django.urls import reverse
+
+        self.client.force_login(
+            self.other_user
+        )
+
+        response = self.client.post(
+            reverse(
+                "verify_credit_sui_payment"
+            ),
+            {
+                "payment_intent_id":
+                    self.intent.pk,
+                "tx_digest":
+                    "stolen-intent-digest",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.intent.refresh_from_db()
+
+        self.assertEqual(
+            self.intent.status,
+            "created",
+        )
+
+        self.assertEqual(
+            self.intent.settlement_reference,
+            "",
+        )

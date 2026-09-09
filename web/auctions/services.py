@@ -883,12 +883,15 @@ def process_credit_purchase(*, user, package, external_id, source_node=None):
     wallet.save()
 
     WalletTransaction.objects.create(
-        sender=wallet,
+        sender=None,
         receiver=wallet,
         amount=package.credits,
-        transaction_type="purchase",
-        reference=f"Purchase:{purchase.id}",
-     )
+        transaction_type="credit_purchase",
+        reference=(
+            f"Credit Purchase:{purchase.id}; "
+            f"package={package.name}"
+        ),
+    )
 
     commission_amount = calculate_node_commission(source_node, package)
 

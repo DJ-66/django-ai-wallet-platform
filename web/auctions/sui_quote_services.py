@@ -42,29 +42,7 @@ def _parse_quote_datetime(value):
     return parsed
 
 
-@transaction.atomic
-def freeze_founder_sui_quote(
-    *,
-    payment_intent_id,
-):
-    """
-    Obtain and freeze the authoritative SUI payment quote
-    for one Founder PaymentIntent.
-
-    The browser never chooses the recipient or SUI amount.
-    """
-
-    intent = (
-        PaymentIntent.objects
-        .select_for_update()
-        .get(pk=payment_intent_id)
-    )
-
-    if intent.purpose != "founder_purchase":
-        raise SuiPaymentQuoteError(
-            "PaymentIntent is not a Founder purchase."
-        )
-
+def _validate_sui_intent(intent):
     if (
         intent.settlement_source
         != PaymentIntent.SETTLEMENT_SUI
@@ -74,30 +52,29 @@ def freeze_founder_sui_quote(
             "for SUI settlement."
         )
 
-    try:
-        item = FounderCartItem.objects.get(
-            payment_intent=intent
+    method = str(
+        (intent.metadata or {}).get(
+            "payment_method",
+            "",
         )
-    except FounderCartItem.DoesNotExist as exc:
-        raise SuiPaymentQuoteError(
-            "SUI Founder payment has no cart item."
-        ) from exc
+    ).strip().lower()
 
-    if (
-        item.payment_method
-        != FounderCartItem.PAYMENT_SUI
-    ):
+    if method != "sui":
         raise SuiPaymentQuoteError(
-            "Founder reservation is not "
-            "a SUI purchase."
+            "PaymentIntent is not configured "
+            "for the SUI payment method."
         )
+
+
+def _freeze_locked_sui_quote(intent):
+    _validate_sui_intent(intent)
 
     metadata = dict(
         intent.metadata or {}
     )
 
-    # Reuse an already-frozen quote. Never silently
-    # change an amount while the buyer may be paying it.
+    # Never silently reprice a quote while a buyer may
+    # already be paying it.
     if (
         metadata.get("sui_required_mist")
         and metadata.get(
@@ -226,3 +203,68 @@ def freeze_founder_sui_quote(
     )
 
     return intent, True
+
+
+@transaction.atomic
+def freeze_sui_quote(
+    *,
+    payment_intent_id,
+):
+    """
+    Freeze the authoritative mainnet SUI quote for a
+    generic FANZ PaymentIntent.
+
+    The browser never chooses the recipient or amount.
+    """
+    intent = (
+        PaymentIntent.objects
+        .select_for_update()
+        .get(pk=payment_intent_id)
+    )
+
+    return _freeze_locked_sui_quote(
+        intent
+    )
+
+
+@transaction.atomic
+def freeze_founder_sui_quote(
+    *,
+    payment_intent_id,
+):
+    """
+    Founder compatibility wrapper around the generic
+    FANZ SUI quote primitive.
+    """
+    intent = (
+        PaymentIntent.objects
+        .select_for_update()
+        .get(pk=payment_intent_id)
+    )
+
+    if intent.purpose != "founder_purchase":
+        raise SuiPaymentQuoteError(
+            "PaymentIntent is not a Founder purchase."
+        )
+
+    try:
+        item = FounderCartItem.objects.get(
+            payment_intent=intent
+        )
+    except FounderCartItem.DoesNotExist as exc:
+        raise SuiPaymentQuoteError(
+            "SUI Founder payment has no cart item."
+        ) from exc
+
+    if (
+        item.payment_method
+        != FounderCartItem.PAYMENT_SUI
+    ):
+        raise SuiPaymentQuoteError(
+            "Founder reservation is not "
+            "a SUI purchase."
+        )
+
+    return _freeze_locked_sui_quote(
+        intent
+    )

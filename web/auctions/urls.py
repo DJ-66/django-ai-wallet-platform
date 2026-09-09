@@ -24,6 +24,18 @@ urlpatterns = [
     path("activate/<uidb64>/<token>/", views.activate_view, name="activate"),
     path("wallet/pay/<uuid:wallet_code>/", pay_user, name="pay_user"),
     path("wallet/", wallet_view, name="wallet"),
+
+    path(
+        "credits/packages/<int:package_id>/buy/",
+        views.buy_credit_package,
+        name="buy_credit_package",
+    ),
+
+    path(
+        "credits/sui/verify/",
+        views.verify_credit_sui_payment,
+        name="verify_credit_sui_payment",
+    ),
     path("pay/<str:pay_code>/", views.pay_user_short, name="pay_user_short"),
     path("node/", views.node_dashboard, name="node_dashboard"),
     path("ai/", views_ai.companion_list, name="companion_list"),

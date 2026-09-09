@@ -371,6 +371,7 @@ class WalletTransaction(models.Model):
         ("tip", "Tip"),
         ("unlock", "Premium Unlock"),
         ("purchase", "Purchase"),
+        ("credit_purchase", "Credit Purchase"),
         ("commission", "Commission"),
         ("bonus", "Bonus"),
         ("game", "Game"),

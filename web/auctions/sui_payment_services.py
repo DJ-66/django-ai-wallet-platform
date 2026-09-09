@@ -19,34 +19,7 @@ class SuiPaymentSettlementError(RuntimeError):
     pass
 
 
-@transaction.atomic
-def settle_founder_sui_payment(
-    *,
-    payment_intent_id,
-    tx_digest,
-    recipient_address,
-    minimum_amount_mist,
-):
-    """
-    Verify one mainnet SUI payment and settle its
-    Founder PaymentIntent.
-
-    Verification is delegated to the FANZ Sui service.
-    Django accepts settlement only when the returned
-    transaction exactly matches this request.
-    """
-
-    intent = (
-        PaymentIntent.objects
-        .select_for_update()
-        .get(pk=payment_intent_id)
-    )
-
-    if intent.purpose != "founder_purchase":
-        raise SuiPaymentSettlementError(
-            "PaymentIntent is not a Founder purchase."
-        )
-
+def _validate_sui_intent(intent):
     if (
         intent.settlement_source
         != PaymentIntent.SETTLEMENT_SUI
@@ -56,35 +29,51 @@ def settle_founder_sui_payment(
             "for SUI settlement."
         )
 
-    try:
-        item = FounderCartItem.objects.get(
-            payment_intent=intent
+    method = str(
+        (intent.metadata or {}).get(
+            "payment_method",
+            "",
         )
-    except FounderCartItem.DoesNotExist as exc:
-        raise SuiPaymentSettlementError(
-            "SUI Founder payment has no cart item."
-        ) from exc
+    ).strip().lower()
 
-    if (
-        item.payment_method
-        != FounderCartItem.PAYMENT_SUI
-    ):
+    if method != "sui":
         raise SuiPaymentSettlementError(
-            "Founder reservation is not a SUI purchase."
+            "PaymentIntent is not configured "
+            "for the SUI payment method."
         )
+
+
+def _settle_locked_sui_payment(
+    intent,
+    *,
+    tx_digest,
+    recipient_address,
+    minimum_amount_mist,
+):
+    _validate_sui_intent(intent)
 
     digest = str(tx_digest or "").strip()
     recipient = str(
         recipient_address or ""
     ).strip().lower()
 
-    minimum_mist = int(
-        minimum_amount_mist
-    )
+    try:
+        minimum_mist = int(
+            minimum_amount_mist
+        )
+    except (TypeError, ValueError) as exc:
+        raise SuiPaymentSettlementError(
+            "SUI payment amount is invalid."
+        ) from exc
 
     if not digest:
         raise SuiPaymentSettlementError(
             "SUI transaction digest is required."
+        )
+
+    if not recipient:
+        raise SuiPaymentSettlementError(
+            "SUI payment recipient is required."
         )
 
     if minimum_mist <= 0:
@@ -106,6 +95,37 @@ def settle_founder_sui_payment(
         return intent, False
 
     metadata = intent.metadata or {}
+
+    frozen_recipient = str(
+        metadata.get(
+            "sui_recipient_address",
+            "",
+        )
+    ).strip().lower()
+
+    try:
+        frozen_minimum_mist = int(
+            metadata.get(
+                "sui_required_mist",
+                "0",
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        raise SuiPaymentSettlementError(
+            "SUI payment quote is invalid."
+        ) from exc
+
+    if recipient != frozen_recipient:
+        raise SuiPaymentSettlementError(
+            "SUI payment recipient does not match "
+            "the frozen quote."
+        )
+
+    if minimum_mist != frozen_minimum_mist:
+        raise SuiPaymentSettlementError(
+            "SUI payment amount does not match "
+            "the frozen quote."
+        )
 
     try:
         expires_at = _parse_quote_datetime(
@@ -220,3 +240,70 @@ def settle_founder_sui_payment(
     )
 
     return intent, True
+
+
+@transaction.atomic
+def settle_sui_payment(
+    *,
+    payment_intent_id,
+    tx_digest,
+    recipient_address,
+    minimum_amount_mist,
+):
+    intent = (
+        PaymentIntent.objects
+        .select_for_update()
+        .get(pk=payment_intent_id)
+    )
+
+    return _settle_locked_sui_payment(
+        intent,
+        tx_digest=tx_digest,
+        recipient_address=recipient_address,
+        minimum_amount_mist=minimum_amount_mist,
+    )
+
+
+@transaction.atomic
+def settle_founder_sui_payment(
+    *,
+    payment_intent_id,
+    tx_digest,
+    recipient_address,
+    minimum_amount_mist,
+):
+    intent = (
+        PaymentIntent.objects
+        .select_for_update()
+        .get(pk=payment_intent_id)
+    )
+
+    if intent.purpose != "founder_purchase":
+        raise SuiPaymentSettlementError(
+            "PaymentIntent is not a Founder purchase."
+        )
+
+    try:
+        item = FounderCartItem.objects.get(
+            payment_intent=intent
+        )
+    except FounderCartItem.DoesNotExist as exc:
+        raise SuiPaymentSettlementError(
+            "SUI Founder payment has no cart item."
+        ) from exc
+
+    if (
+        item.payment_method
+        != FounderCartItem.PAYMENT_SUI
+    ):
+        raise SuiPaymentSettlementError(
+            "Founder reservation is not "
+            "a SUI purchase."
+        )
+
+    return _settle_locked_sui_payment(
+        intent,
+        tx_digest=tx_digest,
+        recipient_address=recipient_address,
+        minimum_amount_mist=minimum_amount_mist,
+    )

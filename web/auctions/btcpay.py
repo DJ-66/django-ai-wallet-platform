@@ -156,7 +156,7 @@ def create_payment_intent_invoice(payment_intent):
 
         checkout = None
 
-        if locked.purpose == "founder_purchase":
+        if funding_method:
             payment_method_id = (
                 expected_btcpay_payment_method_id(
                     locked

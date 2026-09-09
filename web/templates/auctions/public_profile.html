@@ -304,6 +304,187 @@
 
     </div>
 
+    {% if is_credit_storefront %}
+        <section class="profile-feed-section buy-credits-storefront">
+            <div class="featured-post-card">
+                <div class="featured-post-header">
+                    <h2>💰 {% trans "Buy FANZ Credits" %}</h2>
+                </div>
+
+                <div class="featured-post-body">
+                    <p>
+                        {% trans "Choose a FANZ Credit package and pay securely with BTC, SUI, or DOGE." %}
+                    </p>
+
+                    <div class="credit-package-grid">
+                        {% for package in credit_storefront_packages %}
+                            <article class="buy-credits-card credit-package-card">
+                                <span class="seller-badge seller-label">
+                                    {% trans "FANZ Credit Pack" %}
+                                </span>
+
+                                <h3>{{ package.name }}</h3>
+
+                                <p>
+                                    <strong>
+                                        {{ package.credits }}
+                                        {% trans "FANZ Credits" %}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    ${{ package.price_usd|floatformat:2 }} USD
+                                </p>
+
+                                <p>
+                                    ₿ BTC · SUI · Ð DOGE
+                                </p>
+
+                                {% if request.user.is_authenticated %}
+                                    <div class="credit-package-rails">
+                                        <form
+                                            method="post"
+                                            action="{% url 'buy_credit_package' package.pk %}"
+                                            class="prevent-double-submit"
+                                        >
+                                            {% csrf_token %}
+                                            <input
+                                                type="hidden"
+                                                name="payment_method"
+                                                value="btc"
+                                            >
+                                            <button
+                                                type="submit"
+                                                class="auth-primary-btn"
+                                            >
+                                                ₿ BTC
+                                            </button>
+                                        </form>
+
+                                        <form
+                                            method="post"
+                                            action="{% url 'buy_credit_package' package.pk %}"
+                                            class="prevent-double-submit"
+                                        >
+                                            {% csrf_token %}
+                                            <input
+                                                type="hidden"
+                                                name="payment_method"
+                                                value="sui"
+                                            >
+                                            <button
+                                                type="submit"
+                                                class="auth-primary-btn"
+                                            >
+                                                SUI
+                                            </button>
+                                        </form>
+
+                                        <form
+                                            method="post"
+                                            action="{% url 'buy_credit_package' package.pk %}"
+                                            class="prevent-double-submit"
+                                        >
+                                            {% csrf_token %}
+                                            <input
+                                                type="hidden"
+                                                name="payment_method"
+                                                value="doge"
+                                            >
+                                            <button
+                                                type="submit"
+                                                class="auth-primary-btn"
+                                            >
+                                                Ð DOGE
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <a
+                                        href="{% url 'account_login' %}?next={% url 'public_profile_root' 'BuyCredits' %}"
+                                        class="auth-primary-btn"
+                                    >
+                                        {% trans "Login to Buy" %}
+                                    </a>
+                                {% endif %}
+                            </article>
+                        {% empty %}
+                            <p>
+                                {% trans "No FANZ Credit packages are currently available." %}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    {% if credit_sui_checkout %}
+                        <div class="featured-post-card credit-sui-checkout">
+                            <h3>💧 {% trans "SUI Checkout" %}</h3>
+
+                            <p>
+                                <strong>{{ credit_sui_checkout.package.name }}</strong>
+                                ·
+                                {{ credit_sui_checkout.package.credits }}
+                                {% trans "FANZ Credits" %}
+                            </p>
+
+                            <p>
+                                {% trans "Amount" %}:
+                                <strong>{{ credit_sui_checkout.amount_sui }} SUI</strong>
+                            </p>
+
+                            <p style="overflow-wrap:anywhere; word-break:break-all;">
+                                {% trans "Send to" %}:
+                                <strong>{{ credit_sui_checkout.recipient_address }}</strong>
+                            </p>
+
+                            <p>
+                                {% trans "Quoted SUI / USD" %}:
+                                {{ credit_sui_checkout.sui_usd_price }}
+                            </p>
+
+                            <p>
+                                {% trans "Quote expires" %}:
+                                {{ credit_sui_checkout.quote_expires_at }}
+                            </p>
+
+                            <form
+                                method="post"
+                                action="{% url 'verify_credit_sui_payment' %}"
+                                id="credit-sui-payment-form"
+                            >
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="payment_intent_id"
+                                    value="{{ credit_sui_checkout.payment_intent_id }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    id="credit-sui-tx-digest"
+                                    name="tx_digest"
+                                    value=""
+                                >
+
+                                <button
+                                    type="button"
+                                    id="credit-sui-wallet-pay"
+                                    class="auth-primary-btn"
+                                    data-recipient-address="{{ credit_sui_checkout.recipient_address }}"
+                                    data-required-mist="{{ credit_sui_checkout.required_mist }}"
+                                >
+                                    💧 {% trans "Pay with Sui Wallet" %}
+                                </button>
+
+                                <p id="credit-sui-wallet-status"></p>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
     <div class="profile-feed-section">
 
 <!-- 1st loop  here  -->
@@ -774,5 +955,126 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 </script>
+
+<script id="credit-sui-wallet-handler">
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    const button =
+      document.getElementById(
+        "credit-sui-wallet-pay"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const status =
+      document.getElementById(
+        "credit-sui-wallet-status"
+      );
+
+    const digestInput =
+      document.getElementById(
+        "credit-sui-tx-digest"
+      );
+
+    const verifyForm =
+      document.getElementById(
+        "credit-sui-payment-form"
+      );
+
+    button.addEventListener(
+      "click",
+      async function () {
+        const originalText =
+          button.textContent;
+
+        try {
+          button.disabled = true;
+
+          if (status) {
+            status.textContent =
+              "Connecting to Sui wallet…";
+          }
+
+          if (!window.FANZSuiWallet) {
+            throw new Error(
+              "Sui wallet bridge is not loaded."
+            );
+          }
+
+          const recipientAddress =
+            button.dataset.recipientAddress || "";
+
+          const amountMist =
+            button.dataset.requiredMist || "";
+
+          if (!recipientAddress) {
+            throw new Error(
+              "SUI payment recipient is missing."
+            );
+          }
+
+          if (!amountMist) {
+            throw new Error(
+              "SUI payment amount is missing."
+            );
+          }
+
+          if (status) {
+            status.textContent =
+              "Approve the SUI payment in your wallet…";
+          }
+
+          const result =
+            await window.FANZSuiWallet.paySui({
+              recipientAddress,
+              amountMist,
+            });
+
+          if (!result?.digest) {
+            throw new Error(
+              "Wallet returned no transaction digest."
+            );
+          }
+
+          digestInput.value =
+            result.digest;
+
+          if (status) {
+            status.textContent =
+              "Payment published. FANZ is verifying it…";
+          }
+
+          verifyForm.submit();
+
+        } catch (error) {
+          console.error(
+            "[FANZ Credit Sui Payment]",
+            error
+          );
+
+          if (status) {
+            status.textContent =
+              error instanceof Error
+                ? error.message
+                : "Unable to complete SUI payment.";
+          }
+
+          button.disabled = false;
+          button.textContent =
+            originalText;
+        }
+      }
+    );
+  }
+);
+</script>
+
+<script
+  type="module"
+  src="{% static 'js/fanz-sui-wallet.js' %}?v=8"
+></script>
 
 {% endblock %}

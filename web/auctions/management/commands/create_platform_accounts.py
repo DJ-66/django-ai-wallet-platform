@@ -6,6 +6,7 @@ from auctions.models import UserProfile
 
 PLATFORM_ACCOUNTS = [
     ("Fanz", "FANZ"),
+    ("BuyCredits", "Buy FANZ Credits"),
     ("News", "FANZ News"),
     ("AI", "FANZ AI"),
     ("Yoga", "FANZ Yoga"),

@@ -72,6 +72,14 @@
         <div class="activity-type">💰 Referral Commission</div>
         <div class="activity-amount positive">+{{ tx.amount }} credits</div>
 
+      {% elif tx.transaction_type == "credit_purchase" %}
+        <div class="activity-direction received">Received ←</div>
+        <div class="activity-type">💰 {% trans "Credit Purchase" %}</div>
+        <div class="activity-amount positive">
+          +{{ tx.amount|floatformat:0 }} credits
+        </div>
+        <div class="activity-reference">{{ tx.reference }}</div>
+
       {% elif tx.transaction_type == "purchase" %}
         <div class="activity-direction sent">Spent →</div>
         <div class="activity-type">🛒 Purchase</div>
