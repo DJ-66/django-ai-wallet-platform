@@ -6818,44 +6818,89 @@ class FounderSuiVerifyViewTests(TestCase):
 
 
 class AuthorizedFanzSellerPolicyTests(TestCase):
-    def test_dj_is_authorized_fanz_seller(self):
+    def _user(
+        self,
+        username,
+        *,
+        is_platform_account=False,
+    ):
         from django.contrib.auth.models import User
-        from .payment_policy import seller_is_platform
+        from .models import UserProfile
 
-        self.assertTrue(
-            seller_is_platform(
-                User(username="DJ")
-            )
+        user = User.objects.create_user(
+            username=username,
         )
 
-    def test_platform_is_authorized_fanz_seller(self):
-        from django.contrib.auth.models import User
-        from .payment_policy import seller_is_platform
-
-        self.assertTrue(
-            seller_is_platform(
-                User(username="platform")
-            )
+        profile, _ = UserProfile.objects.get_or_create(
+            user=user,
         )
 
-    def test_authorized_sellers_are_case_insensitive(self):
-        from django.contrib.auth.models import User
+        profile.is_platform_account = is_platform_account
+        profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
+
+        return user
+
+    def test_platform_profile_is_authorized_fanz_seller(self):
         from .payment_policy import seller_is_platform
 
+        user = self._user(
+            "BuyCredits",
+            is_platform_account=True,
+        )
+
         self.assertTrue(
-            seller_is_platform(
-                User(username="dj")
-            )
+            seller_is_platform(user)
+        )
+
+    def test_username_alone_does_not_grant_platform_authority(self):
+        from .payment_policy import seller_is_platform
+
+        user = self._user(
+            "platform",
+            is_platform_account=False,
+        )
+
+        self.assertFalse(
+            seller_is_platform(user)
+        )
+
+    def test_dj_requires_platform_profile_flag(self):
+        from .payment_policy import seller_is_platform
+
+        user = self._user(
+            "DJ",
+            is_platform_account=False,
+        )
+
+        self.assertFalse(
+            seller_is_platform(user)
+        )
+
+        user.profile.is_platform_account = True
+        user.profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
+
+        self.assertTrue(
+            seller_is_platform(user)
         )
 
     def test_ordinary_user_is_not_authorized(self):
-        from django.contrib.auth.models import User
         from .payment_policy import seller_is_platform
 
+        user = self._user(
+            "bob",
+            is_platform_account=False,
+        )
+
         self.assertFalse(
-            seller_is_platform(
-                User(username="bob")
-            )
+            seller_is_platform(user)
         )
 
     def test_none_is_not_authorized(self):
@@ -9356,3 +9401,83 @@ class FounderTiendaBlindExpiryTests(TestCase):
             self.platform_wallet.credits,
             platform_before + 600,
         )
+
+
+class FeedPostContentRendererTests(SimpleTestCase):
+    def render(self, content):
+        from auctions.templatetags.post_content import (
+            render_post_content,
+        )
+        return str(render_post_content(content))
+
+    def test_hashtag_links_to_fanz_hashtag(self):
+        rendered = self.render("Read #FANZCredits")
+        self.assertIn(
+            'href="/auctions/tag/fanzcredits/"',
+            rendered,
+        )
+        self.assertIn("#FANZCredits", rendered)
+
+    def test_mention_links_to_fanz_profile(self):
+        rendered = self.render("Visit @BuyCredits")
+        self.assertIn(
+            'href="/BuyCredits/"',
+            rendered,
+        )
+        self.assertIn("@BuyCredits", rendered)
+
+    def test_external_https_link_opens_new_tab(self):
+        rendered = self.render(
+            "[Visit offer]"
+            "(https://example.com/product?affiliate=mia123)"
+        )
+
+        self.assertIn(
+            "https://example.com/product?affiliate=mia123",
+            rendered,
+        )
+        self.assertIn('target="_blank"', rendered)
+        self.assertIn(
+            'rel="noopener noreferrer ugc"',
+            rendered,
+        )
+
+    def test_internal_link_stays_same_tab(self):
+        rendered = self.render(
+            "[Buy Credits](/BuyCredits/)"
+        )
+
+        self.assertIn('href="/BuyCredits/"', rendered)
+        self.assertNotIn('target="_blank"', rendered)
+
+    def test_javascript_href_is_removed(self):
+        rendered = self.render(
+            '<a href="javascript:alert(1)">bad</a>'
+        )
+
+        self.assertNotIn("javascript:", rendered.lower())
+
+    def test_event_handler_is_removed(self):
+        rendered = self.render(
+            '<a href="https://example.com/" '
+            'onclick="alert(1)">safe text</a>'
+        )
+
+        self.assertNotIn("onclick", rendered.lower())
+
+    def test_script_tag_is_removed(self):
+        rendered = self.render(
+            '<script>alert(1)</script>Hello'
+        )
+
+        self.assertNotIn("<script", rendered.lower())
+
+    def test_affiliate_query_parameters_are_preserved(self):
+        rendered = self.render(
+            "[Offer]"
+            "(https://merchant.example/buy"
+            "?affiliate=mia123&campaign=summer)"
+        )
+
+        self.assertIn("affiliate=mia123", rendered)
+        self.assertIn("campaign=summer", rendered)

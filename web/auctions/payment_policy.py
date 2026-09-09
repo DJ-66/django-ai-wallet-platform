@@ -118,28 +118,30 @@ def payment_method_allowed(
     )
 
 
-AUTHORIZED_FANZ_SELLER_USERNAMES = frozenset({
-    "dj",
-    "platform",
-})
-
-
 def seller_is_platform(user):
     """
     Return True when this account is authorized to sell
     inventory through FANZ-operated payment rails.
 
-    Callers should depend on this helper rather than on
-    username checks. The implementation can later move
-    to a database role/flag without changing checkout code.
+    Platform-commerce authority is data-driven through the
+    user's UserProfile.is_platform_account flag rather than
+    inferred from the username.
+
+    Query the authoritative profile row instead of relying on
+    user.profile, which may hold a stale OneToOne relation cache
+    after profile capability changes.
     """
     if user is None:
         return False
 
-    username = str(
-        getattr(user, "username", "") or ""
-    ).strip().lower()
+    user_id = getattr(user, "pk", None)
 
-    return username in (
-        AUTHORIZED_FANZ_SELLER_USERNAMES
-    )
+    if not user_id:
+        return False
+
+    from .models import UserProfile
+
+    return UserProfile.objects.filter(
+        user_id=user_id,
+        is_platform_account=True,
+    ).exists()

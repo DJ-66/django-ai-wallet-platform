@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load hashtag_tags %}
+{% load post_content %}
 {% load i18n %}
 {% block content %}
 
@@ -29,7 +30,7 @@
 
     {% if post.content %}
         <div class="post-detail-content">
-            {{ post.display_content|linebreaksbr }}
+            {{ post.display_content|render_post_content }}
         </div>
     {% endif %}
 
