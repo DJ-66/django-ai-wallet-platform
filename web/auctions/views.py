@@ -2322,6 +2322,14 @@ def founder_gift_claim(request, token):
             handle=founder.handle,
         )
 
+    from .founder_vending import (
+        founder_coin_identity,
+    )
+
+    coin_identity = founder_coin_identity(
+        claim.founder_account.handle
+    )
+
     return render(
         request,
         "auctions/founder_gift_claim.html",
@@ -2331,6 +2339,7 @@ def founder_gift_claim(request, token):
             "suggested_sui_address": (
                 claim.suggested_sui_address
             ),
+            "coin_identity": coin_identity,
         },
     )
 
@@ -3309,6 +3318,19 @@ def founder_tienda(request):
     bakery_rebrand = request.session.get(
         "founder_coin_rebrand"
     )
+
+    vending_coin_identity = None
+
+    if vending_item is not None:
+        from .founder_vending import (
+            founder_coin_identity,
+        )
+
+        vending_coin_identity = (
+            founder_coin_identity(
+                vending_item.wanted_handle
+            )
+        )
 
     return render(
         request,

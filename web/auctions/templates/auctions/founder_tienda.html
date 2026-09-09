@@ -899,6 +899,60 @@
     background: rgba(255, 255, 255, .08);
 }
 
+
+  .founder-bundle-card {
+    margin:18px 0 22px;
+    padding:20px;
+    border:1px solid rgba(124,58,237,.42);
+    border-radius:18px;
+    background:rgba(124,58,237,.08);
+    box-shadow:0 14px 36px rgba(15,23,42,.08);
+  }
+
+  .founder-bundle-eyebrow {
+    margin-bottom:14px;
+    font-size:.84rem;
+    font-weight:900;
+    letter-spacing:.08em;
+  }
+
+  .founder-bundle-grid {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+  }
+
+  .founder-bundle-item {
+    padding:14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.48);
+  }
+
+  .founder-bundle-item strong,
+  .founder-bundle-item span {
+    display:block;
+  }
+
+  .founder-bundle-item strong {
+    margin-bottom:5px;
+  }
+
+  .founder-bundle-item span {
+    font-size:.9rem;
+    opacity:.76;
+  }
+
+  .founder-bundle-free {
+    margin:15px 0 0;
+    font-weight:800;
+  }
+
+  @media (max-width:720px) {
+    .founder-bundle-grid {
+      grid-template-columns:1fr;
+    }
+  }
+
 </style>
 {% endblock %}
 
@@ -1031,7 +1085,7 @@
 
         <div class="founder-vending-field">
           <label for="vending-sui">
-            {% trans "Sui wallet address — optional" %}
+            🪙 {% trans "FREE matching custom meme coin — optional" %}
           </label>
 
           <input
@@ -1097,6 +1151,69 @@
           @{{ vending_item.wanted_handle }}
         </h3>
 
+        {% if vending_coin_identity %}
+          <div class="founder-bundle-card">
+            {% if vending_item.purchase_mode == "gift" %}
+              <div class="founder-bundle-eyebrow">
+                🎁 {% trans "ONE GIFT · THREE WINS" %}
+              </div>
+            {% else %}
+              <div class="founder-bundle-eyebrow">
+                🏡 {% trans "YOUR FOUNDER BUNDLE" %}
+              </div>
+            {% endif %}
+
+            <div class="founder-bundle-grid">
+              <div class="founder-bundle-item">
+                <strong>
+                  🏷️ @{{ vending_item.wanted_handle }}
+                </strong>
+                <span>
+                  {% trans "Scarce Founder Property" %}
+                </span>
+              </div>
+
+              <div class="founder-bundle-item">
+                <strong>
+                  🪙 {{ vending_coin_identity.display_name }}
+                </strong>
+                <span>
+                  {{ vending_coin_identity.symbol }}
+                  · 21B
+                  · {% trans "Sui Mainnet" %}
+                </span>
+              </div>
+
+              {% if vending_item.purchase_mode == "gift" %}
+                <div class="founder-bundle-item">
+                  <strong>
+                    💌 {% trans "Personalized Gift Delivery" %}
+                  </strong>
+                  <span>
+                    {% trans "Secure email claim link + your message" %}
+                  </span>
+                </div>
+              {% else %}
+                <div class="founder-bundle-item">
+                  <strong>
+                    ✨ {% trans "Matching Creator Economy" %}
+                  </strong>
+                  <span>
+                    {% trans "Your Founder identity + matching coin" %}
+                  </span>
+                </div>
+              {% endif %}
+            </div>
+
+            <p class="founder-bundle-free">
+              🪙
+              {% blocktrans trimmed with coin=vending_coin_identity.display_name %}
+                FREE {{ coin }} custom meme coin included when a Sui wallet is provided.
+              {% endblocktrans %}
+            </p>
+          </div>
+        {% endif %}
+
         <div class="founder-vending-quote-grid">
           <div class="founder-vending-quote-row">
             <span>{% trans "List Price" %}</span>
@@ -1136,12 +1253,18 @@
           </div>
 
           <div class="founder-vending-quote-row">
-            <span>{% trans "Coin option" %}</span>
+            <span>
+              🪙 {% trans "FREE matching coin" %}
+            </span>
             <strong>
-              {% if vending_item.sui_recipient_address %}
-                {% trans "Enabled" %}
+              {% if vending_item.sui_recipient_address and vending_coin_identity %}
+                {{ vending_coin_identity.display_name }}
+                · {{ vending_coin_identity.symbol }}
+              {% elif vending_item.purchase_mode == "gift" and vending_coin_identity %}
+                {{ vending_coin_identity.display_name }}
+                · {% trans "Recipient can add wallet at claim" %}
               {% else %}
-                {% trans "No Sui coin requested" %}
+                {% trans "Add Sui wallet to include coin" %}
               {% endif %}
             </strong>
           </div>
@@ -1264,10 +1387,17 @@
                 type="submit"
                 class="founder-button founder-button--premium"
               >
-                🏡
-                {% blocktrans trimmed with handle=vending_item.wanted_handle %}
-                  BUY @{{ handle }}
-                {% endblocktrans %}
+                {% if vending_item.purchase_mode == "gift" %}
+                  🎁
+                  {% blocktrans trimmed with handle=vending_item.wanted_handle %}
+                    BUY @{{ handle }} GIFT BUNDLE
+                  {% endblocktrans %}
+                {% else %}
+                  🏡
+                  {% blocktrans trimmed with handle=vending_item.wanted_handle %}
+                    BUY @{{ handle }} FOUNDER BUNDLE
+                  {% endblocktrans %}
+                {% endif %}
               </button>
             </form>
 

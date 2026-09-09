@@ -2,124 +2,403 @@
 {% load i18n %}
 
 {% block content %}
-<div
-  style="
-    max-width:720px;
-    margin:40px auto;
-    padding:24px;
-  "
->
-  {% if claim_error %}
-    <h1>🎁 {% trans "Founder Gift" %}</h1>
+<style>
+  .founder-gift-shell {
+    width:min(820px, calc(100% - 28px));
+    margin:42px auto 72px;
+  }
 
-    <p>
-      {{ claim_error }}
-    </p>
+  .founder-gift-eyebrow {
+    text-align:center;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    opacity:.72;
+    margin-bottom:10px;
+  }
+
+  .founder-gift-title {
+    text-align:center;
+    font-size:clamp(2rem, 5vw, 3rem);
+    line-height:1.05;
+    margin:0 0 28px;
+  }
+
+  .founder-gift-card {
+    border:1px solid rgba(51, 65, 85, .55);
+    border-radius:24px;
+    padding:clamp(22px, 5vw, 36px);
+    margin:18px 0;
+    background:rgba(255, 255, 255, .52);
+    box-shadow:0 18px 50px rgba(15, 23, 42, .10);
+    backdrop-filter:blur(10px);
+  }
+
+  .founder-gift-hero {
+    text-align:center;
+    padding-top:34px;
+    padding-bottom:34px;
+  }
+
+  .founder-gift-hero .founder-gift-title {
+    margin-bottom:0;
+  }
+
+  .founder-gift-handle {
+    font-size:clamp(2.5rem, 8vw, 4.5rem);
+    line-height:1;
+    margin:6px 0 20px;
+  }
+
+  .founder-gift-meta {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:14px 0;
+  }
+
+  .founder-gift-pill {
+    display:inline-flex;
+    align-items:center;
+    padding:7px 12px;
+    border-radius:999px;
+    border:1px solid rgba(51, 65, 85, .28);
+    background:rgba(255,255,255,.48);
+    font-weight:700;
+  }
+
+  .founder-gift-message {
+    margin:22px 0 0;
+    padding:18px 20px;
+    border-radius:16px;
+    background:rgba(255,255,255,.52);
+    font-size:1.08rem;
+    font-style:italic;
+  }
+
+  .founder-gift-coin {
+    border:2px solid rgba(124, 58, 237, .45);
+    position:relative;
+    overflow:hidden;
+  }
+
+  .founder-gift-coin-badge {
+    display:inline-block;
+    padding:7px 12px;
+    border-radius:999px;
+    font-weight:900;
+    letter-spacing:.06em;
+    background:rgba(124, 58, 237, .14);
+  }
+
+  .founder-gift-coin-name {
+    font-size:clamp(1.8rem, 5vw, 2.7rem);
+    margin:15px 0 4px;
+  }
+
+  .founder-gift-symbol {
+    font-weight:900;
+    opacity:.7;
+    letter-spacing:.08em;
+  }
+
+  .founder-gift-coin-grid {
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+    margin:22px 0;
+  }
+
+  .founder-gift-stat {
+    padding:14px;
+    border-radius:14px;
+    text-align:center;
+    background:rgba(255,255,255,.5);
+  }
+
+  .founder-gift-stat strong {
+    display:block;
+    font-size:1.08rem;
+  }
+
+  .founder-gift-status {
+    border-radius:18px;
+    padding:20px;
+    margin-top:18px;
+    background:rgba(255,255,255,.5);
+    border:1px solid rgba(51,65,85,.28);
+  }
+
+  .founder-gift-field label {
+    display:block;
+    font-weight:800;
+    margin-bottom:8px;
+  }
+
+  .founder-gift-field input {
+    width:100%;
+    box-sizing:border-box;
+    padding:14px 16px;
+    border-radius:12px;
+    border:1px solid rgba(51,65,85,.45);
+    font-size:1rem;
+  }
+
+  .founder-gift-actions {
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:20px;
+  }
+
+  .founder-gift-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
+    padding:12px 20px;
+    border:0;
+    border-radius:14px;
+    text-decoration:none;
+    font-weight:900;
+    cursor:pointer;
+    background:#7c3aed;
+    color:white;
+  }
+
+  .founder-gift-button--secondary {
+    background:rgba(51,65,85,.12);
+    color:inherit;
+    border:1px solid rgba(51,65,85,.3);
+  }
+
+  .founder-gift-fineprint {
+    opacity:.72;
+    font-size:.92rem;
+    margin-top:10px;
+  }
+
+  @media (max-width:640px) {
+    .founder-gift-shell {
+      margin-top:24px;
+    }
+
+    .founder-gift-card {
+      border-radius:18px;
+    }
+
+    .founder-gift-coin-grid {
+      grid-template-columns:1fr;
+    }
+
+    .founder-gift-actions {
+      flex-direction:column;
+    }
+
+    .founder-gift-button {
+      width:100%;
+      box-sizing:border-box;
+    }
+  }
+</style>
+
+<div class="founder-gift-shell">
+  {% if claim_error %}
+    <div class="founder-gift-card">
+      <div class="founder-gift-eyebrow">
+        🎁 {% trans "Founder Gift" %}
+      </div>
+
+      <h1 class="founder-gift-title">
+        {% trans "This gift link can't be used" %}
+      </h1>
+
+      <div class="founder-gift-status">
+        {{ claim_error }}
+      </div>
+    </div>
 
   {% else %}
-    <h1>
-      🎁 {% trans "You received a FANZ Founder property" %}
-    </h1>
+    <section class="founder-gift-card founder-gift-hero">
+      <div class="founder-gift-eyebrow">
+        🎁 {% trans "FANZ Founder Gift" %}
+      </div>
 
-    <div
-      style="
-        margin:24px 0;
-        padding:24px;
-        border:1px solid #334155;
-        border-radius:14px;
-      "
-    >
-      <h2 style="font-size:2rem;">
+      <h1 class="founder-gift-title">
+        {% if claim.recipient_name %}
+          {% blocktrans trimmed with name=claim.recipient_name %}
+            {{ name }}, your Founder Property is waiting.
+          {% endblocktrans %}
+        {% else %}
+          {% trans "Your Founder Property is waiting." %}
+        {% endif %}
+      </h1>
+    </section>
+
+    <section class="founder-gift-card">
+      <div class="founder-gift-meta">
+        <span class="founder-gift-pill">
+          🎁 {% trans "Founder Property" %}
+        </span>
+
+        <span class="founder-gift-pill">
+          {% trans "Gift Ready to Claim" %}
+        </span>
+      </div>
+
+      <h2 class="founder-gift-handle">
         @{{ claim.founder_account.handle }}
       </h2>
 
-      {% if claim.recipient_name %}
-        <p>
-          {% blocktrans trimmed with name=claim.recipient_name %}
-            Gift for {{ name }}
-          {% endblocktrans %}
-        </p>
-      {% endif %}
-
       <p>
         {% blocktrans trimmed with sender=claim.purchaser.username %}
-          Sent by {{ sender }}
+          Sent to you by {{ sender }}.
         {% endblocktrans %}
       </p>
 
       {% if claim.gift_message %}
-        <blockquote>
-          {{ claim.gift_message }}
-        </blockquote>
+        <div class="founder-gift-message">
+          “{{ claim.gift_message }}”
+        </div>
       {% endif %}
-    </div>
+    </section>
 
-    {% if not request.user.is_authenticated %}
-      <p>
-        {% trans "Sign in with the recipient FANZ account, or create one to claim this property." %}
-      </p>
+    <section class="founder-gift-card founder-gift-coin">
+      <span class="founder-gift-coin-badge">
+        🪙 {% trans "FREE CUSTOM MEME COIN" %}
+      </span>
 
-      <div
-        style="
-          display:flex;
-          gap:12px;
-          flex-wrap:wrap;
-        "
-      >
-        <a
-          href="{% url 'login' %}?next={{ request.path|urlencode }}"
-        >
-          {% trans "Sign In" %}
-        </a>
+      <h2 class="founder-gift-coin-name">
+        {{ coin_identity.display_name }}
+      </h2>
 
-        <a href="{% url 'signup' %}">
-          {% trans "Create FANZ Account" %}
-        </a>
+      <div class="founder-gift-symbol">
+        {{ coin_identity.symbol }}
       </div>
 
-    {% elif not email_matches %}
       <p>
-        {% trans "You are signed in, but this gift was sent to a different email address." %}
+        {% blocktrans trimmed with handle=claim.founder_account.handle coin=coin_identity.display_name %}
+          Your @{{ handle }} gift also unlocks the matching {{ coin }} creator coin.
+        {% endblocktrans %}
       </p>
 
-      <p>
-        {% trans "Sign in with the FANZ account that uses the recipient email from the gift." %}
+      <div class="founder-gift-coin-grid">
+        <div class="founder-gift-stat">
+          <strong>21B</strong>
+          {% trans "Fixed supply" %}
+        </div>
+
+        <div class="founder-gift-stat">
+          <strong>Sui</strong>
+          {% trans "Mainnet" %}
+        </div>
+
+        <div class="founder-gift-stat">
+          <strong>{% trans "FREE" %}</strong>
+          {% trans "With your gift" %}
+        </div>
+      </div>
+
+      <p class="founder-gift-fineprint">
+        {% trans "The coin is created only after you claim the Founder property and provide a Sui wallet address." %}
       </p>
+    </section>
+
+    {% if not request.user.is_authenticated %}
+      <section class="founder-gift-status">
+        <strong>
+          {% trans "Ready to unwrap it?" %}
+        </strong>
+
+        <p>
+          {% trans "Sign in with the recipient FANZ account, or create a free FANZ account to claim this gift." %}
+        </p>
+
+        <div class="founder-gift-actions">
+          <a
+            class="founder-gift-button"
+            href="{% url 'login' %}?next={{ request.path|urlencode }}"
+          >
+            {% trans "Sign In to Claim" %}
+          </a>
+
+          <a
+            class="founder-gift-button founder-gift-button--secondary"
+            href="{% url 'signup' %}"
+          >
+            {% trans "Create FANZ Account" %}
+          </a>
+        </div>
+      </section>
+
+    {% elif not email_matches %}
+      <section class="founder-gift-status">
+        <strong>
+          🔐 {% trans "This gift is protected for its recipient." %}
+        </strong>
+
+        <p>
+          {% trans "You are signed in, but this gift was sent to a different email address." %}
+        </p>
+
+        <p>
+          {% trans "Sign in with the FANZ account that uses the recipient email from the gift." %}
+        </p>
+      </section>
 
     {% else %}
       <form method="post">
         {% csrf_token %}
 
-        <div style="margin:20px 0;">
-          <label for="gift-sui-address">
-            {% trans "Sui wallet for your matching Founder coin — optional" %}
-          </label>
-
-          <input
-            id="gift-sui-address"
-            type="text"
-            name="sui_recipient_address"
-            maxlength="128"
-            value="{{ suggested_sui_address }}"
-            placeholder="0x..."
-            style="
-              width:100%;
-              margin-top:8px;
-              padding:12px;
-            "
-          >
+        <section class="founder-gift-card">
+          <h2>
+            🪙
+            {% blocktrans trimmed with coin=coin_identity.display_name %}
+              Get your FREE {{ coin }} coin
+            {% endblocktrans %}
+          </h2>
 
           <p>
-            {% trans "The purchaser may have suggested this wallet. Confirm it, replace it, or leave it blank. No Founder coin is created until you claim." %}
+            {% trans "Add the Sui wallet where you want your matching custom meme coin delivered." %}
           </p>
-        </div>
 
-        <button type="submit">
-          🎁
-          {% blocktrans trimmed with handle=claim.founder_account.handle %}
-            Claim @{{ handle }}
-          {% endblocktrans %}
-        </button>
+          <div class="founder-gift-field">
+            <label for="gift-sui-address">
+              {% trans "Your Sui wallet address" %}
+            </label>
+
+            <input
+              id="gift-sui-address"
+              type="text"
+              name="sui_recipient_address"
+              maxlength="128"
+              value="{{ suggested_sui_address }}"
+              placeholder="0x..."
+            >
+
+            <div class="founder-gift-fineprint">
+              {% trans "A wallet may have been suggested by the purchaser. Confirm it, replace it with your own, or clear it to claim the Founder property without creating the coin yet." %}
+            </div>
+          </div>
+
+          <div class="founder-gift-actions">
+            <button
+              class="founder-gift-button"
+              type="submit"
+            >
+              🎁
+              {% blocktrans trimmed with handle=claim.founder_account.handle symbol=coin_identity.symbol %}
+                Claim @{{ handle }} + Create My FREE {{ symbol }} Coin
+              {% endblocktrans %}
+            </button>
+          </div>
+
+          <p class="founder-gift-fineprint">
+            {% blocktrans trimmed with handle=claim.founder_account.handle %}
+              To claim only @{{ handle }}, clear the Sui wallet field before continuing.
+            {% endblocktrans %}
+          </p>
+        </section>
       </form>
     {% endif %}
   {% endif %}
