@@ -45,3 +45,8 @@ sui/generated/
 # FANZ Sui prepared publication artifacts.
 # Operational build/journal input; never source-controlled.
 sui/prepared-publications/
+
+# Local environment and safety snapshots
+.env
+.env.*
+!.env.example

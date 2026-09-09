@@ -1622,6 +1622,7 @@ class FounderOwnershipLedger(models.Model):
     TRANSFER_MINIMUM_CONVEYANCE = "minimum_conveyance"
     TRANSFER_TREASURY_RELEASE = "treasury_release"
     TRANSFER_CB_REDEMPTION = "cb_redemption"
+    TRANSFER_GIFT_CLAIM = "gift_claim"
 
     TRANSFER_TYPE_CHOICES = [
         (TRANSFER_P2P_FIXED, "P2P Fixed Price"),
@@ -1637,6 +1638,10 @@ class FounderOwnershipLedger(models.Model):
         (
             TRANSFER_CB_REDEMPTION,
             "FANZ CB Redemption",
+        ),
+        (
+            TRANSFER_GIFT_CLAIM,
+            "Founder Gift Claim",
         ),
     ]
 
@@ -1709,10 +1714,19 @@ class FounderOwnershipLedger(models.Model):
         ordering = ["sequence"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(
-                    sale_price_credits__gte=FOUNDER_FLOOR_CREDITS
+                condition=(
+                    models.Q(
+                        transfer_type="gift_claim",
+                        sale_price_credits=0,
+                        platform_fee_credits=0,
+                        seller_proceeds_credits=0,
+                    )
+                    |
+                    models.Q(
+                        sale_price_credits__gte=FOUNDER_FLOOR_CREDITS
+                    )
                 ),
-                name="founder_ledger_minimum_200_credit_conveyance",
+                name="founder_ledger_valid_conveyance_value",
             ),
             models.CheckConstraint(
                 condition=models.Q(
@@ -2552,6 +2566,96 @@ class FounderCartItem(models.Model):
             f"@{self.wanted_handle} "
             f"in Founder cart #{self.cart_id}"
         )
+
+
+class FounderGiftClaim(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_CLAIMED = "claimed"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_CLAIMED, "Claimed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    cart_item = models.OneToOneField(
+        FounderCartItem,
+        on_delete=models.PROTECT,
+        related_name="gift_claim",
+    )
+
+    founder_account = models.ForeignKey(
+        FounderAccount,
+        on_delete=models.PROTECT,
+        related_name="gift_claims",
+    )
+
+    purchaser = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="purchased_founder_gifts",
+    )
+
+    recipient_name = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    recipient_email = models.EmailField()
+
+    gift_message = models.TextField(
+        blank=True,
+    )
+
+    suggested_sui_address = models.CharField(
+        max_length=128,
+        blank=True,
+    )
+
+    token_hash = models.CharField(
+        max_length=64,
+        unique=True,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
+    expires_at = models.DateTimeField()
+
+    claimed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="claimed_founder_gifts",
+    )
+
+    claimed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"Founder gift @{self.founder_account.handle} "
+            f"to {self.recipient_email}"
+        )
+
 
 class FounderVendingHold(models.Model):
     STATUS_HELD = "held"

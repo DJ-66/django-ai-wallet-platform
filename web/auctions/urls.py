@@ -57,6 +57,11 @@ urlpatterns = [
         name="verify_founder_coin_rebrand",
     ),
     path(
+        "founder/gift/<str:token>/",
+        views.founder_gift_claim,
+        name="founder_gift_claim",
+    ),
+    path(
         "founder/tienda/vending/quote/",
         views.quote_founder_vending,
         name="quote_founder_vending",

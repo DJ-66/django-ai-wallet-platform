@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from datetime import timedelta
 from decimal import Decimal
+import hashlib
+import secrets
 from django.utils import timezone
 from .founder_vending import (
     founder_budget_quote,
@@ -18,6 +20,7 @@ from .models import (
     FounderAccount,
     FounderCart,
     FounderCartItem,
+    FounderGiftClaim,
     FounderListing,
     FounderOwnershipLedger,
     FounderPriceMemory,
@@ -35,6 +38,94 @@ from .utils import get_system_wallet
 
 class FounderCartError(RuntimeError):
     pass
+
+
+FOUNDER_GIFT_CLAIM_TTL = timedelta(days=30)
+
+
+def _gift_token_hash(token):
+    return hashlib.sha256(
+        token.encode("utf-8")
+    ).hexdigest()
+
+
+def _create_pending_founder_gift_claim(
+    *,
+    item,
+    founder,
+    purchaser,
+):
+    if item.purchase_mode != FounderCartItem.MODE_GIFT:
+        return None, None
+
+    recipient_email = (
+        item.gift_recipient_email or ""
+    ).strip().lower()
+
+    if not recipient_email:
+        raise FounderCartError(
+            "Gift purchase has no recipient email."
+        )
+
+    existing = (
+        FounderGiftClaim.objects
+        .select_for_update()
+        .filter(cart_item=item)
+        .first()
+    )
+
+    if existing is not None:
+        return existing, None
+
+    raw_token = secrets.token_urlsafe(32)
+
+    claim = FounderGiftClaim.objects.create(
+        cart_item=item,
+        founder_account=founder,
+        purchaser=purchaser,
+        recipient_name=(
+            item.gift_recipient_name or ""
+        ).strip(),
+        recipient_email=recipient_email,
+        gift_message=(
+            item.gift_message or ""
+        ).strip(),
+        suggested_sui_address=(
+            item.sui_recipient_address or ""
+        ).strip(),
+        token_hash=_gift_token_hash(
+            raw_token
+        ),
+        status=FounderGiftClaim.STATUS_PENDING,
+        expires_at=(
+            timezone.now()
+            + FOUNDER_GIFT_CLAIM_TTL
+        ),
+    )
+
+    return claim, raw_token
+
+
+def _send_post_purchase_gift_email(
+    claim_id,
+    raw_token,
+):
+    from .founder_gift_services import (
+        send_founder_gift_claim_email,
+    )
+
+    try:
+        send_founder_gift_claim_email(
+            claim_id=claim_id,
+            raw_token=raw_token,
+        )
+    except Exception as exc:
+        print(
+            "FOUNDER GIFT EMAIL FAILED:",
+            claim_id,
+            str(exc),
+        )
+
 
 def _create_post_purchase_starter_grant(
     payment_intent_id,
@@ -1004,7 +1095,33 @@ def fulfill_external_founder_vending_purchase(
         ]
     )
 
-    if item.sui_recipient_address:
+    gift_claim = None
+
+    if item.purchase_mode == FounderCartItem.MODE_GIFT:
+        gift_claim, gift_token = (
+            _create_pending_founder_gift_claim(
+                item=item,
+                founder=founder,
+                purchaser=buyer_root,
+            )
+        )
+
+        if gift_token:
+            transaction.on_commit(
+                lambda claim_id=gift_claim.pk,
+                raw_token=gift_token: (
+                    _send_post_purchase_gift_email(
+                        claim_id,
+                        raw_token,
+                    )
+                )
+            )
+
+    if (
+        item.purchase_mode
+        != FounderCartItem.MODE_GIFT
+        and item.sui_recipient_address
+    ):
         transaction.on_commit(
             lambda item_id=item.pk: (
                 _create_post_purchase_coin_draft(
@@ -1029,6 +1146,7 @@ def fulfill_external_founder_vending_purchase(
         "buyer_root": buyer_root,
         "sale_price_credits": list_price,
         "ledger_record": ledger_record,
+        "gift_claim": gift_claim,
     }
 
 
@@ -1287,7 +1405,33 @@ def purchase_founder_vending_reservation(
         ]
     )
 
-    if item.sui_recipient_address:
+    gift_claim = None
+
+    if item.purchase_mode == FounderCartItem.MODE_GIFT:
+        gift_claim, gift_token = (
+            _create_pending_founder_gift_claim(
+                item=item,
+                founder=founder,
+                purchaser=buyer_root,
+            )
+        )
+
+        if gift_token:
+            transaction.on_commit(
+                lambda claim_id=gift_claim.pk,
+                raw_token=gift_token: (
+                    _send_post_purchase_gift_email(
+                        claim_id,
+                        raw_token,
+                    )
+                )
+            )
+
+    if (
+        item.purchase_mode
+        != FounderCartItem.MODE_GIFT
+        and item.sui_recipient_address
+    ):
         transaction.on_commit(
             lambda item_id=item.pk: (
                 _create_post_purchase_coin_draft(
@@ -1309,4 +1453,5 @@ def purchase_founder_vending_reservation(
         "refund_credits": refund_credits,
         "wallet_transaction": purchase_tx,
         "ledger_record": ledger_record,
+        "gift_claim": gift_claim,
     }

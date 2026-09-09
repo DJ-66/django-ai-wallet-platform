@@ -3263,6 +3263,562 @@ class PendingFounderCoinPublicationsCommandTests(TestCase):
         )
 
 
+class FounderGiftClaimServiceTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .founder_cart_services import (
+            _gift_token_hash,
+        )
+        from .models import (
+            FounderAccount,
+            FounderCart,
+            FounderCartItem,
+            FounderGiftClaim,
+        )
+
+        self.purchaser = User.objects.create_user(
+            username="gift-purchaser",
+            email="buyer@example.com",
+            password="test-password",
+        )
+
+        self.recipient = User.objects.create_user(
+            username="gift-recipient",
+            email="gift@example.com",
+            password="test-password",
+        )
+
+        self.other = User.objects.create_user(
+            username="gift-other-user",
+            email="other@example.com",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="gft1",
+            owner_root=self.purchaser,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.purchaser,
+        )
+
+        self.item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="gft1",
+            budget_credits=200,
+            list_price_credits=200,
+            purchase_mode=FounderCartItem.MODE_GIFT,
+            gift_recipient_name="Gift Recipient",
+            gift_recipient_email="gift@example.com",
+            gift_message="Enjoy it!",
+            sui_recipient_address="0x" + "7" * 64,
+            status=FounderCartItem.STATUS_PURCHASED,
+        )
+
+        self.raw_token = "gift-claim-test-token"
+
+        self.claim = FounderGiftClaim.objects.create(
+            cart_item=self.item,
+            founder_account=self.founder,
+            purchaser=self.purchaser,
+            recipient_name="Gift Recipient",
+            recipient_email="gift@example.com",
+            gift_message="Enjoy it!",
+            suggested_sui_address="0x" + "7" * 64,
+            token_hash=_gift_token_hash(
+                self.raw_token
+            ),
+            status=FounderGiftClaim.STATUS_PENDING,
+            expires_at=(
+                timezone.now()
+                + timedelta(days=30)
+            ),
+        )
+
+    def test_matching_recipient_claims_gift_without_coin_when_no_sui_submitted(
+        self,
+    ):
+        from .founder_gift_services import (
+            claim_founder_gift,
+        )
+        from .models import (
+            EconomyAsset,
+            FounderGiftClaim,
+            FounderOwnershipLedger,
+        )
+
+        result = claim_founder_gift(
+            raw_token=self.raw_token,
+            recipient_user=self.recipient,
+            sui_recipient_address="",
+        )
+
+        self.founder.refresh_from_db()
+        self.claim.refresh_from_db()
+
+        self.assertEqual(
+            self.founder.owner_root,
+            self.recipient,
+        )
+
+        self.assertEqual(
+            self.claim.status,
+            FounderGiftClaim.STATUS_CLAIMED,
+        )
+
+        self.assertEqual(
+            self.claim.claimed_by,
+            self.recipient,
+        )
+
+        ledger = FounderOwnershipLedger.objects.get(
+            founder_account=self.founder,
+            transfer_type=(
+                FounderOwnershipLedger
+                .TRANSFER_GIFT_CLAIM
+            ),
+        )
+
+        self.assertEqual(
+            ledger.sale_price_credits,
+            0,
+        )
+
+        self.assertEqual(
+            ledger.platform_fee_credits,
+            0,
+        )
+
+        self.assertEqual(
+            ledger.seller_proceeds_credits,
+            0,
+        )
+
+        self.assertFalse(
+            EconomyAsset.objects.filter(
+                founder_account=self.founder,
+            ).exists()
+        )
+
+        self.assertEqual(
+            result["recipient_root"],
+            self.recipient,
+        )
+
+    def test_matching_recipient_claim_with_sui_creates_coin_after_commit(
+        self,
+    ):
+        from .founder_gift_services import (
+            claim_founder_gift,
+        )
+        from .models import EconomyAsset
+
+        address = "0x" + "8" * 64
+
+        with self.captureOnCommitCallbacks(
+            execute=True
+        ):
+            claim_founder_gift(
+                raw_token=self.raw_token,
+                recipient_user=self.recipient,
+                sui_recipient_address=address,
+            )
+
+        asset = EconomyAsset.objects.get(
+            founder_account=self.founder,
+        )
+
+        self.assertEqual(
+            asset.metadata.get(
+                "intended_recipient_address"
+            ),
+            address,
+        )
+
+        self.assertEqual(
+            asset.metadata.get(
+                "issuance_source"
+            ),
+            "founder_ownership",
+        )
+
+    def test_wrong_email_cannot_claim(self):
+        from .founder_gift_services import (
+            FounderGiftError,
+            claim_founder_gift,
+        )
+
+        with self.assertRaises(
+            FounderGiftError
+        ):
+            claim_founder_gift(
+                raw_token=self.raw_token,
+                recipient_user=self.other,
+            )
+
+        self.founder.refresh_from_db()
+        self.claim.refresh_from_db()
+
+        self.assertEqual(
+            self.founder.owner_root,
+            self.purchaser,
+        )
+
+        self.assertEqual(
+            self.claim.status,
+            self.claim.STATUS_PENDING,
+        )
+
+    def test_expired_claim_fails_closed(self):
+        from django.utils import timezone
+
+        from .founder_gift_services import (
+            FounderGiftError,
+            claim_founder_gift,
+        )
+
+        self.claim.expires_at = (
+            timezone.now()
+            - timezone.timedelta(minutes=1)
+        )
+        self.claim.save(
+            update_fields=[
+                "expires_at",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            FounderGiftError
+        ):
+            claim_founder_gift(
+                raw_token=self.raw_token,
+                recipient_user=self.recipient,
+            )
+
+    def test_claim_cannot_be_reused(self):
+        from .founder_gift_services import (
+            FounderGiftError,
+            claim_founder_gift,
+        )
+
+        claim_founder_gift(
+            raw_token=self.raw_token,
+            recipient_user=self.recipient,
+        )
+
+        with self.assertRaises(
+            FounderGiftError
+        ):
+            claim_founder_gift(
+                raw_token=self.raw_token,
+                recipient_user=self.recipient,
+            )
+
+
+class FounderGiftClaimViewTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        from .founder_gift_services import (
+            gift_token_hash,
+        )
+        from .models import (
+            FounderAccount,
+            FounderCart,
+            FounderCartItem,
+            FounderGiftClaim,
+        )
+
+        self.purchaser = User.objects.create_user(
+            username="gift-view-purchaser",
+            email="buyer-view@example.com",
+            password="test-password",
+        )
+
+        self.recipient = User.objects.create_user(
+            username="gift-view-recipient",
+            email="gift-view@example.com",
+            password="test-password",
+        )
+
+        self.other = User.objects.create_user(
+            username="gift-view-other",
+            email="other-view@example.com",
+            password="test-password",
+        )
+
+        from allauth.socialaccount.models import SocialApp
+        from django.contrib.sites.models import Site
+
+        site = Site.objects.get_current()
+
+        social_app = SocialApp.objects.create(
+            provider="google",
+            name="Google",
+            client_id="test-google-client-id",
+            secret="test-google-client-secret",
+        )
+
+        social_app.sites.add(site)
+
+        self.founder = FounderAccount.objects.create(
+            handle="gvw1",
+            owner_root=self.purchaser,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.cart = FounderCart.objects.create(
+            purchaser=self.purchaser,
+        )
+
+        self.item = FounderCartItem.objects.create(
+            cart=self.cart,
+            wanted_handle="gvw1",
+            budget_credits=200,
+            list_price_credits=200,
+            purchase_mode=FounderCartItem.MODE_GIFT,
+            gift_recipient_name="Gift View Recipient",
+            gift_recipient_email="gift-view@example.com",
+            gift_message="View test gift",
+            sui_recipient_address="0x" + "4" * 64,
+            status=FounderCartItem.STATUS_PURCHASED,
+        )
+
+        self.raw_token = "gift-view-test-token"
+
+        self.claim = FounderGiftClaim.objects.create(
+            cart_item=self.item,
+            founder_account=self.founder,
+            purchaser=self.purchaser,
+            recipient_name="Gift View Recipient",
+            recipient_email="gift-view@example.com",
+            gift_message="View test gift",
+            suggested_sui_address="0x" + "4" * 64,
+            token_hash=gift_token_hash(
+                self.raw_token
+            ),
+            status=FounderGiftClaim.STATUS_PENDING,
+            expires_at=(
+                timezone.now()
+                + timedelta(days=30)
+            ),
+        )
+
+    def _url(self):
+        from django.urls import reverse
+
+        return reverse(
+            "founder_gift_claim",
+            args=[self.raw_token],
+        )
+
+    def test_anonymous_can_view_gift_and_session_remembers_claim(self):
+        response = self.client.get(
+            self._url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            "@gvw1",
+        )
+
+        session = self.client.session
+
+        self.assertEqual(
+            session["founder_gift_claim_token"],
+            self.raw_token,
+        )
+
+        self.assertEqual(
+            session["founder_gift_claim_email"],
+            "gift-view@example.com",
+        )
+
+    def test_wrong_email_user_cannot_claim(self):
+        self.client.force_login(
+            self.other
+        )
+
+        response = self.client.post(
+            self._url(),
+            {
+                "sui_recipient_address": "",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.founder.refresh_from_db()
+        self.claim.refresh_from_db()
+
+        self.assertEqual(
+            self.founder.owner_root,
+            self.purchaser,
+        )
+
+        self.assertEqual(
+            self.claim.status,
+            self.claim.STATUS_PENDING,
+        )
+
+    def test_matching_recipient_claims_property(self):
+        self.client.force_login(
+            self.recipient
+        )
+
+        response = self.client.post(
+            self._url(),
+            {
+                "sui_recipient_address": "",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.founder.refresh_from_db()
+        self.claim.refresh_from_db()
+
+        self.assertEqual(
+            self.founder.owner_root,
+            self.recipient,
+        )
+
+        self.assertEqual(
+            self.claim.status,
+            self.claim.STATUS_CLAIMED,
+        )
+
+    def test_gift_signup_prefills_recipient_email(self):
+        from django.urls import reverse
+
+        self.client.get(
+            self._url()
+        )
+
+        response = self.client.get(
+            reverse("signup")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertEqual(
+            response.context["form"].initial.get(
+                "email"
+            ),
+            "gift-view@example.com",
+        )
+
+    def test_activation_returns_new_user_to_gift_claim(self):
+        from django.contrib.auth.models import User
+        from django.contrib.auth.tokens import default_token_generator
+        from django.urls import reverse
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        # First visit the gift so the claim context is stored
+        # in this browser session.
+        self.client.get(
+            self._url()
+        )
+
+        user = User.objects.create_user(
+            username="giftviewactivate",
+            email="gift-view@example.com",
+            password="test-password-123",
+            is_active=False,
+        )
+
+        uidb64 = urlsafe_base64_encode(
+            force_bytes(user.pk)
+        )
+
+        token = default_token_generator.make_token(
+            user
+        )
+
+        response = self.client.get(
+            reverse(
+                "activate",
+                args=[
+                    uidb64,
+                    token,
+                ],
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.assertEqual(
+            response["Location"],
+            self._url(),
+        )
+
+        user.refresh_from_db()
+
+        self.assertTrue(
+            user.is_active
+        )
+
+    def test_gift_signup_rejects_different_email(self):
+        from django.urls import reverse
+
+        self.client.get(
+            self._url()
+        )
+
+        response = self.client.post(
+            reverse("signup"),
+            {
+                "username": "giftviewnew",
+                "email": "wrong@example.com",
+                "password": "test-password-123",
+                "password_confirm":
+                    "test-password-123",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertFormError(
+            response.context["form"],
+            "email",
+            (
+                "Use the email address "
+                "that received the Founder gift."
+            ),
+        )
+
+
 class FounderVendingTiendaViewTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
@@ -3634,10 +4190,11 @@ class FounderVendingTiendaViewTests(TestCase):
             ).exists()
         )
 
-    def test_gift_buy_with_sui_creates_creator_coin_draft(self):
+    def test_gift_buy_with_sui_creates_pending_gift_claim(self):
         from auctions.models import (
             EconomyAsset,
             FounderCartItem,
+            FounderGiftClaim,
         )
         from django.urls import reverse
 
@@ -3710,42 +4267,49 @@ class FounderVendingTiendaViewTests(TestCase):
             self.buyer,
         )
 
-        asset = EconomyAsset.objects.get(
-            founder_account=self.founder,
+        claim = FounderGiftClaim.objects.get(
+            cart_item=item,
         )
 
         self.assertEqual(
-            asset.status,
-            EconomyAsset.STATUS_DRAFT,
+            claim.status,
+            FounderGiftClaim.STATUS_PENDING,
         )
 
         self.assertEqual(
-            asset.chain,
-            "sui",
+            claim.founder_account,
+            self.founder,
         )
 
         self.assertEqual(
-            asset.decimals,
-            6,
+            claim.purchaser,
+            self.buyer,
         )
 
         self.assertEqual(
-            asset.genesis_supply_base_units,
-            21_000_000_000_000_000,
+            claim.recipient_name,
+            "Gift Recipient",
         )
 
         self.assertEqual(
-            asset.metadata.get(
-                "issuance_source"
-            ),
-            "founder_vending",
+            claim.recipient_email,
+            "gift@example.com",
         )
 
         self.assertEqual(
-            asset.metadata.get(
-                "intended_recipient_address"
-            ),
+            claim.gift_message,
+            "Enjoy your Founder property!",
+        )
+
+        self.assertEqual(
+            claim.suggested_sui_address,
             "0xabc123",
+        )
+
+        self.assertFalse(
+            EconomyAsset.objects.filter(
+                founder_account=self.founder,
+            ).exists()
         )
 
     def test_expired_buy_does_not_purchase_founder(self):
@@ -5481,6 +6045,122 @@ class ExternalFounderFulfillmentTests(TestCase):
             WalletTransaction.objects.count(),
             wallet_tx_before,
         )
+
+    @patch(
+        "auctions.founder_cart_services."
+        "_create_post_purchase_starter_grant"
+    )
+    def test_external_gift_creates_pending_claim_without_sui_assets(
+        self,
+        starter_grant,
+    ):
+        from .models import (
+            EconomyAsset,
+            FounderCartItem,
+            FounderGiftClaim,
+        )
+        from .payment_services import (
+            fulfill_payment_intent,
+        )
+
+        self.item.purchase_mode = (
+            FounderCartItem.MODE_GIFT
+        )
+        self.item.gift_recipient_name = (
+            "External Gift Recipient"
+        )
+        self.item.gift_recipient_email = (
+            "external-gift@example.com"
+        )
+        self.item.gift_message = (
+            "Enjoy your Founder property!"
+        )
+        self.item.sui_recipient_address = (
+            "0x" + "8" * 64
+        )
+
+        self.item.save(
+            update_fields=[
+                "purchase_mode",
+                "gift_recipient_name",
+                "gift_recipient_email",
+                "gift_message",
+                "sui_recipient_address",
+                "updated_at",
+            ]
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                self.intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.status,
+            "fulfilled",
+        )
+
+        self.item.refresh_from_db()
+        self.founder.refresh_from_db()
+
+        self.assertEqual(
+            self.item.status,
+            FounderCartItem.STATUS_PURCHASED,
+        )
+
+        self.assertEqual(
+            self.founder.owner_root,
+            self.buyer,
+        )
+
+        claim = FounderGiftClaim.objects.get(
+            cart_item=self.item,
+        )
+
+        self.assertEqual(
+            claim.status,
+            FounderGiftClaim.STATUS_PENDING,
+        )
+
+        self.assertEqual(
+            claim.founder_account,
+            self.founder,
+        )
+
+        self.assertEqual(
+            claim.purchaser,
+            self.buyer,
+        )
+
+        self.assertEqual(
+            claim.recipient_name,
+            "External Gift Recipient",
+        )
+
+        self.assertEqual(
+            claim.recipient_email,
+            "external-gift@example.com",
+        )
+
+        self.assertEqual(
+            claim.gift_message,
+            "Enjoy your Founder property!",
+        )
+
+        self.assertEqual(
+            claim.suggested_sui_address,
+            "0x" + "8" * 64,
+        )
+
+        self.assertFalse(
+            EconomyAsset.objects.filter(
+                founder_account=self.founder,
+            ).exists()
+        )
+
+        starter_grant.assert_not_called()
 
     def test_external_founder_fulfillment_is_idempotent(self):
         from .models import FounderOwnershipLedger

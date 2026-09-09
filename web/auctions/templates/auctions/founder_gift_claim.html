@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div
+  style="
+    max-width:720px;
+    margin:40px auto;
+    padding:24px;
+  "
+>
+  {% if claim_error %}
+    <h1>🎁 {% trans "Founder Gift" %}</h1>
+
+    <p>
+      {{ claim_error }}
+    </p>
+
+  {% else %}
+    <h1>
+      🎁 {% trans "You received a FANZ Founder property" %}
+    </h1>
+
+    <div
+      style="
+        margin:24px 0;
+        padding:24px;
+        border:1px solid #334155;
+        border-radius:14px;
+      "
+    >
+      <h2 style="font-size:2rem;">
+        @{{ claim.founder_account.handle }}
+      </h2>
+
+      {% if claim.recipient_name %}
+        <p>
+          {% blocktrans trimmed with name=claim.recipient_name %}
+            Gift for {{ name }}
+          {% endblocktrans %}
+        </p>
+      {% endif %}
+
+      <p>
+        {% blocktrans trimmed with sender=claim.purchaser.username %}
+          Sent by {{ sender }}
+        {% endblocktrans %}
+      </p>
+
+      {% if claim.gift_message %}
+        <blockquote>
+          {{ claim.gift_message }}
+        </blockquote>
+      {% endif %}
+    </div>
+
+    {% if not request.user.is_authenticated %}
+      <p>
+        {% trans "Sign in with the recipient FANZ account, or create one to claim this property." %}
+      </p>
+
+      <div
+        style="
+          display:flex;
+          gap:12px;
+          flex-wrap:wrap;
+        "
+      >
+        <a
+          href="{% url 'login' %}?next={{ request.path|urlencode }}"
+        >
+          {% trans "Sign In" %}
+        </a>
+
+        <a href="{% url 'signup' %}">
+          {% trans "Create FANZ Account" %}
+        </a>
+      </div>
+
+    {% elif not email_matches %}
+      <p>
+        {% trans "You are signed in, but this gift was sent to a different email address." %}
+      </p>
+
+      <p>
+        {% trans "Sign in with the FANZ account that uses the recipient email from the gift." %}
+      </p>
+
+    {% else %}
+      <form method="post">
+        {% csrf_token %}
+
+        <div style="margin:20px 0;">
+          <label for="gift-sui-address">
+            {% trans "Sui wallet for your matching Founder coin — optional" %}
+          </label>
+
+          <input
+            id="gift-sui-address"
+            type="text"
+            name="sui_recipient_address"
+            maxlength="128"
+            value="{{ suggested_sui_address }}"
+            placeholder="0x..."
+            style="
+              width:100%;
+              margin-top:8px;
+              padding:12px;
+            "
+          >
+
+          <p>
+            {% trans "The purchaser may have suggested this wallet. Confirm it, replace it, or leave it blank. No Founder coin is created until you claim." %}
+          </p>
+        </div>
+
+        <button type="submit">
+          🎁
+          {% blocktrans trimmed with handle=claim.founder_account.handle %}
+            Claim @{{ handle }}
+          {% endblocktrans %}
+        </button>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

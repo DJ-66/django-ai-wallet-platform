@@ -51,7 +51,22 @@ def append_founder_ownership_ledger(
     platform_fee_credits = int(platform_fee_credits)
     seller_proceeds_credits = int(seller_proceeds_credits)
 
-    if sale_price_credits < 200:
+    is_gift_claim = (
+        transfer_type
+        == FounderOwnershipLedger.TRANSFER_GIFT_CLAIM
+    )
+
+    if is_gift_claim:
+        if (
+            sale_price_credits != 0
+            or platform_fee_credits != 0
+            or seller_proceeds_credits != 0
+        ):
+            raise ValidationError(
+                "Founder gift claims must be zero-value "
+                "conveyances."
+            )
+    elif sale_price_credits < 200:
         raise ValidationError(
             "Founder ledger transfers require at least 200 credits."
         )

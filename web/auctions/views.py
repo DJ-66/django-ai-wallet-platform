@@ -1228,6 +1228,42 @@ def signup_view(request):
         form = SignUpForm(request.POST)
 
         if form.is_valid():
+            gift_email = (
+                request.session.get(
+                    "founder_gift_claim_email"
+                )
+                or ""
+            ).strip().lower()
+
+            submitted_email = (
+                form.cleaned_data.get(
+                    "email",
+                    "",
+                )
+                or ""
+            ).strip().lower()
+
+            if (
+                gift_email
+                and submitted_email
+                != gift_email
+            ):
+                form.add_error(
+                    "email",
+                    (
+                        "Use the email address "
+                        "that received the Founder gift."
+                    ),
+                )
+
+                return render(
+                    request,
+                    "account/signup.html",
+                    {
+                        "form": form,
+                    },
+                )
+
             user = form.save(commit=False)
             user.set_password(
                 form.cleaned_data["password"]
@@ -1329,7 +1365,20 @@ def signup_view(request):
             )
 
     else:
-        form = SignUpForm()
+        gift_email = (
+            request.session.get(
+                "founder_gift_claim_email"
+            )
+            or ""
+        ).strip()
+
+        form = SignUpForm(
+            initial={
+                "email": gift_email,
+            }
+            if gift_email
+            else None
+        )
 
     return render(
         request,
@@ -1547,6 +1596,19 @@ def activate_view(request, uidb64, token):
             request,
             "🎉 Account activated successfully!",
         )
+
+        gift_token = (
+            request.session.get(
+                "founder_gift_claim_token"
+            )
+            or ""
+        ).strip()
+
+        if gift_token:
+            return redirect(
+                "founder_gift_claim",
+                token=gift_token,
+            )
 
         return redirect("auction_list")
 
@@ -2141,6 +2203,136 @@ def founder_knowledge(request, handle):
         },
     )
 
+
+
+def founder_gift_claim(request, token):
+    from .founder_gift_services import (
+        FounderGiftError,
+        claim_founder_gift,
+        get_founder_gift_claim,
+    )
+
+    try:
+        claim = get_founder_gift_claim(
+            raw_token=token
+        )
+    except FounderGiftError as exc:
+        return render(
+            request,
+            "auctions/founder_gift_claim.html",
+            {
+                "claim_error": str(exc),
+            },
+            status=400,
+        )
+
+    # Preserve gift context across signup + activation.
+    request.session[
+        "founder_gift_claim_token"
+    ] = token
+
+    request.session[
+        "founder_gift_claim_email"
+    ] = claim.recipient_email
+
+    account_email = ""
+
+    if request.user.is_authenticated:
+        account_email = (
+            request.user.email or ""
+        ).strip().lower()
+
+    recipient_email = (
+        claim.recipient_email or ""
+    ).strip().lower()
+
+    email_matches = bool(
+        request.user.is_authenticated
+        and account_email
+        and account_email == recipient_email
+    )
+
+    if request.method == "POST":
+        if not request.user.is_authenticated:
+            return redirect(
+                f"{reverse('login')}"
+                f"?next={request.path}"
+            )
+
+        if not email_matches:
+            messages.error(
+                request,
+                "This gift was sent to a different "
+                "email address.",
+            )
+
+            return redirect(
+                "founder_gift_claim",
+                token=token,
+            )
+
+        sui_address = (
+            request.POST.get(
+                "sui_recipient_address"
+            )
+            or ""
+        ).strip()
+
+        try:
+            result = claim_founder_gift(
+                raw_token=token,
+                recipient_user=request.user,
+                sui_recipient_address=sui_address,
+            )
+        except FounderGiftError as exc:
+            messages.error(
+                request,
+                str(exc),
+            )
+
+            return redirect(
+                "founder_gift_claim",
+                token=token,
+            )
+
+        request.session.pop(
+            "founder_gift_claim_token",
+            None,
+        )
+
+        request.session.pop(
+            "founder_gift_claim_email",
+            None,
+        )
+
+        founder = result[
+            "founder_account"
+        ]
+
+        messages.success(
+            request,
+            (
+                f"🎁 @{founder.handle} is now "
+                "your FANZ Founder property."
+            ),
+        )
+
+        return redirect(
+            "founder_knowledge",
+            handle=founder.handle,
+        )
+
+    return render(
+        request,
+        "auctions/founder_gift_claim.html",
+        {
+            "claim": claim,
+            "email_matches": email_matches,
+            "suggested_sui_address": (
+                claim.suggested_sui_address
+            ),
+        },
+    )
 
 
 @login_required
