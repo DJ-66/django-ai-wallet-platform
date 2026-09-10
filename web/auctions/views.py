@@ -4341,6 +4341,37 @@ def public_profile(request, username):
                     sui_intent.metadata or {}
                 )
 
+                payable_status = (
+                    sui_intent.status
+                    in {
+                        "created",
+                        "invoice_created",
+                        "processing",
+                    }
+                )
+
+                quote_is_live = False
+
+                try:
+                    from .sui_quote_services import (
+                        _parse_quote_datetime,
+                    )
+
+                    quote_expires_at = (
+                        _parse_quote_datetime(
+                            metadata.get(
+                                "sui_quote_expires_at"
+                            )
+                        )
+                    )
+
+                    quote_is_live = (
+                        timezone.now()
+                        < quote_expires_at
+                    )
+                except Exception:
+                    quote_is_live = False
+
                 try:
                     required_mist = int(
                         metadata.get(
@@ -4362,7 +4393,9 @@ def public_profile(request, username):
                 ).strip()
 
                 if (
-                    required_mist > 0
+                    payable_status
+                    and quote_is_live
+                    and required_mist > 0
                     and recipient_address
                 ):
                     credit_sui_checkout = {
@@ -6167,6 +6200,7 @@ def buy_credit_package(request, package_id):
         return redirect(
             f"{reverse('public_profile_root', kwargs={'username': 'BuyCredits'})}"
             f"?sui_payment_intent={intent.pk}"
+            "#credit-sui-checkout"
         )
 
     intent = PaymentIntent.objects.create(

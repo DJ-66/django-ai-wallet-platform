@@ -1,4 +1,8 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files import File
 from django.core.management.base import BaseCommand
 
 from auctions.models import UserProfile
@@ -78,12 +82,30 @@ class Command(BaseCommand):
                 .first()
             )
 
-            if user:
-                existing_count += 1
-
-                profile, _ = UserProfile.objects.get_or_create(
-                    user=user
+            if user is None:
+                user = User(
+                    username=username,
+                    email=(
+                        f"{username.lower()}"
+                        "@platform.invalid"
+                    ),
+                    is_active=True,
+                    is_staff=False,
+                    is_superuser=False,
                 )
+
+                user.set_unusable_password()
+                user.save()
+
+                created_count += 1
+
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"CREATED: @{username}"
+                    )
+                )
+            else:
+                existing_count += 1
 
                 self.stdout.write(
                     self.style.WARNING(
@@ -91,41 +113,70 @@ class Command(BaseCommand):
                     )
                 )
 
-                continue
-
-            user = User(
-                username=username,
-                email=f"{username.lower()}@platform.invalid",
-                is_active=True,
-                is_staff=False,
-                is_superuser=False,
-            )
-
-            user.set_unusable_password()
-            user.save()
-
-            profile, _ = UserProfile.objects.get_or_create(
-                user=user
+            profile, _ = (
+                UserProfile.objects.get_or_create(
+                    user=user
+                )
             )
 
             profile.display_name = display_name
             profile.is_platform_account = True
             profile.is_official = True
+            profile.is_verified = True
+
+            update_fields = [
+                "display_name",
+                "is_platform_account",
+                "is_official",
+                "is_verified",
+            ]
+
+            if username.lower() == "buycredits":
+                profile.bio = (
+                    "Official FANZ Credits storefront. "
+                    "Buy FANZ Credit packages using "
+                    "BTC, SUI, or DOGE. "
+                    "Current packages and promotions "
+                    "are published here."
+                )
+
+                update_fields.append("bio")
+
+                avatar_source = (
+                    Path(settings.BASE_DIR)
+                    / "static"
+                    / "img"
+                    / "platform"
+                    / "buycredits-avatar.png"
+                )
+
+                avatar_name = (
+                    "avatars/"
+                    "buycredits-avatar.png"
+                )
+
+                if not avatar_source.exists():
+                    raise RuntimeError(
+                        "Canonical BuyCredits avatar "
+                        f"not found: {avatar_source}"
+                    )
+
+                storage = profile.avatar.storage
+
+                if not storage.exists(
+                    avatar_name
+                ):
+                    with avatar_source.open("rb") as fh:
+                        storage.save(
+                            avatar_name,
+                            File(fh),
+                        )
+
+                profile.avatar.name = avatar_name
+                update_fields.append("avatar")
 
             profile.save(
-                update_fields=[
-                    "display_name",
-                    "is_platform_account",
-                    "is_official",
-                ]
-            )
-
-            created_count += 1
-
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"CREATED: @{username}"
-                )
+                update_fields=update_fields
             )
 
         self.stdout.write("")

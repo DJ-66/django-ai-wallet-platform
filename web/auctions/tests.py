@@ -10347,6 +10347,89 @@ class BuyCreditsSuiFlowTests(TestCase):
             10000000000,
         )
 
+    def test_expired_sui_checkout_is_not_displayed(self):
+        from datetime import timedelta
+        from django.urls import reverse
+        from django.utils import timezone
+
+        metadata = dict(
+            self.intent.metadata
+        )
+
+        metadata["sui_quote_expires_at"] = (
+            timezone.now()
+            - timedelta(minutes=1)
+        ).isoformat()
+
+        self.intent.metadata = metadata
+        self.intent.save(
+            update_fields=["metadata"]
+        )
+
+        self.client.force_login(
+            self.user
+        )
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "BuyCredits",
+                },
+            ),
+            {
+                "sui_payment_intent":
+                    self.intent.pk,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertIsNone(
+            response.context[
+                "credit_sui_checkout"
+            ]
+        )
+
+    def test_fulfilled_sui_checkout_is_not_displayed(self):
+        from django.urls import reverse
+
+        self.intent.status = "fulfilled"
+        self.intent.save(
+            update_fields=["status"]
+        )
+
+        self.client.force_login(
+            self.user
+        )
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": "BuyCredits",
+                },
+            ),
+            {
+                "sui_payment_intent":
+                    self.intent.pk,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertIsNone(
+            response.context[
+                "credit_sui_checkout"
+            ]
+        )
+
     def test_other_user_cannot_load_sui_checkout(self):
         from django.urls import reverse
 

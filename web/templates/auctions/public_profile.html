@@ -17,7 +17,10 @@
     <div class="profile-public-card">
 
         {% if profile.avatar %}
-            <img src="{{ profile.avatar.url }}" class="profile-avatar">
+            <img
+                src="{{ profile.avatar.url }}"
+                class="profile-avatar"
+            >
         {% else %}
             <div class="profile-avatar-fallback">
                 {{ profile_user.username|first|upper }}
@@ -416,7 +419,10 @@
                     </div>
 
                     {% if credit_sui_checkout %}
-                        <div class="featured-post-card credit-sui-checkout">
+                        <div
+                            id="credit-sui-checkout"
+                            class="featured-post-card credit-sui-checkout"
+                        >
                             <h3>💧 {% trans "SUI Checkout" %}</h3>
 
                             <p>
@@ -1078,6 +1084,11 @@ document.addEventListener(
 ></script>
 
 <style>
+
+.credit-sui-checkout {
+    scroll-margin-top: 24px;
+}
+
 .credit-package-rails {
     display: flex;
     flex-direction: column;
