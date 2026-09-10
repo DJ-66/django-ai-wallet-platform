@@ -9851,6 +9851,34 @@ class BuyCreditPackageViewTests(TestCase):
             is_active=True,
         )
 
+        self.buycredits = User.objects.create_user(
+            username="BuyCredits",
+            password="test-password",
+        )
+
+        from .models import VendingProduct
+
+        self.vending_product = (
+            VendingProduct.objects.create(
+                product_key="buycredits-popular",
+                seller=self.buycredits,
+                display_name="Popular FANZ Credits",
+                mode=VendingProduct.MODE_PAY,
+                settlement_mode=(
+                    VendingProduct.SETTLEMENT_PLATFORM
+                ),
+                price_usd=self.package.price_usd,
+                fulfillment_type="credit_package",
+                fulfillment_metadata={
+                    "credit_package_id":
+                        self.package.pk,
+                    "credits":
+                        self.package.credits,
+                },
+                is_active=True,
+            )
+        )
+
         self.client.force_login(self.user)
 
     @patch("auctions.btcpay.create_payment_intent_invoice")
@@ -9895,6 +9923,11 @@ class BuyCreditPackageViewTests(TestCase):
         )
 
         self.assertEqual(
+            intent.vending_product,
+            self.vending_product,
+        )
+
+        self.assertEqual(
             intent.metadata["payment_method"],
             "btc",
         )
@@ -9927,6 +9960,11 @@ class BuyCreditPackageViewTests(TestCase):
         self.assertEqual(
             intent.metadata["payment_method"],
             "sui",
+        )
+
+        self.assertEqual(
+            intent.vending_product,
+            self.vending_product,
         )
 
         self.assertEqual(
@@ -10604,4 +10642,68 @@ class BuyCreditsSuiFlowTests(TestCase):
         self.assertEqual(
             self.intent.settlement_reference,
             "",
+        )
+
+
+class VendingProductModelTests(TestCase):
+    def setUp(self):
+        self.seller = User.objects.create_user(
+            username="vending-platform",
+            password="test-password",
+        )
+
+    def test_pay_platform_product(self):
+        from .models import VendingProduct
+
+        product = VendingProduct.objects.create(
+            product_key="test-product",
+            seller=self.seller,
+            display_name="Test Product",
+            mode=VendingProduct.MODE_PAY,
+            settlement_mode=(
+                VendingProduct.SETTLEMENT_PLATFORM
+            ),
+            price_usd="5.00",
+            fulfillment_type="test",
+        )
+
+        self.assertEqual(
+            product.product_key,
+            "test-product",
+        )
+        self.assertEqual(
+            str(product.price_usd),
+            "5.00",
+        )
+        self.assertEqual(
+            product.mode,
+            VendingProduct.MODE_PAY,
+        )
+        self.assertEqual(
+            product.settlement_mode,
+            VendingProduct.SETTLEMENT_PLATFORM,
+        )
+
+    def test_payment_intent_can_reference_product(self):
+        from .models import VendingProduct
+
+        product = VendingProduct.objects.create(
+            product_key="intent-product",
+            seller=self.seller,
+            display_name="Intent Product",
+            price_usd="5.00",
+            fulfillment_type="test",
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.seller,
+            purpose="integration_test",
+            amount="5.00",
+            currency="USD",
+            vending_product=product,
+        )
+
+        self.assertEqual(
+            intent.vending_product,
+            product,
         )

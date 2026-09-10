@@ -6135,7 +6135,11 @@ def btcpay_webhook(request):
 @require_POST
 def buy_credit_package(request, package_id):
     from .btcpay import BTCPayError, create_payment_intent_invoice
-    from .models import CreditPackage, PaymentIntent
+    from .models import (
+        CreditPackage,
+        PaymentIntent,
+        VendingProduct,
+    )
 
     package = get_object_or_404(
         CreditPackage,
@@ -6161,6 +6165,20 @@ def buy_credit_package(request, package_id):
             username="BuyCredits",
         )
 
+    vending_product = get_object_or_404(
+        VendingProduct,
+        seller__username__iexact="BuyCredits",
+        mode=VendingProduct.MODE_PAY,
+        settlement_mode=(
+            VendingProduct.SETTLEMENT_PLATFORM
+        ),
+        fulfillment_type="credit_package",
+        fulfillment_metadata__credit_package_id=(
+            package.pk
+        ),
+        is_active=True,
+    )
+
     if payment_method == "sui":
         from .sui_quote_services import (
             SuiPaymentQuoteError,
@@ -6175,6 +6193,7 @@ def buy_credit_package(request, package_id):
             settlement_source=(
                 PaymentIntent.SETTLEMENT_SUI
             ),
+            vending_product=vending_product,
             credit_package=package,
             metadata={
                 "payment_method": "sui",
@@ -6211,6 +6230,7 @@ def buy_credit_package(request, package_id):
         settlement_source=(
             PaymentIntent.SETTLEMENT_BTCPAY
         ),
+        vending_product=vending_product,
         credit_package=package,
         metadata={
             "payment_method": payment_method,

@@ -5,7 +5,11 @@ from django.contrib.auth.models import User
 from django.core.files import File
 from django.core.management.base import BaseCommand
 
-from auctions.models import UserProfile
+from auctions.models import (
+    CreditPackage,
+    UserProfile,
+    VendingProduct,
+)
 
 
 PLATFORM_ACCOUNTS = [
@@ -178,6 +182,58 @@ class Command(BaseCommand):
             profile.save(
                 update_fields=update_fields
             )
+
+            if username.lower() == "buycredits":
+                for package in (
+                    CreditPackage.objects
+                    .filter(is_active=True)
+                    .order_by(
+                        "price_usd",
+                        "credits",
+                        "pk",
+                    )
+                ):
+                    product_key = (
+                        "buycredits-"
+                        + package.name
+                        .strip()
+                        .lower()
+                        .replace(" ", "-")
+                    )
+
+                    VendingProduct.objects.update_or_create(
+                        product_key=product_key,
+                        defaults={
+                            "seller": user,
+                            "display_name": (
+                                f"{package.name} "
+                                "FANZ Credits"
+                            ),
+                            "description": (
+                                f"{package.credits} "
+                                "FANZ Credits"
+                            ),
+                            "mode": (
+                                VendingProduct.MODE_PAY
+                            ),
+                            "settlement_mode": (
+                                VendingProduct
+                                .SETTLEMENT_PLATFORM
+                            ),
+                            "price_usd":
+                                package.price_usd,
+                            "fulfillment_type":
+                                "credit_package",
+                            "fulfillment_metadata": {
+                                "credit_package_id":
+                                    package.pk,
+                                "credits":
+                                    package.credits,
+                            },
+                            "is_active":
+                                package.is_active,
+                        },
+                    )
 
         self.stdout.write("")
         self.stdout.write(

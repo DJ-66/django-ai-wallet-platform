@@ -511,6 +511,99 @@ class CreditPurchase(models.Model):
         return f"{self.user} - {self.package} - ${self.amount_paid}"
 
 
+
+class VendingProduct(models.Model):
+    MODE_PAY = "pay"
+    MODE_SPEND = "spend"
+    MODE_HOLD = "hold"
+
+    MODE_CHOICES = [
+        (MODE_PAY, "Pay"),
+        (MODE_SPEND, "Spend"),
+        (MODE_HOLD, "Hold"),
+    ]
+
+    SETTLEMENT_PLATFORM = "platform"
+    SETTLEMENT_DIRECT_SELLER = "direct_seller"
+
+    SETTLEMENT_MODE_CHOICES = [
+        (
+            SETTLEMENT_PLATFORM,
+            "FANZ Platform",
+        ),
+        (
+            SETTLEMENT_DIRECT_SELLER,
+            "Direct Seller",
+        ),
+    ]
+
+    product_key = models.SlugField(
+        max_length=100,
+        unique=True,
+    )
+
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="vending_products",
+    )
+
+    display_name = models.CharField(
+        max_length=160,
+    )
+
+    description = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    mode = models.CharField(
+        max_length=16,
+        choices=MODE_CHOICES,
+        default=MODE_PAY,
+    )
+
+    settlement_mode = models.CharField(
+        max_length=24,
+        choices=SETTLEMENT_MODE_CHOICES,
+        default=SETTLEMENT_PLATFORM,
+    )
+
+    price_usd = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    fulfillment_type = models.CharField(
+        max_length=64,
+    )
+
+    fulfillment_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return (
+            f"{self.display_name} "
+            f"({self.product_key})"
+        )
+
+
 class PaymentIntent(models.Model):
     SETTLEMENT_BTCPAY = "btcpay"
     SETTLEMENT_SUI = "sui"
@@ -552,6 +645,14 @@ class PaymentIntent(models.Model):
     purpose = models.CharField(
         max_length=32,
         choices=PURPOSE_CHOICES,
+    )
+
+    vending_product = models.ForeignKey(
+        "VendingProduct",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="payment_intents",
     )
 
     status = models.CharField(
