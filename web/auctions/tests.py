@@ -11460,3 +11460,195 @@ class VendingSuiCoinDeliveryTests(TestCase):
             first.submission_key,
             submission_key,
         )
+
+
+class VendingCoinRebrandFulfillmentTests(TestCase):
+    def setUp(self):
+        from .models import (
+            EconomyAsset,
+            FounderAccount,
+            VendingProduct,
+        )
+
+        self.owner = User.objects.create_user(
+            username="rebrand-vending-owner",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="rv01",
+            current_account=self.owner,
+            owner_root=self.owner,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="RebrandVendFanz",
+            symbol="RVFANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+            chain="sui",
+            coin_type="mock::rv01::RVFANZ",
+            metadata={
+                "publication_key":
+                    "founder-rv01-v1",
+            },
+        )
+
+        self.product = VendingProduct.objects.create(
+            product_key="coin-rebrand-service",
+            seller=self.owner,
+            display_name="Coin Rebrand",
+            price_usd="5.00",
+            fulfillment_type="coin_rebrand",
+            fulfillment_metadata={},
+        )
+
+    def _intent(
+        self,
+        *,
+        method,
+        settlement_source,
+        reference="",
+        invoice_id=None,
+    ):
+        return PaymentIntent.objects.create(
+            user=self.owner,
+            purpose="platform_service",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=settlement_source,
+            settlement_reference=reference,
+            btcpay_invoice_id=invoice_id,
+            vending_product=self.product,
+            metadata={
+                "payment_method": method,
+                "asset_id": self.asset.pk,
+                "publication_key":
+                    "founder-rv01-v1",
+                "icon_url":
+                    "https://example.test/rebrand.jpg",
+            },
+        )
+
+    def test_btc_grants_rebrand_entitlement(self):
+        intent = self._intent(
+            method="btc",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            invoice_id="rebrand-btc-invoice",
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.status,
+            "fulfilled",
+        )
+        self.assertEqual(
+            fulfilled.metadata["service"],
+            "founder_coin_rebrand",
+        )
+        self.assertEqual(
+            fulfilled.metadata["asset_id"],
+            self.asset.pk,
+        )
+        self.assertEqual(
+            fulfilled.metadata["owner_root_id"],
+            self.owner.pk,
+        )
+
+    def test_doge_grants_rebrand_entitlement(self):
+        intent = self._intent(
+            method="doge",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            invoice_id="rebrand-doge-invoice",
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.metadata["service"],
+            "founder_coin_rebrand",
+        )
+
+    def test_sui_grants_rebrand_entitlement(self):
+        intent = self._intent(
+            method="sui",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            reference="rebrand-sui-digest",
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.metadata["service"],
+            "founder_coin_rebrand",
+        )
+
+    def test_wrong_owner_fails_closed(self):
+        other = User.objects.create_user(
+            username="rebrand-other-user",
+            password="test-password",
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=other,
+            purpose="platform_service",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=(
+                "rebrand-wrong-owner"
+            ),
+            vending_product=self.product,
+            metadata={
+                "payment_method": "btc",
+                "asset_id": self.asset.pk,
+                "publication_key":
+                    "founder-rv01-v1",
+                "icon_url":
+                    "https://example.test/rebrand.jpg",
+            },
+        )
+
+        with self.assertRaises(
+            PaymentFulfillmentError
+        ):
+            fulfill_payment_intent(
+                intent.pk
+            )
+
+        intent.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "settled",
+        )
+        self.assertIsNone(
+            intent.fulfilled_at
+        )

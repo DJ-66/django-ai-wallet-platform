@@ -171,11 +171,31 @@ def fulfill_sui_coin_delivery(intent):
     return False
 
 
+def fulfill_coin_rebrand(intent):
+    from .coin_rebrand_services import (
+        CoinRebrandPaymentError,
+        bind_paid_coin_rebrand_entitlement,
+    )
+
+    try:
+        bind_paid_coin_rebrand_entitlement(
+            payment_intent=intent
+        )
+    except CoinRebrandPaymentError as exc:
+        raise VendingFulfillmentError(
+            str(exc)
+        ) from exc
+
+    return True
+
+
 FULFILLMENT_HANDLERS = {
     "credit_package":
         fulfill_credit_package,
     "sui_coin_delivery":
         fulfill_sui_coin_delivery,
+    "coin_rebrand":
+        fulfill_coin_rebrand,
 }
 
 

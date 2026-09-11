@@ -21,6 +21,163 @@ class CoinRebrandPaymentError(Exception):
     pass
 
 
+def validate_coin_rebrand_request(
+    *,
+    user,
+    asset_id,
+    publication_key,
+    icon_url,
+    lock_asset=False,
+):
+    """
+    Validate and normalize one exact Coin Rebrand
+    request without charging any payment rail.
+
+    Returns:
+        (asset, publication_key, icon_url)
+    """
+    queryset = (
+        EconomyAsset.objects
+        .select_related("founder_account")
+    )
+
+    if lock_asset:
+        queryset = queryset.select_for_update()
+
+    asset = queryset.get(pk=asset_id)
+
+    founder = asset.founder_account
+
+    if founder.owner_root_id != user.pk:
+        raise CoinRebrandPaymentError(
+            "You do not currently own this "
+            "Founder property."
+        )
+
+    if asset.status != EconomyAsset.STATUS_ACTIVE:
+        raise CoinRebrandPaymentError(
+            "Founder coin is not active."
+        )
+
+    if asset.chain != "sui":
+        raise CoinRebrandPaymentError(
+            "Founder coin is not a Sui asset."
+        )
+
+    expected_publication_key = str(
+        (asset.metadata or {}).get(
+            "publication_key",
+            "",
+        )
+    ).strip()
+
+    if (
+        not expected_publication_key
+        or expected_publication_key
+        != str(publication_key).strip()
+    ):
+        raise CoinRebrandPaymentError(
+            "Founder coin publication "
+            "does not match."
+        )
+
+    normalized_icon_url = str(
+        icon_url or ""
+    ).strip()
+
+    if not normalized_icon_url:
+        raise CoinRebrandPaymentError(
+            "Coin image URL is required."
+        )
+
+    return (
+        asset,
+        expected_publication_key,
+        normalized_icon_url,
+    )
+
+
+def bind_paid_coin_rebrand_entitlement(
+    *,
+    payment_intent,
+):
+    """
+    Bind one already-paid PaymentIntent to an exact
+    Coin Rebrand entitlement.
+
+    This does not charge any payment rail and does not
+    execute the Sui rebrand transaction.
+    """
+    if not isinstance(
+        payment_intent,
+        PaymentIntent,
+    ):
+        raise TypeError(
+            "payment_intent must be a PaymentIntent"
+        )
+
+    if payment_intent.user_id is None:
+        raise CoinRebrandPaymentError(
+            "Coin Rebrand payment has no user."
+        )
+
+    metadata = dict(
+        payment_intent.metadata or {}
+    )
+
+    try:
+        asset_id = int(
+            metadata["asset_id"]
+        )
+        publication_key = str(
+            metadata["publication_key"]
+        ).strip()
+        icon_url = str(
+            metadata["icon_url"]
+        ).strip()
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise CoinRebrandPaymentError(
+            "Coin Rebrand payment has invalid metadata."
+        ) from exc
+
+    (
+        asset,
+        expected_publication_key,
+        normalized_icon_url,
+    ) = validate_coin_rebrand_request(
+        user=payment_intent.user,
+        asset_id=asset_id,
+        publication_key=publication_key,
+        icon_url=icon_url,
+        lock_asset=False,
+    )
+
+    metadata.update({
+        "service": SERVICE_KEY,
+        "asset_id": asset.pk,
+        "publication_key":
+            expected_publication_key,
+        "icon_url":
+            normalized_icon_url,
+        "owner_root_id":
+            payment_intent.user_id,
+    })
+
+    payment_intent.metadata = metadata
+    payment_intent.save(
+        update_fields=[
+            "metadata",
+            "updated_at",
+        ]
+    )
+
+    return payment_intent
+
+
 @transaction.atomic
 def purchase_coin_rebrand_with_credits(
     *,
@@ -41,54 +198,19 @@ def purchase_coin_rebrand_with_credits(
     Repeated calls for the same exact request are idempotent.
     """
 
-    asset = (
-        EconomyAsset.objects
-        .select_for_update()
-        .select_related("founder_account")
-        .get(pk=asset_id)
+    (
+        asset,
+        expected_publication_key,
+        normalized_icon_url,
+    ) = validate_coin_rebrand_request(
+        user=user,
+        asset_id=asset_id,
+        publication_key=publication_key,
+        icon_url=icon_url,
+        lock_asset=True,
     )
 
     founder = asset.founder_account
-
-    if founder.owner_root_id != user.pk:
-        raise CoinRebrandPaymentError(
-            "You do not currently own this Founder property."
-        )
-
-    if asset.status != EconomyAsset.STATUS_ACTIVE:
-        raise CoinRebrandPaymentError(
-            "Founder coin is not active."
-        )
-
-    if asset.chain != "sui":
-        raise CoinRebrandPaymentError(
-            "Founder coin is not a Sui asset."
-        )
-
-    expected_publication_key = str(
-        (asset.metadata or {}).get(
-            "publication_key",
-            ""
-        )
-    ).strip()
-
-    if (
-        not expected_publication_key
-        or expected_publication_key
-        != str(publication_key).strip()
-    ):
-        raise CoinRebrandPaymentError(
-            "Founder coin publication does not match."
-        )
-
-    normalized_icon_url = str(
-        icon_url or ""
-    ).strip()
-
-    if not normalized_icon_url:
-        raise CoinRebrandPaymentError(
-            "Coin image URL is required."
-        )
 
     #
     # Exact-entitlement idempotency.
