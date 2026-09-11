@@ -6137,8 +6137,11 @@ def buy_credit_package(request, package_id):
     from .btcpay import BTCPayError, create_payment_intent_invoice
     from .models import (
         CreditPackage,
-        PaymentIntent,
         VendingProduct,
+    )
+    from .vending_services import (
+        VendingProductError,
+        create_vending_payment_intent,
     )
 
     package = get_object_or_404(
@@ -6185,21 +6188,26 @@ def buy_credit_package(request, package_id):
             freeze_sui_quote,
         )
 
-        intent = PaymentIntent.objects.create(
-            user=request.user,
-            purpose="credit_purchase",
-            amount=package.price_usd,
-            currency="USD",
-            settlement_source=(
-                PaymentIntent.SETTLEMENT_SUI
-            ),
-            vending_product=vending_product,
-            credit_package=package,
-            metadata={
-                "payment_method": "sui",
-                "storefront": "buycredits",
-            },
-        )
+        try:
+            intent = create_vending_payment_intent(
+                product=vending_product,
+                buyer=request.user,
+                payment_method="sui",
+                purpose="credit_purchase",
+                credit_package=package,
+                metadata={
+                    "storefront": "buycredits",
+                },
+            )
+        except VendingProductError:
+            messages.error(
+                request,
+                "Unable to create vending checkout.",
+            )
+            return redirect(
+                "public_profile_root",
+                username="BuyCredits",
+            )
 
         try:
             intent, _ = freeze_sui_quote(
@@ -6222,21 +6230,26 @@ def buy_credit_package(request, package_id):
             "#credit-sui-checkout"
         )
 
-    intent = PaymentIntent.objects.create(
-        user=request.user,
-        purpose="credit_purchase",
-        amount=package.price_usd,
-        currency="USD",
-        settlement_source=(
-            PaymentIntent.SETTLEMENT_BTCPAY
-        ),
-        vending_product=vending_product,
-        credit_package=package,
-        metadata={
-            "payment_method": payment_method,
-            "storefront": "buycredits",
-        },
-    )
+    try:
+        intent = create_vending_payment_intent(
+            product=vending_product,
+            buyer=request.user,
+            payment_method=payment_method,
+            purpose="credit_purchase",
+            credit_package=package,
+            metadata={
+                "storefront": "buycredits",
+            },
+        )
+    except VendingProductError:
+        messages.error(
+            request,
+            "Unable to create vending checkout.",
+        )
+        return redirect(
+            "public_profile_root",
+            username="BuyCredits",
+        )
 
     try:
         intent = create_payment_intent_invoice(

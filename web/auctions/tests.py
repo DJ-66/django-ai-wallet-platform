@@ -9856,7 +9856,20 @@ class BuyCreditPackageViewTests(TestCase):
             password="test-password",
         )
 
-        from .models import VendingProduct
+        from .models import (
+            UserProfile,
+            VendingProduct,
+        )
+
+        profile, _ = UserProfile.objects.get_or_create(
+            user=self.buycredits
+        )
+        profile.is_platform_account = True
+        profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
 
         self.vending_product = (
             VendingProduct.objects.create(
@@ -10706,4 +10719,226 @@ class VendingProductModelTests(TestCase):
         self.assertEqual(
             intent.vending_product,
             product,
+        )
+
+
+class VendingPaymentIntentServiceTests(TestCase):
+    def setUp(self):
+        from .models import (
+            CreditPackage,
+            UserProfile,
+            VendingProduct,
+        )
+
+        self.buyer = User.objects.create_user(
+            username="vending-buyer",
+            password="test-password",
+        )
+
+        self.seller = User.objects.create_user(
+            username="vending-seller",
+            password="test-password",
+        )
+
+        profile, _ = (
+            UserProfile.objects.get_or_create(
+                user=self.seller
+            )
+        )
+        profile.is_platform_account = True
+        profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
+
+        self.package = (
+            CreditPackage.objects.create(
+                name="Vending Test",
+                credits=100,
+                price_usd="5.00",
+                is_active=True,
+            )
+        )
+
+        self.product = (
+            VendingProduct.objects.create(
+                product_key="vending-test",
+                seller=self.seller,
+                display_name="Vending Test",
+                mode=VendingProduct.MODE_PAY,
+                settlement_mode=(
+                    VendingProduct
+                    .SETTLEMENT_PLATFORM
+                ),
+                price_usd="5.00",
+                fulfillment_type=(
+                    "credit_package"
+                ),
+                fulfillment_metadata={
+                    "credit_package_id":
+                        self.package.pk,
+                    "credits":
+                        self.package.credits,
+                },
+            )
+        )
+
+    def test_btc_creates_btcpay_intent(self):
+        from .vending_services import (
+            create_vending_payment_intent,
+        )
+
+        intent = (
+            create_vending_payment_intent(
+                product=self.product,
+                buyer=self.buyer,
+                payment_method="BTC",
+                purpose="credit_purchase",
+                credit_package=self.package,
+                metadata={
+                    "storefront":
+                        "buycredits",
+                },
+            )
+        )
+
+        from decimal import Decimal
+
+        self.assertEqual(
+            intent.amount,
+            Decimal("5.00"),
+        )
+        self.assertEqual(
+            intent.settlement_source,
+            PaymentIntent.SETTLEMENT_BTCPAY,
+        )
+        self.assertEqual(
+            intent.vending_product,
+            self.product,
+        )
+        self.assertEqual(
+            intent.credit_package,
+            self.package,
+        )
+        self.assertEqual(
+            intent.metadata[
+                "payment_method"
+            ],
+            "btc",
+        )
+
+    def test_doge_creates_btcpay_intent(self):
+        from .vending_services import (
+            create_vending_payment_intent,
+        )
+
+        intent = (
+            create_vending_payment_intent(
+                product=self.product,
+                buyer=self.buyer,
+                payment_method="doge",
+                purpose="credit_purchase",
+                credit_package=self.package,
+            )
+        )
+
+        self.assertEqual(
+            intent.settlement_source,
+            PaymentIntent.SETTLEMENT_BTCPAY,
+        )
+
+    def test_sui_creates_sui_intent(self):
+        from .vending_services import (
+            create_vending_payment_intent,
+        )
+
+        intent = (
+            create_vending_payment_intent(
+                product=self.product,
+                buyer=self.buyer,
+                payment_method="sui",
+                purpose="credit_purchase",
+                credit_package=self.package,
+            )
+        )
+
+        self.assertEqual(
+            intent.settlement_source,
+            PaymentIntent.SETTLEMENT_SUI,
+        )
+
+    def test_product_price_is_authoritative(self):
+        from .vending_services import (
+            create_vending_payment_intent,
+        )
+
+        self.product.price_usd = "12.00"
+        self.product.save(
+            update_fields=["price_usd"]
+        )
+
+        intent = (
+            create_vending_payment_intent(
+                product=self.product,
+                buyer=self.buyer,
+                payment_method="btc",
+                purpose="credit_purchase",
+            )
+        )
+
+        from decimal import Decimal
+
+        self.assertEqual(
+            intent.amount,
+            Decimal("12.00"),
+        )
+
+    def test_non_platform_seller_fails_closed(self):
+        from .models import UserProfile
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        UserProfile.objects.filter(
+            user=self.seller
+        ).update(
+            is_platform_account=False
+        )
+
+        with self.assertRaises(
+            VendingProductError
+        ):
+            create_vending_payment_intent(
+                product=self.product,
+                buyer=self.buyer,
+                payment_method="btc",
+                purpose="credit_purchase",
+            )
+
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            0,
+        )
+
+    def test_invalid_method_creates_no_intent(self):
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        with self.assertRaises(
+            VendingProductError
+        ):
+            create_vending_payment_intent(
+                product=self.product,
+                buyer=self.buyer,
+                payment_method="ltc",
+                purpose="credit_purchase",
+            )
+
+        self.assertEqual(
+            PaymentIntent.objects.count(),
+            0,
         )
