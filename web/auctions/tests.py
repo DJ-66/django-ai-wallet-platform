@@ -11248,3 +11248,215 @@ class VendingFulfillmentRegistryTests(TestCase):
         self.assertIsNone(
             intent.fulfilled_at
         )
+
+
+class VendingSuiCoinDeliveryTests(TestCase):
+    def setUp(self):
+        from .models import (
+            EconomyAsset,
+            FounderAccount,
+            VendingProduct,
+        )
+
+        self.buyer = User.objects.create_user(
+            username="coin-vending-buyer",
+            password="test-password",
+        )
+
+        self.seller = User.objects.create_user(
+            username="coin-vending-seller",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="vc01",
+            current_account=self.seller,
+            owner_root=self.seller,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="VendCoin",
+            symbol="VENDCOIN",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type=(
+                "mock::vendcoin::VENDCOIN"
+            ),
+        )
+
+        self.product = VendingProduct.objects.create(
+            product_key="vendcoin-100",
+            seller=self.seller,
+            display_name="100 VendCoin",
+            price_usd="5.00",
+            fulfillment_type=(
+                "sui_coin_delivery"
+            ),
+            fulfillment_metadata={
+                "economy_asset_id":
+                    self.asset.pk,
+                "amount_base_units":
+                    100_000_000,
+            },
+        )
+
+    def test_btcpay_creates_coin_delivery(self):
+        from .models import (
+            EconomyAssetDelivery,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=(
+                "coin-vending-btc"
+            ),
+            vending_product=self.product,
+            metadata={
+                "payment_method": "btc",
+                "recipient_address": "0x1234",
+            },
+        )
+
+        returned, completed = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertFalse(completed)
+        self.assertEqual(
+            returned.status,
+            "settled",
+        )
+        self.assertIsNone(
+            returned.fulfilled_at
+        )
+
+        delivery = (
+            EconomyAssetDelivery.objects.get(
+                payment_intent=intent
+            )
+        )
+
+        self.assertEqual(
+            delivery.asset,
+            self.asset,
+        )
+        self.assertEqual(
+            delivery.recipient_address,
+            "0x1234",
+        )
+        self.assertEqual(
+            delivery.amount_base_units,
+            100_000_000,
+        )
+        self.assertEqual(
+            delivery.status,
+            EconomyAssetDelivery.STATUS_PENDING,
+        )
+
+    def test_sui_creates_same_delivery_type(self):
+        from .models import (
+            EconomyAssetDelivery,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference=(
+                "coin-vending-sui-payment"
+            ),
+            vending_product=self.product,
+            metadata={
+                "payment_method": "sui",
+                "recipient_address": "0x5678",
+            },
+        )
+
+        returned, completed = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertFalse(completed)
+
+        delivery = (
+            EconomyAssetDelivery.objects.get(
+                payment_intent=intent
+            )
+        )
+
+        self.assertEqual(
+            delivery.asset,
+            self.asset,
+        )
+        self.assertEqual(
+            delivery.recipient_address,
+            "0x5678",
+        )
+        self.assertEqual(
+            delivery.amount_base_units,
+            100_000_000,
+        )
+
+    def test_retry_reuses_delivery(self):
+        from .models import (
+            EconomyAssetDelivery,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=(
+                "coin-vending-retry"
+            ),
+            vending_product=self.product,
+            metadata={
+                "payment_method": "doge",
+                "recipient_address": "0x9999",
+            },
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        first = EconomyAssetDelivery.objects.get(
+            payment_intent=intent
+        )
+        submission_key = first.submission_key
+
+        fulfill_payment_intent(intent.pk)
+
+        self.assertEqual(
+            EconomyAssetDelivery.objects.filter(
+                payment_intent=intent
+            ).count(),
+            1,
+        )
+
+        first.refresh_from_db()
+
+        self.assertEqual(
+            first.submission_key,
+            submission_key,
+        )
