@@ -11085,3 +11085,166 @@ class VendingCheckoutPreparationTests(TestCase):
             prepare_vending_checkout(
                 payment_intent=intent
             )
+
+
+class VendingFulfillmentRegistryTests(TestCase):
+    def setUp(self):
+        from .models import (
+            CreditPackage,
+            VendingProduct,
+        )
+
+        self.user = User.objects.create_user(
+            username="vending-fulfillment-buyer",
+            password="test-password",
+        )
+
+        self.seller = User.objects.create_user(
+            username="vending-fulfillment-seller",
+            password="test-password",
+        )
+
+        self.package = CreditPackage.objects.create(
+            name="Registry Package",
+            credits=100,
+            price_usd="5.00",
+            is_active=True,
+        )
+
+        self.product = VendingProduct.objects.create(
+            product_key="registry-credit-package",
+            seller=self.seller,
+            display_name="Registry Credits",
+            price_usd="5.00",
+            fulfillment_type="credit_package",
+            fulfillment_metadata={
+                "credit_package_id":
+                    self.package.pk,
+                "credits":
+                    self.package.credits,
+            },
+        )
+
+    def test_btcpay_credit_product_fulfills(self):
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=(
+                "registry-btcpay-invoice"
+            ),
+            vending_product=self.product,
+            credit_package=self.package,
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.status,
+            "fulfilled",
+        )
+
+        wallet = BidWallet.objects.get(
+            user=self.user
+        )
+        self.assertEqual(
+            wallet.credits,
+            100,
+        )
+
+        self.assertTrue(
+            CreditPurchase.objects.filter(
+                external_id=(
+                    "btcpay:"
+                    "registry-btcpay-invoice"
+                )
+            ).exists()
+        )
+
+    def test_sui_credit_product_fulfills(self):
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference=(
+                "registry-sui-digest"
+            ),
+            vending_product=self.product,
+            credit_package=self.package,
+        )
+
+        fulfilled, created = (
+            fulfill_payment_intent(
+                intent.pk
+            )
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(
+            fulfilled.status,
+            "fulfilled",
+        )
+
+        self.assertTrue(
+            CreditPurchase.objects.filter(
+                external_id=(
+                    "sui:registry-sui-digest"
+                )
+            ).exists()
+        )
+
+    def test_unknown_fulfillment_fails_closed(self):
+        self.product.fulfillment_type = (
+            "future_magic_product"
+        )
+        self.product.save(
+            update_fields=[
+                "fulfillment_type",
+            ]
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="credit_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id="registry-unknown",
+            vending_product=self.product,
+            credit_package=self.package,
+        )
+
+        with self.assertRaises(
+            PaymentFulfillmentError
+        ):
+            fulfill_payment_intent(
+                intent.pk
+            )
+
+        intent.refresh_from_db()
+
+        self.assertEqual(
+            intent.status,
+            "settled",
+        )
+        self.assertIsNone(
+            intent.fulfilled_at
+        )

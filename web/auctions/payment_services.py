@@ -25,6 +25,21 @@ def dispatch_payment_fulfillment(intent):
     are owned by fulfill_payment_intent(). This dispatcher is responsible only
     for purpose-specific delivery.
     """
+    if intent.vending_product_id is not None:
+        from .vending_fulfillment import (
+            VendingFulfillmentError,
+            dispatch_vending_fulfillment,
+        )
+
+        try:
+            return dispatch_vending_fulfillment(
+                intent
+            )
+        except VendingFulfillmentError as exc:
+            raise PaymentFulfillmentError(
+                str(exc)
+            ) from exc
+
     if intent.purpose == "credit_purchase":
         if intent.user_id is None:
             raise PaymentFulfillmentError(
