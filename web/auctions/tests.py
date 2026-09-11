@@ -1,3 +1,4 @@
+from decimal import Decimal
 from datetime import timedelta
 from unittest.mock import Mock, patch
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -9640,7 +9641,6 @@ class BuyCreditsStorefrontProfileTests(TestCase):
             1,
         )
 
-        from decimal import Decimal
 
         self.assertEqual(
             packages[0].price_usd,
@@ -9918,7 +9918,6 @@ class BuyCreditPackageViewTests(TestCase):
 
         intent = PaymentIntent.objects.get()
 
-        from decimal import Decimal
 
         self.assertEqual(
             intent.amount,
@@ -10803,7 +10802,6 @@ class VendingPaymentIntentServiceTests(TestCase):
             )
         )
 
-        from decimal import Decimal
 
         self.assertEqual(
             intent.amount,
@@ -10887,7 +10885,6 @@ class VendingPaymentIntentServiceTests(TestCase):
             )
         )
 
-        from decimal import Decimal
 
         self.assertEqual(
             intent.amount,
@@ -11651,4 +11648,669 @@ class VendingCoinRebrandFulfillmentTests(TestCase):
         )
         self.assertIsNone(
             intent.fulfilled_at
+        )
+
+
+@override_settings(**BTCPAY_TEST_SETTINGS)
+class CoinRebrandVendingCheckoutTests(TestCase):
+    def setUp(self):
+        from .models import (
+            EconomyAsset,
+            FounderAccount,
+            UserProfile,
+            VendingProduct,
+        )
+
+        self.owner = User.objects.create_user(
+            username="rebrand-checkout-owner",
+            password="test-password",
+        )
+
+        self.platform = User.objects.create_user(
+            username="FanzRebrandPlatform",
+            password="test-password",
+        )
+
+        profile = UserProfile.objects.get(
+            user=self.platform
+        )
+        profile.is_platform_account = True
+        profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="rc01",
+            current_account=self.owner,
+            owner_root=self.owner,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="RebrandCheckoutFanz",
+            symbol="RCFANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+            chain="sui",
+            coin_type="mock::rc01::RCFANZ",
+            metadata={
+                "publication_key":
+                    "founder-rc01-v1",
+            },
+        )
+
+        self.product = VendingProduct.objects.create(
+            product_key="founder-coin-rebrand",
+            seller=self.platform,
+            display_name="Founder Coin Rebrand",
+            price_usd="5.00",
+            fulfillment_type="coin_rebrand",
+            fulfillment_metadata={},
+        )
+
+    @patch(
+        "auctions.btcpay.create_payment_intent_invoice"
+    )
+    def test_btc_checkout_uses_vending_chassis(
+        self,
+        invoice,
+    ):
+        from .coin_rebrand_services import (
+            create_coin_rebrand_vending_checkout,
+        )
+
+        def prepare(intent):
+            intent.btcpay_invoice_id = (
+                "rebrand-checkout-btc"
+            )
+            intent.btcpay_checkout_link = (
+                "https://pay.example.test/rebrand"
+            )
+            intent.status = "invoice_created"
+            intent.save(
+                update_fields=[
+                    "btcpay_invoice_id",
+                    "btcpay_checkout_link",
+                    "status",
+                ]
+            )
+            return intent
+
+        invoice.side_effect = prepare
+
+        intent = (
+            create_coin_rebrand_vending_checkout(
+                user=self.owner,
+                asset_id=self.asset.pk,
+                publication_key=(
+                    "founder-rc01-v1"
+                ),
+                icon_url=(
+                    "https://example.test/new.jpg"
+                ),
+                payment_method="btc",
+            )
+        )
+
+        self.assertEqual(
+            intent.vending_product,
+            self.product,
+        )
+        self.assertEqual(
+            intent.amount,
+            Decimal("5.00"),
+        )
+        self.assertEqual(
+            intent.purpose,
+            "platform_service",
+        )
+        self.assertEqual(
+            intent.metadata["service"],
+            "founder_coin_rebrand",
+        )
+        self.assertEqual(
+            intent.metadata["asset_id"],
+            self.asset.pk,
+        )
+        self.assertEqual(
+            intent.metadata["icon_url"],
+            "https://example.test/new.jpg",
+        )
+
+    @patch(
+        "auctions.sui_quote_services.quote_sui_payment"
+    )
+    def test_sui_checkout_freezes_quote(
+        self,
+        quote,
+    ):
+        from .coin_rebrand_services import (
+            create_coin_rebrand_vending_checkout,
+        )
+
+        recipient = (
+            "0x" + "1" * 64
+        )
+
+        quote.return_value = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address":
+                    recipient,
+                "amount_usd": "5.00",
+                "sui_usd_price": "1.00",
+                "amount_mist":
+                    "5000000000",
+                "amount_sui": "5.0",
+                "quoted_at":
+                    "2026-09-11T04:00:00Z",
+                "quote_expires_at":
+                    "2099-09-11T04:15:00Z",
+            },
+        }
+
+        intent = (
+            create_coin_rebrand_vending_checkout(
+                user=self.owner,
+                asset_id=self.asset.pk,
+                publication_key=(
+                    "founder-rc01-v1"
+                ),
+                icon_url=(
+                    "https://example.test/new.jpg"
+                ),
+                payment_method="sui",
+            )
+        )
+
+        self.assertEqual(
+            intent.settlement_source,
+            PaymentIntent.SETTLEMENT_SUI,
+        )
+        self.assertEqual(
+            intent.metadata[
+                "sui_required_mist"
+            ],
+            "5000000000",
+        )
+        self.assertEqual(
+            intent.metadata[
+                "sui_recipient_address"
+            ],
+            recipient,
+        )
+
+
+class CoinRebrandPaidEntitlementTests(TestCase):
+    def setUp(self):
+        from .models import (
+            EconomyAsset,
+            FounderAccount,
+            UserProfile,
+            VendingProduct,
+        )
+
+        self.owner = User.objects.create_user(
+            username="rebrand-resume-owner",
+            password="test-password",
+        )
+
+        self.platform = User.objects.create_user(
+            username="RebrandResumePlatform",
+            password="test-password",
+        )
+
+        profile = UserProfile.objects.get(
+            user=self.platform
+        )
+        profile.is_platform_account = True
+        profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="rr01",
+            current_account=self.owner,
+            owner_root=self.owner,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="ResumeRebrandFanz",
+            symbol="RRFANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+            chain="sui",
+            coin_type="mock::rr01::RRFANZ",
+            metadata={
+                "publication_key":
+                    "founder-rr01-v1",
+            },
+        )
+
+        self.product = VendingProduct.objects.create(
+            product_key="founder-coin-rebrand",
+            seller=self.platform,
+            display_name="Founder Coin Rebrand",
+            price_usd="5.00",
+            fulfillment_type="coin_rebrand",
+            fulfillment_metadata={},
+        )
+
+    def _fulfilled_intent(self, *, user=None):
+        return PaymentIntent.objects.create(
+            user=user or self.owner,
+            purpose="platform_service",
+            status="fulfilled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference="resume-test-digest",
+            vending_product=self.product,
+            metadata={
+                "payment_method": "sui",
+                "service":
+                    "founder_coin_rebrand",
+                "asset_id": self.asset.pk,
+                "publication_key":
+                    "founder-rr01-v1",
+                "icon_url":
+                    "https://example.test/resume.jpg",
+                "owner_root_id":
+                    self.owner.pk,
+            },
+        )
+
+    def test_owner_can_resolve_paid_entitlement(self):
+        from .coin_rebrand_services import (
+            get_paid_coin_rebrand_entitlement,
+        )
+
+        intent = self._fulfilled_intent()
+
+        (
+            returned,
+            asset,
+            publication_key,
+            icon_url,
+        ) = get_paid_coin_rebrand_entitlement(
+            user=self.owner,
+            payment_intent_id=intent.pk,
+        )
+
+        self.assertEqual(returned, intent)
+        self.assertEqual(asset, self.asset)
+        self.assertEqual(
+            publication_key,
+            "founder-rr01-v1",
+        )
+        self.assertEqual(
+            icon_url,
+            "https://example.test/resume.jpg",
+        )
+
+    def test_other_user_cannot_resume_entitlement(self):
+        from .coin_rebrand_services import (
+            CoinRebrandPaymentError,
+            get_paid_coin_rebrand_entitlement,
+        )
+
+        other = User.objects.create_user(
+            username="rebrand-resume-other",
+            password="test-password",
+        )
+
+        intent = self._fulfilled_intent()
+
+        with self.assertRaises(
+            CoinRebrandPaymentError
+        ):
+            get_paid_coin_rebrand_entitlement(
+                user=other,
+                payment_intent_id=intent.pk,
+            )
+
+
+@override_settings(**BTCPAY_TEST_SETTINGS)
+class CoinRebrandHTTPFlowTests(TestCase):
+    def setUp(self):
+        from django.urls import reverse
+
+        from .models import (
+            EconomyAsset,
+            FounderAccount,
+            UserProfile,
+            VendingProduct,
+        )
+
+        self.reverse = reverse
+
+        self.owner = User.objects.create_user(
+            username="rebrand-http-owner",
+            password="test-password",
+        )
+
+        self.platform = User.objects.create_user(
+            username="RebrandHTTPPlatform",
+            password="test-password",
+        )
+
+        profile = UserProfile.objects.get(
+            user=self.platform
+        )
+        profile.is_platform_account = True
+        profile.save(
+            update_fields=[
+                "is_platform_account",
+            ]
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="rh01",
+            current_account=self.owner,
+            owner_root=self.owner,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="RebrandHTTPFanz",
+            symbol="RHFANZ",
+            status=EconomyAsset.STATUS_ACTIVE,
+            chain="sui",
+            coin_type="mock::rh01::RHFANZ",
+            metadata={
+                "publication_key":
+                    "founder-rh01-v1",
+            },
+        )
+
+        self.product = VendingProduct.objects.create(
+            product_key="founder-coin-rebrand",
+            seller=self.platform,
+            display_name="Founder Coin Rebrand",
+            price_usd="5.00",
+            fulfillment_type="coin_rebrand",
+            fulfillment_metadata={},
+        )
+
+        self.client.force_login(self.owner)
+
+    @patch(
+        "auctions.btcpay.create_payment_intent_invoice"
+    )
+    @patch(
+        "auctions.sui_adapter."
+        "get_creator_coin_image_status"
+    )
+    def test_btc_start_redirects_to_btcpay(
+        self,
+        status_mock,
+        invoice,
+    ):
+        status_mock.return_value = {
+            "coin_image": {
+                "next_image_action": "rebrand",
+                "next_image_price_usd": "5.00",
+            },
+        }
+        def prepare(intent):
+            intent.btcpay_invoice_id = (
+                "rebrand-http-btc"
+            )
+            intent.btcpay_checkout_link = (
+                "https://pay.example.test/rebrand-http"
+            )
+            intent.status = "invoice_created"
+            intent.save(
+                update_fields=[
+                    "btcpay_invoice_id",
+                    "btcpay_checkout_link",
+                    "status",
+                ]
+            )
+            return intent
+
+        invoice.side_effect = prepare
+
+        response = self.client.post(
+            self.reverse(
+                "start_founder_coin_rebrand_checkout"
+            ),
+            {
+                "asset_id": self.asset.pk,
+                "icon_url":
+                    "https://example.test/http.jpg",
+                "payment_method": "btc",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+        self.assertEqual(
+            response["Location"],
+            "https://pay.example.test/rebrand-http",
+        )
+
+        intent = PaymentIntent.objects.get(
+            vending_product=self.product
+        )
+
+        self.assertEqual(
+            intent.metadata["asset_id"],
+            self.asset.pk,
+        )
+
+    @patch(
+        "auctions.sui_quote_services.quote_sui_payment"
+    )
+    @patch(
+        "auctions.sui_adapter."
+        "get_creator_coin_image_status"
+    )
+    def test_sui_start_returns_to_bakery_checkout(
+        self,
+        status_mock,
+        quote,
+    ):
+        status_mock.return_value = {
+            "coin_image": {
+                "next_image_action": "rebrand",
+                "next_image_price_usd": "5.00",
+            },
+        }
+        recipient = (
+            "0x" + "2" * 64
+        )
+
+        quote.return_value = {
+            "quote": {
+                "network": "mainnet",
+                "recipient_address":
+                    recipient,
+                "amount_usd": "5.00",
+                "sui_usd_price": "1.00",
+                "amount_mist":
+                    "5000000000",
+                "amount_sui": "5.0",
+                "quoted_at":
+                    "2026-09-11T05:00:00Z",
+                "quote_expires_at":
+                    "2099-09-11T05:15:00Z",
+            },
+        }
+
+        response = self.client.post(
+            self.reverse(
+                "start_founder_coin_rebrand_checkout"
+            ),
+            {
+                "asset_id": self.asset.pk,
+                "icon_url":
+                    "https://example.test/http-sui.jpg",
+                "payment_method": "sui",
+            },
+        )
+
+        intent = PaymentIntent.objects.get(
+            vending_product=self.product
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+        self.assertIn(
+            (
+                "rebrand_sui_payment_intent="
+                f"{intent.pk}"
+            ),
+            response["Location"],
+        )
+
+    def test_unfulfilled_resume_is_rejected(self):
+        intent = PaymentIntent.objects.create(
+            user=self.owner,
+            purpose="platform_service",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            vending_product=self.product,
+            metadata={
+                "payment_method": "sui",
+                "service":
+                    "founder_coin_rebrand",
+                "asset_id": self.asset.pk,
+                "publication_key":
+                    "founder-rh01-v1",
+                "icon_url":
+                    "https://example.test/not-yet.jpg",
+                "owner_root_id":
+                    self.owner.pk,
+            },
+        )
+
+        response = self.client.get(
+            self.reverse(
+                "resume_founder_coin_rebrand",
+                kwargs={
+                    "payment_intent_id":
+                        intent.pk,
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.assertNotIn(
+            "founder_coin_rebrand",
+            self.client.session,
+        )
+
+    @patch(
+        "auctions.sui_adapter."
+        "prepare_creator_coin_image_rebrand"
+    )
+    @patch(
+        "auctions.sui_adapter."
+        "get_creator_coin_image_status"
+    )
+    def test_fulfilled_resume_prepares_session(
+        self,
+        status_mock,
+        prepare_mock,
+    ):
+        status_mock.return_value = {
+            "coin_image": {
+                "next_image_action": "rebrand",
+                "next_image_price_usd": "5.00",
+            },
+        }
+
+        prepare_mock.return_value = {
+            "prepared": {
+                "image_action": "rebrand",
+                "icon_url":
+                    "https://example.test/final.jpg",
+                "owner_address":
+                    "0xowner",
+                "transaction_bytes_b64":
+                    "dGVzdA==",
+                "prepared_at":
+                    "2026-09-11T05:10:00Z",
+                "price_usd": "5.00",
+            },
+        }
+
+        intent = PaymentIntent.objects.create(
+            user=self.owner,
+            purpose="platform_service",
+            status="fulfilled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            settlement_reference=(
+                "resume-http-digest"
+            ),
+            vending_product=self.product,
+            metadata={
+                "payment_method": "sui",
+                "service":
+                    "founder_coin_rebrand",
+                "asset_id": self.asset.pk,
+                "publication_key":
+                    "founder-rh01-v1",
+                "icon_url":
+                    "https://example.test/final.jpg",
+                "owner_root_id":
+                    self.owner.pk,
+            },
+        )
+
+        response = self.client.get(
+            self.reverse(
+                "resume_founder_coin_rebrand",
+                kwargs={
+                    "payment_intent_id":
+                        intent.pk,
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        session = self.client.session[
+            "founder_coin_rebrand"
+        ]
+
+        self.assertEqual(
+            session["payment_intent_id"],
+            intent.pk,
+        )
+        self.assertEqual(
+            session["image_action"],
+            "rebrand",
+        )
+        self.assertEqual(
+            session["transaction_bytes_b64"],
+            "dGVzdA==",
         )

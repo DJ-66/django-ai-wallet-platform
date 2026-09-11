@@ -183,6 +183,31 @@ class Command(BaseCommand):
                 update_fields=update_fields
             )
 
+            if username.lower() == "fanz":
+                VendingProduct.objects.update_or_create(
+                    product_key="founder-coin-rebrand",
+                    defaults={
+                        "seller": user,
+                        "display_name":
+                            "Founder Coin Rebrand",
+                        "description": (
+                            "Paid on-chain image rebrand "
+                            "for an active Sui Founder coin."
+                        ),
+                        "mode":
+                            VendingProduct.MODE_PAY,
+                        "settlement_mode": (
+                            VendingProduct
+                            .SETTLEMENT_PLATFORM
+                        ),
+                        "price_usd": "5.00",
+                        "fulfillment_type":
+                            "coin_rebrand",
+                        "fulfillment_metadata": {},
+                        "is_active": True,
+                    },
+                )
+
             if username.lower() == "buycredits":
                 for package in (
                     CreditPackage.objects

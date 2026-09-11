@@ -2124,17 +2124,63 @@
           </div>
 
           <p class="founder-vending-note">
-            {% trans "Rebrand fee: $5.00 / 100 FANZ Credits. The image URL must use HTTPS." %}
+            {% trans "Genesis branding is included with vending. Later rebrands are $5.00 / 100 FANZ Credits. The image URL must use HTTPS." %}
           </p>
 
-          <div class="founder-vending-submit">
+          <div
+            class="founder-vending-submit"
+            style="
+              display:grid;
+              grid-template-columns:
+                repeat(auto-fit,minmax(190px,1fr));
+              gap:10px;
+            "
+          >
             <button
               type="submit"
+              formaction="{% url 'prepare_founder_coin_rebrand' %}"
               class="founder-button founder-button--premium"
             >
-              🧁 {% trans "Prepare Rebrand" %}
+              🧁 100 FANZ Credits ⚡
+            </button>
+
+            <button
+              type="submit"
+              formaction="{% url 'start_founder_coin_rebrand_checkout' %}"
+              name="payment_method"
+              value="sui"
+              class="founder-button founder-button--premium"
+            >
+              💧 SUI ⚡ {% trans "Fastest" %}
+            </button>
+
+            <button
+              type="submit"
+              formaction="{% url 'start_founder_coin_rebrand_checkout' %}"
+              name="payment_method"
+              value="btc"
+              class="founder-button"
+            >
+              ₿ BTC · ~10+ min
+            </button>
+
+            <button
+              type="submit"
+              formaction="{% url 'start_founder_coin_rebrand_checkout' %}"
+              name="payment_method"
+              value="doge"
+              class="founder-button"
+            >
+              🐕 DOGE · {% trans "confirmation required" %}
             </button>
           </div>
+
+          <p
+            class="founder-vending-note"
+            style="margin-top:10px;"
+          >
+            {% trans "BTC and DOGE confirmation times are estimates and vary with network conditions." %}
+          </p>
         {% else %}
           <p
             class="founder-vending-note"
@@ -2144,6 +2190,108 @@
           </p>
         {% endif %}
       </form>
+
+      {% if rebrand_sui_checkout %}
+        <div
+          class="founder-rebrand-step"
+          style="
+            border:1px solid rgba(56,189,248,.40);
+            border-radius:16px;
+            padding:18px;
+          "
+        >
+          <strong>
+            💧 {% trans "Pay Coin Rebrand with SUI" %}
+          </strong>
+
+          <div
+            class="founder-vending-quote-grid"
+            style="margin-top:16px;"
+          >
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Rebrand fee" %}</span>
+              <strong>$5.00</strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Amount" %}</span>
+              <strong>
+                {{ rebrand_sui_checkout.amount_sui }} SUI
+              </strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Network" %}</span>
+              <strong>Sui Mainnet</strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Send to" %}</span>
+              <strong
+                style="
+                  overflow-wrap:anywhere;
+                  word-break:break-all;
+                "
+              >
+                {{ rebrand_sui_checkout.recipient_address }}
+              </strong>
+            </div>
+
+            <div class="founder-vending-quote-row">
+              <span>{% trans "Quote expires" %}</span>
+              <strong>
+                {{ rebrand_sui_checkout.quote_expires_at }}
+              </strong>
+            </div>
+          </div>
+
+          <p
+            class="founder-vending-note"
+            style="margin-top:12px;"
+          >
+            {% trans "This payment purchases the Coin Rebrand entitlement. After payment, your current coin owner wallet will sign the separate on-chain rebrand transaction." %}
+          </p>
+
+          <form
+            method="post"
+            action="{% url 'verify_founder_coin_rebrand_sui_payment' %}"
+            id="rebrand-sui-payment-form"
+          >
+            {% csrf_token %}
+
+            <input
+              type="hidden"
+              name="payment_intent_id"
+              value="{{ rebrand_sui_checkout.payment_intent_id }}"
+            >
+
+            <input
+              id="rebrand-sui-tx-digest"
+              name="tx_digest"
+              type="hidden"
+              value=""
+            >
+
+            <div class="founder-vending-submit">
+              <button
+                type="button"
+                id="rebrand-sui-wallet-pay"
+                class="founder-button founder-button--premium"
+                data-recipient-address="{{ rebrand_sui_checkout.recipient_address }}"
+                data-required-mist="{{ rebrand_sui_checkout.required_mist }}"
+              >
+                💧 {% trans "Pay $5 Rebrand with Sui Wallet" %}
+              </button>
+            </div>
+
+            <p
+              id="rebrand-sui-wallet-status"
+              class="founder-vending-note"
+              style="margin-top:10px;"
+            ></p>
+          </form>
+        </div>
+      {% endif %}
 
 
       <form
@@ -2440,6 +2588,123 @@ document.addEventListener(
         } catch (error) {
           console.error(
             "[FANZ Sui Payment]",
+            error
+          );
+
+          if (status) {
+            status.textContent =
+              error instanceof Error
+                ? error.message
+                : "Unable to complete SUI payment.";
+          }
+
+          button.disabled = false;
+          button.textContent =
+            originalText;
+        }
+      }
+    );
+  }
+);
+</script>
+
+<script>
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    const button =
+      document.getElementById(
+        "rebrand-sui-wallet-pay"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const status =
+      document.getElementById(
+        "rebrand-sui-wallet-status"
+      );
+
+    const digestInput =
+      document.getElementById(
+        "rebrand-sui-tx-digest"
+      );
+
+    const verifyForm =
+      document.getElementById(
+        "rebrand-sui-payment-form"
+      );
+
+    button.addEventListener(
+      "click",
+      async function () {
+        const originalText =
+          button.textContent;
+
+        try {
+          button.disabled = true;
+
+          if (status) {
+            status.textContent =
+              "Connecting to Sui wallet…";
+          }
+
+          if (!window.FANZSuiWallet) {
+            throw new Error(
+              "Sui wallet bridge is not loaded."
+            );
+          }
+
+          const recipientAddress =
+            button.dataset.recipientAddress || "";
+
+          const amountMist =
+            button.dataset.requiredMist || "";
+
+          if (!recipientAddress) {
+            throw new Error(
+              "SUI payment recipient is missing."
+            );
+          }
+
+          if (!amountMist) {
+            throw new Error(
+              "SUI payment amount is missing."
+            );
+          }
+
+          if (status) {
+            status.textContent =
+              "Approve the $5 Coin Rebrand payment…";
+          }
+
+          const result =
+            await window.FANZSuiWallet
+              .paySui({
+                recipientAddress,
+                amountMist,
+              });
+
+          if (!result?.digest) {
+            throw new Error(
+              "Wallet returned no transaction digest."
+            );
+          }
+
+          digestInput.value =
+            result.digest;
+
+          if (status) {
+            status.textContent =
+              "Payment published. FANZ is verifying it…";
+          }
+
+          verifyForm.submit();
+
+        } catch (error) {
+          console.error(
+            "[FANZ Rebrand Sui Payment]",
             error
           );
 

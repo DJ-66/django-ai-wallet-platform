@@ -178,6 +178,208 @@ def bind_paid_coin_rebrand_entitlement(
     return payment_intent
 
 
+def prepare_coin_rebrand_transaction(
+    *,
+    publication_key,
+    icon_url,
+    expected_image_action,
+):
+    """
+    Prepare the owner-signed Sui Coin Image transaction.
+
+    Payment/entitlement must already have been handled by
+    the caller when expected_image_action == "rebrand".
+
+    This function does not charge any payment rail.
+    """
+    from .sui_adapter import (
+        SuiAdapterError,
+        prepare_creator_coin_image_rebrand,
+    )
+
+    response = prepare_creator_coin_image_rebrand(
+        publication_key,
+        icon_url=icon_url,
+    )
+
+    prepared = response.get("prepared")
+
+    if not isinstance(prepared, dict):
+        raise SuiAdapterError(
+            "Sui service returned no prepared "
+            "Coin Image transaction."
+        )
+
+    prepared_action = str(
+        prepared.get(
+            "image_action",
+            "",
+        )
+    ).strip().lower()
+
+    if prepared_action != expected_image_action:
+        raise SuiAdapterError(
+            "Coin Image state changed while "
+            "preparing the transaction. "
+            "Please try again."
+        )
+
+    return prepared
+
+
+def get_paid_coin_rebrand_entitlement(
+    *,
+    user,
+    payment_intent_id,
+):
+    """
+    Return and revalidate one fulfilled external
+    Coin Rebrand entitlement owned by this user.
+    """
+    try:
+        intent = (
+            PaymentIntent.objects
+            .select_related(
+                "vending_product",
+                "user",
+            )
+            .get(
+                pk=payment_intent_id,
+                user=user,
+                purpose="platform_service",
+                status="fulfilled",
+                vending_product__product_key=(
+                    "founder-coin-rebrand"
+                ),
+                vending_product__fulfillment_type=(
+                    "coin_rebrand"
+                ),
+                metadata__service=SERVICE_KEY,
+                metadata__owner_root_id=user.pk,
+            )
+        )
+    except PaymentIntent.DoesNotExist as exc:
+        raise CoinRebrandPaymentError(
+            "Paid Coin Rebrand entitlement "
+            "was not found."
+        ) from exc
+
+    metadata = intent.metadata or {}
+
+    try:
+        asset_id = int(
+            metadata["asset_id"]
+        )
+        publication_key = str(
+            metadata["publication_key"]
+        ).strip()
+        icon_url = str(
+            metadata["icon_url"]
+        ).strip()
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise CoinRebrandPaymentError(
+            "Paid Coin Rebrand entitlement "
+            "has invalid metadata."
+        ) from exc
+
+    (
+        asset,
+        publication_key,
+        icon_url,
+    ) = validate_coin_rebrand_request(
+        user=user,
+        asset_id=asset_id,
+        publication_key=publication_key,
+        icon_url=icon_url,
+        lock_asset=False,
+    )
+
+    return (
+        intent,
+        asset,
+        publication_key,
+        icon_url,
+    )
+
+
+def create_coin_rebrand_vending_checkout(
+    *,
+    user,
+    asset_id,
+    publication_key,
+    icon_url,
+    payment_method,
+):
+    """
+    Create and prepare one externally paid Coin Rebrand
+    checkout using the reusable FANZ vending chassis.
+
+    Supported here:
+        BTC
+        DOGE
+        SUI
+
+    FANZ Credits remain a FANZ-only synchronous path.
+    """
+    from .models import VendingProduct
+    from .vending_services import (
+        VendingProductError,
+        create_vending_payment_intent,
+        prepare_vending_checkout,
+    )
+
+    (
+        asset,
+        expected_publication_key,
+        normalized_icon_url,
+    ) = validate_coin_rebrand_request(
+        user=user,
+        asset_id=asset_id,
+        publication_key=publication_key,
+        icon_url=icon_url,
+        lock_asset=False,
+    )
+
+    product = VendingProduct.objects.get(
+        product_key="founder-coin-rebrand",
+        fulfillment_type="coin_rebrand",
+        is_active=True,
+    )
+
+    try:
+        intent = create_vending_payment_intent(
+            product=product,
+            buyer=user,
+            payment_method=payment_method,
+            purpose="platform_service",
+            metadata={
+                "service": SERVICE_KEY,
+                "asset_id": asset.pk,
+                "publication_key":
+                    expected_publication_key,
+                "icon_url":
+                    normalized_icon_url,
+                "owner_root_id": user.pk,
+                "storefront": "founder_bakery",
+            },
+        )
+
+        intent = prepare_vending_checkout(
+            payment_intent=intent
+        )
+
+    except VendingProductError as exc:
+        raise CoinRebrandPaymentError(
+            str(exc)
+        ) from exc
+
+    return intent
+
+
 @transaction.atomic
 def purchase_coin_rebrand_with_credits(
     *,

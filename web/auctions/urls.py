@@ -59,6 +59,24 @@ urlpatterns = [
         name="verify_founder_sui_payment",
     ),
     path(
+        "founder/tienda/rebrand/checkout/",
+        views.start_founder_coin_rebrand_checkout,
+        name="start_founder_coin_rebrand_checkout",
+    ),
+    path(
+        "founder/tienda/rebrand/sui/verify/",
+        views.verify_founder_coin_rebrand_sui_payment,
+        name="verify_founder_coin_rebrand_sui_payment",
+    ),
+    path(
+        (
+            "founder/tienda/rebrand/"
+            "<int:payment_intent_id>/resume/"
+        ),
+        views.resume_founder_coin_rebrand,
+        name="resume_founder_coin_rebrand",
+    ),
+    path(
         "founder/tienda/rebrand/prepare/",
         views.prepare_founder_coin_rebrand,
         name="prepare_founder_coin_rebrand",
