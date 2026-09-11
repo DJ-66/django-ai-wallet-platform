@@ -10942,3 +10942,146 @@ class VendingPaymentIntentServiceTests(TestCase):
             PaymentIntent.objects.count(),
             0,
         )
+
+
+class VendingCheckoutPreparationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="checkout-user",
+            password="test-password",
+        )
+
+    @patch(
+        "auctions.btcpay."
+        "create_payment_intent_invoice"
+    )
+    def test_btc_delegates_to_btcpay(
+        self,
+        create_invoice,
+    ):
+        from .vending_services import (
+            prepare_vending_checkout,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="integration_test",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "payment_method": "btc",
+            },
+        )
+
+        create_invoice.return_value = intent
+
+        returned = prepare_vending_checkout(
+            payment_intent=intent
+        )
+
+        self.assertEqual(returned, intent)
+        create_invoice.assert_called_once_with(
+            intent
+        )
+
+    @patch(
+        "auctions.btcpay."
+        "create_payment_intent_invoice"
+    )
+    def test_doge_delegates_to_btcpay(
+        self,
+        create_invoice,
+    ):
+        from .vending_services import (
+            prepare_vending_checkout,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="integration_test",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "payment_method": "doge",
+            },
+        )
+
+        create_invoice.return_value = intent
+
+        returned = prepare_vending_checkout(
+            payment_intent=intent
+        )
+
+        self.assertEqual(returned, intent)
+        create_invoice.assert_called_once_with(
+            intent
+        )
+
+    @patch(
+        "auctions.sui_quote_services."
+        "freeze_sui_quote"
+    )
+    def test_sui_delegates_to_quote_service(
+        self,
+        freeze_quote,
+    ):
+        from .vending_services import (
+            prepare_vending_checkout,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="integration_test",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_SUI
+            ),
+            metadata={
+                "payment_method": "sui",
+            },
+        )
+
+        freeze_quote.return_value = (
+            intent,
+            True,
+        )
+
+        returned = prepare_vending_checkout(
+            payment_intent=intent
+        )
+
+        self.assertEqual(returned, intent)
+
+        freeze_quote.assert_called_once_with(
+            payment_intent_id=intent.pk,
+        )
+
+    def test_unknown_method_fails_closed(self):
+        from .vending_services import (
+            VendingProductError,
+            prepare_vending_checkout,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="integration_test",
+            amount="5.00",
+            currency="USD",
+            metadata={
+                "payment_method": "ltc",
+            },
+        )
+
+        with self.assertRaises(
+            VendingProductError
+        ):
+            prepare_vending_checkout(
+                payment_intent=intent
+            )

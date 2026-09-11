@@ -125,3 +125,73 @@ def create_vending_payment_intent(
         credit_package=credit_package,
         metadata=intent_metadata,
     )
+
+
+def prepare_vending_checkout(
+    *,
+    payment_intent,
+):
+    """
+    Prepare the external checkout for an existing
+    FANZ vending PaymentIntent.
+
+    BTC/DOGE delegate to the existing BTCPay primitive.
+    SUI delegates to the existing generic SUI quote
+    primitive.
+
+    Settlement and fulfillment remain separate.
+    """
+    if not isinstance(
+        payment_intent,
+        PaymentIntent,
+    ):
+        raise TypeError(
+            "payment_intent must be a PaymentIntent"
+        )
+
+    method = normalize_payment_method(
+        (payment_intent.metadata or {}).get(
+            "payment_method"
+        )
+    )
+
+    if method in {
+        PAYMENT_BTC,
+        PAYMENT_DOGE,
+    }:
+        from .btcpay import (
+            BTCPayError,
+            create_payment_intent_invoice,
+        )
+
+        try:
+            return create_payment_intent_invoice(
+                payment_intent
+            )
+        except BTCPayError as exc:
+            raise VendingProductError(
+                str(exc)
+            ) from exc
+
+    if method == PAYMENT_SUI:
+        from .sui_quote_services import (
+            SuiPaymentQuoteError,
+            freeze_sui_quote,
+        )
+
+        try:
+            intent, _ = freeze_sui_quote(
+                payment_intent_id=(
+                    payment_intent.pk
+                ),
+            )
+        except SuiPaymentQuoteError as exc:
+            raise VendingProductError(
+                str(exc)
+            ) from exc
+
+        return intent
+
+    raise VendingProductError(
+        "Unsupported vending payment method."
+    )

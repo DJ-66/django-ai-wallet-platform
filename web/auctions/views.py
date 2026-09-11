@@ -6134,7 +6134,6 @@ def btcpay_webhook(request):
 @login_required
 @require_POST
 def buy_credit_package(request, package_id):
-    from .btcpay import BTCPayError, create_payment_intent_invoice
     from .models import (
         CreditPackage,
         VendingProduct,
@@ -6142,6 +6141,7 @@ def buy_credit_package(request, package_id):
     from .vending_services import (
         VendingProductError,
         create_vending_payment_intent,
+        prepare_vending_checkout,
     )
 
     package = get_object_or_404(
@@ -6183,11 +6183,6 @@ def buy_credit_package(request, package_id):
     )
 
     if payment_method == "sui":
-        from .sui_quote_services import (
-            SuiPaymentQuoteError,
-            freeze_sui_quote,
-        )
-
         try:
             intent = create_vending_payment_intent(
                 product=vending_product,
@@ -6210,10 +6205,10 @@ def buy_credit_package(request, package_id):
             )
 
         try:
-            intent, _ = freeze_sui_quote(
-                payment_intent_id=intent.pk,
+            intent = prepare_vending_checkout(
+                payment_intent=intent,
             )
-        except SuiPaymentQuoteError:
+        except VendingProductError:
             messages.error(
                 request,
                 "Unable to prepare SUI checkout.",
@@ -6252,10 +6247,10 @@ def buy_credit_package(request, package_id):
         )
 
     try:
-        intent = create_payment_intent_invoice(
-            intent
+        intent = prepare_vending_checkout(
+            payment_intent=intent,
         )
-    except BTCPayError:
+    except VendingProductError:
         messages.error(
             request,
             "Unable to create crypto checkout.",
