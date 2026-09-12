@@ -52,6 +52,15 @@ services:
       - default
       - fanz-net
 
+  mediamtx:
+    image: bluenviron/mediamtx:1
+    ports:
+      - "1935:1935"
+    networks:
+      - default
+      - fanz-net
+    restart: always
+
   auction_worker:
     build: .
     env_file:

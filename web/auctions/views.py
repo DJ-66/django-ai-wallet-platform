@@ -4634,6 +4634,87 @@ def translate_profile(request):
         },
     )
 
+def sunsetcam_status(request):
+    latitude = os.environ.get("SUNSETCAM_LATITUDE", "").strip()
+    longitude = os.environ.get("SUNSETCAM_LONGITUDE", "").strip()
+    sunsetcam_timezone = os.environ.get(
+        "SUNSETCAM_TIMEZONE",
+        "America/Asuncion",
+    ).strip()
+
+    if not latitude or not longitude:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "SunsetCam location is not configured.",
+            },
+            status=503,
+        )
+
+    weather_url = "https://api.open-meteo.com/v1/forecast"
+    weather_params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m",
+        "daily": "sunset",
+        "forecast_days": 2,
+        "timezone": sunsetcam_timezone,
+    }
+
+    air_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+    air_params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "us_aqi",
+        "timezone": sunsetcam_timezone,
+    }
+
+    try:
+        weather_response = requests.get(
+            weather_url,
+            params=weather_params,
+            timeout=10,
+        )
+        weather_response.raise_for_status()
+        weather_data = weather_response.json()
+
+        air_response = requests.get(
+            air_url,
+            params=air_params,
+            timeout=10,
+        )
+        air_response.raise_for_status()
+        air_data = air_response.json()
+    except (
+        requests.RequestException,
+        ValueError,
+    ) as exc:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "SunsetCam environmental data unavailable.",
+                "detail": str(exc),
+            },
+            status=502,
+        )
+
+    current_weather = weather_data.get("current") or {}
+    current_air = air_data.get("current") or {}
+    daily = weather_data.get("daily") or {}
+
+    sunsets = daily.get("sunset") or []
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "temperature_c": current_weather.get("temperature_2m"),
+            "aqi": current_air.get("us_aqi"),
+            "timezone": sunsetcam_timezone,
+            "sunsets": sunsets[:2],
+        }
+    )
+
+
 def public_profile(request, username):
     profile_user = get_object_or_404(
         User,
@@ -4904,12 +4985,24 @@ def public_profile(request, username):
                             ),
                     }
 
+    sunsetcam_live = (
+        profile_user.username.lower() == "sunsetcam"
+    )
+
+    sunsetcam_hls_url = (
+        "/live/sunsetcam/index.m3u8"
+        if sunsetcam_live
+        else ""
+    )
+
     return render(
         request,
         "auctions/public_profile.html",
         {
             "profile_user": profile_user,
             "profile": profile,
+            "sunsetcam_live": sunsetcam_live,
+            "sunsetcam_hls_url": sunsetcam_hls_url,
             "creator_wallet": creator_wallet,
             "profile_posts": profile_posts,
             "unlocked_post_ids": unlocked_post_ids,

@@ -10,6 +10,12 @@ from . import views_events
 
 urlpatterns = [
     path(
+        "sunsetcam/status/",
+        views.sunsetcam_status,
+        name="sunsetcam_status",
+    ),
+
+    path(
         "webhooks/btcpay/",
         views.btcpay_webhook,
         name="btcpay_webhook",

@@ -11,6 +11,12 @@
     <div class="profile-banner {% if not profile.banner %}profile-banner-fallback{% endif %}">
         {% if profile.banner %}
             <img src="{{ profile.banner.url }}" alt="Banner">
+        {% else %}
+            <img
+                src="{% static 'auctions/img/profile/fanz-default-banner.webp' %}"
+                alt=""
+                class="profile-default-banner"
+            >
         {% endif %}
     </div>
 
@@ -22,9 +28,11 @@
                 class="profile-avatar"
             >
         {% else %}
-            <div class="profile-avatar-fallback">
-                {{ profile_user.username|first|upper }}
-            </div>
+            <img
+                src="{% static 'auctions/img/profile/fanz-default-avatar.webp' %}"
+                class="profile-avatar"
+                alt=""
+            >
         {% endif %}
 
         <h1>
@@ -306,6 +314,325 @@
         {% endif %}
 
     </div>
+
+    {% if sunsetcam_live %}
+        <section class="profile-feed-section sunsetcam-live-section">
+            <div class="featured-post-card sunsetcam-live-card">
+
+                <div class="sunsetcam-live-header">
+                    <span class="sunsetcam-live-dot" aria-hidden="true"></span>
+                    <strong>LIVE</strong>
+                </div>
+
+                <div class="sunsetcam-player-wrap">
+                    <video
+                        id="sunsetcam-video"
+                        class="sunsetcam-video"
+                        controls
+                        autoplay
+                        muted
+                        playsinline
+                        preload="metadata"
+                        data-hls-url="{{ sunsetcam_hls_url }}">
+                    </video>
+                </div>
+
+                <div class="sunsetcam-status-row">
+                    <div class="sunsetcam-status-item">
+                        <span>🌡️</span>
+                        <span id="sunsetcam-temp">--</span>
+                    </div>
+
+                    <div class="sunsetcam-status-item">
+                        <span>🕐</span>
+                        <span id="sunsetcam-local-time">--:--</span>
+                    </div>
+
+                    <div class="sunsetcam-status-item">
+                        <span>🌅</span>
+                        <span id="sunsetcam-sunset-countdown">--:--:--</span>
+                    </div>
+
+                    <div class="sunsetcam-status-item">
+                        <span>🌬️</span>
+                        <span id="sunsetcam-aqi">AQI --</span>
+                    </div>
+                </div>
+
+                <div class="sunsetcam-promo">
+                    <a href="{% url 'account_signup' %}">
+                        {% if language == "es" %}
+                            <img
+                                src="{% static 'auctions/img/ES-50-FREE.webp' %}"
+                                alt="{% trans '50 free credits on Fanz.to' %}"
+                                class="sunsetcam-promo-img"
+                                width="686"
+                                height="936"
+                                loading="lazy"
+                            >
+                        {% elif language == "pt" %}
+                            <img
+                                src="{% static 'auctions/img/PT-50-FREE.webp' %}"
+                                alt="{% trans '50 free credits on Fanz.to' %}"
+                                class="sunsetcam-promo-img"
+                                width="686"
+                                height="936"
+                                loading="lazy"
+                            >
+                        {% else %}
+                            <img
+                                src="{% static 'auctions/img/EN-50-FREE.webp' %}"
+                                alt="{% trans '50 free credits on Fanz.to' %}"
+                                class="sunsetcam-promo-img"
+                                width="686"
+                                height="930"
+                                loading="lazy"
+                            >
+                        {% endif %}
+                    </a>
+                </div>
+
+            </div>
+        </section>
+
+        <style>
+            .sunsetcam-live-section {
+                width: 100%;
+                margin: 1.25rem auto 1.75rem;
+            }
+
+            .sunsetcam-live-card {
+                width: min(100%, 900px);
+                margin: 0 auto;
+                overflow: hidden;
+            }
+
+            .sunsetcam-live-header {
+                display: flex;
+                align-items: center;
+                gap: .55rem;
+                padding: .8rem 1rem;
+                font-weight: 800;
+                letter-spacing: .06em;
+            }
+
+            .sunsetcam-live-dot {
+                width: .7rem;
+                height: .7rem;
+                border-radius: 50%;
+                background: #e42645;
+                box-shadow: 0 0 0 .2rem rgba(228, 38, 69, .15);
+            }
+
+            .sunsetcam-player-wrap {
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                background: #000;
+                overflow: hidden;
+            }
+
+            .sunsetcam-video {
+                display: block;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                background: #000;
+            }
+
+            .sunsetcam-status-row {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .5rem;
+                padding: .8rem;
+            }
+
+            .sunsetcam-status-item {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: .35rem;
+                min-height: 2.6rem;
+                text-align: center;
+                font-weight: 700;
+            }
+
+            .sunsetcam-promo {
+                display: flex;
+                justify-content: center;
+                padding: 0 .8rem 1rem;
+            }
+
+            .sunsetcam-promo a {
+                display: block;
+                width: min(100%, 420px);
+            }
+
+            .sunsetcam-promo-img {
+                display: block;
+                width: 100%;
+                height: auto;
+                border-radius: 1rem;
+            }
+
+            @media (max-width: 700px) {
+                .sunsetcam-status-row {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+        </style>
+
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+        <script>
+        (function () {
+            const video = document.getElementById("sunsetcam-video");
+            if (!video) return;
+
+            const hlsUrl = video.dataset.hlsUrl;
+            if (!hlsUrl) return;
+
+            if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                video.src = hlsUrl;
+            } else if (window.Hls && Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(video);
+            }
+
+            const tempEl = document.getElementById("sunsetcam-temp");
+            const timeEl = document.getElementById("sunsetcam-local-time");
+            const sunsetEl = document.getElementById("sunsetcam-sunset-countdown");
+            const aqiEl = document.getElementById("sunsetcam-aqi");
+
+            let sunsetcamTimezone = "America/Asuncion";
+            let sunsetTimes = [];
+
+            function formatDuration(milliseconds) {
+                const totalSeconds = Math.max(
+                    0,
+                    Math.floor(milliseconds / 1000)
+                );
+
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor(
+                    (totalSeconds % 3600) / 60
+                );
+                const seconds = totalSeconds % 60;
+
+                return [
+                    String(hours).padStart(2, "0"),
+                    String(minutes).padStart(2, "0"),
+                    String(seconds).padStart(2, "0"),
+                ].join(":");
+            }
+
+            function updateClockAndSunset() {
+                const now = new Date();
+
+                if (timeEl) {
+                    timeEl.textContent = new Intl.DateTimeFormat(
+                        undefined,
+                        {
+                            timeZone: sunsetcamTimezone,
+                            hour: "numeric",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        }
+                    ).format(now);
+                }
+
+                if (!sunsetEl || !sunsetTimes.length) {
+                    return;
+                }
+
+                const nextSunset = sunsetTimes
+                    .map(value => new Date(value))
+                    .find(value => value > now);
+
+                if (nextSunset) {
+                    sunsetEl.textContent =
+                        "Sunset " +
+                        formatDuration(nextSunset - now);
+                } else {
+                    sunsetEl.textContent = "Sunset passed";
+                }
+            }
+
+            async function refreshSunsetCamStatus() {
+                try {
+                    const response = await fetch(
+                        "{% url 'sunsetcam_status' %}",
+                        {
+                            headers: {
+                                "Accept": "application/json",
+                            },
+                            cache: "no-store",
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(
+                            "status endpoint returned " +
+                            response.status
+                        );
+                    }
+
+                    const data = await response.json();
+
+                    if (!data.ok) {
+                        throw new Error(
+                            data.error || "status unavailable"
+                        );
+                    }
+
+                    sunsetcamTimezone =
+                        data.timezone || sunsetcamTimezone;
+
+                    sunsetTimes = Array.isArray(data.sunsets)
+                        ? data.sunsets
+                        : [];
+
+                    if (
+                        tempEl &&
+                        data.temperature_c !== null &&
+                        data.temperature_c !== undefined
+                    ) {
+                        tempEl.textContent =
+                            Math.round(data.temperature_c) + "°C";
+                    }
+
+                    if (
+                        aqiEl &&
+                        data.aqi !== null &&
+                        data.aqi !== undefined
+                    ) {
+                        aqiEl.textContent =
+                            "AQI " + Math.round(data.aqi);
+                    }
+
+                    updateClockAndSunset();
+                } catch (error) {
+                    console.warn(
+                        "SunsetCam status unavailable:",
+                        error
+                    );
+                }
+            }
+
+            refreshSunsetCamStatus();
+            updateClockAndSunset();
+
+            setInterval(
+                updateClockAndSunset,
+                1000
+            );
+
+            setInterval(
+                refreshSunsetCamStatus,
+                300000
+            );
+        })();
+        </script>
+    {% endif %}
 
     {% if is_credit_storefront %}
         <section class="profile-feed-section buy-credits-storefront">
