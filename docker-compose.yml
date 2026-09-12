@@ -54,6 +54,8 @@ services:
 
   mediamtx:
     image: bluenviron/mediamtx:1
+    environment:
+      MTX_HLSALWAYSREMUX: "yes"
     ports:
       - "1935:1935"
     networks:

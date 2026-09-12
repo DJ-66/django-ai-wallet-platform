@@ -490,13 +490,59 @@
             const hlsUrl = video.dataset.hlsUrl;
             if (!hlsUrl) return;
 
-            if (video.canPlayType("application/vnd.apple.mpegurl")) {
-                video.src = hlsUrl;
-            } else if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(hlsUrl);
-                hls.attachMedia(video);
+            let sunsetcamHls = null;
+
+            function startSunsetCamPlayback() {
+                if (sunsetcamHls) {
+                    sunsetcamHls.destroy();
+                    sunsetcamHls = null;
+                }
+
+                if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                    video.src = hlsUrl;
+                    video.load();
+                    video.play().catch(() => {});
+                    return;
+                }
+
+                if (window.Hls && Hls.isSupported()) {
+                    sunsetcamHls = new Hls({
+                        liveSyncDurationCount: 3,
+                        liveMaxLatencyDurationCount: 8,
+                    });
+
+                    sunsetcamHls.on(
+                        Hls.Events.MANIFEST_PARSED,
+                        function () {
+                            video.play().catch(() => {});
+                        }
+                    );
+
+                    sunsetcamHls.on(
+                        Hls.Events.ERROR,
+                        function (_event, data) {
+                            if (!data.fatal) {
+                                return;
+                            }
+
+                            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                                sunsetcamHls.recoverMediaError();
+                                return;
+                            }
+
+                            setTimeout(
+                                startSunsetCamPlayback,
+                                2000
+                            );
+                        }
+                    );
+
+                    sunsetcamHls.loadSource(hlsUrl);
+                    sunsetcamHls.attachMedia(video);
+                }
             }
+
+            startSunsetCamPlayback();
 
             const tempEl = document.getElementById("sunsetcam-temp");
             const timeEl = document.getElementById("sunsetcam-local-time");
@@ -1068,7 +1114,7 @@
 
 
 
-    {% if request.user.is_authenticated and request.user != post.user %}
+    {% if request.user.is_authenticated and request.user != post.user and post.user.bidwallet.wallet_code %}
        <div class="feed-tip-group">
 
     <button

@@ -98,7 +98,10 @@ def add_fanz_platform_footer(
     img = img.convert("RGBA")
 
     width, height = img.size
-    footer_height = max(90, int(width * 0.12))
+
+    # Keep FANZ branding clearly visible without allowing the footer
+    # to dominate the uploaded image.
+    footer_height = max(72, int(width * 0.085))
 
     new_img = Image.new(
         "RGBA",
@@ -111,20 +114,40 @@ def add_fanz_platform_footer(
     draw = ImageDraw.Draw(new_img)
 
     brand_text = text
+    horizontal_padding = max(24, int(width * 0.04))
+    max_text_width = width - (horizontal_padding * 2)
 
-    font_size = int(footer_height * 1.0)
+    # Start conservatively, then shrink until even long usernames fit.
+    font_size = max(24, int(footer_height * 0.50))
 
-    try:
-        brand_font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
-    except OSError:
-        brand_font = ImageFont.load_default()
+    while True:
+        try:
+            brand_font = ImageFont.truetype(
+                "DejaVuSans-Bold.ttf",
+                font_size,
+            )
+        except OSError:
+            brand_font = ImageFont.load_default()
 
-    bbox = draw.textbbox((0, 0), brand_text, font=brand_font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+        bbox = draw.textbbox(
+            (0, 0),
+            brand_text,
+            font=brand_font,
+        )
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        if text_width <= max_text_width or font_size <= 24:
+            break
+
+        font_size -= 2
 
     text_x = (width - text_width) // 2
-    text_y = height + (footer_height - text_height) // 2 - bbox[1]
+    text_y = (
+        height
+        + (footer_height - text_height) // 2
+        - bbox[1]
+    )
 
     draw.text(
         (text_x, text_y),
