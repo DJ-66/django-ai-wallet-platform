@@ -2879,3 +2879,55 @@ class FounderPriceMemory(models.Model):
             f"for @{self.buyer_root.username}: "
             f"{self.list_price_credits} cr"
         )
+
+class SunsetCamCapture(models.Model):
+    CAPTURE_MIDNIGHT = "midnight"
+    CAPTURE_MORNING = "morning"
+    CAPTURE_MIDDAY = "midday"
+    CAPTURE_SUNSET = "sunset"
+
+    CAPTURE_TYPE_CHOICES = [
+        (CAPTURE_MIDNIGHT, "Midnight"),
+        (CAPTURE_MORNING, "Morning"),
+        (CAPTURE_MIDDAY, "Midday"),
+        (CAPTURE_SUNSET, "Sunset"),
+    ]
+
+    local_date = models.DateField()
+
+    capture_type = models.CharField(
+        max_length=16,
+        choices=CAPTURE_TYPE_CHOICES,
+    )
+
+    post = models.ForeignKey(
+        FeedPost,
+        on_delete=models.PROTECT,
+        related_name="sunsetcam_captures",
+    )
+
+    captured_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-local_date",
+            "-captured_at",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "local_date",
+                    "capture_type",
+                ],
+                name="unique_sunsetcam_capture_per_slot",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"SunsetCam {self.local_date} "
+            f"{self.capture_type} -> post #{self.post_id}"
+        )

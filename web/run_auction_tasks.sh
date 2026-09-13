@@ -24,6 +24,10 @@ do
         # authoritative for PREPARE/SUBMIT safety gates.
         python manage.py process_next_founder_coin_publication
 
+        # Check whether a SunsetCam daily capture slot is due.
+        # The command is idempotent through SunsetCamCapture.
+        python manage.py process_sunsetcam_capture
+
         PAYMENT_COUNTER=0
     fi
 
