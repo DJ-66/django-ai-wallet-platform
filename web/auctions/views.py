@@ -5705,22 +5705,15 @@ No previous conversation is provided intentionally.
 
     
     try:
-        response = requests.post(
-            "http://172.17.0.1:11434/api/generate",
-            json={
-                "model": "gemma3:latest",
-                "prompt": memory_prompt,
-                "stream": False,
-                "options": {
-                    "num_predict": 80,
-                },
-            },
-            timeout=45,
-        )
+        from .ai_services.ai_providers import DeepSeekLocalProvider
 
-        response.raise_for_status()
+        provider = DeepSeekLocalProvider()
 
-        raw_memory_text = response.json().get("response", "").strip()
+        raw_memory_text = provider.generate_reply(
+            memory_prompt,
+            [],
+            num_predict=80,
+        ).strip()
         
         cleaned_memory_text = raw_memory_text
 
@@ -6228,6 +6221,7 @@ Write the next message from {influencer.username}.
         reply_text = provider.generate_reply(
             prompt,
             [],
+            num_predict=55,
         ).strip()
 
         if not reply_text:

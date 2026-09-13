@@ -2,13 +2,18 @@ import requests
 from django.conf import settings
 
 class DeepSeekLocalProvider:
-    def generate_reply(self, system_prompt, history):
+    def generate_reply(
+        self,
+        system_prompt,
+        history,
+        num_predict=512,
+    ):
         payload = {
             "model": settings.OLLAMA_MODEL,
             "messages": [{"role": "system", "content": system_prompt}] + history,
             "stream": False,
             "options": {
-                "num_predict": 512,
+                "num_predict": num_predict,
                 "temperature": 0.7,
             },
         }

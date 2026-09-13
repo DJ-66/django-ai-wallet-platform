@@ -102,27 +102,15 @@ Message:
 """
 
     try:
-        response = requests.post(
-            "http://172.17.0.1:11434/api/generate",
+        from .ai_services.ai_providers import DeepSeekLocalProvider
 
-            json={
-                "model": "gemma3:latest",
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "num_predict": 500,
-                },
-            },
-            timeout=45,
-        )
+        provider = DeepSeekLocalProvider()
 
-        response.raise_for_status()
-
-        translated = (
-            response.json()
-            .get("response", "")
-            .strip()
-        )
+        translated = provider.generate_reply(
+            prompt,
+            [],
+            num_predict=500,
+        ).strip()
 
         if not translated:
             return body
