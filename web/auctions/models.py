@@ -2889,13 +2889,26 @@ class SunsetCamCapture(models.Model):
     CAPTURE_MIDNIGHT = "midnight"
     CAPTURE_MORNING = "morning"
     CAPTURE_MIDDAY = "midday"
+
+    # Legacy single-sunset slot. Keep this value so existing
+    # capture rows remain valid, but do not schedule new posts
+    # into it.
     CAPTURE_SUNSET = "sunset"
+
+    CAPTURE_SUNSET_1 = "sunset_1"
+    CAPTURE_SUNSET_2 = "sunset_2"
+    CAPTURE_SUNSET_3 = "sunset_3"
+    CAPTURE_SUNSET_4 = "sunset_4"
 
     CAPTURE_TYPE_CHOICES = [
         (CAPTURE_MIDNIGHT, "Midnight"),
         (CAPTURE_MORNING, "Morning"),
         (CAPTURE_MIDDAY, "Midday"),
-        (CAPTURE_SUNSET, "Sunset"),
+        (CAPTURE_SUNSET, "Sunset (legacy)"),
+        (CAPTURE_SUNSET_1, "Sunset 1"),
+        (CAPTURE_SUNSET_2, "Sunset 2"),
+        (CAPTURE_SUNSET_3, "Sunset 3"),
+        (CAPTURE_SUNSET_4, "Sunset 4"),
     ]
 
     local_date = models.DateField()

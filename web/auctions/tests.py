@@ -13005,3 +13005,179 @@ class CustomAmountVendingTests(TestCase):
         self.assertTrue(created)
         self.assertEqual(returned.status, "fulfilled")
         self.assertIsNotNone(returned.fulfilled_at)
+
+
+class SunsetCamCaptureScheduleTests(TestCase):
+    def setUp(self):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from auctions.management.commands import (
+            process_sunsetcam_capture,
+        )
+
+        self.datetime = datetime
+        self.timezone = ZoneInfo(
+            "America/Asuncion"
+        )
+        self.command = (
+            process_sunsetcam_capture.Command()
+        )
+
+        self.sunrise = datetime(
+            2026,
+            9,
+            15,
+            5,
+            42,
+            tzinfo=self.timezone,
+        )
+
+        self.sunset = datetime(
+            2026,
+            9,
+            15,
+            18,
+            31,
+            tzinfo=self.timezone,
+        )
+
+    def _moment(self, hour, minute):
+        return self.datetime(
+            2026,
+            9,
+            15,
+            hour,
+            minute,
+            tzinfo=self.timezone,
+        )
+
+    def _due(self, hour, minute):
+        from unittest.mock import patch
+
+        with patch.object(
+            self.command,
+            "_get_today_solar_times",
+            return_value=(
+                self.sunrise,
+                self.sunset,
+            ),
+        ):
+            return self.command._due_capture_type(
+                self._moment(hour, minute)
+            )
+
+    def test_midnight_slot(self):
+        from auctions.models import (
+            SunsetCamCapture,
+        )
+
+        self.assertEqual(
+            self._due(0, 0),
+            SunsetCamCapture.CAPTURE_MIDNIGHT,
+        )
+
+    def test_morning_is_five_minutes_after_sunrise(
+        self,
+    ):
+        from auctions.models import (
+            SunsetCamCapture,
+        )
+
+        self.assertIsNone(
+            self._due(5, 46)
+        )
+
+        self.assertEqual(
+            self._due(5, 47),
+            SunsetCamCapture.CAPTURE_MORNING,
+        )
+
+        self.assertEqual(
+            self._due(5, 51),
+            SunsetCamCapture.CAPTURE_MORNING,
+        )
+
+        self.assertIsNone(
+            self._due(5, 52)
+        )
+
+    def test_midday_slot(self):
+        from auctions.models import (
+            SunsetCamCapture,
+        )
+
+        self.assertEqual(
+            self._due(12, 0),
+            SunsetCamCapture.CAPTURE_MIDDAY,
+        )
+
+    def test_evening_progression_slots(self):
+        from auctions.models import (
+            SunsetCamCapture,
+        )
+
+        expected = [
+            (
+                18,
+                5,
+                SunsetCamCapture.CAPTURE_SUNSET_1,
+            ),
+            (
+                18,
+                15,
+                SunsetCamCapture.CAPTURE_SUNSET_2,
+            ),
+            (
+                18,
+                25,
+                SunsetCamCapture.CAPTURE_SUNSET_3,
+            ),
+            (
+                18,
+                31,
+                SunsetCamCapture.CAPTURE_SUNSET_4,
+            ),
+        ]
+
+        for hour, minute, capture_type in expected:
+            with self.subTest(
+                capture_type=capture_type
+            ):
+                self.assertEqual(
+                    self._due(hour, minute),
+                    capture_type,
+                )
+
+    def test_legacy_sunset_choice_is_preserved_but_not_scheduled(
+        self,
+    ):
+        from auctions.models import (
+            SunsetCamCapture,
+        )
+
+        choice_values = {
+            value
+            for value, _label
+            in SunsetCamCapture.CAPTURE_TYPE_CHOICES
+        }
+
+        self.assertIn(
+            SunsetCamCapture.CAPTURE_SUNSET,
+            choice_values,
+        )
+
+        scheduled = {
+            self._due(0, 0),
+            self._due(5, 47),
+            self._due(12, 0),
+            self._due(18, 5),
+            self._due(18, 15),
+            self._due(18, 25),
+            self._due(18, 31),
+        }
+
+        self.assertNotIn(
+            SunsetCamCapture.CAPTURE_SUNSET,
+            scheduled,
+        )

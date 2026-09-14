@@ -107,6 +107,19 @@ CAPTURE_COPY = {
     },
 }
 
+# The evening sequence uses the same multilingual sunset copy.
+# The capture identity remains distinct so each frame can post
+# exactly once per local date.
+for _sunset_capture_type in (
+    SunsetCamCapture.CAPTURE_SUNSET_1,
+    SunsetCamCapture.CAPTURE_SUNSET_2,
+    SunsetCamCapture.CAPTURE_SUNSET_3,
+    SunsetCamCapture.CAPTURE_SUNSET_4,
+):
+    CAPTURE_COPY[_sunset_capture_type] = (
+        CAPTURE_COPY[SunsetCamCapture.CAPTURE_SUNSET]
+    )
+
 
 class Command(BaseCommand):
     help = (
@@ -127,6 +140,10 @@ class Command(BaseCommand):
                 SunsetCamCapture.CAPTURE_MORNING,
                 SunsetCamCapture.CAPTURE_MIDDAY,
                 SunsetCamCapture.CAPTURE_SUNSET,
+                SunsetCamCapture.CAPTURE_SUNSET_1,
+                SunsetCamCapture.CAPTURE_SUNSET_2,
+                SunsetCamCapture.CAPTURE_SUNSET_3,
+                SunsetCamCapture.CAPTURE_SUNSET_4,
             ],
             help="Force one capture type regardless of the current time.",
         )
@@ -144,7 +161,7 @@ class Command(BaseCommand):
                 f"Invalid SUNSETCAM_TIMEZONE: {timezone_name}"
             ) from exc
 
-    def _get_today_sunset(self, now_local):
+    def _get_today_solar_times(self, now_local):
         latitude = os.environ.get(
             "SUNSETCAM_LATITUDE",
             "",
@@ -162,7 +179,8 @@ class Command(BaseCommand):
 
         if not latitude or not longitude:
             raise CommandError(
-                "SUNSETCAM_LATITUDE and SUNSETCAM_LONGITUDE are required."
+                "SUNSETCAM_LATITUDE and "
+                "SUNSETCAM_LONGITUDE are required."
             )
 
         try:
@@ -171,7 +189,7 @@ class Command(BaseCommand):
                 params={
                     "latitude": latitude,
                     "longitude": longitude,
-                    "daily": "sunset",
+                    "daily": "sunrise,sunset",
                     "forecast_days": 1,
                     "timezone": timezone_name,
                 },
@@ -179,25 +197,38 @@ class Command(BaseCommand):
             )
             response.raise_for_status()
             data = response.json()
-        except (requests.RequestException, ValueError) as exc:
+        except (
+            requests.RequestException,
+            ValueError,
+        ) as exc:
             raise CommandError(
-                "Unable to retrieve SunsetCam sunset time."
+                "Unable to retrieve SunsetCam solar times."
             ) from exc
 
-        sunsets = (
-            (data.get("daily") or {}).get("sunset")
-            or []
-        )
+        daily = data.get("daily") or {}
 
-        if not sunsets:
+        sunrises = daily.get("sunrise") or []
+        sunsets = daily.get("sunset") or []
+
+        if not sunrises or not sunsets:
             raise CommandError(
-                "Open-Meteo returned no sunset time."
+                "Open-Meteo returned incomplete solar times."
             )
 
-        sunset_naive = datetime.fromisoformat(sunsets[0])
+        sunrise_naive = datetime.fromisoformat(
+            sunrises[0]
+        )
+        sunset_naive = datetime.fromisoformat(
+            sunsets[0]
+        )
 
-        return sunset_naive.replace(
-            tzinfo=now_local.tzinfo
+        return (
+            sunrise_naive.replace(
+                tzinfo=now_local.tzinfo
+            ),
+            sunset_naive.replace(
+                tzinfo=now_local.tzinfo
+            ),
         )
 
     def _due_capture_type(self, now_local):
@@ -207,27 +238,74 @@ class Command(BaseCommand):
         )
 
         fixed_slots = {
-            SunsetCamCapture.CAPTURE_MIDNIGHT: 0,
-            SunsetCamCapture.CAPTURE_MORNING: 6 * 60,
-            SunsetCamCapture.CAPTURE_MIDDAY: 12 * 60,
+            SunsetCamCapture.CAPTURE_MIDNIGHT:
+                0,
+            SunsetCamCapture.CAPTURE_MIDDAY:
+                12 * 60,
+            SunsetCamCapture.CAPTURE_SUNSET_1:
+                18 * 60 + 5,
+            SunsetCamCapture.CAPTURE_SUNSET_2:
+                18 * 60 + 15,
+            SunsetCamCapture.CAPTURE_SUNSET_3:
+                18 * 60 + 25,
         }
 
-        for capture_type, target_minute in fixed_slots.items():
-            if target_minute <= minute_of_day <= target_minute + 4:
+        for (
+            capture_type,
+            target_minute,
+        ) in fixed_slots.items():
+            if (
+                target_minute
+                <= minute_of_day
+                <= target_minute + 4
+            ):
                 return capture_type
 
-        # Sunset changes slowly. Avoid querying the weather API
-        # every minute throughout the entire day.
-        if not (16 <= now_local.hour <= 21):
-            return None
+        # Morning follows the seasons instead of using a
+        # fixed 06:00 slot. Five minutes after sunrise gives
+        # the camera useful daylight while staying close to
+        # the start of the day.
+        if 4 <= now_local.hour <= 10:
+            sunrise, _ = (
+                self._get_today_solar_times(
+                    now_local
+                )
+            )
 
-        if now_local.minute % 5 != 0:
-            return None
+            morning_target = (
+                sunrise
+                + timedelta(minutes=5)
+            )
 
-        sunset = self._get_today_sunset(now_local)
+            if (
+                morning_target
+                <= now_local
+                <= morning_target
+                + timedelta(minutes=4)
+            ):
+                return (
+                    SunsetCamCapture.
+                    CAPTURE_MORNING
+                )
 
-        if abs(now_local - sunset) <= timedelta(minutes=3):
-            return SunsetCamCapture.CAPTURE_SUNSET
+        # Final evening frame follows astronomical sunset.
+        if 16 <= now_local.hour <= 21:
+            _, sunset = (
+                self._get_today_solar_times(
+                    now_local
+                )
+            )
+
+            if (
+                sunset
+                <= now_local
+                <= sunset
+                + timedelta(minutes=4)
+            ):
+                return (
+                    SunsetCamCapture.
+                    CAPTURE_SUNSET_4
+                )
 
         return None
 
