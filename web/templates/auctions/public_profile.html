@@ -147,7 +147,7 @@
 
         {% if request.user.is_authenticated and request.user != profile_user %}
             <a href="{% url 'toggle_fan' profile_user.username %}"
-               class="auth-primary-btn profile-tip-btn">
+               class="auth-primary-btn profile-tip-btn profile-fan-btn">
                 {% if is_fan %}
                     ⭐ {% trans "Unfan" %}
                 {% else %}
@@ -155,14 +155,18 @@
                 {% endif %}
 
             </a>
-            <br>
+
+            <div
+                class="profile-action-gap"
+                aria-hidden="true"
+            ></div>
+
          {% if request.user.is_authenticated %}
          <a href="{% url 'start_conversation' profile_user.username %}"
-         class="auth-primary-btn">
+         class="auth-primary-btn profile-message-btn">
         💌 {% trans "Message" %} {{ profile_user.username }}
         </a>
         {% endif %}
-        <br>
              {% if profile_user.bidwallet.wallet_code %}
             <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
                class="auth-primary-btn profile-tip-btn">
@@ -202,42 +206,45 @@
 
 
 
-        <div class="profile-social-links">
-            {% if profile.youtube %}
-                <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
-            {% endif %}
+        {% if profile.youtube or profile.instagram or profile.x_url or profile.tiktok or profile.telegram or profile.whatsapp or profile.featured_link_1_url or profile.featured_link_2_url or profile.featured_link_3_url %}
+            <div class="profile-social-links">
+                {% if profile.youtube %}
+                    <a href="{{ profile.youtube }}" target="_blank" rel="noopener">📺 YouTube</a>
+                {% endif %}
 
-            {% if profile.instagram %}
-                <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
-            {% endif %}
+                {% if profile.instagram %}
+                    <a href="{{ profile.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>
+                {% endif %}
 
-            {% if profile.x_url %}
-                <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
-            {% endif %}
+                {% if profile.x_url %}
+                    <a href="{{ profile.x_url }}" target="_blank" rel="noopener">𝕏.com</a>
+                {% endif %}
 
-            {% if profile.tiktok %}
-                <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
-            {% endif %}
+                {% if profile.tiktok %}
+                    <a href="{{ profile.tiktok }}" target="_blank" rel="noopener">🎵 TikTok</a>
+                {% endif %}
 
-            {% if profile.telegram %}
-                <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
-            {% endif %}
-            {% if profile.whatsapp %}
-                <a href="https://wa.me/{{ profile.whatsapp }}" target="_blank" rel="noopener">📱 WhatsApp</a>
-            {% endif %}
+                {% if profile.telegram %}
+                    <a href="{{ profile.telegram }}" target="_blank" rel="noopener">✈️ Telegram</a>
+                {% endif %}
 
-            {% if profile.featured_link_1_label and profile.featured_link_1_url %}
-                <a href="{{ profile.featured_link_1_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_1_label }}</a>
-            {% endif %}
-            {% if profile.featured_link_2_label and profile.featured_link_2_url %}
-                <a href="{{ profile.featured_link_2_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_2_label }}</a>
-            {% endif %}
-            {% if profile.featured_link_3_label and profile.featured_link_3_url %}
-                <a href="{{ profile.featured_link_3_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_3_label }}</a>
-            {% endif %}
+                {% if profile.whatsapp %}
+                    <a href="https://wa.me/{{ profile.whatsapp }}" target="_blank" rel="noopener">📱 WhatsApp</a>
+                {% endif %}
 
-        </div>
-<br>
+                {% if profile.featured_link_1_label and profile.featured_link_1_url %}
+                    <a href="{{ profile.featured_link_1_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_1_label }}</a>
+                {% endif %}
+
+                {% if profile.featured_link_2_label and profile.featured_link_2_url %}
+                    <a href="{{ profile.featured_link_2_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_2_label }}</a>
+                {% endif %}
+
+                {% if profile.featured_link_3_label and profile.featured_link_3_url %}
+                    <a href="{{ profile.featured_link_3_url }}" target="_blank" rel="noopener">⭐ {{ profile.featured_link_3_label }}</a>
+                {% endif %}
+            </div>
+        {% endif %}
 
  {% if profile.bank_qr_image and creator_wallet and creator_wallet.credits >= 500 %}
 
@@ -298,7 +305,6 @@
                 </details>
             </div>
         {% endif %}
-<br>
 
         <button
             type="button"
@@ -314,6 +320,487 @@
         {% endif %}
 
     </div>
+
+    {% if support_product %}
+        <section
+            id="support-me"
+            class="profile-feed-section support-me-section"
+        >
+            <div class="featured-post-card support-me-card">
+
+                <div class="support-me-header">
+                    <div>
+                        <span class="support-me-heart">❤️</span>
+                        <strong>{{ support_product.display_name }}</strong>
+                    </div>
+
+                    <span class="seller-badge">
+                        {% trans "Support" %}
+                    </span>
+                </div>
+
+                {% if support_product.description %}
+                    <p class="support-me-description">
+                        {{ support_product.description }}
+                    </p>
+                {% endif %}
+
+                {% if support_goal > 0 %}
+                    <div class="support-meter-copy">
+                        <strong>
+                            ${{ support_total|floatformat:2 }}
+                        </strong>
+                        <span>
+                            / ${{ support_goal|floatformat:2 }}
+                            {% trans "this month" %}
+                        </span>
+                    </div>
+
+                    <div
+                        class="support-meter"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-valuenow="{{ support_bar_percent|floatformat:0 }}"
+                    >
+                        <div
+                            class="support-meter-fill"
+                            style="width: {{ support_bar_percent|floatformat:2 }}%;"
+                        ></div>
+                    </div>
+
+                    <div class="support-meter-footer">
+                        <span>
+                            {{ support_percent|floatformat:1 }}%
+                        </span>
+
+                        <span>
+                            👥 {{ supporter_count }}
+                            {% trans "supporters" %}
+                        </span>
+                    </div>
+                {% endif %}
+
+                {% if request.user.is_authenticated %}
+                    <form
+                        method="post"
+                        action="{% url 'support_vending_checkout' support_product.product_key %}"
+                        class="support-checkout-form"
+                    >
+                        {% csrf_token %}
+
+                        <div class="support-presets">
+                            {% for amount in support_presets %}
+                                <button
+                                    type="button"
+                                    class="auth-primary-btn support-preset-btn"
+                                    data-support-amount="{{ amount }}"
+                                >
+                                    ${{ amount }}
+                                </button>
+                            {% endfor %}
+                        </div>
+
+                        <div class="support-custom-row">
+                            <label for="support-custom-amount">
+                                {% trans "Support amount" %}
+                            </label>
+
+                            <div class="support-custom-input-wrap">
+                                <span>$</span>
+                                <input
+                                    id="support-custom-amount"
+                                    name="amount_usd"
+                                    type="number"
+                                    min="1"
+                                    max="5000"
+                                    step="0.01"
+                                    required
+                                    placeholder="25.00"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="support-payment-methods">
+                            <button
+                                type="submit"
+                                name="payment_method"
+                                value="btc"
+                                class="auth-primary-btn"
+                            >
+                                ₿ BTC
+                            </button>
+
+                            <button
+                                type="submit"
+                                name="payment_method"
+                                value="sui"
+                                class="auth-primary-btn"
+                            >
+                                ◎ SUI
+                            </button>
+
+                            <button
+                                type="submit"
+                                name="payment_method"
+                                value="doge"
+                                class="auth-primary-btn"
+                            >
+                                Ð DOGE
+                            </button>
+                        </div>
+                    </form>
+
+                    <script>
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        function () {
+                            const input = document.getElementById(
+                                "support-custom-amount"
+                            );
+
+                            document.querySelectorAll(
+                                ".support-preset-btn"
+                            ).forEach(function (button) {
+                                button.addEventListener(
+                                    "click",
+                                    function () {
+                                        if (!input) return;
+
+                                        input.value =
+                                            button.dataset.supportAmount;
+
+                                        input.focus();
+                                    }
+                                );
+                            });
+                        }
+                    );
+                    </script>
+
+                    {% if support_sui_checkout %}
+                        <div
+                            id="support-sui-checkout"
+                            class="support-sui-checkout"
+                        >
+                            <h4>
+                                ◎ {% trans "SUI Support Payment" %}
+                            </h4>
+
+                            <p>
+                                <strong>{% trans "Support amount" %}:</strong>
+                                ${{ support_sui_checkout.amount_usd|floatformat:2 }}
+                            </p>
+
+                            <p>
+                                <strong>{% trans "SUI amount" %}:</strong>
+                                {{ support_sui_checkout.amount_sui }} SUI
+                            </p>
+
+                            <p>
+                                <strong>
+                                    {% trans "FANZ Sui address" %}:
+                                </strong>
+                            </p>
+
+                            <code
+                                id="support-sui-recipient-address"
+                                class="support-sui-address"
+                            >
+                                {{ support_sui_checkout.recipient_address }}
+                            </code>
+
+                            <button
+                                type="button"
+                                id="support-sui-copy-address"
+                                class="auth-secondary-btn"
+                            >
+                                📋 {% trans "Copy Sui address" %}
+                            </button>
+
+                            <button
+                                type="button"
+                                id="support-sui-wallet-pay"
+                                class="auth-primary-btn"
+                                data-recipient-address="{{ support_sui_checkout.recipient_address }}"
+                                data-required-mist="{{ support_sui_checkout.required_mist }}"
+                            >
+                                💧 {% trans "Pay with Sui Wallet" %}
+                            </button>
+
+                            <p id="support-sui-wallet-status"></p>
+
+                            <form
+                                id="support-sui-payment-form"
+                                method="post"
+                                action="{% url 'verify_support_sui_payment' %}"
+                            >
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="payment_intent_id"
+                                    value="{{ support_sui_checkout.payment_intent_id }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    id="support-sui-tx-digest"
+                                    name="tx_digest"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    id="support-sui-payer-address"
+                                    name="payer_sui_address"
+                                >
+                            </form>
+
+                            <details class="support-sui-manual">
+                                <summary>
+                                    {% trans "Already paid manually?" %}
+                                </summary>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'verify_support_sui_payment' %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="payment_intent_id"
+                                        value="{{ support_sui_checkout.payment_intent_id }}"
+                                    >
+
+                                    <label for="support-sui-manual-digest">
+                                        {% trans "Transaction digest" %}
+                                    </label>
+
+                                    <input
+                                        id="support-sui-manual-digest"
+                                        name="tx_digest"
+                                        type="text"
+                                        required
+                                        autocomplete="off"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="auth-primary-btn"
+                                    >
+                                        ◎ {% trans "Verify Payment" %}
+                                    </button>
+                                </form>
+                            </details>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <a
+                        href="{% url 'account_login' %}"
+                        class="auth-primary-btn"
+                    >
+                        {% trans "Login to support" %}
+                    </a>
+                {% endif %}
+
+            </div>
+        </section>
+
+        <style>
+            .profile-share-btn {
+                margin-top: .2rem;
+                margin-bottom: .2rem;
+                padding-top: .45rem;
+                padding-bottom: .45rem;
+            }
+
+            .support-me-section {
+                width: 100%;
+                margin: .5rem auto 1.25rem;
+            }
+
+            .support-me-card {
+                width: min(100%, 900px);
+                margin: 0 auto;
+                padding: 1.15rem;
+            }
+
+            @media (max-width: 600px) {
+                .profile-share-btn {
+                    margin-top: 0;
+                    margin-bottom: 0;
+                    padding-top: .35rem;
+                    padding-bottom: .35rem;
+                }
+
+                .support-me-section {
+                    margin-top: .25rem;
+                }
+            }
+
+            .support-me-header,
+            .support-meter-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .support-me-header {
+                font-size: 1.1rem;
+            }
+
+            .support-me-heart {
+                margin-right: .35rem;
+            }
+
+            .support-me-description {
+                margin: .8rem 0 1rem;
+                opacity: .9;
+            }
+
+            .support-meter-copy {
+                margin-bottom: .45rem;
+            }
+
+            .support-meter-copy strong {
+                font-size: 1.2rem;
+            }
+
+            .support-meter {
+                width: 100%;
+                height: 1.15rem;
+                overflow: hidden;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, .12);
+                border: 1px solid rgba(255, 255, 255, .16);
+            }
+
+            .support-meter-fill {
+                height: 100%;
+                min-width: 0;
+                border-radius: inherit;
+                background:
+                    linear-gradient(
+                        90deg,
+                        #7c3aed,
+                        #ec4899,
+                        #facc15
+                    );
+                transition: width .3s ease;
+            }
+
+            .support-meter-footer {
+                margin-top: .4rem;
+                font-size: .88rem;
+                opacity: .85;
+            }
+
+            .support-presets,
+            .support-payment-methods {
+                display: flex;
+                flex-wrap: wrap;
+                gap: .55rem;
+                margin-top: 1rem;
+            }
+
+            .support-custom-row {
+                margin-top: 1rem;
+            }
+
+            .support-custom-row label {
+                display: block;
+                margin-bottom: .35rem;
+                font-weight: 700;
+            }
+
+            .support-custom-input-wrap {
+                display: flex;
+                align-items: center;
+                gap: .4rem;
+                max-width: 15rem;
+            }
+
+            .support-custom-input-wrap input {
+                width: 100%;
+                padding: .65rem .75rem;
+                border-radius: .6rem;
+            }
+
+            .support-coming-next {
+                display: block;
+                margin-top: .7rem;
+                opacity: .65;
+            }
+
+            .support-sui-checkout {
+                margin-top: 1.25rem;
+                padding: 1rem;
+                border-radius: .8rem;
+                border: 1px solid rgba(255, 255, 255, .18);
+                background: rgba(0, 0, 0, .18);
+            }
+
+            .support-sui-address {
+                display: block;
+                overflow-wrap: anywhere;
+                padding: .7rem;
+                margin-bottom: .8rem;
+                border-radius: .5rem;
+            }
+
+            #support-sui-copy-address {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: .3rem;
+                padding: .42rem .72rem;
+                margin: 0 .55rem .8rem 0;
+                border: 1px solid #7c3aed;
+                border-radius: .55rem;
+                background: #7c3aed;
+                color: #fff;
+                font: inherit;
+                font-size: .82rem;
+                font-weight: 700;
+                line-height: 1;
+                cursor: pointer;
+                box-shadow: 0 2px 6px rgba(124, 58, 237, .22);
+                transition:
+                    background .15s ease,
+                    transform .15s ease;
+            }
+
+            #support-sui-copy-address:hover {
+                background: #6d28d9;
+                transform: translateY(-1px);
+            }
+
+            #support-sui-copy-address:active {
+                transform: translateY(0);
+            }
+
+            .support-sui-checkout input[type="text"] {
+                display: block;
+                width: min(100%, 32rem);
+                max-width: 100%;
+                box-sizing: border-box;
+                margin: .4rem 0 .8rem;
+                padding: .65rem .75rem;
+                border-radius: .6rem;
+            }
+
+            .support-sui-manual {
+                max-width: 100%;
+                overflow: hidden;
+            }
+
+            .support-sui-manual form {
+                max-width: 100%;
+            }
+        </style>
+    {% endif %}
 
     {% if sunsetcam_live %}
         <section class="profile-feed-section sunsetcam-live-section">
@@ -1239,6 +1726,105 @@
 </div>
 {% include "auctions/includes/_feed_post_scripts.html" %}
 
+<style id="mobile-profile-compact">
+@media (max-width: 600px) {
+
+    /* Shorter hero/banner */
+    .profile-banner {
+        max-height: 125px !important;
+        overflow: hidden !important;
+    }
+
+    .profile-banner img {
+        display: block !important;
+        width: 100% !important;
+        height: 125px !important;
+        object-fit: cover !important;
+    }
+
+    /* Smaller overlapping avatar */
+    .profile-avatar {
+        width: 96px !important;
+        height: 96px !important;
+        max-width: 96px !important;
+        max-height: 96px !important;
+    }
+
+    /* Compress the white profile card */
+    .profile-public-card {
+        padding-top: .4rem !important;
+        padding-bottom: .45rem !important;
+        margin-bottom: .35rem !important;
+    }
+
+    .profile-public-card h1 {
+        margin-top: .35rem !important;
+        margin-bottom: .1rem !important;
+        line-height: 1.08 !important;
+    }
+
+    .profile-username {
+        margin-top: 0 !important;
+        margin-bottom: .35rem !important;
+    }
+
+    .profile-stats {
+        margin-top: .3rem !important;
+        margin-bottom: .45rem !important;
+        gap: .45rem !important;
+    }
+
+    /* Main profile actions */
+    .profile-public-card > .auth-primary-btn {
+        margin-top: .18rem !important;
+        margin-bottom: .18rem !important;
+        padding-top: .48rem !important;
+        padding-bottom: .48rem !important;
+    }
+
+    .profile-share-btn {
+        margin-top: .2rem !important;
+        margin-bottom: 0 !important;
+        padding-top: .38rem !important;
+        padding-bottom: .38rem !important;
+    }
+
+    /* Pull capability modules toward profile card */
+    .support-me-section,
+    .sunsetcam-live-section {
+        margin-top: .25rem !important;
+    }
+
+    /*
+     * Keep the two primary profile actions visually
+     * separated without wasting vertical space.
+     */
+    .profile-fan-btn {
+        margin-bottom: .32rem !important;
+    }
+
+    .profile-message-btn {
+        margin-top: .32rem !important;
+        margin-bottom: .25rem !important;
+    }
+
+    /*
+     * Share is the final normal profile action.
+     * Do not leave a large empty tail below it.
+     */
+    .profile-share-btn {
+        margin-top: .25rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    .profile-public-card {
+        min-height: 0 !important;
+        height: auto !important;
+        padding-bottom: .65rem !important;
+    }
+}
+</style>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const shareBtn = document.querySelector(".profile-share-btn");
@@ -1333,6 +1919,170 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+</script>
+
+<script id="support-sui-wallet-handler">
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    const button =
+      document.getElementById(
+        "support-sui-wallet-pay"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const status =
+      document.getElementById(
+        "support-sui-wallet-status"
+      );
+
+    const copyButton =
+      document.getElementById(
+        "support-sui-copy-address"
+      );
+
+    const recipientCode =
+      document.getElementById(
+        "support-sui-recipient-address"
+      );
+
+
+    const digestInput =
+      document.getElementById(
+        "support-sui-tx-digest"
+      );
+
+    const payerInput =
+      document.getElementById(
+        "support-sui-payer-address"
+      );
+
+    const verifyForm =
+      document.getElementById(
+        "support-sui-payment-form"
+      );
+
+    if (copyButton && recipientCode) {
+      copyButton.addEventListener(
+        "click",
+        async function () {
+          const address =
+            recipientCode.textContent.trim();
+
+          try {
+            await navigator.clipboard.writeText(
+              address
+            );
+
+            copyButton.textContent =
+              "Copied";
+          } catch (error) {
+            console.error(
+              "[FANZ Support Sui Copy]",
+              error
+            );
+          }
+        }
+      );
+    }
+
+    button.addEventListener(
+      "click",
+      async function () {
+        const originalText =
+          button.textContent;
+
+        try {
+          button.disabled = true;
+
+          if (status) {
+            status.textContent =
+              "Connecting to Sui wallet…";
+          }
+
+          if (!window.FANZSuiWallet) {
+            throw new Error(
+              "Sui wallet bridge is not loaded."
+            );
+          }
+
+          const recipientAddress =
+            button.dataset.recipientAddress || "";
+
+          const amountMist =
+            button.dataset.requiredMist || "";
+
+          if (!recipientAddress) {
+            throw new Error(
+              "SUI payment recipient is missing."
+            );
+          }
+
+          if (!amountMist) {
+            throw new Error(
+              "SUI payment amount is missing."
+            );
+          }
+
+          if (status) {
+            status.textContent =
+              "Approve the SUI support payment in your wallet…";
+          }
+
+          const result =
+            await window.FANZSuiWallet.paySui({
+              recipientAddress,
+              amountMist,
+            });
+
+          if (!result?.digest) {
+            throw new Error(
+              "Wallet returned no transaction digest."
+            );
+          }
+
+          digestInput.value =
+            result.digest;
+
+          if (
+            payerInput
+            && result.account
+          ) {
+            payerInput.value =
+              result.account;
+          }
+
+          if (status) {
+            status.textContent =
+              "Payment published. FANZ is verifying it…";
+          }
+
+          verifyForm.submit();
+
+        } catch (error) {
+          console.error(
+            "[FANZ Support Sui Payment]",
+            error
+          );
+
+          if (status) {
+            status.textContent =
+              error instanceof Error
+                ? error.message
+                : "Unable to complete SUI payment.";
+          }
+
+          button.disabled = false;
+          button.textContent =
+            originalText;
+        }
+      }
+    );
+  }
+);
 </script>
 
 <script id="credit-sui-wallet-handler">

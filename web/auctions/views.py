@@ -4716,6 +4716,7 @@ def sunsetcam_status(request):
 
 
 def public_profile(request, username):
+    from .models import PaymentIntent, VendingProduct
     profile_user = get_object_or_404(
         User,
         username__iexact=username
@@ -4985,6 +4986,241 @@ def public_profile(request, username):
                             ),
                     }
 
+    # --------------------------------------------------
+    # Generic Support Me / Fund Me vending capability
+    # --------------------------------------------------
+
+    support_product = (
+        VendingProduct.objects
+        .filter(
+            seller=profile_user,
+            mode=VendingProduct.MODE_PAY,
+            settlement_mode=(
+                VendingProduct.SETTLEMENT_PLATFORM
+            ),
+            fulfillment_type="contribution",
+            is_active=True,
+        )
+        .order_by("pk")
+        .first()
+    )
+
+    support_total = Decimal("0.00")
+    support_goal = Decimal("0.00")
+    support_percent = Decimal("0.00")
+    support_bar_percent = Decimal("0.00")
+    supporter_count = 0
+    support_presets = []
+
+    if support_product is not None:
+        support_metadata = (
+            support_product.fulfillment_metadata or {}
+        )
+
+        try:
+            support_goal = Decimal(
+                str(
+                    support_metadata.get(
+                        "display_goal_usd",
+                        "0",
+                    )
+                )
+            )
+        except Exception:
+            support_goal = Decimal("0.00")
+
+        support_presets = (
+            support_metadata.get("presets_usd")
+            or []
+        )
+
+        support_intents = (
+            PaymentIntent.objects
+            .filter(
+                vending_product=support_product,
+                status__in={
+                    "settled",
+                    "fulfilled",
+                },
+                paid_at__isnull=False,
+            )
+        )
+
+        if (
+            str(
+                support_metadata.get(
+                    "period",
+                    "lifetime",
+                )
+            ).strip().lower()
+            == "monthly"
+        ):
+            now = timezone.localtime()
+
+            month_start = now.replace(
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
+            support_intents = (
+                support_intents.filter(
+                    paid_at__gte=month_start
+                )
+            )
+
+        support_total = (
+            support_intents.aggregate(
+                total=Sum("amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        supporter_count = (
+            support_intents
+            .exclude(user_id__isnull=True)
+            .values("user_id")
+            .distinct()
+            .count()
+        )
+
+        if support_goal > 0:
+            support_percent = (
+                support_total
+                / support_goal
+                * Decimal("100")
+            )
+
+            support_bar_percent = min(
+                support_percent,
+                Decimal("100"),
+            )
+
+    support_sui_checkout = None
+
+    if (
+        support_product is not None
+        and request.user.is_authenticated
+    ):
+        support_sui_intent_id = request.GET.get(
+            "support_sui_payment_intent"
+        )
+
+        if support_sui_intent_id:
+            try:
+                support_sui_intent = (
+                    PaymentIntent.objects
+                    .select_related(
+                        "vending_product",
+                    )
+                    .get(
+                        pk=support_sui_intent_id,
+                        user=request.user,
+                        purpose="donation",
+                        settlement_source=(
+                            PaymentIntent.SETTLEMENT_SUI
+                        ),
+                        vending_product=support_product,
+                    )
+                )
+            except (
+                PaymentIntent.DoesNotExist,
+                ValueError,
+                TypeError,
+            ):
+                support_sui_intent = None
+
+            if support_sui_intent is not None:
+                metadata = (
+                    support_sui_intent.metadata
+                    or {}
+                )
+
+                payable_status = (
+                    support_sui_intent.status
+                    in {
+                        "created",
+                        "invoice_created",
+                        "processing",
+                    }
+                )
+
+                quote_is_live = False
+
+                try:
+                    from .sui_quote_services import (
+                        _parse_quote_datetime,
+                    )
+
+                    quote_expires_at = (
+                        _parse_quote_datetime(
+                            metadata.get(
+                                "sui_quote_expires_at"
+                            )
+                        )
+                    )
+
+                    quote_is_live = (
+                        timezone.now()
+                        < quote_expires_at
+                    )
+                except Exception:
+                    quote_is_live = False
+
+                try:
+                    required_mist = int(
+                        metadata.get(
+                            "sui_required_mist",
+                            "0",
+                        )
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    required_mist = 0
+
+                recipient_address = str(
+                    metadata.get(
+                        "sui_recipient_address",
+                        "",
+                    )
+                ).strip()
+
+                if (
+                    payable_status
+                    and quote_is_live
+                    and required_mist > 0
+                    and recipient_address
+                ):
+                    support_sui_checkout = {
+                        "payment_intent_id":
+                            support_sui_intent.pk,
+                        "amount_usd":
+                            support_sui_intent.amount,
+                        "amount_sui":
+                            metadata.get(
+                                "sui_amount",
+                                "",
+                            ),
+                        "required_mist":
+                            required_mist,
+                        "recipient_address":
+                            recipient_address,
+                        "sui_usd_price":
+                            metadata.get(
+                                "sui_usd_price",
+                                "",
+                            ),
+                        "quote_expires_at":
+                            metadata.get(
+                                "sui_quote_expires_at",
+                                "",
+                            ),
+                    }
+
     sunsetcam_live = (
         profile_user.username.lower() == "sunsetcam"
     )
@@ -5001,6 +5237,14 @@ def public_profile(request, username):
         {
             "profile_user": profile_user,
             "profile": profile,
+            "support_product": support_product,
+            "support_total": support_total,
+            "support_goal": support_goal,
+            "support_percent": support_percent,
+            "support_bar_percent": support_bar_percent,
+            "supporter_count": supporter_count,
+            "support_presets": support_presets,
+            "support_sui_checkout": support_sui_checkout,
             "sunsetcam_live": sunsetcam_live,
             "sunsetcam_hls_url": sunsetcam_hls_url,
             "creator_wallet": creator_wallet,
@@ -6869,6 +7113,251 @@ def buy_credit_package(request, package_id):
 
     return redirect(
         intent.btcpay_checkout_link
+    )
+
+
+@login_required
+@require_POST
+def support_vending_checkout(request, product_key):
+    from .models import VendingProduct
+    from .vending_services import (
+        VendingProductError,
+        create_vending_payment_intent,
+        prepare_vending_checkout,
+    )
+
+    product = get_object_or_404(
+        VendingProduct,
+        product_key=product_key,
+        mode=VendingProduct.MODE_PAY,
+        settlement_mode=(
+            VendingProduct.SETTLEMENT_PLATFORM
+        ),
+        fulfillment_type="contribution",
+        is_active=True,
+    )
+
+    payment_method = str(
+        request.POST.get(
+            "payment_method",
+            "",
+        )
+    ).strip().lower()
+
+    if payment_method not in {
+        "btc",
+        "sui",
+        "doge",
+    }:
+        messages.error(
+            request,
+            "Unsupported payment method.",
+        )
+        return redirect(
+            "public_profile_root",
+            username=product.seller.username,
+        )
+
+    amount_usd = str(
+        request.POST.get(
+            "amount_usd",
+            "",
+        )
+    ).strip()
+
+    try:
+        intent = create_vending_payment_intent(
+            product=product,
+            buyer=request.user,
+            payment_method=payment_method,
+            purpose="donation",
+            amount_usd=amount_usd,
+            metadata={
+                "storefront": "support",
+            },
+        )
+    except (
+        VendingProductError,
+        ValueError,
+        TypeError,
+    ):
+        messages.error(
+            request,
+            "Please choose a valid support amount.",
+        )
+        return redirect(
+            "public_profile_root",
+            username=product.seller.username,
+        )
+
+    try:
+        intent = prepare_vending_checkout(
+            payment_intent=intent,
+        )
+    except VendingProductError:
+        messages.error(
+            request,
+            "Unable to prepare support checkout.",
+        )
+        return redirect(
+            "public_profile_root",
+            username=product.seller.username,
+        )
+
+    profile_url = reverse(
+        "public_profile_root",
+        kwargs={
+            "username": product.seller.username,
+        },
+    )
+
+    if payment_method == "sui":
+        return redirect(
+            f"{profile_url}"
+            f"?support_sui_payment_intent={intent.pk}"
+            "#support-me"
+        )
+
+    if not intent.btcpay_checkout_link:
+        messages.error(
+            request,
+            "BTCPay checkout link was not returned.",
+        )
+        return redirect(profile_url)
+
+    return redirect(
+        intent.btcpay_checkout_link
+    )
+
+
+@login_required
+@require_POST
+def verify_support_sui_payment(request):
+    from .models import PaymentIntent
+    from .payment_services import (
+        PaymentFulfillmentError,
+        fulfill_payment_intent,
+    )
+    from .sui_payment_services import (
+        SuiPaymentSettlementError,
+        settle_sui_payment,
+    )
+
+    payment_intent_id = request.POST.get(
+        "payment_intent_id"
+    )
+
+    tx_digest = str(
+        request.POST.get(
+            "tx_digest",
+            "",
+        )
+    ).strip()
+
+    try:
+        intent = (
+            PaymentIntent.objects
+            .select_related(
+                "vending_product",
+                "vending_product__seller",
+            )
+            .get(
+                pk=payment_intent_id,
+                user=request.user,
+                purpose="donation",
+                settlement_source=(
+                    PaymentIntent.SETTLEMENT_SUI
+                ),
+                vending_product__fulfillment_type=(
+                    "contribution"
+                ),
+            )
+        )
+    except (
+        PaymentIntent.DoesNotExist,
+        ValueError,
+        TypeError,
+    ):
+        messages.error(
+            request,
+            "SUI support checkout was not found.",
+        )
+        return redirect("/")
+
+    product = intent.vending_product
+
+    profile_url = reverse(
+        "public_profile_root",
+        kwargs={
+            "username": product.seller.username,
+        },
+    )
+
+    metadata = intent.metadata or {}
+
+    recipient_address = str(
+        metadata.get(
+            "sui_recipient_address",
+            "",
+        )
+    ).strip()
+
+    try:
+        minimum_amount_mist = int(
+            metadata.get(
+                "sui_required_mist",
+                "0",
+            )
+        )
+    except (TypeError, ValueError):
+        minimum_amount_mist = 0
+
+    if (
+        not tx_digest
+        or not recipient_address
+        or minimum_amount_mist <= 0
+    ):
+        messages.error(
+            request,
+            "SUI support payment information is incomplete.",
+        )
+        return redirect(
+            f"{profile_url}#support-me"
+        )
+
+    try:
+        intent, _ = settle_sui_payment(
+            payment_intent_id=intent.pk,
+            tx_digest=tx_digest,
+            recipient_address=recipient_address,
+            minimum_amount_mist=minimum_amount_mist,
+        )
+
+        fulfill_payment_intent(
+            intent.pk
+        )
+
+    except (
+        SuiPaymentSettlementError,
+        PaymentFulfillmentError,
+    ):
+        messages.error(
+            request,
+            "Unable to verify SUI support payment.",
+        )
+        return redirect(
+            f"{profile_url}"
+            f"?support_sui_payment_intent={intent.pk}"
+            "#support-me"
+        )
+
+    messages.success(
+        request,
+        "Thank you for your support!",
+    )
+
+    return redirect(
+        f"{profile_url}#support-me"
     )
 
 

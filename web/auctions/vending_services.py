@@ -39,6 +39,7 @@ def create_vending_payment_intent(
     purpose,
     credit_package=None,
     metadata=None,
+    amount_usd=None,
 ):
     """
     Create the authoritative PaymentIntent for one
@@ -91,12 +92,50 @@ def create_vending_payment_intent(
             "Unsupported vending payment method."
         )
 
-    if product.price_usd is None:
-        raise VendingProductError(
-            "Vending product has no USD price."
+    if product.price_usd is not None:
+        price = Decimal(product.price_usd)
+
+        if amount_usd is not None:
+            requested = Decimal(str(amount_usd))
+
+            if requested != price:
+                raise VendingProductError(
+                    "Fixed-price vending product amount mismatch."
+                )
+    else:
+        if amount_usd is None:
+            raise VendingProductError(
+                "Custom-price vending product requires amount_usd."
+            )
+
+        price = Decimal(str(amount_usd))
+
+        product_metadata = (
+            product.fulfillment_metadata or {}
         )
 
-    price = Decimal(product.price_usd)
+        min_amount = product_metadata.get(
+            "min_amount_usd"
+        )
+        max_amount = product_metadata.get(
+            "max_amount_usd"
+        )
+
+        if min_amount is not None:
+            min_amount = Decimal(str(min_amount))
+
+            if price < min_amount:
+                raise VendingProductError(
+                    "Custom vending amount is below the minimum."
+                )
+
+        if max_amount is not None:
+            max_amount = Decimal(str(max_amount))
+
+            if price > max_amount:
+                raise VendingProductError(
+                    "Custom vending amount exceeds the maximum."
+                )
 
     if price <= 0:
         raise VendingProductError(

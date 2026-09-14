@@ -38,6 +38,18 @@ urlpatterns = [
     ),
 
     path(
+        "vending/support/<slug:product_key>/",
+        views.support_vending_checkout,
+        name="support_vending_checkout",
+    ),
+
+    path(
+        "vending/support/sui/verify/",
+        views.verify_support_sui_payment,
+        name="verify_support_sui_payment",
+    ),
+
+    path(
         "credits/sui/verify/",
         views.verify_credit_sui_payment,
         name="verify_credit_sui_payment",

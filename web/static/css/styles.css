@@ -7484,3 +7484,104 @@ Allow the content to wrap safely in every language.
 }
 
 /* end_css */
+
+/* --------------------------------------------------
+   Public profile vertical-density cleanup
+   -------------------------------------------------- */
+
+.profile-public-card {
+    padding-bottom: 14px;
+}
+
+.profile-fan-btn {
+    margin-bottom: 6px !important;
+}
+
+.profile-message-btn {
+    margin-top: 6px !important;
+    margin-bottom: 6px !important;
+}
+
+.profile-share-btn {
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+
+/*
+ * Compact profile layout for phones / narrow browser windows.
+ * 960px intentionally covers the desktop-narrow/mobile-like
+ * viewport used by FANZ as well as normal phones/tablets.
+ */
+@media (max-width: 960px) {
+    .profile-public-card {
+        padding-bottom: 10px;
+        margin-bottom: 8px;
+    }
+
+    .profile-share-btn {
+        margin-top: 5px;
+        margin-bottom: 0;
+    }
+}
+
+
+/* Tight transition from profile header into capability modules */
+.profile-public-card {
+    margin-bottom: 4px;
+}
+
+.support-me-section,
+.sunsetcam-live-section {
+    margin-top: 0 !important;
+}
+
+.support-me-card,
+.sunsetcam-live-card {
+    margin-top: 0 !important;
+}
+
+
+/* Final public-profile action spacing */
+.profile-action-gap {
+    display: block;
+    height: 6px;
+}
+
+@media (max-width: 960px) {
+    .profile-public-card {
+        padding-bottom: 4px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .profile-share-btn {
+        margin-top: 6px !important;
+        margin-bottom: 0 !important;
+    }
+
+    .support-me-section,
+    .sunsetcam-live-section {
+        margin-top: 0 !important;
+    }
+
+    .support-me-card,
+    .sunsetcam-live-card {
+        margin-top: 0 !important;
+    }
+}
+
+/* Keep profile primary actions separated at every viewport width */
+.profile-action-gap {
+    display: block;
+    height: 8px;
+    width: 100%;
+}
+
+
+/* Desktop + mobile spacing between Fan and Message */
+.profile-public-card > .profile-fan-btn {
+    margin-bottom: 8px !important;
+}
+
+.profile-public-card > .profile-message-btn {
+    margin-top: 0 !important;
+}

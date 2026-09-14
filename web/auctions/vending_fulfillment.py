@@ -171,6 +171,16 @@ def fulfill_sui_coin_delivery(intent):
     return False
 
 
+def fulfill_contribution(intent):
+    """
+    A contribution is economically fulfilled by accepted settlement.
+
+    Optional supporter-coin delivery can be layered on later without
+    changing the generic payment settlement contract.
+    """
+    return True
+
+
 def fulfill_coin_rebrand(intent):
     from .coin_rebrand_services import (
         CoinRebrandPaymentError,
@@ -196,6 +206,8 @@ FULFILLMENT_HANDLERS = {
         fulfill_sui_coin_delivery,
     "coin_rebrand":
         fulfill_coin_rebrand,
+    "contribution":
+        fulfill_contribution,
 }
 
 

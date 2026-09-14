@@ -2257,6 +2257,8 @@ class EconomyAsset(models.Model):
         FounderAccount,
         on_delete=models.PROTECT,
         related_name="economy_asset",
+        null=True,
+        blank=True,
     )
 
     name = models.CharField(
@@ -2328,10 +2330,13 @@ class EconomyAsset(models.Model):
         ordering = ["founder_account__handle"]
 
     def __str__(self):
-        return (
-            f"{self.name} ({self.symbol}) "
-            f"for @{self.founder_account.handle}"
-        )
+        if self.founder_account_id:
+            return (
+                f"{self.name} ({self.symbol}) "
+                f"for @{self.founder_account.handle}"
+            )
+
+        return f"{self.name} ({self.symbol})"
 
 
 class EconomyAssetDelivery(models.Model):

@@ -12600,3 +12600,201 @@ class BTCPayZeroConfWebhookPolicyTests(TestCase):
         )
         self.assertIsNone(intent.paid_at)
         verify_mock.assert_called_once()
+
+
+class CustomAmountVendingTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from .models import UserProfile, VendingProduct
+
+        self.seller = User.objects.create_user(
+            username="support-platform",
+        )
+        self.buyer = User.objects.create_user(
+            username="support-buyer",
+        )
+
+        profile, _ = UserProfile.objects.get_or_create(
+            user=self.seller
+        )
+        profile.is_platform_account = True
+        profile.save(update_fields=["is_platform_account"])
+
+        self.fixed_product = VendingProduct.objects.create(
+            product_key="support-fixed-test",
+            seller=self.seller,
+            display_name="Fixed Support",
+            mode=VendingProduct.MODE_PAY,
+            settlement_mode=VendingProduct.SETTLEMENT_PLATFORM,
+            price_usd="10.00",
+            fulfillment_type="contribution",
+            is_active=True,
+        )
+
+        self.custom_product = VendingProduct.objects.create(
+            product_key="support-custom-test",
+            seller=self.seller,
+            display_name="Custom Support",
+            mode=VendingProduct.MODE_PAY,
+            settlement_mode=VendingProduct.SETTLEMENT_PLATFORM,
+            price_usd=None,
+            fulfillment_type="contribution",
+            fulfillment_metadata={
+                "amount_mode": "custom",
+            },
+            is_active=True,
+        )
+
+    def test_fixed_product_uses_product_price(self):
+        from .vending_services import (
+            create_vending_payment_intent,
+        )
+
+        intent = create_vending_payment_intent(
+            product=self.fixed_product,
+            buyer=self.buyer,
+            payment_method="doge",
+            purpose="donation",
+        )
+
+        self.assertEqual(str(intent.amount), "10.00")
+
+    def test_fixed_product_rejects_override(self):
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        with self.assertRaises(VendingProductError):
+            create_vending_payment_intent(
+                product=self.fixed_product,
+                buyer=self.buyer,
+                payment_method="btc",
+                purpose="donation",
+                amount_usd="25.00",
+            )
+
+    def test_custom_product_requires_amount(self):
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        with self.assertRaises(VendingProductError):
+            create_vending_payment_intent(
+                product=self.custom_product,
+                buyer=self.buyer,
+                payment_method="btc",
+                purpose="donation",
+            )
+
+    def test_custom_product_accepts_amount(self):
+        from .vending_services import (
+            create_vending_payment_intent,
+        )
+
+        intent = create_vending_payment_intent(
+            product=self.custom_product,
+            buyer=self.buyer,
+            payment_method="btc",
+            purpose="donation",
+            amount_usd="7.50",
+        )
+
+        self.assertEqual(str(intent.amount), "7.50")
+        self.assertEqual(
+            intent.vending_product_id,
+            self.custom_product.pk,
+        )
+
+    def test_custom_product_rejects_nonpositive_amount(self):
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        for amount in ("0", "-1"):
+            with self.subTest(amount=amount):
+                with self.assertRaises(VendingProductError):
+                    create_vending_payment_intent(
+                        product=self.custom_product,
+                        buyer=self.buyer,
+                        payment_method="doge",
+                        purpose="donation",
+                        amount_usd=amount,
+                    )
+
+    def test_custom_product_enforces_minimum_amount(self):
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        self.custom_product.fulfillment_metadata = {
+            "amount_mode": "custom",
+            "min_amount_usd": "1.00",
+        }
+        self.custom_product.save(
+            update_fields=["fulfillment_metadata"]
+        )
+
+        with self.assertRaises(VendingProductError):
+            create_vending_payment_intent(
+                product=self.custom_product,
+                buyer=self.buyer,
+                payment_method="doge",
+                purpose="donation",
+                amount_usd="0.99",
+            )
+
+    def test_custom_product_enforces_maximum_amount(self):
+        from .vending_services import (
+            VendingProductError,
+            create_vending_payment_intent,
+        )
+
+        self.custom_product.fulfillment_metadata = {
+            "amount_mode": "custom",
+            "max_amount_usd": "5000.00",
+        }
+        self.custom_product.save(
+            update_fields=["fulfillment_metadata"]
+        )
+
+        with self.assertRaises(VendingProductError):
+            create_vending_payment_intent(
+                product=self.custom_product,
+                buyer=self.buyer,
+                payment_method="btc",
+                purpose="donation",
+                amount_usd="5000.01",
+            )
+
+    def test_contribution_fulfillment_completes(self):
+        from .models import PaymentIntent
+        from .payment_services import fulfill_payment_intent
+
+        intent = PaymentIntent.objects.create(
+            user=self.buyer,
+            purpose="donation",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id="support-test-invoice",
+            vending_product=self.custom_product,
+            metadata={
+                "payment_method": "doge",
+            },
+        )
+
+        returned, created = fulfill_payment_intent(
+            intent.pk
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(returned.status, "fulfilled")
+        self.assertIsNotNone(returned.fulfilled_at)
