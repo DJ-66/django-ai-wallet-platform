@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 """
 Central FANZ payment-rail policy.
 
@@ -145,3 +147,48 @@ def seller_is_platform(user):
         user_id=user_id,
         is_platform_account=True,
     ).exists()
+
+# Low-value BTC/DOGE platform commerce may be accepted once
+# BTCPay has accounted for the full payment in the mempool.
+# $10.00 itself requires confirmation.
+BTCPAY_ZERO_CONF_LIMIT_USD = Decimal("10.00")
+
+
+def required_btcpay_confirmations(payment_intent):
+    """
+    Return FANZ's application-level confirmation requirement.
+
+    BTC/DOGE USD intents below $10.00 may use accounted
+    mempool settlement. All other BTCPay intents require
+    confirmed settlement.
+    """
+    method = normalize_payment_method(
+        (payment_intent.metadata or {}).get(
+            "payment_method"
+        )
+    )
+
+    if method not in {
+        PAYMENT_BTC,
+        PAYMENT_DOGE,
+    }:
+        raise ValueError(
+            "PaymentIntent is not a BTC/DOGE payment."
+        )
+
+    currency = str(
+        payment_intent.currency or ""
+    ).strip().upper()
+
+    amount = Decimal(
+        str(payment_intent.amount)
+    )
+
+    if (
+        currency == "USD"
+        and amount < BTCPAY_ZERO_CONF_LIMIT_USD
+    ):
+        return 0
+
+    return 1
+

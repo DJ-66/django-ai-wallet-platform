@@ -262,6 +262,84 @@ def get_invoice_payment_methods(invoice_id):
     )
 
 
+def accounted_btcpay_payment_method_ids(
+    payment_methods,
+):
+    """
+    Return BTCPay payment-method IDs that contain at least
+    one accounted payment.
+
+    get_invoice_payment_methods() uses BTCPay's default
+    onlyAccountedPayments=true behavior.
+    """
+    received = set()
+
+    for method in payment_methods or []:
+        if not isinstance(method, dict):
+            continue
+
+        method_id = str(
+            method.get("paymentMethodId") or ""
+        ).strip()
+
+        if not method_id:
+            continue
+
+        payments = method.get("payments") or []
+
+        if any(
+            isinstance(payment, dict)
+            for payment in payments
+        ):
+            received.add(method_id)
+
+    return received
+
+
+def verify_btcpay_intent_accounted_payment_method(
+    payment_intent,
+    *,
+    payment_methods=None,
+):
+    """
+    Verify that an accounted mempool payment arrived through
+    exactly the BTC/DOGE rail selected by the FANZ intent.
+    """
+    expected_id = expected_btcpay_payment_method_id(
+        payment_intent
+    )
+
+    if payment_methods is None:
+        if not payment_intent.btcpay_invoice_id:
+            raise BTCPayError(
+                "PaymentIntent has no BTCPay invoice id."
+            )
+
+        payment_methods = get_invoice_payment_methods(
+            payment_intent.btcpay_invoice_id
+        )
+
+    received_ids = accounted_btcpay_payment_method_ids(
+        payment_methods
+    )
+
+    if expected_id not in received_ids:
+        raise BTCPayError(
+            "Accounted BTCPay rail does not match "
+            "the FANZ payment method."
+        )
+
+    unexpected = received_ids - {expected_id}
+
+    if unexpected:
+        raise BTCPayError(
+            "BTCPay invoice contains accounted payment "
+            "on an unexpected payment rail."
+        )
+
+    return expected_id
+
+
 def settled_btcpay_payment_method_ids(
     payment_methods,
 ):

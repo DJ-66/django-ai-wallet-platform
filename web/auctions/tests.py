@@ -12314,3 +12314,289 @@ class CoinRebrandHTTPFlowTests(TestCase):
             session["transaction_bytes_b64"],
             "dGVzdA==",
         )
+
+
+class BTCPayConfirmationPolicyTests(TestCase):
+    def _intent(self, *, amount, method):
+        from .models import PaymentIntent
+
+        return PaymentIntent(
+            purpose="platform_service",
+            amount=amount,
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "payment_method": method,
+            },
+        )
+
+    def test_btc_999_is_zero_conf(self):
+        from .payment_policy import (
+            required_btcpay_confirmations,
+        )
+
+        self.assertEqual(
+            required_btcpay_confirmations(
+                self._intent(
+                    amount="9.99",
+                    method="btc",
+                )
+            ),
+            0,
+        )
+
+    def test_doge_500_is_zero_conf(self):
+        from .payment_policy import (
+            required_btcpay_confirmations,
+        )
+
+        self.assertEqual(
+            required_btcpay_confirmations(
+                self._intent(
+                    amount="5.00",
+                    method="doge",
+                )
+            ),
+            0,
+        )
+
+    def test_btc_1000_requires_one_confirmation(self):
+        from .payment_policy import (
+            required_btcpay_confirmations,
+        )
+
+        self.assertEqual(
+            required_btcpay_confirmations(
+                self._intent(
+                    amount="10.00",
+                    method="btc",
+                )
+            ),
+            1,
+        )
+
+    def test_doge_2500_requires_one_confirmation(self):
+        from .payment_policy import (
+            required_btcpay_confirmations,
+        )
+
+        self.assertEqual(
+            required_btcpay_confirmations(
+                self._intent(
+                    amount="25.00",
+                    method="doge",
+                )
+            ),
+            1,
+        )
+
+    def test_non_usd_requires_one_confirmation(self):
+        from .models import PaymentIntent
+        from .payment_policy import (
+            required_btcpay_confirmations,
+        )
+
+        intent = PaymentIntent(
+            purpose="platform_service",
+            amount="5.00",
+            currency="EUR",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            metadata={
+                "payment_method": "btc",
+            },
+        )
+
+        self.assertEqual(
+            required_btcpay_confirmations(intent),
+            1,
+        )
+
+    def test_non_btcpay_method_fails_closed(self):
+        from .payment_policy import (
+            required_btcpay_confirmations,
+        )
+
+        with self.assertRaises(ValueError):
+            required_btcpay_confirmations(
+                self._intent(
+                    amount="5.00",
+                    method="sui",
+                )
+            )
+
+
+class BTCPayZeroConfWebhookPolicyTests(TestCase):
+    def _post_processing_webhook(
+        self,
+        *,
+        amount,
+        payment_method,
+        reject_accounted_rail=False,
+    ):
+        import hashlib
+        import hmac
+        import json
+
+        from unittest.mock import patch
+
+        from django.test import override_settings
+        from django.urls import reverse
+
+        from .btcpay import BTCPayError
+        from .models import PaymentIntent
+
+        invoice_id = (
+            f"zero-conf-{payment_method}-"
+            f"{str(amount).replace('.', '-')}"
+        )
+
+        intent = PaymentIntent.objects.create(
+            purpose="platform_service",
+            status="invoice_created",
+            amount=amount,
+            currency="USD",
+            settlement_source=(
+                PaymentIntent.SETTLEMENT_BTCPAY
+            ),
+            btcpay_invoice_id=invoice_id,
+            metadata={
+                "payment_method": payment_method,
+            },
+        )
+
+        payload = {
+            "storeId": "test-store",
+            "invoiceId": invoice_id,
+        }
+
+        body = json.dumps(
+            payload,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+        secret = "test-zero-conf-secret"
+
+        signature = (
+            "sha256="
+            + hmac.new(
+                secret.encode("utf-8"),
+                body,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+
+        if reject_accounted_rail:
+            verify_side_effect = BTCPayError(
+                "Wrong accounted rail"
+            )
+            verify_return_value = None
+        else:
+            verify_side_effect = None
+            verify_return_value = (
+                "BTC-CHAIN"
+                if payment_method == "btc"
+                else "DOGE-CHAIN"
+            )
+
+        with (
+            override_settings(
+                BTCPAY_WEBHOOK_SECRET=secret,
+                BTCPAY_STORE_ID="test-store",
+            ),
+            patch(
+                "auctions.btcpay.get_invoice",
+                return_value={
+                    "id": invoice_id,
+                    "status": "Processing",
+                },
+            ),
+            patch(
+                "auctions.btcpay."
+                "verify_btcpay_intent_accounted_payment_method",
+                return_value=verify_return_value,
+                side_effect=verify_side_effect,
+            ) as verify_mock,
+        ):
+            response = self.client.post(
+                reverse("btcpay_webhook"),
+                data=body,
+                content_type="application/json",
+                HTTP_BTCPAY_SIG=signature,
+            )
+
+        intent.refresh_from_db()
+
+        return intent, response, verify_mock
+
+    def test_doge_500_processing_is_accepted_zero_conf(self):
+        intent, response, verify_mock = (
+            self._post_processing_webhook(
+                amount="5.00",
+                payment_method="doge",
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(intent.status, "settled")
+        self.assertIsNotNone(intent.paid_at)
+        verify_mock.assert_called_once()
+
+    def test_btc_999_processing_is_accepted_zero_conf(self):
+        intent, response, verify_mock = (
+            self._post_processing_webhook(
+                amount="9.99",
+                payment_method="btc",
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(intent.status, "settled")
+        self.assertIsNotNone(intent.paid_at)
+        verify_mock.assert_called_once()
+
+    def test_doge_1000_processing_waits_for_confirmation(self):
+        intent, response, verify_mock = (
+            self._post_processing_webhook(
+                amount="10.00",
+                payment_method="doge",
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(intent.status, "processing")
+        self.assertIsNone(intent.paid_at)
+        verify_mock.assert_not_called()
+
+    def test_btc_1200_processing_waits_for_confirmation(self):
+        intent, response, verify_mock = (
+            self._post_processing_webhook(
+                amount="12.00",
+                payment_method="btc",
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(intent.status, "processing")
+        self.assertIsNone(intent.paid_at)
+        verify_mock.assert_not_called()
+
+    def test_wrong_accounted_rail_rejects_zero_conf(self):
+        intent, response, verify_mock = (
+            self._post_processing_webhook(
+                amount="5.00",
+                payment_method="doge",
+                reject_accounted_rail=True,
+            )
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            intent.status,
+            "invoice_created",
+        )
+        self.assertIsNone(intent.paid_at)
+        verify_mock.assert_called_once()

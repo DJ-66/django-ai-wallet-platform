@@ -6523,6 +6523,7 @@ def btcpay_webhook(request):
     from .btcpay import (
         BTCPayError,
         get_invoice,
+        verify_btcpay_intent_accounted_payment_method,
         verify_btcpay_intent_payment_method,
     )
     from .models import PaymentIntent
@@ -6615,10 +6616,13 @@ def btcpay_webhook(request):
             }
         )
 
-    if (
-        new_status == "settled"
-        and intent.purpose == "founder_purchase"
-    ):
+    from .payment_policy import (
+        required_btcpay_confirmations,
+    )
+
+    # Every BTCPay PaymentIntent must settle through the exact
+    # BTC/DOGE rail selected by FANZ.
+    if new_status == "settled":
         try:
             verify_btcpay_intent_payment_method(
                 intent
@@ -6628,11 +6632,42 @@ def btcpay_webhook(request):
                 {
                     "error": (
                         "Settled BTCPay payment method "
-                        "does not match Founder checkout."
+                        "does not match FANZ checkout."
                     ),
                 },
                 status=409,
             )
+
+    # Low-value BTC/DOGE invoices may be accepted at 0-conf
+    # once BTCPay reports the invoice fully paid/Processing
+    # and exposes an accounted payment on the expected rail.
+    elif new_status == "processing":
+        try:
+            confirmations = (
+                required_btcpay_confirmations(
+                    intent
+                )
+            )
+        except ValueError:
+            confirmations = 1
+
+        if confirmations == 0:
+            try:
+                verify_btcpay_intent_accounted_payment_method(
+                    intent
+                )
+            except BTCPayError:
+                return JsonResponse(
+                    {
+                        "error": (
+                            "Processing BTCPay payment method "
+                            "does not match FANZ checkout."
+                        ),
+                    },
+                    status=409,
+                )
+
+            new_status = "settled"
 
     with transaction.atomic():
         intent = (
