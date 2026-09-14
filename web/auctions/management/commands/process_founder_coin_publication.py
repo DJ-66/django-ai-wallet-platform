@@ -61,12 +61,28 @@ def founder_move_identifier(handle):
 def publication_key_for_asset(asset):
     metadata = dict(asset.metadata or {})
 
-    return (
-        metadata.get("publication_key")
-        or (
+    explicit = str(
+        metadata.get("publication_key") or ""
+    ).strip()
+
+    if explicit:
+        return explicit
+
+    if asset.founder_account_id:
+        return (
             f"founder-{asset.pk}-"
             f"{asset.founder_account.handle}-v1"
         )
+
+    platform_key = str(
+        metadata.get("platform_key") or ""
+    ).strip().lower()
+
+    if platform_key:
+        return f"platform-{platform_key}-v1"
+
+    raise FounderCoinPublicationProcessError(
+        "EconomyAsset has no publication identity."
     )
 
 
@@ -124,17 +140,34 @@ def load_prepared_payload(asset):
         asset
     )
 
-    move_handle = founder_move_identifier(
-        asset.founder_account.handle
-    )
+    metadata = dict(asset.metadata or {})
 
-    expected_module = (
-        f"{move_handle}_fanz"
-    )
+    if asset.founder_account_id:
+        move_handle = founder_move_identifier(
+            asset.founder_account.handle
+        )
 
-    expected_struct = (
-        expected_module.upper()
-    )
+        expected_module = (
+            f"{move_handle}_fanz"
+        )
+
+        expected_struct = (
+            expected_module.upper()
+        )
+    else:
+        expected_module = str(
+            metadata.get("module_name") or ""
+        ).strip()
+
+        expected_struct = str(
+            metadata.get("coin_struct_name") or ""
+        ).strip()
+
+        if not expected_module or not expected_struct:
+            raise FounderCoinPublicationProcessError(
+                "Platform EconomyAsset has no "
+                "module/coin struct identity."
+            )
 
     if payload["publication_key"] != expected_key:
         raise FounderCoinPublicationProcessError(
@@ -288,11 +321,22 @@ class Command(BaseCommand):
             not in {
                 "founder_vending",
                 "founder_ownership",
+                "platform",
             }
         ):
             raise CommandError(
                 "EconomyAsset is not an eligible "
-                "Founder coin asset."
+                "coin publication asset."
+            )
+
+        if (
+            metadata.get("issuance_source") == "platform"
+            and not str(
+                metadata.get("platform_key") or ""
+            ).strip()
+        ):
+            raise CommandError(
+                "Platform EconomyAsset requires platform_key."
             )
 
         publication_key = (
@@ -343,8 +387,11 @@ class Command(BaseCommand):
             json.dumps(
                 {
                     "economy_asset_id": asset.pk,
-                    "handle":
-                        asset.founder_account.handle,
+                    "handle": (
+                        asset.founder_account.handle
+                        if asset.founder_account_id
+                        else metadata.get("platform_key")
+                    ),
                     "publication_key":
                         publication_key,
                     "payload":

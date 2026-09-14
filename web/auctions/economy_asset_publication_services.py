@@ -149,7 +149,6 @@ def reconcile_confirmed_creator_publication(
         locked = (
             EconomyAsset.objects
             .select_for_update()
-            .select_related("founder_account")
             .get(pk=asset_id)
         )
 

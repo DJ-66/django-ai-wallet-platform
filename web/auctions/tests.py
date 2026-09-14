@@ -4724,6 +4724,213 @@ class FounderCoinPublicationProcessorTests(TestCase):
             stderr.getvalue(),
         )
 
+    def _configure_platform_asset(
+        self,
+        **metadata_overrides,
+    ):
+        metadata = {
+            "issuance_source": "platform",
+            "platform_key": "fanz",
+            "publication_key":
+                "platform-fanz-v1",
+            "generated_package":
+                "fanz_platform_fanz",
+            "module_name": "fanz",
+            "coin_struct_name": "FANZ",
+            "intended_recipient_address":
+                "0xabc",
+            "publication_network":
+                "mainnet",
+        }
+
+        metadata.update(metadata_overrides)
+
+        self.asset.founder_account = None
+        self.asset.metadata = metadata
+
+        self.asset.save(
+            update_fields=[
+                "founder_account",
+                "metadata",
+            ]
+        )
+
+        return metadata
+
+    def _write_platform_payload(
+        self,
+        **payload_overrides,
+    ):
+        import json
+
+        path = (
+            self.temp_root
+            / "platform-fanz-v1.json"
+        )
+
+        payload = dict(self.payload)
+
+        payload.update(
+            {
+                "publication_key":
+                    "platform-fanz-v1",
+                "network": "mainnet",
+                "module_name": "fanz",
+                "coin_struct_name": "FANZ",
+                "recipient_address":
+                    "0xabc",
+            }
+        )
+
+        payload.update(payload_overrides)
+
+        path.write_text(
+            json.dumps(payload)
+        )
+
+        self.addCleanup(
+            lambda: (
+                path.unlink()
+                if path.exists()
+                else None
+            )
+        )
+
+        return path
+
+    @patch(
+        "auctions.management.commands."
+        "process_founder_coin_publication."
+        "get_remote_publication"
+    )
+    def test_platform_asset_passes_publication_eligibility_gate(
+        self,
+        get_remote,
+    ):
+        from auctions.sui_adapter import (
+            SuiAdapterError,
+        )
+
+        self._configure_platform_asset()
+        self._write_platform_payload()
+
+        get_remote.side_effect = SuiAdapterError(
+            "platform-publication-gate-probe"
+        )
+
+        with self.assertRaisesMessage(
+            SuiAdapterError,
+            "platform-publication-gate-probe",
+        ):
+            self._call()
+
+        get_remote.assert_called_once_with(
+            "platform-fanz-v1"
+        )
+
+    def test_platform_asset_requires_platform_key(
+        self,
+    ):
+        from django.core.management.base import (
+            CommandError,
+        )
+
+        self._configure_platform_asset(
+            platform_key=""
+        )
+
+        with self.assertRaisesMessage(
+            CommandError,
+            "Platform EconomyAsset requires platform_key.",
+        ):
+            self._call()
+
+    def test_platform_asset_requires_module_and_struct_identity(
+        self,
+    ):
+        error_type = (
+            self.processor.
+            FounderCoinPublicationProcessError
+        )
+
+        self._write_platform_payload()
+
+        for missing_field in (
+            "module_name",
+            "coin_struct_name",
+        ):
+            with self.subTest(
+                missing_field=missing_field
+            ):
+                metadata = {
+                    "module_name": "fanz",
+                    "coin_struct_name": "FANZ",
+                }
+
+                metadata[missing_field] = ""
+
+                self._configure_platform_asset(
+                    **metadata
+                )
+
+                with self.assertRaisesMessage(
+                    error_type,
+                    (
+                        "Platform EconomyAsset has no "
+                        "module/coin struct identity."
+                    ),
+                ):
+                    self.processor.load_prepared_payload(
+                        self.asset
+                    )
+
+    def test_platform_asset_requires_valid_publication_network(
+        self,
+    ):
+        error_type = (
+            self.processor.
+            FounderCoinPublicationProcessError
+        )
+
+        self._configure_platform_asset(
+            publication_network="invalid-network"
+        )
+
+        self._write_platform_payload()
+
+        with self.assertRaisesMessage(
+            error_type,
+            "EconomyAsset has no valid publication network.",
+        ):
+            self.processor.load_prepared_payload(
+                self.asset
+            )
+
+    def test_platform_asset_rejects_recipient_mismatch(
+        self,
+    ):
+        error_type = (
+            self.processor.
+            FounderCoinPublicationProcessError
+        )
+
+        self._configure_platform_asset()
+
+        self._write_platform_payload(
+            recipient_address="0xdef"
+        )
+
+        with self.assertRaisesMessage(
+            error_type,
+            (
+                "Prepared publication recipient "
+                "does not match EconomyAsset."
+            ),
+        ):
+            self.processor.load_prepared_payload(
+                self.asset
+            )
+
     @patch(
         "auctions.management.commands."
         "process_founder_coin_publication."
