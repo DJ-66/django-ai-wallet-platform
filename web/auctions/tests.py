@@ -14647,3 +14647,324 @@ class CreatorEdgeAuthenticatedClaimTests(TestCase):
             request.call_count,
             1,
         )
+
+
+from django.urls import reverse
+
+
+class CreatorEdgeApiTests(TestCase):
+    def setUp(self):
+        from auctions.creator_edge_services import (
+            register_creator_edge,
+        )
+        from auctions.creator_execution_services import (
+            get_or_create_creator_execution_request,
+        )
+
+        self.user = User.objects.create_user(
+            username="tg-edge-api-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="tge1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.custody = "0x" + ("7" * 64)
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="TG Edge API Creator",
+            symbol="TGEAPI",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::tg_edge::TGEAPI",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    self.custody,
+            },
+        )
+
+        self.edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+            label="API test edge",
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=
+                "tg-edge-api-invoice",
+            metadata={
+                "economy_asset_id":
+                    self.asset.pk,
+                "recipient_address":
+                    "0x" + ("8" * 64),
+                "amount_base_units":
+                    2_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        self.execution, _ = (
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+        )
+
+    def _post_json(
+        self,
+        url,
+        payload,
+    ):
+        import json
+
+        return self.client.post(
+            url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_challenge_endpoint_returns_signable_message(self):
+        response = self._post_json(
+            reverse(
+                "tg_edge_auth_challenge"
+            ),
+            {
+                "edge_id":
+                    str(self.edge.edge_id),
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            201,
+        )
+
+        body = response.json()
+
+        self.assertEqual(
+            body["edge_id"],
+            str(self.edge.edge_id),
+        )
+        self.assertIn(
+            "FANZ TokenGate Edge Authentication",
+            body["message"],
+        )
+        self.assertIn(
+            f"custody_address:{self.custody}",
+            body["message"],
+        )
+        self.assertTrue(
+            body["challenge_id"]
+        )
+        self.assertTrue(
+            body["expires_at"]
+        )
+
+    def test_challenge_endpoint_rejects_invalid_json(self):
+        response = self.client.post(
+            reverse(
+                "tg_edge_auth_challenge"
+            ),
+            data=b"{bad-json",
+            content_type="application/json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            400,
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_claim_endpoint_returns_minimal_execution(
+        self,
+        sui_request,
+    ):
+        challenge_response = self._post_json(
+            reverse(
+                "tg_edge_auth_challenge"
+            ),
+            {
+                "edge_id":
+                    str(self.edge.edge_id),
+            },
+        )
+
+        challenge_id = (
+            challenge_response.json()[
+                "challenge_id"
+            ]
+        )
+
+        sui_request.return_value = {
+            "valid": True,
+            "signer_address":
+                self.custody,
+        }
+
+        response = self._post_json(
+            reverse(
+                "tg_edge_claim_execution",
+                kwargs={
+                    "execution_request_id":
+                        self.execution.pk,
+                },
+            ),
+            {
+                "edge_id":
+                    str(self.edge.edge_id),
+                "challenge_id":
+                    challenge_id,
+                "signature":
+                    "serialized-sui-signature",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        body = response.json()
+
+        self.assertEqual(
+            set(body),
+            {
+                "execution_id",
+                "state",
+                "claimed",
+                "claim_nonce",
+                "coin_type",
+                "custody_address",
+                "recipient_address",
+                "amount_base_units",
+            },
+        )
+
+        self.assertEqual(
+            body["execution_id"],
+            self.execution.pk,
+        )
+        self.assertEqual(
+            body["state"],
+            "claimed",
+        )
+        self.assertTrue(
+            body["claimed"]
+        )
+        self.assertEqual(
+            body["coin_type"],
+            self.asset.coin_type,
+        )
+        self.assertEqual(
+            body["custody_address"],
+            self.custody,
+        )
+        self.assertEqual(
+            body["recipient_address"],
+            "0x" + ("8" * 64),
+        )
+        self.assertEqual(
+            body["amount_base_units"],
+            "2000000",
+        )
+
+        # Privacy boundary: no payment or purchaser data.
+        self.assertNotIn(
+            "payment_intent_id",
+            body,
+        )
+        self.assertNotIn(
+            "user_id",
+            body,
+        )
+        self.assertNotIn(
+            "username",
+            body,
+        )
+        self.assertNotIn(
+            "amount",
+            body,
+        )
+        self.assertNotIn(
+            "currency",
+            body,
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_bad_signature_does_not_claim(
+        self,
+        sui_request,
+    ):
+        challenge_response = self._post_json(
+            reverse(
+                "tg_edge_auth_challenge"
+            ),
+            {
+                "edge_id":
+                    str(self.edge.edge_id),
+            },
+        )
+
+        challenge_id = (
+            challenge_response.json()[
+                "challenge_id"
+            ]
+        )
+
+        sui_request.return_value = {
+            "valid": False,
+        }
+
+        response = self._post_json(
+            reverse(
+                "tg_edge_claim_execution",
+                kwargs={
+                    "execution_request_id":
+                        self.execution.pk,
+                },
+            ),
+            {
+                "edge_id":
+                    str(self.edge.edge_id),
+                "challenge_id":
+                    challenge_id,
+                "signature":
+                    "bad-signature",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            403,
+        )
+
+        self.execution.refresh_from_db()
+
+        self.assertEqual(
+            self.execution.status,
+            self.execution.STATUS_PENDING,
+        )
+        self.assertEqual(
+            self.execution.claimed_by,
+            "",
+        )

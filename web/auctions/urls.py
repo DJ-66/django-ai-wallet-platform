@@ -6,9 +6,24 @@ from .views import pay_user
 from .views import wallet_view
 from . import views_ai
 from . import views_events
+from . import views_tg_edge
 
 
 urlpatterns = [
+    path(
+        "tg-edge/auth/challenge/",
+        views_tg_edge.tg_edge_auth_challenge,
+        name="tg_edge_auth_challenge",
+    ),
+    path(
+        (
+            "tg-edge/executions/"
+            "<int:execution_request_id>/claim/"
+        ),
+        views_tg_edge.tg_edge_claim_execution,
+        name="tg_edge_claim_execution",
+    ),
+
     path(
         "sunsetcam/status/",
         views.sunsetcam_status,
