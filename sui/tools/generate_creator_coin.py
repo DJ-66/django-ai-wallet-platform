@@ -39,6 +39,22 @@ def main():
     parser.add_argument("--symbol", required=True)
     parser.add_argument("--name", required=True)
     parser.add_argument(
+        "--package-name",
+        default="",
+        help=(
+            "Optional explicit Move package name. "
+            "Defaults to fanz_creator_<handle>."
+        ),
+    )
+    parser.add_argument(
+        "--module-name",
+        default="",
+        help=(
+            "Optional explicit Move module name. "
+            "Defaults to <handle>_fanz."
+        ),
+    )
+    parser.add_argument(
         "--description",
         default="Fixed-supply FANZ creator economy coin",
     )
@@ -71,13 +87,21 @@ def main():
 
     handle = args.handle.lower().lstrip("@")
 
-    package_name = identifier(
-        f"fanz_creator_{handle}"
-    ).lower()
+    package_name = (
+        identifier(args.package_name).lower()
+        if args.package_name.strip()
+        else identifier(
+            f"fanz_creator_{handle}"
+        ).lower()
+    )
 
-    module_name = identifier(
-        f"{handle}_fanz"
-    ).lower()
+    module_name = (
+        identifier(args.module_name).lower()
+        if args.module_name.strip()
+        else identifier(
+            f"{handle}_fanz"
+        ).lower()
+    )
 
     # Sui one-time witness rule:
     # the witness struct name must be the uppercase

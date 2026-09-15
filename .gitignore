@@ -50,3 +50,6 @@ sui/prepared-publications/
 .env
 .env.*
 !.env.example
+
+# Local Sui publication artifacts
+sui/prepared/
