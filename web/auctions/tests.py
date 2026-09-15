@@ -14324,3 +14324,326 @@ class CreatorEdgeWalletAuthenticationTests(TestCase):
             request.call_count,
             1,
         )
+
+
+class CreatorEdgeAuthenticatedClaimTests(TestCase):
+    def setUp(self):
+        from auctions.creator_edge_auth_services import (
+            create_creator_edge_auth_challenge,
+        )
+        from auctions.creator_edge_services import (
+            register_creator_edge,
+        )
+        from auctions.creator_execution_services import (
+            get_or_create_creator_execution_request,
+        )
+
+        self.user = User.objects.create_user(
+            username="edge-auth-claim-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="eac2",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.custody = "0x" + ("3" * 64)
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Authenticated Claim Creator",
+            symbol="AUTHCLAIM",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::auth::AUTHCLAIM",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    self.custody,
+            },
+        )
+
+        self.edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=
+                "authenticated-claim-invoice",
+            metadata={
+                "economy_asset_id":
+                    self.asset.pk,
+                "recipient_address":
+                    "0x" + ("4" * 64),
+                "amount_base_units":
+                    1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        self.request, _ = (
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+        )
+
+        self.challenge = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_valid_wallet_proof_consumes_and_claims(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            authenticate_and_claim_creator_execution,
+        )
+        from auctions.models import (
+            CreatorExecutionRequest,
+        )
+
+        request.return_value = {
+            "valid": True,
+            "signer_address": self.custody,
+        }
+
+        execution, changed = (
+            authenticate_and_claim_creator_execution(
+                challenge_id=
+                    self.challenge.pk,
+                edge_id=
+                    self.edge.edge_id,
+                signature=
+                    "valid-sui-signature",
+                execution_request_id=
+                    self.request.pk,
+            )
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(
+            execution.status,
+            CreatorExecutionRequest.STATUS_CLAIMED,
+        )
+        self.assertEqual(
+            execution.claimed_by,
+            str(self.edge.edge_id),
+        )
+        self.assertTrue(
+            execution.claim_nonce
+        )
+
+        self.challenge.refresh_from_db()
+        self.assertIsNotNone(
+            self.challenge.consumed_at
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_invalid_signature_changes_nothing(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            authenticate_and_claim_creator_execution,
+        )
+
+        request.return_value = {
+            "valid": False,
+        }
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            authenticate_and_claim_creator_execution(
+                challenge_id=
+                    self.challenge.pk,
+                edge_id=
+                    self.edge.edge_id,
+                signature="bad-signature",
+                execution_request_id=
+                    self.request.pk,
+            )
+
+        self.challenge.refresh_from_db()
+        self.request.refresh_from_db()
+
+        self.assertIsNone(
+            self.challenge.consumed_at
+        )
+        self.assertEqual(
+            self.request.status,
+            self.request.STATUS_PENDING,
+        )
+        self.assertEqual(
+            self.request.claimed_by,
+            "",
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_unauthorized_execution_is_rejected_before_crypto(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            authenticate_and_claim_creator_execution,
+        )
+        from auctions.creator_execution_services import (
+            get_or_create_creator_execution_request,
+        )
+
+        other_user = User.objects.create_user(
+            username="edge-auth-claim-other",
+            password="test-password",
+        )
+
+        other_founder = FounderAccount.objects.create(
+            handle="eac3",
+            current_account=other_user,
+            owner_root=other_user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        other_asset = EconomyAsset.objects.create(
+            founder_account=other_founder,
+            name="Other Auth Claim",
+            symbol="OTHCLAIM",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::auth::OTHCLAIM",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    "0x" + ("5" * 64),
+            },
+        )
+
+        other_intent = PaymentIntent.objects.create(
+            user=other_user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=
+                "other-auth-claim-invoice",
+            metadata={
+                "economy_asset_id":
+                    other_asset.pk,
+                "recipient_address":
+                    "0x" + ("6" * 64),
+                "amount_base_units":
+                    1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(
+            other_intent.pk
+        )
+
+        other_delivery = (
+            EconomyAssetDelivery.objects.get(
+                payment_intent=other_intent,
+            )
+        )
+
+        other_request, _ = (
+            get_or_create_creator_execution_request(
+                other_delivery.pk
+            )
+        )
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            authenticate_and_claim_creator_execution(
+                challenge_id=
+                    self.challenge.pk,
+                edge_id=
+                    self.edge.edge_id,
+                signature=
+                    "should-not-be-checked",
+                execution_request_id=
+                    other_request.pk,
+            )
+
+        request.assert_not_called()
+
+        self.challenge.refresh_from_db()
+        other_request.refresh_from_db()
+
+        self.assertIsNone(
+            self.challenge.consumed_at
+        )
+        self.assertEqual(
+            other_request.status,
+            other_request.STATUS_PENDING,
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_consumed_challenge_cannot_claim_again(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            authenticate_and_claim_creator_execution,
+        )
+
+        request.return_value = {
+            "valid": True,
+            "signer_address": self.custody,
+        }
+
+        authenticate_and_claim_creator_execution(
+            challenge_id=self.challenge.pk,
+            edge_id=self.edge.edge_id,
+            signature="valid-signature",
+            execution_request_id=self.request.pk,
+        )
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            authenticate_and_claim_creator_execution(
+                challenge_id=
+                    self.challenge.pk,
+                edge_id=
+                    self.edge.edge_id,
+                signature="valid-signature",
+                execution_request_id=
+                    self.request.pk,
+            )
+
+        # Replay is rejected before another crypto call.
+        self.assertEqual(
+            request.call_count,
+            1,
+        )
