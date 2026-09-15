@@ -5,6 +5,9 @@ import express, { NextFunction, Request, Response } from "express";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
+import {
+  verifyPersonalMessageSignature,
+} from "@mysten/sui/verify";
 
 const PORT = Number(process.env.PORT || "3000");
 const DB_PATH = process.env.FANZ_SUI_DB_PATH || "/data/fanz-sui.sqlite3";
@@ -5584,6 +5587,90 @@ app.post(
           error instanceof Error
             ? error.message
             : "testnet reconciliation failed",
+      });
+    }
+  },
+);
+
+
+
+app.post(
+  "/v1/verify-personal-message",
+  async (req, res) => {
+    const message =
+      typeof req.body?.message === "string"
+        ? req.body.message
+        : "";
+
+    const signature =
+      typeof req.body?.signature === "string"
+        ? req.body.signature
+        : "";
+
+    const expectedAddress =
+      typeof req.body?.expected_address === "string"
+        ? req.body.expected_address
+            .trim()
+            .toLowerCase()
+        : "";
+
+    if (!message) {
+      res.status(400).json({
+        error: "message is required",
+      });
+      return;
+    }
+
+    if (!signature) {
+      res.status(400).json({
+        error: "signature is required",
+      });
+      return;
+    }
+
+    if (
+      !/^0x[0-9a-f]{64}$/.test(
+        expectedAddress
+      )
+    ) {
+      res.status(400).json({
+        error:
+          "expected_address must be a canonical "
+          + "lowercase Sui address",
+      });
+      return;
+    }
+
+    try {
+      const publicKey =
+        await verifyPersonalMessageSignature(
+          new TextEncoder().encode(message),
+          signature,
+          {
+            address: expectedAddress,
+            client: mainnetClient(),
+          },
+        );
+
+      const signerAddress =
+        publicKey
+          .toSuiAddress()
+          .toLowerCase();
+
+      if (signerAddress !== expectedAddress) {
+        res.status(401).json({
+          valid: false,
+        });
+        return;
+      }
+
+      res.json({
+        valid: true,
+        signer_address: signerAddress,
+      });
+    } catch {
+      res.status(401).json({
+        valid: false,
       });
     }
   },
