@@ -13741,3 +13741,204 @@ class CreatorEdgeAuthorizationTests(TestCase):
                 edge_id=edge.edge_id,
                 execution_request_id=request.pk,
             )
+
+
+class CreatorEdgeClaimTests(TestCase):
+    def setUp(self):
+        from auctions.creator_edge_services import (
+            register_creator_edge,
+        )
+        from auctions.creator_execution_services import (
+            get_or_create_creator_execution_request,
+        )
+
+        self.user = User.objects.create_user(
+            username="edge-claim-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="clm1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.custody = "0x" + ("c" * 64)
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Claim Creator",
+            symbol="CLAIMCREATOR",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::claim::CLAIMCREATOR",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    self.custody,
+            },
+        )
+
+        self.edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+            label="Claim test edge",
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=
+                "creator-edge-claim-invoice",
+            metadata={
+                "economy_asset_id": self.asset.pk,
+                "recipient_address":
+                    "0x" + ("d" * 64),
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        self.request, _ = (
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+        )
+
+    def test_active_edge_claims_pending_request(self):
+        from auctions.creator_edge_services import (
+            claim_creator_execution_request,
+        )
+        from auctions.models import (
+            CreatorExecutionRequest,
+        )
+
+        request, changed = (
+            claim_creator_execution_request(
+                edge_id=self.edge.edge_id,
+                execution_request_id=
+                    self.request.pk,
+            )
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(
+            request.status,
+            CreatorExecutionRequest.STATUS_CLAIMED,
+        )
+        self.assertEqual(
+            request.claimed_by,
+            str(self.edge.edge_id),
+        )
+        self.assertTrue(request.claim_nonce)
+        self.assertIsNotNone(request.claimed_at)
+
+        self.edge.refresh_from_db()
+        self.assertIsNotNone(
+            self.edge.last_seen_at
+        )
+
+    def test_same_edge_claim_retry_is_idempotent(self):
+        from auctions.creator_edge_services import (
+            claim_creator_execution_request,
+        )
+
+        first, first_changed = (
+            claim_creator_execution_request(
+                edge_id=self.edge.edge_id,
+                execution_request_id=
+                    self.request.pk,
+            )
+        )
+
+        nonce = first.claim_nonce
+
+        second, second_changed = (
+            claim_creator_execution_request(
+                edge_id=self.edge.edge_id,
+                execution_request_id=
+                    self.request.pk,
+            )
+        )
+
+        self.assertTrue(first_changed)
+        self.assertFalse(second_changed)
+        self.assertEqual(
+            second.claim_nonce,
+            nonce,
+        )
+
+    def test_other_edge_cannot_take_claim(self):
+        from auctions.creator_edge_services import (
+            CreatorEdgeError,
+            claim_creator_execution_request,
+            register_creator_edge,
+        )
+
+        claim_creator_execution_request(
+            edge_id=self.edge.edge_id,
+            execution_request_id=self.request.pk,
+        )
+
+        other_edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+            label="Second Bob edge",
+        )
+
+        with self.assertRaises(CreatorEdgeError):
+            claim_creator_execution_request(
+                edge_id=other_edge.edge_id,
+                execution_request_id=
+                    self.request.pk,
+            )
+
+        self.request.refresh_from_db()
+
+        self.assertEqual(
+            self.request.claimed_by,
+            str(self.edge.edge_id),
+        )
+
+    def test_revoked_edge_cannot_claim(self):
+        from auctions.creator_edge_services import (
+            CreatorEdgeError,
+            claim_creator_execution_request,
+            revoke_creator_edge,
+        )
+
+        revoke_creator_edge(
+            self.edge.edge_id
+        )
+
+        with self.assertRaises(CreatorEdgeError):
+            claim_creator_execution_request(
+                edge_id=self.edge.edge_id,
+                execution_request_id=
+                    self.request.pk,
+            )
+
+        self.request.refresh_from_db()
+
+        self.assertEqual(
+            self.request.status,
+            self.request.STATUS_PENDING,
+        )
+        self.assertEqual(
+            self.request.claimed_by,
+            "",
+        )
+        self.assertEqual(
+            self.request.claim_nonce,
+            "",
+        )

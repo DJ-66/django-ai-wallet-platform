@@ -158,3 +158,123 @@ def revoke_creator_edge(edge_id):
     )
 
     return edge, True
+
+
+@transaction.atomic
+def claim_creator_execution_request(
+    *,
+    edge_id,
+    execution_request_id,
+):
+    """
+    Atomically claim one creator execution request.
+
+    Authorization is based on the registered Founder economy
+    and frozen custody address. Authentication belongs to the
+    caller/API layer and is intentionally separate.
+    """
+    try:
+        edge = (
+            CreatorEdgeRegistration.objects
+            .select_for_update()
+            .select_related("founder_account")
+            .get(edge_id=edge_id)
+        )
+    except CreatorEdgeRegistration.DoesNotExist as exc:
+        raise CreatorEdgeError(
+            "TG Edge registration does not exist."
+        ) from exc
+
+    if (
+        edge.status
+        != CreatorEdgeRegistration.STATUS_ACTIVE
+    ):
+        raise CreatorEdgeError(
+            "TG Edge registration is not active."
+        )
+
+    try:
+        request = (
+            CreatorExecutionRequest.objects
+            .select_for_update(of=("self",))
+            .select_related(
+                "delivery__asset"
+            )
+            .get(pk=execution_request_id)
+        )
+    except CreatorExecutionRequest.DoesNotExist as exc:
+        raise CreatorEdgeError(
+            "Creator execution request does not exist."
+        ) from exc
+
+    founder_id = (
+        request.delivery.asset.founder_account_id
+    )
+
+    if founder_id != edge.founder_account_id:
+        raise CreatorEdgeError(
+            "TG Edge is not authorized for this "
+            "creator economy."
+        )
+
+    if (
+        _normalize_address(request.custody_address)
+        != _normalize_address(edge.custody_address)
+    ):
+        raise CreatorEdgeError(
+            "TG Edge custody address does not match "
+            "execution custody."
+        )
+
+    edge_identity = str(edge.edge_id)
+
+    # Idempotent retry from the same Edge.
+    if (
+        request.status
+        == CreatorExecutionRequest.STATUS_CLAIMED
+        and request.claimed_by == edge_identity
+        and request.claim_nonce
+    ):
+        return request, False
+
+    if (
+        request.status
+        != CreatorExecutionRequest.STATUS_PENDING
+    ):
+        raise CreatorEdgeError(
+            "Creator execution request is not claimable."
+        )
+
+    request.status = (
+        CreatorExecutionRequest.STATUS_CLAIMED
+    )
+    request.claimed_by = edge_identity
+
+    # Server-generated capability nonce for this exact claim.
+    # This is not a wallet credential or private key.
+    import secrets
+    request.claim_nonce = secrets.token_urlsafe(32)
+
+    request.claimed_at = timezone.now()
+    request.last_error = ""
+
+    request.save(
+        update_fields=[
+            "status",
+            "claimed_by",
+            "claim_nonce",
+            "claimed_at",
+            "last_error",
+            "updated_at",
+        ]
+    )
+
+    edge.last_seen_at = timezone.now()
+    edge.save(
+        update_fields=[
+            "last_seen_at",
+            "updated_at",
+        ]
+    )
+
+    return request, True
