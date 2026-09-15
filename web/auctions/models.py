@@ -2448,6 +2448,83 @@ class EconomyAssetDelivery(models.Model):
             f"#{self.pk} [{self.status}]"
         )
 
+class CreatorEdgeRegistration(models.Model):
+    """
+    Public identity for a creator-operated TG Edge.
+
+    FANZ stores registration identity and public custody
+    information only. Creator private keys and signing
+    credentials remain on creator-controlled hardware.
+    """
+
+    STATUS_ACTIVE = "active"
+    STATUS_REVOKED = "revoked"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_REVOKED, "Revoked"),
+    ]
+
+    founder_account = models.ForeignKey(
+        FounderAccount,
+        on_delete=models.PROTECT,
+        related_name="creator_edge_registrations",
+    )
+
+    edge_id = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+
+    label = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+    )
+
+    custody_address = models.CharField(
+        max_length=128,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+
+    registered_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    last_seen_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    revoked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return (
+            f"TG Edge {self.edge_id} "
+            f"for @{self.founder_account.handle}"
+        )
+
+
 class CreatorExecutionRequest(models.Model):
     """
     Durable non-custodial handoff for a creator-owned

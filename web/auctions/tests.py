@@ -13552,3 +13552,192 @@ class EconomyAssetCustodyPolicyTests(TestCase):
             ).count(),
             1,
         )
+
+
+class CreatorEdgeAuthorizationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="edge-auth-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="edg1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.custody = "0x" + ("8" * 64)
+
+        self.asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Edge Auth Creator",
+            symbol="EDGEAUTH",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::edge::EDGEAUTH",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    self.custody,
+            },
+        )
+
+    def _execution_request(self):
+        from auctions.creator_execution_services import (
+            get_or_create_creator_execution_request,
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=
+                f"edge-auth-{PaymentIntent.objects.count()}",
+            metadata={
+                "economy_asset_id": self.asset.pk,
+                "recipient_address":
+                    "0x" + ("9" * 64),
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        request, _ = (
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+        )
+
+        return request
+
+    def test_edge_registration_requires_creator_custody(self):
+        from auctions.creator_edge_services import (
+            CreatorEdgeError,
+            register_creator_edge,
+        )
+
+        with self.assertRaises(CreatorEdgeError):
+            register_creator_edge(
+                founder_account_id=self.founder.pk,
+                custody_address=
+                    "0x" + ("a" * 64),
+            )
+
+    def test_active_matching_edge_is_authorized(self):
+        from auctions.creator_edge_services import (
+            authorize_edge_for_execution,
+            register_creator_edge,
+        )
+
+        edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+            label="Bob home edge",
+        )
+
+        request = self._execution_request()
+
+        authorized_edge, authorized_request = (
+            authorize_edge_for_execution(
+                edge_id=edge.edge_id,
+                execution_request_id=request.pk,
+            )
+        )
+
+        self.assertEqual(
+            authorized_edge.pk,
+            edge.pk,
+        )
+        self.assertEqual(
+            authorized_request.pk,
+            request.pk,
+        )
+
+    def test_other_founder_edge_is_rejected(self):
+        from auctions.creator_edge_services import (
+            CreatorEdgeError,
+            authorize_edge_for_execution,
+            register_creator_edge,
+        )
+
+        other_user = User.objects.create_user(
+            username="edge-other-user",
+            password="test-password",
+        )
+
+        other_founder = FounderAccount.objects.create(
+            handle="edg2",
+            current_account=other_user,
+            owner_root=other_user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        other_custody = "0x" + ("b" * 64)
+
+        EconomyAsset.objects.create(
+            founder_account=other_founder,
+            name="Other Edge Creator",
+            symbol="OTHEREDGE",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::edge::OTHEREDGE",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    other_custody,
+            },
+        )
+
+        other_edge = register_creator_edge(
+            founder_account_id=other_founder.pk,
+            custody_address=other_custody,
+        )
+
+        request = self._execution_request()
+
+        with self.assertRaises(CreatorEdgeError):
+            authorize_edge_for_execution(
+                edge_id=other_edge.edge_id,
+                execution_request_id=request.pk,
+            )
+
+    def test_revoked_edge_is_rejected(self):
+        from auctions.creator_edge_services import (
+            CreatorEdgeError,
+            authorize_edge_for_execution,
+            register_creator_edge,
+            revoke_creator_edge,
+        )
+
+        edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+        )
+
+        request = self._execution_request()
+
+        revoked, changed = revoke_creator_edge(
+            edge.edge_id
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(
+            revoked.status,
+            revoked.STATUS_REVOKED,
+        )
+
+        with self.assertRaises(CreatorEdgeError):
+            authorize_edge_for_execution(
+                edge_id=edge.edge_id,
+                execution_request_id=request.pk,
+            )
