@@ -13942,3 +13942,194 @@ class CreatorEdgeClaimTests(TestCase):
             self.request.claim_nonce,
             "",
         )
+
+
+class CreatorEdgeAuthChallengeTests(TestCase):
+    def setUp(self):
+        from auctions.creator_edge_services import (
+            register_creator_edge,
+        )
+
+        self.user = User.objects.create_user(
+            username="edge-auth-challenge-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="eac1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.custody = "0x" + ("e" * 64)
+
+        EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Auth Challenge Creator",
+            symbol="AUTHCHAL",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::auth::AUTHCHAL",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    self.custody,
+            },
+        )
+
+        self.edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+            label="Auth challenge edge",
+        )
+
+    def test_challenge_contains_bound_canonical_message(self):
+        from auctions.creator_edge_auth_services import (
+            create_creator_edge_auth_challenge,
+        )
+
+        challenge = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+        self.assertIn(
+            "FANZ TokenGate Edge Authentication",
+            challenge.message,
+        )
+        self.assertIn(
+            f"edge_id:{self.edge.edge_id}",
+            challenge.message,
+        )
+        self.assertIn(
+            f"custody_address:{self.custody}",
+            challenge.message,
+        )
+        self.assertIn(
+            f"nonce:{challenge.nonce}",
+            challenge.message,
+        )
+        self.assertIn(
+            "domain:fanz.to",
+            challenge.message,
+        )
+
+        self.assertGreater(
+            challenge.expires_at,
+            challenge.created_at,
+        )
+
+    def test_challenges_use_distinct_nonces(self):
+        from auctions.creator_edge_auth_services import (
+            create_creator_edge_auth_challenge,
+        )
+
+        first = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+        second = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+        self.assertNotEqual(
+            first.nonce,
+            second.nonce,
+        )
+        self.assertNotEqual(
+            first.message,
+            second.message,
+        )
+
+    def test_challenge_consumes_once(self):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            consume_creator_edge_auth_challenge,
+            create_creator_edge_auth_challenge,
+        )
+
+        challenge = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+        consumed = (
+            consume_creator_edge_auth_challenge(
+                challenge_id=challenge.pk,
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+        self.assertIsNotNone(
+            consumed.consumed_at
+        )
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            consume_creator_edge_auth_challenge(
+                challenge_id=challenge.pk,
+                edge_id=self.edge.edge_id,
+            )
+
+    def test_expired_challenge_is_rejected(self):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            consume_creator_edge_auth_challenge,
+            create_creator_edge_auth_challenge,
+        )
+
+        challenge = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+        challenge.expires_at = (
+            timezone.now()
+            - timezone.timedelta(seconds=1)
+        )
+        challenge.save(
+            update_fields=[
+                "expires_at",
+            ]
+        )
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            consume_creator_edge_auth_challenge(
+                challenge_id=challenge.pk,
+                edge_id=self.edge.edge_id,
+            )
+
+        challenge.refresh_from_db()
+        self.assertIsNone(
+            challenge.consumed_at
+        )
+
+    def test_revoked_edge_cannot_receive_challenge(self):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            create_creator_edge_auth_challenge,
+        )
+        from auctions.creator_edge_services import (
+            revoke_creator_edge,
+        )
+
+        revoke_creator_edge(
+            self.edge.edge_id
+        )
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )

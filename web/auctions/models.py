@@ -2525,6 +2525,49 @@ class CreatorEdgeRegistration(models.Model):
         )
 
 
+class CreatorEdgeAuthChallenge(models.Model):
+    """
+    One-time wallet-signature challenge for authenticating
+    a creator-operated TG Edge.
+
+    The challenge contains public authentication material only.
+    Creator private keys and signing credentials never enter FANZ.
+    """
+
+    edge = models.ForeignKey(
+        CreatorEdgeRegistration,
+        on_delete=models.PROTECT,
+        related_name="auth_challenges",
+    )
+
+    nonce = models.CharField(
+        max_length=128,
+        unique=True,
+    )
+
+    message = models.TextField()
+
+    expires_at = models.DateTimeField()
+
+    consumed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return (
+            f"TG Edge auth challenge #{self.pk} "
+            f"for {self.edge.edge_id}"
+        )
+
+
 class CreatorExecutionRequest(models.Model):
     """
     Durable non-custodial handoff for a creator-owned
