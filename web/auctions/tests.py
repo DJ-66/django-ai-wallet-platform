@@ -13382,13 +13382,19 @@ class EconomyAssetCustodyPolicyTests(TestCase):
     @patch(
         "auctions.economy_delivery_services.accept_delivery"
     )
-    def test_creator_delivery_never_reaches_platform_signer(
+    def test_creator_delivery_creates_non_custodial_handoff(
         self,
         accept_delivery,
     ):
+        from auctions.models import (
+            CreatorExecutionRequest,
+        )
         from auctions.economy_delivery_services import (
-            EconomyDeliveryError,
             process_pending_economy_delivery,
+        )
+
+        custody_address = (
+            "0x" + ("3" * 64)
         )
 
         asset = EconomyAsset.objects.create(
@@ -13398,9 +13404,10 @@ class EconomyAssetCustodyPolicyTests(TestCase):
             status=EconomyAsset.STATUS_ACTIVE,
             coin_type="mock::custody::CSTNOSIGN",
             metadata={
-                "issuance_source": "founder_ownership",
+                "issuance_source":
+                    "founder_ownership",
                 "intended_recipient_address":
-                    "0x" + ("3" * 64),
+                    custody_address,
             },
         )
 
@@ -13410,7 +13417,8 @@ class EconomyAssetCustodyPolicyTests(TestCase):
             status="settled",
             amount="5.00",
             currency="USD",
-            btcpay_invoice_id="custody-no-sign-invoice",
+            btcpay_invoice_id=
+                "custody-no-sign-invoice",
             metadata={
                 "economy_asset_id": asset.pk,
                 "recipient_address":
@@ -13426,20 +13434,121 @@ class EconomyAssetCustodyPolicyTests(TestCase):
             payment_intent=intent,
         )
 
-        with self.assertRaises(EconomyDeliveryError) as ctx:
+        returned, changed = (
             process_pending_economy_delivery(
                 delivery.pk
             )
+        )
 
-        self.assertIn(
-            "creator-authorized",
-            str(ctx.exception),
+        self.assertFalse(changed)
+        self.assertEqual(
+            returned.status,
+            EconomyAssetDelivery.STATUS_PENDING,
+        )
+
+        request = (
+            CreatorExecutionRequest.objects.get(
+                delivery=delivery
+            )
+        )
+
+        self.assertEqual(
+            request.status,
+            CreatorExecutionRequest.STATUS_PENDING,
+        )
+        self.assertEqual(
+            request.custody_address,
+            custody_address,
         )
 
         accept_delivery.assert_not_called()
 
-        delivery.refresh_from_db()
+        # Retry is idempotent: exactly one handoff.
+        process_pending_economy_delivery(
+            delivery.pk
+        )
+
         self.assertEqual(
-            delivery.status,
-            EconomyAssetDelivery.STATUS_PENDING,
+            CreatorExecutionRequest.objects.filter(
+                delivery=delivery
+            ).count(),
+            1,
+        )
+
+    def test_creator_execution_rejects_custody_drift(self):
+        from auctions.creator_execution_services import (
+            CreatorExecutionError,
+            get_or_create_creator_execution_request,
+        )
+        from auctions.models import (
+            CreatorExecutionRequest,
+        )
+
+        asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Custody Drift",
+            symbol="CSTDRIFT",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::custody::CSTDRIFT",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    "0x" + ("5" * 64),
+            },
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id=
+                "custody-drift-invoice",
+            metadata={
+                "economy_asset_id": asset.pk,
+                "recipient_address":
+                    "0x" + ("6" * 64),
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        request, created = (
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+        )
+
+        self.assertTrue(created)
+
+        request.custody_address = (
+            "0x" + ("7" * 64)
+        )
+        request.save(
+            update_fields=[
+                "custody_address",
+                "updated_at",
+            ]
+        )
+
+        with self.assertRaises(
+            CreatorExecutionError
+        ):
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+
+        self.assertEqual(
+            CreatorExecutionRequest.objects.filter(
+                delivery=delivery
+            ).count(),
+            1,
         )

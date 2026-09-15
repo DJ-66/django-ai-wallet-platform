@@ -2448,6 +2448,113 @@ class EconomyAssetDelivery(models.Model):
             f"#{self.pk} [{self.status}]"
         )
 
+class CreatorExecutionRequest(models.Model):
+    """
+    Durable non-custodial handoff for a creator-owned
+    EconomyAssetDelivery.
+
+    FANZ records what must be delivered. The creator or an
+    authorized creator-side TG Edge signs with the creator's
+    own Sui key. Private creator signing material never belongs
+    in FANZ.
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_CLAIMED = "claimed"
+    STATUS_SIGNED = "signed"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_CONFIRMED = "confirmed"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_CLAIMED, "Claimed"),
+        (STATUS_SIGNED, "Signed"),
+        (STATUS_SUBMITTED, "Submitted"),
+        (STATUS_CONFIRMED, "Confirmed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    delivery = models.OneToOneField(
+        EconomyAssetDelivery,
+        on_delete=models.PROTECT,
+        related_name="creator_execution_request",
+    )
+
+    # Immutable public custody identity. No private key.
+    custody_address = models.CharField(
+        max_length=128,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
+    # Future TG Edge identity. This is an opaque public
+    # registration/instance identifier, never a credential.
+    claimed_by = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    claim_nonce = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+    )
+
+    tx_digest = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+    )
+
+    claimed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    signed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    submitted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    confirmed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return (
+            f"Creator execution for delivery "
+            f"#{self.delivery_id} [{self.status}]"
+        )
+
+
 class FounderCart(models.Model):
     STATUS_OPEN = "open"
     STATUS_CHECKED_OUT = "checked_out"

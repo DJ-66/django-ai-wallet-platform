@@ -105,10 +105,24 @@ def process_pending_economy_delivery(delivery_id):
         ) from exc
 
     if execution_mode == EXECUTION_CREATOR_AUTHORIZED:
-        raise EconomyDeliveryError(
-            "Creator-custodied delivery requires "
-            "creator-authorized execution."
+        from .creator_execution_services import (
+            CreatorExecutionError,
+            get_or_create_creator_execution_request,
         )
+
+        try:
+            get_or_create_creator_execution_request(
+                delivery.pk
+            )
+        except CreatorExecutionError as exc:
+            raise EconomyDeliveryError(
+                str(exc)
+            ) from exc
+
+        # The creator-side TG Edge owns execution.
+        # FANZ leaves the underlying delivery pending until
+        # signed/submitted/confirmed state is reconciled.
+        return delivery, False
 
     if execution_mode != EXECUTION_PLATFORM_INVENTORY:
         raise EconomyDeliveryError(
