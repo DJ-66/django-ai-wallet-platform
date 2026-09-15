@@ -1197,6 +1197,88 @@ class EconomyAssetPublicationTests(TestCase):
         "auctions.economy_asset_publication_services."
         "get_creator_publication"
     )
+    def test_platform_publication_uses_explicit_identity(
+        self,
+        get_publication,
+    ):
+        self.asset.founder_account = None
+        self.asset.name = "FANZ"
+        self.asset.symbol = "FANZ"
+        self.asset.metadata = {
+            "issuance_source": "platform",
+            "platform_key": "fanz",
+            "publication_key": "platform-fanz-v1",
+            "module_name": "fanz",
+            "coin_struct_name": "FANZ",
+        }
+        self.asset.save(
+            update_fields=[
+                "founder_account",
+                "name",
+                "symbol",
+                "metadata",
+                "updated_at",
+            ]
+        )
+
+        package_id = (
+            "0x31f1df5547a0f6b5610ee87e5cbe3ca"
+            "76142795d42eb1f6f58419c88e103040e"
+        )
+        tx_digest = (
+            "3ZnaTzPD2QKyaB5RGZ9yCLRQAuDiWuiAE2yEG5Ywtc4E"
+        )
+        coin_type = (
+            f"{package_id}::fanz::FANZ"
+        )
+
+        get_publication.return_value = {
+            "publication": {
+                "publication_key": "platform-fanz-v1",
+                "chain": "sui",
+                "module_name": "fanz",
+                "coin_struct_name": "FANZ",
+                "state": "confirmed",
+                "tx_digest": tx_digest,
+                "package_id": package_id,
+                "coin_type": coin_type,
+            }
+        }
+
+        asset, changed = (
+            reconcile_confirmed_creator_publication(
+                self.asset.pk,
+                "platform-fanz-v1",
+            )
+        )
+
+        self.assertTrue(changed)
+
+        asset.refresh_from_db()
+
+        self.assertIsNone(asset.founder_account)
+        self.assertEqual(asset.coin_type, coin_type)
+        self.assertEqual(
+            asset.genesis_tx_digest,
+            tx_digest,
+        )
+        self.assertEqual(
+            asset.metadata["package_id"],
+            package_id,
+        )
+        self.assertEqual(
+            asset.metadata["publication_key"],
+            "platform-fanz-v1",
+        )
+        self.assertEqual(
+            asset.status,
+            EconomyAsset.STATUS_ACTIVE,
+        )
+
+    @patch(
+        "auctions.economy_asset_publication_services."
+        "get_creator_publication"
+    )
     def test_confirmed_publication_retry_is_idempotent(
         self,
         get_publication,

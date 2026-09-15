@@ -28,12 +28,40 @@ def _founder_move_handle(asset):
 
 
 def _expected_module_name(asset):
+    metadata = dict(asset.metadata or {})
+
+    if metadata.get("issuance_source") == "platform":
+        module_name = str(
+            metadata.get("module_name") or ""
+        ).strip()
+
+        if not module_name:
+            raise EconomyAssetPublicationError(
+                "Platform EconomyAsset has no module identity."
+            )
+
+        return module_name
+
     return (
         f"{_founder_move_handle(asset)}_fanz"
     )
 
 
 def _expected_coin_struct_name(asset):
+    metadata = dict(asset.metadata or {})
+
+    if metadata.get("issuance_source") == "platform":
+        coin_struct_name = str(
+            metadata.get("coin_struct_name") or ""
+        ).strip()
+
+        if not coin_struct_name:
+            raise EconomyAssetPublicationError(
+                "Platform EconomyAsset has no coin struct identity."
+            )
+
+        return coin_struct_name
+
     return _expected_module_name(
         asset
     ).upper()
