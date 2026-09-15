@@ -20,8 +20,12 @@ services:
       FANZ_SUI_MAINNET_PUBLICATION_SUBMIT_ENABLED: ${FANZ_SUI_MAINNET_PUBLICATION_SUBMIT_ENABLED:-false}
       FANZ_SUI_TESTNET_CURRENCY_REGISTRATION_ENABLED: ${FANZ_SUI_TESTNET_CURRENCY_REGISTRATION_ENABLED:-false}
       FANZ_SUI_MAINNET_CURRENCY_REGISTRATION_ENABLED: ${FANZ_SUI_MAINNET_CURRENCY_REGISTRATION_ENABLED:-false}
+      FANZ_SUI_MAINNET_DELIVERY_PREPARE_ENABLED: ${FANZ_SUI_MAINNET_DELIVERY_PREPARE_ENABLED:-false}
+      FANZ_SUI_MAINNET_DELIVERY_SUBMIT_ENABLED: ${FANZ_SUI_MAINNET_DELIVERY_SUBMIT_ENABLED:-false}
       FANZ_SUI_TESTNET_PRIVATE_KEY: ${FANZ_SUI_TESTNET_PRIVATE_KEY:-}
       FANZ_SUI_MAINNET_HOT_ADDRESS: ${FANZ_SUI_MAINNET_HOT_ADDRESS:-}
+      FANZ_SUI_MAINNET_INVENTORY_ADDRESS: ${FANZ_SUI_MAINNET_INVENTORY_ADDRESS:-}
+      FANZ_SUI_MAINNET_INVENTORY_WALLET_PATH: /run/secrets/fanz-mainnet-inventory-wallet.json
       FANZ_SUI_MAINNET_TRANSFER_ENABLED: ${FANZ_SUI_MAINNET_TRANSFER_ENABLED:-false}
       FANZ_SUI_MAINNET_STARTER_GRANT_ENABLED: ${FANZ_SUI_MAINNET_STARTER_GRANT_ENABLED:-false}
       FANZ_SUI_MAINNET_WALLET_PATH: /run/secrets/fanz-mainnet-wallet.json
@@ -34,6 +38,7 @@ services:
     volumes:
       - sui_journal:/data
       - ${HOME}/.fanz-wallets/sui-mainnet/fanz-mainnet-wallet.json:/run/secrets/fanz-mainnet-wallet.json:ro
+      - ${HOME}/.fanz-wallets/sui-mainnet/fanz-mainnet-inventory-wallet.json:/run/secrets/fanz-mainnet-inventory-wallet.json:ro
     networks:
       fanz-net:
         aliases:

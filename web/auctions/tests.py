@@ -594,10 +594,10 @@ SUI_ADAPTER_TEST_SETTINGS = {
 @override_settings(**SUI_ADAPTER_TEST_SETTINGS)
 class SuiAdapterClientTests(SimpleTestCase):
     @patch("auctions.sui_adapter.requests.request")
-    def test_prepare_delivery_posts_immutable_payload(self, request):
+    def test_accept_delivery_posts_immutable_payload(self, request):
         from types import SimpleNamespace
 
-        from auctions.sui_adapter import prepare_delivery
+        from auctions.sui_adapter import accept_delivery
 
         response = Mock()
         response.status_code = 201
@@ -616,12 +616,16 @@ class SuiAdapterClientTests(SimpleTestCase):
             asset=SimpleNamespace(
                 chain="sui",
                 coin_type="mock::lisa::LISAFANZ",
+                metadata={
+                    "inventory_address":
+                        "0x" + ("1" * 64),
+                },
             ),
             recipient_address="0x1234",
             amount_base_units=1_000_000,
         )
 
-        result = prepare_delivery(delivery)
+        result = accept_delivery(delivery)
 
         self.assertTrue(result["created"])
 
@@ -640,6 +644,8 @@ class SuiAdapterClientTests(SimpleTestCase):
                     "11111111-2222-4333-8444-555555555555",
                 "chain": "sui",
                 "coin_type": "mock::lisa::LISAFANZ",
+                "inventory_address":
+                    "0x" + ("1" * 64),
                 "recipient_address": "0x1234",
                 "amount_base_units": "1000000",
             },
@@ -662,6 +668,10 @@ class SuiAdapterClientTests(SimpleTestCase):
             asset=SimpleNamespace(
                 chain="sui",
                 coin_type="mock::lisa::LISAFANZ",
+                metadata={
+                    "inventory_address":
+                        "0x" + ("1" * 64),
+                },
             ),
             recipient_address="0x1234",
             amount_base_units=1_000_000,
@@ -941,6 +951,10 @@ class EconomyDeliveryProcessorTests(TestCase):
             symbol="ECO4FANZ",
             status=EconomyAsset.STATUS_ACTIVE,
             coin_type="mock::eco4::ECO4FANZ",
+            metadata={
+                "inventory_address":
+                    "0x" + ("2" * 64),
+            },
         )
 
         self.intent = PaymentIntent.objects.create(
@@ -967,10 +981,34 @@ class EconomyDeliveryProcessorTests(TestCase):
     @patch(
         "auctions.economy_delivery_services.prepare_delivery"
     )
-    def test_pending_delivery_becomes_prepared(self, prepare):
+    @patch(
+        "auctions.economy_delivery_services.accept_delivery"
+    )
+    def test_pending_delivery_becomes_prepared(
+        self,
+        accept,
+        prepare,
+    ):
         from auctions.economy_delivery_services import (
             process_pending_economy_delivery,
         )
+
+        accept.return_value = {
+            "created": True,
+            "delivery": {
+                "submission_key":
+                    str(self.delivery.submission_key),
+                "chain": "sui",
+                "coin_type": "mock::eco4::ECO4FANZ",
+                "inventory_address":
+                    "0x" + ("2" * 64),
+                "recipient_address": "0x1234",
+                "amount_base_units": "1000000",
+                "state": "accepted",
+                "sender_address": None,
+                "tx_digest": None,
+            },
+        }
 
         prepare.return_value = {
             "created": True,
@@ -979,6 +1017,8 @@ class EconomyDeliveryProcessorTests(TestCase):
                     str(self.delivery.submission_key),
                 "chain": "sui",
                 "coin_type": "mock::eco4::ECO4FANZ",
+                "inventory_address":
+                    "0x" + ("2" * 64),
                 "recipient_address": "0x1234",
                 "amount_base_units": "1000000",
                 "state": "prepared",
@@ -1034,9 +1074,9 @@ class EconomyDeliveryProcessorTests(TestCase):
         prepare.assert_not_called()
 
     @patch(
-        "auctions.economy_delivery_services.prepare_delivery"
+        "auctions.economy_delivery_services.accept_delivery"
     )
-    def test_adapter_failure_leaves_delivery_pending(self, prepare):
+    def test_adapter_failure_leaves_delivery_pending(self, accept):
         from auctions.economy_delivery_services import (
             EconomyDeliveryError,
             process_pending_economy_delivery,
@@ -1044,7 +1084,7 @@ class EconomyDeliveryProcessorTests(TestCase):
         )
         from auctions.sui_adapter import SuiAdapterError
 
-        prepare.side_effect = SuiAdapterError(
+        accept.side_effect = SuiAdapterError(
             "adapter unavailable"
         )
 
@@ -1065,15 +1105,15 @@ class EconomyDeliveryProcessorTests(TestCase):
         self.assertTrue(self.delivery.last_error)
 
     @patch(
-        "auctions.economy_delivery_services.prepare_delivery"
+        "auctions.economy_delivery_services.accept_delivery"
     )
-    def test_remote_immutable_mismatch_is_rejected(self, prepare):
+    def test_remote_immutable_mismatch_is_rejected(self, accept):
         from auctions.economy_delivery_services import (
             EconomyDeliveryError,
             process_pending_economy_delivery,
         )
 
-        prepare.return_value = {
+        accept.return_value = {
             "created": False,
             "delivery": {
                 "submission_key":

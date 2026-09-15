@@ -109,7 +109,7 @@ def _request(method, path, **kwargs):
         ) from exc
 
 
-def prepare_delivery(delivery):
+def _delivery_payload(delivery):
     asset = delivery.asset
 
     if not asset.coin_type:
@@ -117,18 +117,40 @@ def prepare_delivery(delivery):
             "EconomyAsset has no on-chain coin_type."
         )
 
-    payload = {
+    inventory_address = str(
+        (asset.metadata or {}).get(
+            "inventory_address"
+        ) or ""
+    ).strip().lower()
+
+    if not inventory_address:
+        raise SuiAdapterError(
+            "EconomyAsset has no inventory_address."
+        )
+
+    return {
         "submission_key": str(delivery.submission_key),
         "chain": asset.chain,
         "coin_type": asset.coin_type,
+        "inventory_address": inventory_address,
         "recipient_address": delivery.recipient_address,
         "amount_base_units": str(delivery.amount_base_units),
     }
 
+
+def accept_delivery(delivery):
     return _request(
         "POST",
         "/v1/deliveries",
-        json=payload,
+        json=_delivery_payload(delivery),
+    )
+
+
+def prepare_delivery(submission_key):
+    return _request(
+        "POST",
+        f"/v1/deliveries/{submission_key}/prepare",
+        json={},
     )
 
 

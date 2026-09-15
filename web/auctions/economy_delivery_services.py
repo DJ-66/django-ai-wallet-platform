@@ -5,6 +5,7 @@ from .models import EconomyAssetDelivery
 from .sui_adapter import (
     SuiAdapterConflict,
     SuiAdapterError,
+    accept_delivery,
     prepare_delivery,
 )
 
@@ -13,11 +14,26 @@ class EconomyDeliveryError(RuntimeError):
     pass
 
 
-def _validate_adapter_delivery(local_delivery, remote_delivery):
+def _validate_adapter_delivery_identity(
+    local_delivery,
+    remote_delivery,
+):
+    inventory_address = str(
+        (local_delivery.asset.metadata or {}).get(
+            "inventory_address"
+        ) or ""
+    ).strip().lower()
+
+    if not inventory_address:
+        raise EconomyDeliveryError(
+            "EconomyAsset has no inventory_address."
+        )
+
     expected = {
         "submission_key": str(local_delivery.submission_key),
         "chain": local_delivery.asset.chain,
         "coin_type": local_delivery.asset.coin_type,
+        "inventory_address": inventory_address,
         "recipient_address": local_delivery.recipient_address,
         "amount_base_units": str(local_delivery.amount_base_units),
     }
@@ -28,12 +44,26 @@ def _validate_adapter_delivery(local_delivery, remote_delivery):
                 f"FANZ Sui response mismatch for {key}."
             )
 
+    return remote_delivery
+
+
+def _validate_adapter_delivery(
+    local_delivery,
+    remote_delivery,
+):
+    _validate_adapter_delivery_identity(
+        local_delivery,
+        remote_delivery,
+    )
+
     if remote_delivery.get("state") != "prepared":
         raise EconomyDeliveryError(
             "FANZ Sui delivery is not in prepared state."
         )
 
-    sender_address = remote_delivery.get("sender_address")
+    sender_address = remote_delivery.get(
+        "sender_address"
+    )
 
     if not sender_address:
         raise EconomyDeliveryError(
@@ -60,7 +90,9 @@ def process_pending_economy_delivery(delivery_id):
         return delivery, False
 
     try:
-        response = prepare_delivery(delivery)
+        accepted_response = accept_delivery(
+            delivery
+        )
     except SuiAdapterConflict as exc:
         raise EconomyDeliveryError(
             "FANZ Sui rejected conflicting delivery data."
@@ -70,11 +102,44 @@ def process_pending_economy_delivery(delivery_id):
             "FANZ Sui adapter unavailable or invalid."
         ) from exc
 
-    remote_delivery = response.get("delivery")
+    accepted_delivery = accepted_response.get(
+        "delivery"
+    )
+
+    if not isinstance(accepted_delivery, dict):
+        raise EconomyDeliveryError(
+            "FANZ Sui response contained no delivery object."
+        )
+
+    _validate_adapter_delivery_identity(
+        delivery,
+        accepted_delivery,
+    )
+
+    if accepted_delivery.get("state") not in (
+        "accepted",
+        "prepared",
+    ):
+        raise EconomyDeliveryError(
+            "FANZ Sui delivery is not accepted for preparation."
+        )
+
+    try:
+        prepared_response = prepare_delivery(
+            str(delivery.submission_key)
+        )
+    except SuiAdapterError as exc:
+        raise EconomyDeliveryError(
+            "FANZ Sui delivery preparation failed."
+        ) from exc
+
+    remote_delivery = prepared_response.get(
+        "delivery"
+    )
 
     if not isinstance(remote_delivery, dict):
         raise EconomyDeliveryError(
-            "FANZ Sui response contained no delivery object."
+            "FANZ Sui preparation contained no delivery object."
         )
 
     sender_address = _validate_adapter_delivery(

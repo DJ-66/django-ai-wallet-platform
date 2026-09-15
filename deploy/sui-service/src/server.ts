@@ -36,6 +36,12 @@ const TESTNET_CURRENCY_REGISTRATION_ENABLED =
 const MAINNET_CURRENCY_REGISTRATION_ENABLED =
   process.env.FANZ_SUI_MAINNET_CURRENCY_REGISTRATION_ENABLED === "true";
 
+const MAINNET_DELIVERY_PREPARE_ENABLED =
+  process.env.FANZ_SUI_MAINNET_DELIVERY_PREPARE_ENABLED === "true";
+
+const MAINNET_DELIVERY_SUBMIT_ENABLED =
+  process.env.FANZ_SUI_MAINNET_DELIVERY_SUBMIT_ENABLED === "true";
+
 const MAINNET_TRANSFER_ENABLED =
   process.env.FANZ_SUI_MAINNET_TRANSFER_ENABLED === "true";
 
@@ -227,6 +233,7 @@ db.exec(`
     submission_key TEXT PRIMARY KEY,
     chain TEXT NOT NULL,
     coin_type TEXT NOT NULL,
+    inventory_address TEXT,
     recipient_address TEXT NOT NULL,
     amount_base_units TEXT NOT NULL,
     state TEXT NOT NULL,
@@ -276,6 +283,12 @@ function ensureColumn(
 }
 
 // Durable schema upgrades for journals created by earlier fanz-sui versions.
+ensureColumn(
+  "deliveries",
+  "inventory_address",
+  "TEXT",
+);
+
 ensureColumn(
   "deliveries",
   "transaction_bytes_b64",
@@ -513,6 +526,7 @@ type DeliveryInput = {
   submission_key: string;
   chain: string;
   coin_type: string;
+  inventory_address: string;
   recipient_address: string;
   amount_base_units: string;
 };
@@ -621,6 +635,7 @@ function validateDelivery(body: unknown): DeliveryInput {
     "submission_key",
     "chain",
     "coin_type",
+    "inventory_address",
     "recipient_address",
     "amount_base_units",
   ] as const;
@@ -632,6 +647,16 @@ function validateDelivery(body: unknown): DeliveryInput {
     ) {
       throw new Error(`${key} must be a non-empty string`);
     }
+  }
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      value.inventory_address as string,
+    )
+  ) {
+    throw new Error(
+      "inventory_address must be a canonical lowercase Sui address"
+    );
   }
 
   if (!/^[0-9]+$/.test(value.amount_base_units as string)) {
@@ -646,6 +671,7 @@ function validateDelivery(body: unknown): DeliveryInput {
     submission_key: value.submission_key as string,
     chain: value.chain as string,
     coin_type: value.coin_type as string,
+    inventory_address: value.inventory_address as string,
     recipient_address: value.recipient_address as string,
     amount_base_units: value.amount_base_units as string,
   };
@@ -901,6 +927,7 @@ function getDelivery(submissionKey: string): DeliveryRow | undefined {
       submission_key,
       chain,
       coin_type,
+      inventory_address,
       recipient_address,
       amount_base_units,
       state,
@@ -925,6 +952,7 @@ function immutableFieldsMatch(
   return (
     existing.chain === requested.chain &&
     existing.coin_type === requested.coin_type &&
+    existing.inventory_address === requested.inventory_address &&
     existing.recipient_address === requested.recipient_address &&
     existing.amount_base_units === requested.amount_base_units
   );
@@ -936,6 +964,7 @@ function publicDelivery(row: DeliveryRow) {
     submission_key: row.submission_key,
     chain: row.chain,
     coin_type: row.coin_type,
+    inventory_address: row.inventory_address,
     recipient_address: row.recipient_address,
     amount_base_units: row.amount_base_units,
     state: row.state,
@@ -1355,6 +1384,91 @@ function loadMainnetSigner(): Ed25519Keypair {
   ) {
     throw new Error(
       "Mainnet signer does not match configured hot wallet"
+    );
+  }
+
+  return keypair;
+}
+
+
+
+function loadMainnetInventorySigner(): Ed25519Keypair {
+  const walletPath =
+    process.env
+      .FANZ_SUI_MAINNET_INVENTORY_WALLET_PATH ||
+    "";
+
+  if (!walletPath) {
+    throw new Error(
+      "FANZ_SUI_MAINNET_INVENTORY_WALLET_PATH is missing"
+    );
+  }
+
+  const wallet = JSON.parse(
+    fs.readFileSync(walletPath, "utf8")
+  ) as {
+    network?: string;
+    address?: string;
+    private_key?: string;
+  };
+
+  if (
+    wallet.network !== "mainnet" ||
+    !wallet.private_key ||
+    !wallet.address
+  ) {
+    throw new Error(
+      "Mainnet inventory wallet file is invalid"
+    );
+  }
+
+  const keypair =
+    Ed25519Keypair.fromSecretKey(
+      wallet.private_key
+    );
+
+  const derived =
+    keypair.toSuiAddress().toLowerCase();
+
+  if (
+    derived !==
+    wallet.address.toLowerCase()
+  ) {
+    throw new Error(
+      "Mainnet inventory wallet key/address mismatch"
+    );
+  }
+
+  const configuredInventory =
+    (
+      process.env
+        .FANZ_SUI_MAINNET_INVENTORY_ADDRESS ||
+      ""
+    ).trim().toLowerCase();
+
+  if (!configuredInventory) {
+    throw new Error(
+      "FANZ_SUI_MAINNET_INVENTORY_ADDRESS is missing"
+    );
+  }
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(
+      configuredInventory
+    )
+  ) {
+    throw new Error(
+      "Mainnet inventory address is invalid"
+    );
+  }
+
+  if (
+    derived !==
+    configuredInventory
+  ) {
+    throw new Error(
+      "Mainnet inventory signer does not match "
+      + "configured inventory wallet"
     );
   }
 
@@ -4422,6 +4536,411 @@ app.post(
 );
 
 
+
+type DeliveryCoin = {
+  objectId: string;
+  version: string;
+  digest: string;
+  type: string;
+  balance: string;
+};
+
+async function selectDeliveryCoins(
+  client: SuiGrpcClient,
+  owner: string,
+  coinType: string,
+  amountBaseUnits: string,
+): Promise<DeliveryCoin[]> {
+  const requestedAmount =
+    BigInt(amountBaseUnits);
+
+  if (requestedAmount <= 0n) {
+    throw new Error(
+      "Delivery amount must be greater than zero"
+    );
+  }
+
+  const available: DeliveryCoin[] = [];
+
+  let cursor: string | null = null;
+
+  do {
+    const page = await client.listCoins({
+      owner,
+      coinType,
+      cursor: cursor ?? undefined,
+      limit: 100,
+    });
+
+    for (const coin of page.objects) {
+      if (
+        !coin.objectId ||
+        !coin.version ||
+        !coin.digest ||
+        !coin.type ||
+        coin.balance == null
+      ) {
+        throw new Error(
+          "Sui coin inventory response is incomplete"
+        );
+      }
+
+      available.push({
+        objectId: coin.objectId,
+        version: coin.version,
+        digest: coin.digest,
+        type: coin.type,
+        balance: coin.balance,
+      });
+    }
+
+    cursor =
+      page.hasNextPage
+        ? page.cursor
+        : null;
+
+    if (
+      page.hasNextPage &&
+      !cursor
+    ) {
+      throw new Error(
+        "Sui coin inventory pagination cursor is missing"
+      );
+    }
+  } while (cursor);
+
+  /*
+   * RPC ordering is not part of our delivery contract.
+   * Sort before selection so the same visible inventory
+   * produces the same selected object set.
+   */
+  available.sort(
+    (left, right) =>
+      left.objectId.localeCompare(
+        right.objectId
+      )
+  );
+
+  const selected: DeliveryCoin[] = [];
+
+  let selectedBalance = 0n;
+
+  for (const coin of available) {
+    const balance =
+      BigInt(coin.balance);
+
+    if (balance <= 0n) {
+      continue;
+    }
+
+    selected.push(coin);
+    selectedBalance += balance;
+
+    if (
+      selectedBalance >=
+      requestedAmount
+    ) {
+      return selected;
+    }
+  }
+
+  throw new Error(
+    `Insufficient ${coinType} inventory: ` +
+    `requested ${requestedAmount.toString()} ` +
+    `base units, available ` +
+    `${selectedBalance.toString()}`
+  );
+}
+
+
+function buildDeliveryTransaction(
+  senderAddress: string,
+  recipientAddress: string,
+  amountBaseUnits: string,
+  selectedCoins: DeliveryCoin[],
+): Transaction {
+  if (selectedCoins.length === 0) {
+    throw new Error(
+      "Delivery requires at least one selected coin"
+    );
+  }
+
+  const amount =
+    BigInt(amountBaseUnits);
+
+  if (amount <= 0n) {
+    throw new Error(
+      "Delivery amount must be greater than zero"
+    );
+  }
+
+  const tx = new Transaction();
+
+  tx.setSender(senderAddress);
+
+  const primaryCoin =
+    tx.objectRef({
+      objectId:
+        selectedCoins[0].objectId,
+      version:
+        selectedCoins[0].version,
+      digest:
+        selectedCoins[0].digest,
+    });
+
+  const mergeSources =
+    selectedCoins
+      .slice(1)
+      .map((coin) =>
+        tx.objectRef({
+          objectId: coin.objectId,
+          version: coin.version,
+          digest: coin.digest,
+        })
+      );
+
+  if (mergeSources.length > 0) {
+    tx.mergeCoins(
+      primaryCoin,
+      mergeSources,
+    );
+  }
+
+  const [deliveryCoin] =
+    tx.splitCoins(
+      primaryCoin,
+      [amount],
+    );
+
+  tx.transferObjects(
+    [deliveryCoin],
+    recipientAddress,
+  );
+
+  return tx;
+}
+
+
+async function prepareDelivery(
+  submissionKey: string,
+): Promise<DeliveryRow> {
+  const existing =
+    getDelivery(submissionKey);
+
+  if (!existing) {
+    throw new Error(
+      "Delivery not found"
+    );
+  }
+
+  /*
+   * Critical invariant:
+   * once signed delivery material exists,
+   * NEVER rebuild it.
+   */
+  if (
+    existing.transaction_bytes_b64 &&
+    existing.signature
+  ) {
+    return existing;
+  }
+
+  if (existing.tx_digest) {
+    throw new Error(
+      "Delivery already has a transaction digest"
+    );
+  }
+
+  if (
+    existing.state !== "accepted" &&
+    existing.state !== "prepared"
+  ) {
+    throw new Error(
+      `Cannot prepare delivery in state ${existing.state}`
+    );
+  }
+
+  if (existing.chain !== "sui") {
+    throw new Error(
+      "Delivery chain must be sui"
+    );
+  }
+
+  if (!MAINNET_DELIVERY_PREPARE_ENABLED) {
+    throw new Error(
+      "Mainnet economy delivery preparation is disabled"
+    );
+  }
+
+  const keypair =
+    loadMainnetInventorySigner();
+
+  const sender =
+    keypair.toSuiAddress().toLowerCase();
+
+  if (
+    sender !==
+    existing.inventory_address.toLowerCase()
+  ) {
+    throw new Error(
+      "Delivery inventory signer does not match inventory_address"
+    );
+  }
+
+  const preparingAt =
+    new Date().toISOString();
+
+  const claim = db.prepare(`
+    UPDATE deliveries
+    SET
+      state = 'preparing',
+      sender_address = ?,
+      updated_at = ?
+    WHERE submission_key = ?
+      AND state = 'accepted'
+      AND tx_digest IS NULL
+      AND transaction_bytes_b64 IS NULL
+      AND signature IS NULL
+  `).run(
+    sender,
+    preparingAt,
+    submissionKey,
+  );
+
+  if (claim.changes !== 1) {
+    const current =
+      getDelivery(submissionKey);
+
+    if (
+      current?.transaction_bytes_b64 &&
+      current?.signature
+    ) {
+      return current;
+    }
+
+    if (current?.state === "preparing") {
+      throw new Error(
+        "Delivery preparation is already in progress"
+      );
+    }
+
+    throw new Error(
+      "Delivery could not be claimed for preparation"
+    );
+  }
+
+  try {
+    const client =
+      mainnetClient();
+
+    const selectedCoins =
+      await selectDeliveryCoins(
+        client,
+        existing.inventory_address,
+        existing.coin_type,
+        existing.amount_base_units,
+      );
+
+    const tx =
+      buildDeliveryTransaction(
+        sender,
+        existing.recipient_address,
+        existing.amount_base_units,
+        selectedCoins,
+      );
+
+    const bytes =
+      await tx.build({
+        client,
+      });
+
+    const signed =
+      await keypair.signTransaction(bytes);
+
+    const bytesB64 =
+      Buffer.from(bytes).toString("base64");
+
+    const preparedAt =
+      new Date().toISOString();
+
+    const update = db.prepare(`
+      UPDATE deliveries
+      SET
+        state = 'prepared',
+        sender_address = ?,
+        transaction_bytes_b64 = ?,
+        signature = ?,
+        prepared_at = ?,
+        updated_at = ?
+      WHERE submission_key = ?
+        AND state = 'preparing'
+        AND tx_digest IS NULL
+        AND transaction_bytes_b64 IS NULL
+        AND signature IS NULL
+    `).run(
+      sender,
+      bytesB64,
+      signed.signature,
+      preparedAt,
+      preparedAt,
+      submissionKey,
+    );
+
+    if (update.changes !== 1) {
+      const raced =
+        getDelivery(submissionKey);
+
+      if (
+        raced?.transaction_bytes_b64 &&
+        raced?.signature
+      ) {
+        return raced;
+      }
+
+      throw new Error(
+        "Prepared delivery journal update failed"
+      );
+    }
+  } catch (error) {
+    /*
+     * Preparation failed before signed material
+     * was frozen. Release the claim so a later
+     * retry can safely prepare again.
+     */
+    const failedAt =
+      new Date().toISOString();
+
+    db.prepare(`
+      UPDATE deliveries
+      SET
+        state = 'accepted',
+        sender_address = NULL,
+        updated_at = ?
+      WHERE submission_key = ?
+        AND state = 'preparing'
+        AND tx_digest IS NULL
+        AND transaction_bytes_b64 IS NULL
+        AND signature IS NULL
+    `).run(
+      failedAt,
+      submissionKey,
+    );
+
+    throw error;
+  }
+
+  const prepared =
+    getDelivery(submissionKey);
+
+  if (!prepared) {
+    throw new Error(
+      "Prepared delivery disappeared from journal"
+    );
+  }
+
+  return prepared;
+}
+
 app.post("/v1/deliveries", (req, res) => {
   let requested: DeliveryInput;
 
@@ -4454,21 +4973,12 @@ app.post("/v1/deliveries", (req, res) => {
 
   const now = new Date().toISOString();
 
-  // Mock-only public sender identity.
-  // No private key and no chain transaction exist in v0.
-  const senderAddress =
-    "mock:" +
-    crypto
-      .createHash("sha256")
-      .update(requested.submission_key)
-      .digest("hex")
-      .slice(0, 32);
-
   db.prepare(`
     INSERT INTO deliveries (
       submission_key,
       chain,
       coin_type,
+      inventory_address,
       recipient_address,
       amount_base_units,
       state,
@@ -4483,19 +4993,17 @@ app.post("/v1/deliveries", (req, res) => {
       updated_at
     )
     VALUES (
-      ?, ?, ?, ?, ?, ?, ?,
-      NULL, NULL, NULL,
-      ?, NULL, NULL, ?, ?
+      ?, ?, ?, ?, ?, ?, 'accepted',
+      NULL, NULL, NULL, NULL,
+      NULL, NULL, NULL, ?, ?
     )
   `).run(
     requested.submission_key,
     requested.chain,
     requested.coin_type,
+    requested.inventory_address,
     requested.recipient_address,
     requested.amount_base_units,
-    "prepared",
-    senderAddress,
-    now,
     now,
     now,
   );
@@ -4507,6 +5015,31 @@ app.post("/v1/deliveries", (req, res) => {
     ),
   });
 });
+
+
+app.post(
+  "/v1/deliveries/:submissionKey/prepare",
+  async (req, res) => {
+    try {
+      const delivery =
+        await prepareDelivery(
+          req.params.submissionKey,
+        );
+
+      res.json({
+        delivery:
+          publicDelivery(delivery),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "delivery preparation failed",
+      });
+    }
+  },
+);
 
 app.get("/v1/deliveries/:submissionKey", (req, res) => {
   const delivery = getDelivery(req.params.submissionKey);
