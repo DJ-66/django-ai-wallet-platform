@@ -14,6 +14,7 @@ from auctions.models import (
 
 PLATFORM_ACCOUNTS = [
     ("Fanz", "FANZ"),
+    ("TokenGate", "TokenGate"),
     ("BuyCredits", "Buy FANZ Credits"),
     ("News", "FANZ News"),
     ("AI", "FANZ AI"),
