@@ -152,3 +152,91 @@ def consume_creator_edge_auth_challenge(
     )
 
     return challenge
+
+
+def authenticate_creator_edge_challenge(
+    *,
+    challenge_id,
+    edge_id,
+    signature,
+):
+    """
+    Verify the exact stored challenge against the registered
+    creator custody address, then atomically consume it.
+
+    The creator private key never enters FANZ.
+    """
+    from .sui_adapter import (
+        SuiAdapterError,
+        verify_personal_message,
+    )
+
+    try:
+        challenge = (
+            CreatorEdgeAuthChallenge.objects
+            .select_related("edge")
+            .get(pk=challenge_id)
+        )
+    except CreatorEdgeAuthChallenge.DoesNotExist as exc:
+        raise CreatorEdgeAuthError(
+            "TG Edge authentication challenge "
+            "does not exist."
+        ) from exc
+
+    edge = challenge.edge
+
+    if str(edge.edge_id) != str(edge_id):
+        raise CreatorEdgeAuthError(
+            "TG Edge authentication challenge "
+            "belongs to another Edge."
+        )
+
+    if (
+        edge.status
+        != CreatorEdgeRegistration.STATUS_ACTIVE
+    ):
+        raise CreatorEdgeAuthError(
+            "TG Edge registration is not active."
+        )
+
+    if challenge.consumed_at is not None:
+        raise CreatorEdgeAuthError(
+            "TG Edge authentication challenge "
+            "has already been consumed."
+        )
+
+    if timezone.now() >= challenge.expires_at:
+        raise CreatorEdgeAuthError(
+            "TG Edge authentication challenge "
+            "has expired."
+        )
+
+    try:
+        result = verify_personal_message(
+            message=challenge.message,
+            signature=signature,
+            expected_address=edge.custody_address,
+        )
+    except SuiAdapterError as exc:
+        raise CreatorEdgeAuthError(
+            "TG Edge wallet signature verification failed."
+        ) from exc
+
+    if result.get("valid") is not True:
+        raise CreatorEdgeAuthError(
+            "TG Edge wallet signature is invalid."
+        )
+
+    signer_address = str(
+        result.get("signer_address") or ""
+    ).strip().lower()
+
+    if signer_address != edge.custody_address.lower():
+        raise CreatorEdgeAuthError(
+            "TG Edge wallet signer address mismatch."
+        )
+
+    return consume_creator_edge_auth_challenge(
+        challenge_id=challenge.pk,
+        edge_id=edge.edge_id,
+    )

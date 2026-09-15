@@ -14133,3 +14133,194 @@ class CreatorEdgeAuthChallengeTests(TestCase):
             create_creator_edge_auth_challenge(
                 edge_id=self.edge.edge_id,
             )
+
+
+class CreatorEdgeWalletAuthenticationTests(TestCase):
+    def setUp(self):
+        from auctions.creator_edge_auth_services import (
+            create_creator_edge_auth_challenge,
+        )
+        from auctions.creator_edge_services import (
+            register_creator_edge,
+        )
+
+        self.user = User.objects.create_user(
+            username="edge-wallet-auth-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="ewa1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+        self.custody = "0x" + ("1" * 64)
+
+        EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Wallet Auth Creator",
+            symbol="WALLETAUTH",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::auth::WALLETAUTH",
+            metadata={
+                "issuance_source":
+                    "founder_ownership",
+                "intended_recipient_address":
+                    self.custody,
+            },
+        )
+
+        self.edge = register_creator_edge(
+            founder_account_id=self.founder.pk,
+            custody_address=self.custody,
+        )
+
+        self.challenge = (
+            create_creator_edge_auth_challenge(
+                edge_id=self.edge.edge_id,
+            )
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_valid_wallet_signature_consumes_challenge(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            authenticate_creator_edge_challenge,
+        )
+
+        request.return_value = {
+            "valid": True,
+            "signer_address": self.custody,
+        }
+
+        challenge = (
+            authenticate_creator_edge_challenge(
+                challenge_id=self.challenge.pk,
+                edge_id=self.edge.edge_id,
+                signature="serialized-sui-signature",
+            )
+        )
+
+        self.assertIsNotNone(
+            challenge.consumed_at
+        )
+
+        request.assert_called_once_with(
+            "POST",
+            "/v1/verify-personal-message",
+            json={
+                "message":
+                    self.challenge.message,
+                "signature":
+                    "serialized-sui-signature",
+                "expected_address":
+                    self.custody,
+            },
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_invalid_wallet_signature_does_not_consume(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            authenticate_creator_edge_challenge,
+        )
+
+        request.return_value = {
+            "valid": False,
+        }
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            authenticate_creator_edge_challenge(
+                challenge_id=self.challenge.pk,
+                edge_id=self.edge.edge_id,
+                signature="bad-signature",
+            )
+
+        self.challenge.refresh_from_db()
+
+        self.assertIsNone(
+            self.challenge.consumed_at
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_signer_address_mismatch_does_not_consume(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            authenticate_creator_edge_challenge,
+        )
+
+        request.return_value = {
+            "valid": True,
+            "signer_address":
+                "0x" + ("2" * 64),
+        }
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            authenticate_creator_edge_challenge(
+                challenge_id=self.challenge.pk,
+                edge_id=self.edge.edge_id,
+                signature="wrong-wallet",
+            )
+
+        self.challenge.refresh_from_db()
+
+        self.assertIsNone(
+            self.challenge.consumed_at
+        )
+
+    @patch(
+        "auctions.sui_adapter._request"
+    )
+    def test_successful_signature_cannot_be_replayed(
+        self,
+        request,
+    ):
+        from auctions.creator_edge_auth_services import (
+            CreatorEdgeAuthError,
+            authenticate_creator_edge_challenge,
+        )
+
+        request.return_value = {
+            "valid": True,
+            "signer_address": self.custody,
+        }
+
+        authenticate_creator_edge_challenge(
+            challenge_id=self.challenge.pk,
+            edge_id=self.edge.edge_id,
+            signature="valid-signature",
+        )
+
+        with self.assertRaises(
+            CreatorEdgeAuthError
+        ):
+            authenticate_creator_edge_challenge(
+                challenge_id=self.challenge.pk,
+                edge_id=self.edge.edge_id,
+                signature="valid-signature",
+            )
+
+        self.assertEqual(
+            request.call_count,
+            1,
+        )

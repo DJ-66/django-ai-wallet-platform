@@ -154,6 +154,24 @@ def prepare_delivery(submission_key):
     )
 
 
+def verify_personal_message(
+    *,
+    message,
+    signature,
+    expected_address,
+):
+    return _request(
+        "POST",
+        "/v1/verify-personal-message",
+        json={
+            "message": message,
+            "signature": signature,
+            "expected_address":
+                expected_address,
+        },
+    )
+
+
 def get_delivery(submission_key):
     return _request(
         "GET",
