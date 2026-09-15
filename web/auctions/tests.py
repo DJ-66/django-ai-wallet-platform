@@ -946,12 +946,14 @@ class EconomyDeliveryProcessorTests(TestCase):
         )
 
         self.asset = EconomyAsset.objects.create(
-            founder_account=self.founder,
             name="Eco4Fanz",
             symbol="ECO4FANZ",
             status=EconomyAsset.STATUS_ACTIVE,
             coin_type="mock::eco4::ECO4FANZ",
             metadata={
+                "issuance_source": "platform",
+                "platform_key":
+                    "economy-delivery-test",
                 "inventory_address":
                     "0x" + ("2" * 64),
             },
@@ -13302,4 +13304,142 @@ class SunsetCamCaptureScheduleTests(TestCase):
         self.assertNotIn(
             SunsetCamCapture.CAPTURE_SUNSET,
             scheduled,
+        )
+
+
+class EconomyAssetCustodyPolicyTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="custody-policy-user",
+            password="test-password",
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="cst1",
+            current_account=self.user,
+            owner_root=self.user,
+            status=FounderAccount.STATUS_OWNED,
+        )
+
+    def test_platform_asset_uses_platform_inventory(self):
+        from auctions.economy_asset_custody import (
+            EXECUTION_PLATFORM_INVENTORY,
+            economy_asset_execution_mode,
+            platform_inventory_address,
+        )
+
+        address = "0x" + ("1" * 64)
+
+        asset = EconomyAsset.objects.create(
+            name="Custody Platform",
+            symbol="CSTPLAT",
+            status=EconomyAsset.STATUS_ACTIVE,
+            metadata={
+                "issuance_source": "platform",
+                "platform_key": "custody-test",
+                "inventory_address": address,
+            },
+        )
+
+        self.assertEqual(
+            economy_asset_execution_mode(asset),
+            EXECUTION_PLATFORM_INVENTORY,
+        )
+        self.assertEqual(
+            platform_inventory_address(asset),
+            address,
+        )
+
+    def test_creator_asset_uses_creator_authorized_execution(self):
+        from auctions.economy_asset_custody import (
+            EXECUTION_CREATOR_AUTHORIZED,
+            creator_custody_address,
+            economy_asset_execution_mode,
+        )
+
+        address = "0x" + ("2" * 64)
+
+        asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Custody Creator",
+            symbol="CSTCREATOR",
+            status=EconomyAsset.STATUS_ACTIVE,
+            metadata={
+                "issuance_source": "founder_ownership",
+                "intended_recipient_address": address,
+            },
+        )
+
+        self.assertEqual(
+            economy_asset_execution_mode(asset),
+            EXECUTION_CREATOR_AUTHORIZED,
+        )
+        self.assertEqual(
+            creator_custody_address(asset),
+            address,
+        )
+
+    @patch(
+        "auctions.economy_delivery_services.accept_delivery"
+    )
+    def test_creator_delivery_never_reaches_platform_signer(
+        self,
+        accept_delivery,
+    ):
+        from auctions.economy_delivery_services import (
+            EconomyDeliveryError,
+            process_pending_economy_delivery,
+        )
+
+        asset = EconomyAsset.objects.create(
+            founder_account=self.founder,
+            name="Custody No Sign",
+            symbol="CSTNOSIGN",
+            status=EconomyAsset.STATUS_ACTIVE,
+            coin_type="mock::custody::CSTNOSIGN",
+            metadata={
+                "issuance_source": "founder_ownership",
+                "intended_recipient_address":
+                    "0x" + ("3" * 64),
+            },
+        )
+
+        intent = PaymentIntent.objects.create(
+            user=self.user,
+            purpose="economy_asset_purchase",
+            status="settled",
+            amount="5.00",
+            currency="USD",
+            btcpay_invoice_id="custody-no-sign-invoice",
+            metadata={
+                "economy_asset_id": asset.pk,
+                "recipient_address":
+                    "0x" + ("4" * 64),
+                "amount_base_units": 1_000_000,
+            },
+            paid_at=timezone.now(),
+        )
+
+        fulfill_payment_intent(intent.pk)
+
+        delivery = EconomyAssetDelivery.objects.get(
+            payment_intent=intent,
+        )
+
+        with self.assertRaises(EconomyDeliveryError) as ctx:
+            process_pending_economy_delivery(
+                delivery.pk
+            )
+
+        self.assertIn(
+            "creator-authorized",
+            str(ctx.exception),
+        )
+
+        accept_delivery.assert_not_called()
+
+        delivery.refresh_from_db()
+        self.assertEqual(
+            delivery.status,
+            EconomyAssetDelivery.STATUS_PENDING,
         )

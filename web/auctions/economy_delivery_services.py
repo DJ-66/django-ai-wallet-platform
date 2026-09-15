@@ -2,6 +2,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import EconomyAssetDelivery
+from .economy_asset_custody import (
+    EXECUTION_CREATOR_AUTHORIZED,
+    EXECUTION_PLATFORM_INVENTORY,
+    EconomyAssetCustodyError,
+    economy_asset_execution_mode,
+)
 from .sui_adapter import (
     SuiAdapterConflict,
     SuiAdapterError,
@@ -88,6 +94,26 @@ def process_pending_economy_delivery(delivery_id):
 
     if delivery.status != EconomyAssetDelivery.STATUS_PENDING:
         return delivery, False
+
+    try:
+        execution_mode = economy_asset_execution_mode(
+            delivery.asset
+        )
+    except EconomyAssetCustodyError as exc:
+        raise EconomyDeliveryError(
+            str(exc)
+        ) from exc
+
+    if execution_mode == EXECUTION_CREATOR_AUTHORIZED:
+        raise EconomyDeliveryError(
+            "Creator-custodied delivery requires "
+            "creator-authorized execution."
+        )
+
+    if execution_mode != EXECUTION_PLATFORM_INVENTORY:
+        raise EconomyDeliveryError(
+            "Unsupported economy delivery execution mode."
+        )
 
     try:
         accepted_response = accept_delivery(
