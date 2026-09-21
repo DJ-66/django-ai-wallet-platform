@@ -15295,6 +15295,127 @@ class FanzSearchRetrievalTests(TestCase):
             "username",
         )
 
+    def test_user_search_returns_identity_metadata(self):
+        from .fanz_search import _search_users
+        from .models import UserProfile
+
+        profile = UserProfile.objects.get(
+            user=self.user,
+        )
+
+        profile.is_verified = True
+        profile.is_official = True
+        profile.is_platform_account = True
+        profile.is_ai_creator = True
+        profile.fan_count = 42
+
+        profile.save(
+            update_fields=[
+                "is_verified",
+                "is_official",
+                "is_platform_account",
+                "is_ai_creator",
+                "fan_count",
+            ]
+        )
+
+        results = _search_users(
+            "searchbob",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+
+        row = results[0]
+
+        self.assertTrue(row["is_verified"])
+        self.assertTrue(row["is_official"])
+        self.assertTrue(
+            row["is_platform_account"]
+        )
+        self.assertTrue(row["is_ai_creator"])
+        self.assertEqual(row["fan_count"], 42)
+
+    def test_identity_metadata_does_not_change_text_score(self):
+        from django.contrib.auth.models import User
+
+        from .fanz_search import _search_users
+        from .models import UserProfile
+
+        exact_user = User.objects.create_user(
+            username="identity",
+            password="test-password",
+        )
+
+        exact_profile, _ = (
+            UserProfile.objects.update_or_create(
+                user=exact_user,
+                defaults={
+                    "display_name": "Identity",
+                    "is_verified": False,
+                    "is_official": False,
+                    "is_platform_account": False,
+                    "is_ai_creator": False,
+                    "fan_count": 0,
+                },
+            )
+        )
+
+        popular_user = User.objects.create_user(
+            username="identityplus",
+            password="test-password",
+        )
+
+        UserProfile.objects.update_or_create(
+            user=popular_user,
+            defaults={
+                "display_name": "Identity Plus",
+                "is_verified": True,
+                "is_official": True,
+                "is_platform_account": True,
+                "is_ai_creator": True,
+                "fan_count": 10000,
+            },
+        )
+
+        results = _search_users(
+            "identity",
+            5,
+        )
+
+        ids = [
+            row["id"]
+            for row in results
+        ]
+
+        self.assertEqual(
+            ids[:2],
+            [
+                exact_user.pk,
+                popular_user.pk,
+            ],
+        )
+
+        self.assertEqual(
+            results[0]["score"],
+            100,
+        )
+
+        self.assertEqual(
+            results[1]["score"],
+            75,
+        )
+
+        exact_profile.refresh_from_db()
+
+        self.assertFalse(
+            results[0]["is_verified"]
+        )
+        self.assertEqual(
+            results[0]["fan_count"],
+            0,
+        )
+
     def test_user_can_be_found_by_profile_bio(self):
         from .fanz_search import _search_users
 

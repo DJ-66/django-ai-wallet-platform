@@ -283,9 +283,47 @@
                 href="{{ row.url }}"
                 class="fanz-search-result"
               >
-                <div class="fanz-search-result__title">
-                  {{ row.title }}
-                </div>
+                {% if row.type == "user" %}
+                  <div class="fanz-search-result__title">
+                    {% if row.is_platform_account and not row.is_ai_creator %}
+                      <span
+                        title="{% trans 'FANZ Platform Account' %}"
+                      >✨</span>
+                    {% endif %}
+
+                    {% if row.display_name %}
+                      {{ row.display_name }}
+                    {% else %}
+                      {{ row.title }}
+                    {% endif %}
+
+                    {% if row.is_official %}
+                      <span
+                        title="{% trans 'Official creator' %}"
+                      >💎</span>
+                    {% elif row.is_verified %}
+                      <span
+                        title="{% trans 'Verified creator' %}"
+                      >✔️</span>
+                    {% endif %}
+                  </div>
+
+                  {% if row.display_name %}
+                    <div class="fanz-search-result__subtitle">
+                      {{ row.title }}
+                    </div>
+                  {% endif %}
+
+                  {% if row.is_ai_creator %}
+                    <div class="fanz-search-result__subtitle">
+                      🤖 {% trans "AI Influencer" %}
+                    </div>
+                  {% endif %}
+
+                {% else %}
+                  <div class="fanz-search-result__title">
+                    {{ row.title }}
+                  </div>
 
                 {% if row.subtitle or row.subtitle_code %}
   <div class="fanz-search-result__subtitle">
@@ -333,6 +371,7 @@
 
   </div>
 {% endif %}
+                {% endif %}
               </a>
             {% endfor %}
           </div>

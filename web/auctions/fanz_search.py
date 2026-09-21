@@ -521,6 +521,32 @@ def _search_users(query, limit):
                 score=score,
                 match_reason=reason,
                 has_profile=bool(profile),
+                display_name=display_name,
+                is_verified=(
+                    bool(profile.is_verified)
+                    if profile
+                    else False
+                ),
+                is_official=(
+                    bool(profile.is_official)
+                    if profile
+                    else False
+                ),
+                is_platform_account=(
+                    bool(profile.is_platform_account)
+                    if profile
+                    else False
+                ),
+                is_ai_creator=(
+                    bool(profile.is_ai_creator)
+                    if profile
+                    else False
+                ),
+                fan_count=(
+                    profile.fan_count
+                    if profile
+                    else 0
+                ),
             )
         )
 
