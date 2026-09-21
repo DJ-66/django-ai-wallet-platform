@@ -455,6 +455,20 @@ class Command(BaseCommand):
             post.unlock_price = 0
             post.save()
 
+            capture = SunsetCamCapture.objects.create(
+                local_date=now_local.date(),
+                capture_type=capture_type,
+                post=post,
+            )
+
+            capture_number = capture.id
+
+            post.title = (
+                f"SunsetCam #{capture_number} — "
+                + post.title
+            )
+            post.save(update_fields=["title"])
+
             media_items = form.cleaned_data.get(
                 "images",
                 [],
@@ -477,18 +491,15 @@ class Command(BaseCommand):
                     post=post,
                     language=language,
                     defaults={
-                        "title": title,
+                        "title": (
+                            f"SunsetCam #{capture_number} — "
+                            + title
+                        ),
                         "content": content,
                     },
                 )
 
             sync_post_hashtags(post)
-
-            SunsetCamCapture.objects.create(
-                local_date=now_local.date(),
-                capture_type=capture_type,
-                post=post,
-            )
 
             return post, True
 
