@@ -15589,3 +15589,112 @@ class FanzSearchRetrievalTests(TestCase):
         )
 
         self.assertEqual(results, [])
+
+
+class FanzSearchDestinationTests(SimpleTestCase):
+    def test_platform_destination_intents(self):
+        from .fanz_search import _search_destinations
+
+        cases = [
+            # English
+            ("wallet", "wallet"),
+            ("credits", "wallet"),
+            ("my wallet", "wallet"),
+            ("node", "node"),
+            ("my node", "node"),
+            ("ai", "ai"),
+            ("ai companions", "ai"),
+            ("events", "events"),
+            ("calendar", "events"),
+            ("discovery", "discovery"),
+            ("explore", "discovery"),
+
+            # Spanish
+            ("cartera", "wallet"),
+            ("créditos", "wallet"),
+            ("nodo", "node"),
+            ("ia", "ai"),
+            ("compañeros ia", "ai"),
+            ("eventos", "events"),
+            ("calendario", "events"),
+            ("descubrir", "discovery"),
+
+            # Portuguese
+            ("carteira", "wallet"),
+            ("créditos fanz", "wallet"),
+            ("meu node", "node"),
+            ("companheiro ia", "ai"),
+            ("eventos", "events"),
+            ("calendário", "events"),
+            ("descobrir", "discovery"),
+        ]
+
+        for query, expected_id in cases:
+            with self.subTest(
+                query=query,
+                expected_id=expected_id,
+            ):
+                results = _search_destinations(
+                    query,
+                    10,
+                )
+
+                self.assertTrue(
+                    any(
+                        row["id"] == expected_id
+                        for row in results
+                    ),
+                    msg=(
+                        f"{query!r} did not resolve "
+                        f"to {expected_id!r}: "
+                        f"{results!r}"
+                    ),
+                )
+
+    def test_destination_urls_reverse(self):
+        from django.urls import reverse
+
+        from .fanz_search import _search_destinations
+
+        cases = [
+            ("wallet", "wallet"),
+            ("node", "node_dashboard"),
+            ("ai", "companion_list"),
+            ("events", "event_list"),
+            ("discovery", "discovery_home"),
+            ("marketplace", "founder_tienda"),
+        ]
+
+        for query, url_name in cases:
+            with self.subTest(
+                query=query,
+                url_name=url_name,
+            ):
+                results = _search_destinations(
+                    query,
+                    10,
+                )
+
+                expected_url = reverse(url_name)
+
+                self.assertTrue(
+                    any(
+                        row["url"] == expected_url
+                        for row in results
+                    ),
+                    msg=(
+                        f"{query!r} did not resolve "
+                        f"to {expected_url!r}"
+                    ),
+                )
+
+    def test_unknown_destination_returns_nothing(self):
+        from .fanz_search import _search_destinations
+
+        self.assertEqual(
+            _search_destinations(
+                "definitely-not-a-fanz-destination",
+                10,
+            ),
+            [],
+        )

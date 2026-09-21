@@ -299,7 +299,17 @@
     {% elif row.subtitle_code == "founder_property" %}
       {% trans "Founder Property" %}
     {% elif row.subtitle_code == "founder_marketplace" %}
-    {% trans "Founder property marketplace" %}
+      {% trans "Founder property marketplace" %}
+    {% elif row.subtitle_code == "wallet" %}
+      {% trans "Credits and payments" %}
+    {% elif row.subtitle_code == "node" %}
+      {% trans "FANZ Node" %}
+    {% elif row.subtitle_code == "ai" %}
+      {% trans "AI companions" %}
+    {% elif row.subtitle_code == "events" %}
+      {% trans "FANZ events" %}
+    {% elif row.subtitle_code == "discovery" %}
+      {% trans "Explore FANZ" %}
     {% elif row.subtitle_code == "hashtag_uses" %}
       {% blocktrans trimmed count count=row.subtitle_count %}
         {{ count }} use
