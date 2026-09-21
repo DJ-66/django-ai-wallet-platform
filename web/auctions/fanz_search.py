@@ -105,6 +105,43 @@ def _match_text(
     if query in value:
         return contains
 
+    query_tokens = [
+        token
+        for token in query.split()
+        if token
+    ]
+
+    if len(query_tokens) >= 2:
+        value_compact = "".join(
+            char
+            for char in value
+            if char.isalnum()
+        )
+
+        query_compact = "".join(
+            char
+            for char in query
+            if char.isalnum()
+        )
+
+        if (
+            query_compact
+            and query_compact in value_compact
+        ):
+            return max(
+                1,
+                min(contains - 5, 45),
+            )
+
+        if all(
+            token in value
+            for token in query_tokens
+        ):
+            return max(
+                1,
+                min(contains - 10, 40),
+            )
+
     return 0
 
 
@@ -418,14 +455,35 @@ def _search_destinations(query, limit):
     )
 
 def _search_users(query, limit):
+    candidate_filter = (
+        Q(username__icontains=query)
+        | Q(profile__display_name__icontains=query)
+        | Q(profile__bio__icontains=query)
+        | Q(profile__location__icontains=query)
+    )
+
+    query_tokens = [
+        token
+        for token in query.split()
+        if token
+    ]
+
+    if len(query_tokens) >= 2:
+        token_filter = Q()
+
+        for token in query_tokens:
+            token_filter &= (
+                Q(username__icontains=token)
+                | Q(profile__display_name__icontains=token)
+                | Q(profile__bio__icontains=token)
+                | Q(profile__location__icontains=token)
+            )
+
+        candidate_filter |= token_filter
+
     rows = (
         User.objects
-        .filter(
-            Q(username__icontains=query)
-            | Q(profile__display_name__icontains=query)
-            | Q(profile__bio__icontains=query)
-            | Q(profile__location__icontains=query)
-        )
+        .filter(candidate_filter)
         .select_related("profile")
         .distinct()
         .order_by("username")[

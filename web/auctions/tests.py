@@ -15819,3 +15819,134 @@ class FanzSearchDestinationTests(SimpleTestCase):
             ),
             [],
         )
+
+
+class FanzSearchTokenMatchingTests(TestCase):
+    def test_buy_credits_matches_compound_platform_account(self):
+        from django.contrib.auth.models import User
+
+        from .fanz_search import _search_users
+        from .models import UserProfile
+
+        user = User.objects.create_user(
+            username="BuyCredits",
+            password="test-password",
+        )
+
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={
+                "display_name": "Buy FANZ Credits",
+                "bio": (
+                    "Official FANZ Credits storefront. "
+                    "Buy FANZ Credit packages."
+                ),
+                "is_official": True,
+                "is_platform_account": True,
+            },
+        )
+
+        results = _search_users(
+            "buy credits",
+            5,
+        )
+
+        self.assertTrue(
+            any(
+                row["id"] == user.pk
+                for row in results
+            )
+        )
+
+    def test_token_gate_matches_compound_username(self):
+        from django.contrib.auth.models import User
+
+        from .fanz_search import _search_users
+        from .models import UserProfile
+
+        user = User.objects.create_user(
+            username="TokenGate",
+            password="test-password",
+        )
+
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={
+                "display_name": "TokenGate",
+                "is_official": True,
+                "is_platform_account": True,
+            },
+        )
+
+        results = _search_users(
+            "token gate",
+            5,
+        )
+
+        self.assertTrue(
+            any(
+                row["id"] == user.pk
+                for row in results
+            )
+        )
+
+    def test_watch_party_matches_watchparty_identity(self):
+        from django.contrib.auth.models import User
+
+        from .fanz_search import _search_users
+        from .models import UserProfile
+
+        user = User.objects.create_user(
+            username="WatchParty",
+            password="test-password",
+        )
+
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={
+                "display_name": "FANZ Watch Parties",
+                "is_official": True,
+                "is_platform_account": True,
+            },
+        )
+
+        results = _search_users(
+            "watch party",
+            5,
+        )
+
+        self.assertTrue(
+            any(
+                row["id"] == user.pk
+                for row in results
+            )
+        )
+
+    def test_exact_text_remains_stronger_than_token_match(self):
+        from .fanz_search import _match_text
+
+        exact = _match_text(
+            "buy credits",
+            "buy credits",
+            exact=100,
+            startswith=75,
+            contains=50,
+        )
+
+        token_candidate = _match_text(
+            "Buy FANZ Credits",
+            "buy credits",
+            exact=100,
+            startswith=75,
+            contains=50,
+        )
+
+        self.assertEqual(exact, 100)
+        self.assertGreater(
+            exact,
+            token_candidate,
+        )
+        self.assertGreater(
+            token_candidate,
+            0,
+        )
