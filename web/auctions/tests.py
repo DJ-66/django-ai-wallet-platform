@@ -14968,3 +14968,179 @@ class CreatorEdgeApiTests(TestCase):
             self.execution.claimed_by,
             "",
         )
+
+
+class FanzSearchCoreTests(SimpleTestCase):
+    def test_language_normalization(self):
+        from .fanz_search import _normalize_language
+
+        self.assertEqual(_normalize_language("en"), "en")
+        self.assertEqual(_normalize_language("es"), "es")
+        self.assertEqual(_normalize_language("pt"), "pt")
+        self.assertEqual(_normalize_language("es-PY"), "es")
+        self.assertEqual(_normalize_language("pt-BR"), "pt")
+        self.assertEqual(_normalize_language("fr"), "en")
+        self.assertEqual(_normalize_language(""), "en")
+        self.assertEqual(_normalize_language(None), "en")
+
+    def test_query_cleanup_preserves_prefix(self):
+        from .fanz_search import _clean_query
+
+        self.assertEqual(
+            _clean_query("  @Bob  "),
+            "@Bob",
+        )
+        self.assertEqual(
+            _clean_query("  #Sunset  "),
+            "#Sunset",
+        )
+
+    def test_bare_query_removes_one_fanz_prefix(self):
+        from .fanz_search import _bare_query
+
+        self.assertEqual(_bare_query("@bob"), "bob")
+        self.assertEqual(_bare_query("#sunset"), "sunset")
+        self.assertEqual(_bare_query("bob"), "bob")
+
+        # Only one canonical FANZ prefix is removed.
+        self.assertEqual(_bare_query("@@bob"), "@bob")
+
+    def test_match_text_ranking(self):
+        from .fanz_search import _match_text
+
+        self.assertEqual(
+            _match_text("bob", "bob"),
+            100,
+        )
+        self.assertEqual(
+            _match_text("bobfanz", "bob"),
+            75,
+        )
+        self.assertEqual(
+            _match_text("the-bob-room", "bob"),
+            50,
+        )
+        self.assertEqual(
+            _match_text("alice", "bob"),
+            0,
+        )
+
+    def test_match_text_is_case_insensitive(self):
+        from .fanz_search import _match_text
+
+        self.assertEqual(
+            _match_text("BobFanz", "bobfanz"),
+            100,
+        )
+
+    def test_rank_results_is_deterministic(self):
+        from .fanz_search import _rank_results
+
+        rows = [
+            {
+                "id": 3,
+                "title": "Zulu",
+                "score": 50,
+            },
+            {
+                "id": 2,
+                "title": "Bravo",
+                "score": 100,
+            },
+            {
+                "id": 1,
+                "title": "Alpha",
+                "score": 100,
+            },
+        ]
+
+        ranked = _rank_results(rows, 3)
+
+        self.assertEqual(
+            [row["id"] for row in ranked],
+            [1, 2, 3],
+        )
+
+    def test_limit_is_clamped(self):
+        from .fanz_search import _limit
+
+        self.assertEqual(_limit(None), 5)
+        self.assertEqual(_limit("bad"), 5)
+        self.assertEqual(_limit(0), 1)
+        self.assertEqual(_limit(1), 1)
+        self.assertEqual(_limit(8), 8)
+        self.assertEqual(_limit(20), 20)
+        self.assertEqual(_limit(999), 20)
+
+    def test_empty_query_contract(self):
+        from .fanz_search import search_fanz
+
+        result = search_fanz(
+            "   ",
+            language="es-PY",
+        )
+
+        self.assertEqual(result["query"], "")
+        self.assertEqual(
+            result["normalized_query"],
+            "",
+        )
+        self.assertEqual(result["language"], "es")
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["groups"], {})
+
+    def test_founder_tienda_english_intent(self):
+        from .fanz_search import _search_destinations
+
+        results = _search_destinations(
+            "marketplace",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            "founder_tienda",
+        )
+        self.assertEqual(results[0]["score"], 100)
+
+    def test_founder_tienda_spanish_intent(self):
+        from .fanz_search import _search_destinations
+
+        results = _search_destinations(
+            "comprar nombres",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            "founder_tienda",
+        )
+
+    def test_founder_tienda_portuguese_intent(self):
+        from .fanz_search import _search_destinations
+
+        results = _search_destinations(
+            "comprar nomes",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            "founder_tienda",
+        )
+
+    def test_single_word_partial_destination_does_not_match(self):
+        from .fanz_search import _search_destinations
+
+        # Phase 12 deliberately requires an exact alias for
+        # single-word destination queries.
+        results = _search_destinations(
+            "market",
+            5,
+        )
+
+        self.assertEqual(results, [])
