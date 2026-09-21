@@ -15144,3 +15144,315 @@ class FanzSearchCoreTests(SimpleTestCase):
         )
 
         self.assertEqual(results, [])
+
+
+class FanzSearchRetrievalTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from .models import (
+            DiscoveryHub,
+            Event,
+            FeedPost,
+            FounderAccount,
+            Hashtag,
+            UserProfile,
+        )
+        from businesses.models import BusinessListing
+
+        self.user = User.objects.create_user(
+            username="searchbob",
+            password="test-password",
+        )
+
+        UserProfile.objects.update_or_create(
+            user=self.user,
+            defaults={
+                "display_name": "Search Bob",
+                "bio": "Parana sunset photographer",
+                "location": "Encarnacion",
+            },
+        )
+
+        self.founder = FounderAccount.objects.create(
+            handle="srch",
+        )
+
+        self.hashtag = Hashtag.objects.create(
+            name="searchsunset",
+            usage_count=0,
+        )
+
+        self.public_post = FeedPost.objects.create(
+            user=self.user,
+            title="Searchable Sunset",
+            content="A public Parana sunset post",
+            is_public=True,
+        )
+        self.public_post.hashtags.add(
+            self.hashtag,
+        )
+
+        self.private_post = FeedPost.objects.create(
+            user=self.user,
+            title="Hidden Search Secret",
+            content="This post must not appear",
+            is_public=False,
+        )
+
+        self.active_hub = DiscoveryHub.objects.create(
+            hashtag="searchtravel",
+            slug="search-travel",
+            title="Search Travel",
+            subtitle="Active discovery hub",
+            is_active=True,
+        )
+
+        self.inactive_hub = DiscoveryHub.objects.create(
+            hashtag="hiddenhub",
+            slug="hidden-hub",
+            title="Hidden Hub",
+            subtitle="Inactive discovery hub",
+            is_active=False,
+        )
+
+        self.event = Event.objects.create(
+            creator=self.user,
+            title="Search Festival",
+            description="Public searchable event",
+            location="Encarnacion",
+            start_at=timezone.now()
+            + timedelta(days=1),
+            is_published=True,
+            is_cancelled=False,
+        )
+
+        self.unpublished_event = Event.objects.create(
+            creator=self.user,
+            title="Hidden Search Event",
+            description="Unpublished event",
+            location="Encarnacion",
+            start_at=timezone.now()
+            + timedelta(days=2),
+            is_published=False,
+            is_cancelled=False,
+        )
+
+        self.cancelled_event = Event.objects.create(
+            creator=self.user,
+            title="Cancelled Search Event",
+            description="Cancelled event",
+            location="Encarnacion",
+            start_at=timezone.now()
+            + timedelta(days=3),
+            is_published=True,
+            is_cancelled=True,
+        )
+
+        self.business = BusinessListing.objects.create(
+            name="Search Cafe",
+            slug="search-cafe",
+            industry=(
+                BusinessListing.
+                INDUSTRY_RESTAURANT
+            ),
+            description="Coffee by the river",
+            city="Encarnacion",
+            country="Paraguay",
+            is_active=True,
+        )
+
+        self.inactive_business = (
+            BusinessListing.objects.create(
+                name="Hidden Search Cafe",
+                slug="hidden-search-cafe",
+                industry=(
+                    BusinessListing.
+                    INDUSTRY_RESTAURANT
+                ),
+                description="Inactive listing",
+                city="Encarnacion",
+                country="Paraguay",
+                is_active=False,
+            )
+        )
+
+    def test_user_can_be_found_by_username(self):
+        from .fanz_search import _search_users
+
+        results = _search_users(
+            "searchbob",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.user.pk,
+        )
+        self.assertEqual(
+            results[0]["match_reason"],
+            "username",
+        )
+
+    def test_user_can_be_found_by_profile_bio(self):
+        from .fanz_search import _search_users
+
+        results = _search_users(
+            "photographer",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.user.pk,
+        )
+        self.assertEqual(
+            results[0]["match_reason"],
+            "bio",
+        )
+
+    def test_founder_property_is_retrievable(self):
+        from .fanz_search import (
+            _search_founder_accounts,
+        )
+
+        results = _search_founder_accounts(
+            "srch",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.founder.pk,
+        )
+
+    def test_hashtag_is_retrievable(self):
+        from .fanz_search import _search_hashtags
+
+        results = _search_hashtags(
+            "searchsunset",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.hashtag.pk,
+        )
+        self.assertEqual(
+            results[0]["usage_count"],
+            1,
+        )
+
+    def test_public_post_is_retrievable(self):
+        from .fanz_search import _search_posts
+
+        results = _search_posts(
+            "Searchable Sunset",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.public_post.pk,
+        )
+
+    def test_private_post_is_not_retrievable(self):
+        from .fanz_search import _search_posts
+
+        results = _search_posts(
+            "Hidden Search Secret",
+            5,
+        )
+
+        self.assertEqual(results, [])
+
+    def test_active_discovery_hub_is_retrievable(self):
+        from .fanz_search import (
+            _search_discovery_hubs,
+        )
+
+        results = _search_discovery_hubs(
+            "searchtravel",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.active_hub.pk,
+        )
+
+    def test_inactive_discovery_hub_is_hidden(self):
+        from .fanz_search import (
+            _search_discovery_hubs,
+        )
+
+        results = _search_discovery_hubs(
+            "hiddenhub",
+            5,
+        )
+
+        self.assertEqual(results, [])
+
+    def test_published_event_is_retrievable(self):
+        from .fanz_search import _search_events
+
+        results = _search_events(
+            "Search Festival",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.event.pk,
+        )
+
+    def test_unpublished_event_is_hidden(self):
+        from .fanz_search import _search_events
+
+        results = _search_events(
+            "Hidden Search Event",
+            5,
+        )
+
+        self.assertEqual(results, [])
+
+    def test_cancelled_event_is_hidden(self):
+        from .fanz_search import _search_events
+
+        results = _search_events(
+            "Cancelled Search Event",
+            5,
+        )
+
+        self.assertEqual(results, [])
+
+    def test_active_business_is_retrievable(self):
+        from .fanz_search import _search_businesses
+
+        results = _search_businesses(
+            "Search Cafe",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            self.business.pk,
+        )
+
+    def test_inactive_business_is_hidden(self):
+        from .fanz_search import _search_businesses
+
+        results = _search_businesses(
+            "Hidden Search Cafe",
+            5,
+        )
+
+        self.assertEqual(results, [])
