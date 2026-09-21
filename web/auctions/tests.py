@@ -15447,6 +15447,139 @@ class FanzSearchRetrievalTests(TestCase):
             self.business.pk,
         )
 
+    def test_live_auction_is_retrievable(self):
+        from .fanz_search import _search_auctions
+        from .models import Auction, DigitalItem
+
+        item = DigitalItem.objects.create(
+            title="Search Auction Item",
+            description="Test delivery item",
+        )
+
+        auction = Auction.objects.create(
+            title="Search Auction",
+            digital_item=item,
+            starts_at=timezone.now()
+            - timedelta(hours=1),
+            ends_at=timezone.now()
+            + timedelta(hours=1),
+            status="live",
+        )
+
+        results = _search_auctions(
+            "Search Auction",
+            5,
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0]["id"],
+            auction.pk,
+        )
+        self.assertEqual(
+            results[0]["status"],
+            "live",
+        )
+
+    def test_draft_auction_is_hidden(self):
+        from .fanz_search import _search_auctions
+        from .models import Auction, DigitalItem
+
+        item = DigitalItem.objects.create(
+            title="Hidden Auction Item",
+        )
+
+        Auction.objects.create(
+            title="Hidden Draft Auction",
+            digital_item=item,
+            starts_at=timezone.now(),
+            ends_at=timezone.now()
+            + timedelta(hours=1),
+            status="draft",
+        )
+
+        results = _search_auctions(
+            "Hidden Draft Auction",
+            5,
+        )
+
+        self.assertEqual(results, [])
+
+    def test_auction_is_retrievable_by_hashtag(self):
+        from .fanz_search import _search_auctions
+        from .models import Auction, DigitalItem
+
+        item = DigitalItem.objects.create(
+            title="Hashtag Auction Item",
+        )
+
+        auction = Auction.objects.create(
+            title="River Auction",
+            digital_item=item,
+            starts_at=timezone.now()
+            - timedelta(hours=1),
+            ends_at=timezone.now()
+            + timedelta(hours=1),
+            status="live",
+        )
+
+        auction.hashtags.add(
+            self.hashtag,
+        )
+
+        results = _search_auctions(
+            "searchsunset",
+            5,
+        )
+
+        self.assertTrue(
+            any(
+                row["id"] == auction.pk
+                for row in results
+            )
+        )
+
+    def test_auction_is_retrievable_by_translation(self):
+        from .fanz_search import _search_auctions
+        from .models import (
+            Auction,
+            AuctionTranslation,
+            DigitalItem,
+        )
+
+        item = DigitalItem.objects.create(
+            title="Translation Auction Item",
+        )
+
+        auction = Auction.objects.create(
+            title="River Evening",
+            digital_item=item,
+            starts_at=timezone.now()
+            - timedelta(hours=1),
+            ends_at=timezone.now()
+            + timedelta(hours=1),
+            status="live",
+        )
+
+        AuctionTranslation.objects.create(
+            auction=auction,
+            language="es",
+            title="Subasta del Paraná",
+            description="Atardecer junto al río",
+        )
+
+        results = _search_auctions(
+            "Paraná",
+            5,
+        )
+
+        self.assertTrue(
+            any(
+                row["id"] == auction.pk
+                for row in results
+            )
+        )
+
     def test_inactive_business_is_hidden(self):
         from .fanz_search import _search_businesses
 
