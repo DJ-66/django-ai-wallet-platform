@@ -3176,3 +3176,125 @@ class SunsetCamCapture(models.Model):
             f"SunsetCam {self.local_date} "
             f"{self.capture_type} -> post #{self.post_id}"
         )
+
+
+class ScheduledPublication(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_QUEUED = "queued"
+    STATUS_PUBLISHING = "publishing"
+    STATUS_PUBLISHED = "published"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_QUEUED, "Queued"),
+        (STATUS_PUBLISHING, "Publishing"),
+        (STATUS_PUBLISHED, "Published"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    publication_key = models.CharField(
+        max_length=160,
+        unique=True,
+    )
+
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="scheduled_publications",
+    )
+
+    source_path = models.TextField()
+
+    title = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+    )
+
+    content = models.TextField(
+        max_length=2000,
+        blank=True,
+        default="",
+    )
+
+    scheduled_for = models.DateTimeField(
+        db_index=True,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        db_index=True,
+    )
+
+    attempt_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    feed_post = models.OneToOneField(
+        FeedPost,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="scheduled_publication",
+    )
+
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "scheduled_for",
+            "id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "status",
+                    "scheduled_for",
+                ],
+                name="schedpub_status_due_idx",
+            ),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="published",
+                        feed_post__isnull=False,
+                        published_at__isnull=False,
+                    )
+                    |
+                    ~models.Q(
+                        status="published",
+                    )
+                ),
+                name="schedpub_published_requires_post",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"@{self.creator.username} "
+            f"{self.scheduled_for.isoformat()} "
+            f"[{self.status}]"
+        )
