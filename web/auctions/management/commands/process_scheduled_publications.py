@@ -30,6 +30,15 @@ class Command(BaseCommand):
             default=str(DEFAULT_SOURCE_ROOT),
         )
         parser.add_argument(
+            "--publication-id",
+            type=int,
+            default=None,
+            help=(
+                "Publish one specific queued publication immediately, "
+                "regardless of scheduled_for."
+            ),
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
         )
@@ -56,17 +65,29 @@ class Command(BaseCommand):
 
         return source
 
-    def _claim_next(self):
+    def _claim_next(self, publication_id=None):
         now = timezone.now()
 
         with transaction.atomic():
-            publication = (
+            queryset = (
                 ScheduledPublication.objects
                 .select_for_update(skip_locked=True)
                 .filter(
                     status=ScheduledPublication.STATUS_QUEUED,
+                )
+            )
+
+            if publication_id is not None:
+                queryset = queryset.filter(
+                    pk=publication_id,
+                )
+            else:
+                queryset = queryset.filter(
                     scheduled_for__lte=now,
                 )
+
+            publication = (
+                queryset
                 .order_by(
                     "scheduled_for",
                     "id",
@@ -105,8 +126,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         source_root = Path(options["source_root"])
         dry_run = options["dry_run"]
+        requested_publication_id = options["publication_id"]
 
-        publication_id = self._claim_next()
+        publication_id = self._claim_next(
+            publication_id=requested_publication_id,
+        )
 
         if publication_id is None:
             self.stdout.write("scheduled_publication_due=none")

@@ -219,6 +219,40 @@ class ScheduledPublicationCommandTests(TestCase):
         self.assertEqual(publication.attempt_count, 0)
         self.assertIsNone(publication.feed_post_id)
 
+    def test_publication_id_can_claim_future_publication(self):
+        from datetime import timedelta
+
+        relative_path = "Forced Publication/image.jpg"
+        source = self.source_root / relative_path
+        write_jpeg(source)
+
+        publication = ScheduledPublication.objects.create(
+            publication_key="worker-forced-future-1",
+            creator=self.user,
+            source_path=relative_path,
+            title="Forced title",
+            content="Forced content",
+            scheduled_for=timezone.now() + timedelta(hours=6),
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        call_command(
+            "process_scheduled_publications",
+            source_root=str(self.source_root),
+            publication_id=publication.id,
+        )
+
+        publication.refresh_from_db()
+
+        self.assertEqual(
+            publication.status,
+            ScheduledPublication.STATUS_PUBLISHED,
+        )
+        self.assertEqual(publication.attempt_count, 1)
+        self.assertIsNotNone(publication.feed_post_id)
+        self.assertIsNotNone(publication.published_at)
+        self.assertFalse(source.exists())
+
     def test_dry_run_leaves_publication_queued(self):
         relative_path = "Dry Run/image.jpg"
         source = self.source_root / relative_path
