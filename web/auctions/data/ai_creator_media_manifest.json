@@ -1,0 +1,572 @@
+{
+  "version": 1,
+  "source_root": "/home/dj/fanz-content/creator-packs",
+  "creators": [
+    {
+      "account": "Alana",
+      "display_name": "Alana",
+      "type": "persona",
+      "packs": [
+        "Alana - Ultra Realistic Ebony Ai Influencer Model"
+      ],
+      "avatar_source": "Alana - Ultra Realistic Ebony Ai Influencer Model/Alana/Alana/PICS/img (19).jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 15,
+      "bio": "A little mystery makes everything more interesting. Photos, stories, and glimpses into my world. 🖤"
+    },
+    {
+      "account": "Bikini",
+      "display_name": "Bikini",
+      "type": "themed_collection",
+      "packs": [
+        "300 Bikini Swimwear AI Model"
+      ],
+      "avatar_source": "300 Bikini Swimwear AI Model/300 Swimwear Visuals/300+ Swimwear Visuals/hf_20260331_123714_88567e42-afc8-40b2-86ef-e7395dbb1705.png",
+      "avatar_candidate": "D",
+      "bio_source_number": null,
+      "bio": "Sunshine, bikinis, beach days, and endless summer inspiration. Fresh AI-created swimwear visuals and new collections from wherever the weather stays warm. ☀️🌊"
+    },
+    {
+      "account": "Claire",
+      "display_name": "Claire",
+      "type": "persona",
+      "packs": [
+        "Claire - Ultra Realistic Albino Ai Influencer Model"
+      ],
+      "avatar_source": "Claire - Ultra Realistic Albino Ai Influencer Model/Claire/Claire/Pics/img (28).jpg",
+      "avatar_candidate": "D",
+      "bio_source_number": 11,
+      "bio": "Come for the smile, stay for the personality. Sharing photos, favorite looks, and whatever adventure happens next. 💫"
+    },
+    {
+      "account": "Clara",
+      "display_name": "Clara",
+      "type": "persona",
+      "packs": [
+        "Clara-AI-Influencer-Pack AI",
+        "Clara-Summer-Vibes-pack"
+      ],
+      "avatar_source": "Clara-AI-Influencer-Pack AI/Clara- Selfie- Ai influencer-20260625T221515Z-3-001/Clara- Selfie- Ai influencer/32.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 30,
+      "bio": "Ocean air fixes almost everything. Beach days, travel photos, and a little digital-creator life in between. 🌊"
+    },
+    {
+      "account": "Coquette",
+      "display_name": "Coquette",
+      "type": "persona",
+      "packs": [
+        "Coquette-Girl-pack"
+      ],
+      "avatar_source": "Coquette-Girl-pack/6 COQUETTE Girl/ALL-20260623T050649Z-3-001/ALL/Quit9To5Consistent26.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 52,
+      "bio": "Romanticizing ordinary days one outfit at a time. 🌸"
+    },
+    {
+      "account": "Emilia",
+      "display_name": "Emilia",
+      "type": "persona",
+      "packs": [
+        "Emilia - Ultra Realistic Perfect Body Ai Influencer Model"
+      ],
+      "avatar_source": "Emilia - Ultra Realistic Perfect Body Ai Influencer Model/Emilia/Emilia/Pics/img (8).jpg",
+      "avatar_candidate": "E",
+      "bio_source_number": 36,
+      "bio": "Gym days, rest days, and everything between them. Sharing the journey instead of pretending it's effortless. 💪"
+    },
+    {
+      "account": "Evelyn",
+      "display_name": "Evelyn",
+      "type": "persona",
+      "packs": [
+        "Evelyn - Ultra Realistic Mommy Figure Redhead Ai Influencer Model"
+      ],
+      "avatar_source": "Evelyn - Ultra Realistic Mommy Figure Redhead Ai Influencer Model/evelyn/evelyn/Pics/evelyn (34).jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 17,
+      "bio": "Cute outfits, spontaneous photos, questionable amounts of coffee. That's basically the feed. ☕📸"
+    },
+    {
+      "account": "Fay",
+      "display_name": "Fay",
+      "type": "persona",
+      "packs": [
+        "Fay- Golden-Girl-pack"
+      ],
+      "avatar_source": "Fay- Golden-Girl-pack/ALL-20260625T171651Z-3-001/ALL/Quit9To5Consistent44.png",
+      "avatar_candidate": "C",
+      "bio_source_number": 31,
+      "bio": "Finding beautiful places and occasionally getting in front of the camera too. ✈️✨"
+    },
+    {
+      "account": "Hazel",
+      "display_name": "Hazel",
+      "type": "persona",
+      "packs": [
+        "Hazel Ultra Realistic Curly Redhead Ai Influencer Model"
+      ],
+      "avatar_source": "Hazel Ultra Realistic Curly Redhead Ai Influencer Model/Hazel/Hazel/Pics/57.jpg",
+      "avatar_candidate": "D",
+      "bio_source_number": 21,
+      "bio": "Mirror selfies, sunny afternoons, and whatever catches my eye. Building my digital world one photo at a time. ✨"
+    },
+    {
+      "account": "Jaana",
+      "display_name": "Jaana",
+      "type": "persona",
+      "packs": [
+        "Jaana - Ultra Realistic Arab Ai Influencer Model"
+      ],
+      "avatar_source": "Jaana - Ultra Realistic Arab Ai Influencer Model/JAANA/JAANA/PICS/JAANA (120).jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": 23,
+      "bio": "A little shy until the camera comes out. Then things get interesting. 📸"
+    },
+    {
+      "account": "Jemma",
+      "display_name": "Jemma",
+      "type": "persona",
+      "packs": [
+        "Jemma - Ultra Realistic American Ai Influencer Model"
+      ],
+      "avatar_source": "Jemma - Ultra Realistic American Ai Influencer Model/Jemma/Jemma/Pics/img (31).jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 13,
+      "bio": "Just a normal girl doing unusually fun things with a camera. New shoots, new ideas, new memories."
+    },
+    {
+      "account": "Kat",
+      "display_name": "Kat",
+      "type": "persona",
+      "packs": [
+        "Kat-digtal-content-bundle",
+        "Kat-influencer-selfie-pack",
+        "Kat-Summer-Vibes-pack"
+      ],
+      "avatar_source": "Kat-influencer-selfie-pack/KAt- Selfie- Ai influencer-20260625T225616Z-3-001/KAt- Selfie- Ai influencer/31.jpg",
+      "avatar_candidate": "E",
+      "bio_source_number": 25,
+      "bio": "Welcome to my favorite corner of the internet. Stay for the photos, stories, and occasional chaos. 🖤"
+    },
+    {
+      "account": "Kayla",
+      "display_name": "Kayla",
+      "type": "persona",
+      "packs": [
+        "Kayla-AI-Influencer-pack",
+        "Kayla-summer-vibes-pack"
+      ],
+      "avatar_source": "Kayla-summer-vibes-pack/kayla - Summer vibes Bundle-20260625T235913Z-3-001/kayla - Summer vibes Bundle/9.png",
+      "avatar_candidate": "F",
+      "bio_source_number": 19,
+      "bio": "Life looks better through a camera lens. Sharing the places, looks, and moments that inspire me."
+    },
+    {
+      "account": "Kendal",
+      "display_name": "Kendal",
+      "type": "persona",
+      "packs": [
+        "Kendal-AI-Influencer-pack",
+        "Kendal-Summer-Vibes-pack"
+      ],
+      "avatar_source": "Kendal-AI-Influencer-pack/Kenda- Selfie - Bundle-20260626T000742Z-3-001/Kenda- Selfie - Bundle/33.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 7,
+      "bio": "A little sweet, a little daring, completely myself. New photos and everyday moments from my world. 🖤"
+    },
+    {
+      "account": "Kira",
+      "display_name": "Kira",
+      "type": "persona",
+      "packs": [
+        "Kira - Korean-Influencer-pack"
+      ],
+      "avatar_source": "Kira - Korean-Influencer-pack/Kira  Korean Girl/Photo-20260623T050943Z-3-001/Photo/Quit9To5Consistent62.png",
+      "avatar_candidate": "D",
+      "bio_source_number": 29,
+      "bio": "My favorite accessory is a plane ticket. Travel, lifestyle, and photo collections from wherever I land next."
+    },
+    {
+      "account": "Livia",
+      "display_name": "Livia",
+      "type": "persona",
+      "packs": [
+        "Livia - Ultra Realistic Curvy AI Influencer Model"
+      ],
+      "avatar_source": "Livia - Ultra Realistic Curvy AI Influencer Model/Livia/Livia/Pics/126.jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": 6,
+      "bio": "Small-town girl building a big digital life. Photos, adventures, creator collections, and everything I learn along the way."
+    },
+    {
+      "account": "Lizzy",
+      "display_name": "Lizzy",
+      "type": "persona",
+      "packs": [
+        "Lizzy-Selfies-AI-Influencer-pack",
+        "Lizzy-Summer-Vibes-pack"
+      ],
+      "avatar_source": "Lizzy-Selfies-AI-Influencer-pack/Lizzy-Selfie-bundle-20260626T001653Z-3-001/Lizzy-Selfie-bundle/6.jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 35,
+      "bio": "Digital nomad energy with a very full camera roll. Work, travel, create, repeat."
+    },
+    {
+      "account": "Lola",
+      "display_name": "Lola",
+      "type": "persona",
+      "packs": [
+        "Nurse Lola - Ultra Realistic Curvy Latina Ai Influencer Model"
+      ],
+      "avatar_source": "Nurse Lola - Ultra Realistic Curvy Latina Ai Influencer Model/Lola/Lola/Pics/img (37).jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 9,
+      "bio": "Comfy clothes, good coffee, and a camera roll that's always full. Welcome to the highlights. ☕✨"
+    },
+    {
+      "account": "Lya",
+      "display_name": "Lya",
+      "type": "persona",
+      "packs": [
+        "A1-Lya Influencer"
+      ],
+      "avatar_source": null,
+      "avatar_candidate": null,
+      "avatar_policy": "keep_existing",
+      "bio_source_number": 5,
+      "bio": "Quiet in public, much more expressive behind the camera. Welcome to my creative side. ✨"
+    },
+    {
+      "account": "Mandi",
+      "display_name": "Mandi",
+      "type": "persona",
+      "packs": [
+        "Mandi - Mediterannean-Girl-pack"
+      ],
+      "avatar_source": "Mandi - Mediterannean-Girl-pack/8 MEDITERANNEAN Girl/all-20260623T050858Z-3-001/all/Quit9To5Consistent22.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 37,
+      "bio": "Strong body, curious mind, creative life. Fitness, lifestyle, and photography from my point of view."
+    },
+    {
+      "account": "Maya",
+      "display_name": "Maya",
+      "type": "persona",
+      "packs": [
+        "Maya - Ultra Realistic Latina Ai Influencer Model"
+      ],
+      "avatar_source": "Maya - Ultra Realistic Latina Ai Influencer Model/il_1588xN.8145959243_btjy.avif",
+      "avatar_candidate": "F",
+      "bio_source_number": 3,
+      "bio": "Messy hair, oversized tees, and spontaneous ideas. Come hang out while I turn ordinary days into something worth remembering. ☕📸"
+    },
+    {
+      "account": "Mia",
+      "display_name": "Mia",
+      "type": "persona",
+      "packs": [
+        "Mia - Polished-Influencer-pack"
+      ],
+      "avatar_source": "Mia - Polished-Influencer-pack/Mia - Polished Clean Girl/Photos-20260621T224947Z-3-001/Photos/CleanGirlQ9T51.jpeg",
+      "avatar_candidate": "A",
+      "bio_source_number": 41,
+      "bio": "Good energy, strong coffee, stronger workouts. Welcome to my routine. ☕💪"
+    },
+    {
+      "account": "Mika",
+      "display_name": "Mika",
+      "type": "persona",
+      "packs": [
+        "Gamer Girl Mika - Ultra Realistic Ai Influencer Model",
+        "Mika - Clean-Girl-Influencer-Pack"
+      ],
+      "avatar_source": "Gamer Girl Mika - Ultra Realistic Ai Influencer Model/Mika/Mika/Pics/img (23).jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": 27,
+      "bio": "Beach hair and camera-roll memories. If there's sunshine nearby, I'll probably find it. 🌊"
+    },
+    {
+      "account": "Molly",
+      "display_name": "Molly",
+      "type": "persona",
+      "packs": [
+        "Molly - Ultra Realistic Plump Ai Influencer Model Redhead"
+      ],
+      "avatar_source": "Molly - Ultra Realistic Plump Ai Influencer Model Redhead/Molly/Molly/Pics/img (82).jpg",
+      "avatar_candidate": "E",
+      "bio_source_number": 1,
+      "bio": "Girl-next-door energy with a wild creative streak. Casual shoots, playful moments, and new collections from my little corner of the internet. ✨"
+    },
+    {
+      "account": "Natalia",
+      "display_name": "Natalia",
+      "type": "persona",
+      "packs": [
+        "Natalia - Ultra Realistic Perfect Body Ai Influencer Model"
+      ],
+      "avatar_source": "Natalia - Ultra Realistic Perfect Body Ai Influencer Model/Natalia/Natalia/Pics/49.jpg",
+      "avatar_candidate": "D",
+      "bio_source_number": 40,
+      "bio": "Progress over perfection. Fitness, confidence, and a camera roll documenting the journey. ✨"
+    },
+    {
+      "account": "Nyla",
+      "display_name": "Nyla Reign",
+      "type": "persona",
+      "packs": [
+        "A1-Nyla Reign"
+      ],
+      "avatar_source": "A1-Nyla Reign/1-Nyla-167-Pics-4Z-3-001/85.png",
+      "avatar_candidate": "C",
+      "bio_source_number": 39,
+      "bio": "Active life, relaxed attitude. Gym fits, outdoor days, and whatever challenge comes next."
+    },
+    {
+      "account": "Nyra",
+      "display_name": "Nyra",
+      "type": "persona",
+      "packs": [
+        "Nyra - Ultra Realistic Emerald AI Influencer Model"
+      ],
+      "avatar_source": "Nyra - Ultra Realistic Emerald AI Influencer Model/Nyra/Nyra/Pics/18.jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 43,
+      "bio": "Healthy habits without pretending life is always healthy. Fitness, food, fun, repeat."
+    },
+    {
+      "account": "Peg",
+      "display_name": "Peg",
+      "type": "persona",
+      "packs": [
+        "Peg - Luxury -Influencer-pack"
+      ],
+      "avatar_source": "Peg - Luxury -Influencer-pack/Photos-20260625T172342Z-3-001/Photos/hf_20260328_225420_852cc9bd-a8da-4f84-aede-9dec76896ae8.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 51,
+      "bio": "Soft aesthetic, strong personality. Fashion, lifestyle, and creative photo collections."
+    },
+    {
+      "account": "Jenny",
+      "display_name": "Jenny",
+      "type": "persona",
+      "packs": [
+        "Professor Jenny - Ultra Realistic Ai Influencer Model"
+      ],
+      "avatar_source": "Professor Jenny - Ultra Realistic Ai Influencer Model/JENNY/JENNY/PICS/img (161).jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 55,
+      "bio": "Sometimes model, sometimes photographer, always creating."
+    },
+    {
+      "account": "Ruby",
+      "display_name": "Ruby",
+      "type": "persona",
+      "packs": [
+        "Ruby-Girl-Influencer-pack"
+      ],
+      "avatar_source": "Ruby-Girl-Influencer-pack/5 Ruby Girl Influencer/all-20260621T225108Z-3-001/all/Quit9To5Consistent25.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 33,
+      "bio": "Sunsets, city lights, and unexpected detours. My camera usually comes along for all of it."
+    },
+    {
+      "account": "Scarlett",
+      "display_name": "Scarlett",
+      "type": "persona",
+      "packs": [
+        "Scarlett - Ultra Realistic Perfect Body Ai Influencer Model"
+      ],
+      "avatar_source": "Scarlett - Ultra Realistic Perfect Body Ai Influencer Model/Scarlett/Scarlett/Pics/5.jpg",
+      "avatar_candidate": "D",
+      "bio_source_number": 38,
+      "bio": "Movement keeps me sane; creativity keeps me interested. Expect workouts, everyday life, and plenty of photos."
+    },
+    {
+      "account": "Skye",
+      "display_name": "Skye",
+      "type": "persona",
+      "packs": [
+        "Skye - Ultra Realistic Perfect Body Ai Influencer Model"
+      ],
+      "avatar_source": "Skye - Ultra Realistic Perfect Body Ai Influencer Model/Skye/Skye/Pics/128.jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": 32,
+      "bio": "Travel slowly. Take too many photos. Remember everything. That's the plan."
+    },
+    {
+      "account": "Sophie",
+      "display_name": "Sophie",
+      "type": "persona",
+      "packs": [
+        "Sophie - Ultra Realistic Blonde Ai Influencer Model"
+      ],
+      "avatar_source": "Sophie - Ultra Realistic Blonde Ai Influencer Model/SOPHIE/SOPHIE/Pics/img (59).jpg",
+      "avatar_candidate": "D",
+      "bio_source_number": 28,
+      "bio": "Collecting sunsets, passport stamps, and photographs. Follow the next adventure. ✈️📸"
+    },
+    {
+      "account": "Vale",
+      "display_name": "Vale",
+      "type": "persona",
+      "packs": [
+        "Vale - Ultra Realistic Curvy Blonde AI Influencer Model"
+      ],
+      "avatar_source": "Vale - Ultra Realistic Curvy Blonde AI Influencer Model/Vale/Vale/Pics/Pic (35).jpg",
+      "avatar_candidate": "D",
+      "bio_source_number": 34,
+      "bio": "Living somewhere between “book the trip” and “take the photo.” Welcome aboard. ✈️"
+    },
+    {
+      "account": "Vespa",
+      "display_name": "Vespa",
+      "type": "persona",
+      "packs": [
+        "Vespa - Melanin-Influencer-pack"
+      ],
+      "avatar_source": "Vespa - Melanin-Influencer-pack/7 Melanin Girl/Photos-20260623T050754Z-3-001/Photos/hf_20260327_211009_101c69e3-fab1-43f9-92a4-4a5b11d19be3.png",
+      "avatar_candidate": "A",
+      "bio_source_number": 50,
+      "bio": "Creating looks, collecting inspiration, and occasionally making a little chaos. 💫"
+    },
+    {
+      "account": "Yara",
+      "display_name": "Yara",
+      "type": "persona",
+      "packs": [
+        "Yara - Ultra Realistic Tribal Ai Influencer Model"
+      ],
+      "avatar_source": "Yara - Ultra Realistic Tribal Ai Influencer Model/Yara/Yara/pics/img (120).jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": 67,
+      "bio": "Creative independence is the goal. Photos, digital products, experiments, and lessons from building online."
+    },
+    {
+      "account": "Yuna",
+      "display_name": "Yuna",
+      "type": "persona",
+      "packs": [
+        "Yuna - Ultra Realistic Perfect Body Ai Influencer Model"
+      ],
+      "avatar_source": "Yuna - Ultra Realistic Perfect Body Ai Influencer Model/Yuna/Yuna/Pics/19.jpg",
+      "avatar_candidate": "C",
+      "bio_source_number": 42,
+      "bio": "Building confidence one workout and one photograph at a time."
+    },
+    {
+      "account": "Luxe",
+      "display_name": "Luxe",
+      "type": "persona",
+      "packs": [
+        "2Clean-Girl-Luxe"
+      ],
+      "avatar_source": "2Clean-Girl-Luxe/Photos-20260625T171027Z-3-001/Photos/CleanGirlQ9T526.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 48,
+      "bio": "Style changes. Confidence stays. Sharing outfits, shoots, and the ideas behind them."
+    },
+    {
+      "account": "Elara",
+      "display_name": "Elara",
+      "type": "persona",
+      "packs": [
+        "Elara - A1-Latina-AI-Influencer--"
+      ],
+      "avatar_source": "Elara - A1-Latina-AI-Influencer--/Latina Model Elara/Latina Model Elara/Pics/123.jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": 56,
+      "bio": "Digital creator turning everyday moments into collections. Follow along while I build something of my own. 💎"
+    },
+    {
+      "account": "SoftCleanGirl",
+      "display_name": "Soft Clean Girl",
+      "type": "persona",
+      "packs": [
+        "1Soft-Clean-Girl-pack"
+      ],
+      "previous_account": "Suzy",
+      "avatar_source": "1Soft-Clean-Girl-pack/1 Blue eyes Blond/Photos-20260621T223751Z-3-001/Photos/CleanGirlQ9T563.png",
+      "avatar_candidate": "D",
+      "bio_source_number": 57,
+      "bio": "Creating online, learning in public, and building a digital business one project at a time."
+    },
+    {
+      "account": "BrownGirl",
+      "display_name": "Brown Girl",
+      "type": "persona",
+      "packs": [
+        "200-Brown-Girl"
+      ],
+      "previous_account": "Sika",
+      "avatar_source": "200-Brown-Girl/200 - Brown Girl Pack/Photos-20260623T045931Z-3-001/Photos/MelanatedGirlQ9T524.png",
+      "avatar_candidate": "D",
+      "bio_source_number": 58,
+      "bio": "Photos are the product; creativity is the business. Welcome to my digital studio. 📸💻"
+    },
+    {
+      "account": "AsianInfluencer",
+      "display_name": "Asian Influencer",
+      "type": "persona",
+      "packs": [
+        "Asian-influencer-pack"
+      ],
+      "previous_account": "Lan",
+      "avatar_source": "Asian-influencer-pack/Visuals-20260625T165758Z-3-001/Visuals/hf_20260329_154006_82686084-5432-4a58-a35e-fd1763efa127.png",
+      "avatar_candidate": "A",
+      "bio_source_number": 59,
+      "bio": "Creator by curiosity, entrepreneur by accident. Building, experimenting, and sharing the journey."
+    },
+    {
+      "account": "BlondeBaddie",
+      "display_name": "Blonde Baddie",
+      "type": "persona",
+      "packs": [
+        "Blond-Baddie-Influencer-pack"
+      ],
+      "previous_account": "Kim",
+      "avatar_source": "Blond-Baddie-Influencer-pack/ALL-20260625T170349Z-3-001/ALL/Quit9To5Consistent24.png",
+      "avatar_candidate": "B",
+      "bio_source_number": 46,
+      "bio": "Fashion is more fun when you stop following all the rules. Looks, experiments, and favorite finds. ✨"
+    },
+    {
+      "account": "EuropeanRedhead",
+      "display_name": "European Redhead",
+      "type": "persona",
+      "packs": [
+        "European-Readhead-pack"
+      ],
+      "previous_account": "Rosa",
+      "avatar_source": "European-Readhead-pack/3 European Redhead/ALL-20260621T224245Z-3-001/ALL/Quit9To5Consistent46.png",
+      "avatar_candidate": "C",
+      "bio_source_number": 53,
+      "bio": "Vintage mood, modern creator. Photos inspired by old films, new places, and whatever I'm obsessed with this week."
+    },
+    {
+      "account": "ExoticInfluencer",
+      "display_name": "Exotic Influencer",
+      "type": "persona",
+      "packs": [
+        "Exotic-Influencer-pack"
+      ],
+      "previous_account": "Reina",
+      "avatar_source": "Exotic-Influencer-pack/10 Exotic Girl/visuals-20260623T051031Z-3-001/visuals/hf_20260327_195126_299e3d13-859d-4df3-93fb-4161036b3d52.png",
+      "avatar_candidate": "A",
+      "bio_source_number": 54,
+      "bio": "Color, texture, light, mood. I like turning everyday life into something visual. 🎨"
+    },
+    {
+      "account": "Swimsuits",
+      "display_name": "Swimsuits",
+      "type": "themed_collection",
+      "packs": [
+        "Swimsuit Suit Babes 350 Photos"
+      ],
+      "avatar_source": "Swimsuit Suit Babes 350 Photos/Swimsuit Babes- pp-20260626T002850Z-3-002/Swimsuit Babes- pp/152.jpg",
+      "avatar_candidate": "B",
+      "bio_source_number": null,
+      "bio": "Swimwear, sunshine, poolside style, and beach-day inspiration. A rotating collection of AI-created swimsuit visuals with new looks always on the way. 🌊☀️"
+    }
+  ]
+}
