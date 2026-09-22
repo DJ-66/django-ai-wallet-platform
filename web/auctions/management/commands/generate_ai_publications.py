@@ -72,6 +72,15 @@ class Command(BaseCommand):
             default=14,
         )
         parser.add_argument(
+            "--start-delay-minutes",
+            type=int,
+            default=60,
+            help=(
+                "Delay before the first slot for creators with no "
+                "publication history. Default: 60 minutes."
+            ),
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
         )
@@ -124,7 +133,13 @@ class Command(BaseCommand):
         ).resolve()
 
         seed = options["seed"]
+        start_delay_minutes = options["start_delay_minutes"]
         dry_run = options["dry_run"]
+
+        if start_delay_minutes < 0:
+            raise CommandError(
+                "--start-delay-minutes cannot be negative."
+            )
 
         manifest = self._load_manifest()
         creators = manifest["creators"]
@@ -135,6 +150,10 @@ class Command(BaseCommand):
             )
 
         now = timezone.now()
+        initial_start = (
+            now
+            + timedelta(minutes=start_delay_minutes)
+        )
         rng = random.Random(seed)
 
         # Stable initial slot spacing:
@@ -188,7 +207,7 @@ class Command(BaseCommand):
 
             if latest is None:
                 scheduled_for = (
-                    now
+                    initial_start
                     + slot_spacing * slot_index
                 )
             else:

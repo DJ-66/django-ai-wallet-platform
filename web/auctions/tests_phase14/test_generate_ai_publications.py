@@ -194,6 +194,30 @@ class GenerateAIPublicationsTests(TestCase):
             sources,
         )
 
+    def test_initial_queue_honors_start_delay(self):
+        before = timezone.now()
+
+        self.run_generator(
+            start_delay_minutes=60,
+        )
+
+        first = (
+            ScheduledPublication.objects
+            .order_by("scheduled_for")
+            .first()
+        )
+
+        delay = first.scheduled_for - before
+
+        self.assertGreaterEqual(
+            delay.total_seconds(),
+            59 * 60,
+        )
+        self.assertLess(
+            delay.total_seconds(),
+            61 * 60,
+        )
+
     def test_dry_run_creates_nothing(self):
         self.run_generator(dry_run=True)
 
