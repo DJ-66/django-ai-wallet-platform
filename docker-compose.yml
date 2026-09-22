@@ -32,6 +32,7 @@ services:
       - ./sui/prepared-publications:/app/sui/prepared-publications:ro
       - staticfiles:/app/staticfiles
       - ./web/media:/app/media
+      - /home/dj/fanz-content/creator-packs:/creator-packs
     networks:
       - default
       - fanz-net
@@ -76,6 +77,7 @@ services:
       - ./sui/prepared-publications:/app/sui/prepared-publications:ro
       - staticfiles:/app/staticfiles
       - ./web/media:/app/media
+      - /home/dj/fanz-content/creator-packs:/creator-packs
     networks:
       - default
       - fanz-net

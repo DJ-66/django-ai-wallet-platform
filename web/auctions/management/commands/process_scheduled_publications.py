@@ -12,7 +12,7 @@ from auctions.feed_publishing import publish_feed_post
 from auctions.models import ScheduledPublication
 
 
-DEFAULT_SOURCE_ROOT = Path("/home/dj/fanz-content/creator-packs")
+DEFAULT_SOURCE_ROOT = Path("/creator-packs")
 MANIFEST_PATH = (
     Path(settings.BASE_DIR)
     / "auctions"
