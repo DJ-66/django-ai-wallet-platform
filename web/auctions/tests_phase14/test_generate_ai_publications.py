@@ -61,16 +61,46 @@ class GenerateAIPublicationsTests(TestCase):
                             "avatar_source": (
                                 "PackA/avatar.jpg"
                             ),
+                            "post_style": {
+                                "hashtags": [
+                                    "CreatorA",
+                                    "Lifestyle",
+                                    "Style",
+                                    "AIInfluencer",
+                                    "DigitalCreator",
+                                    "CreatorLife",
+                                ],
+                            },
                         },
                         {
                             "account": "CreatorB",
                             "packs": ["PackB"],
                             "avatar_source": None,
+                            "post_style": {
+                                "hashtags": [
+                                    "CreatorB",
+                                    "Lifestyle",
+                                    "Fashion",
+                                    "AIInfluencer",
+                                    "DigitalCreator",
+                                    "CreatorLife",
+                                ],
+                            },
                         },
                         {
                             "account": "CreatorC",
                             "packs": ["PackC"],
                             "avatar_source": None,
+                            "post_style": {
+                                "hashtags": [
+                                    "CreatorC",
+                                    "Lifestyle",
+                                    "Creative",
+                                    "AIInfluencer",
+                                    "DigitalCreator",
+                                    "CreatorLife",
+                                ],
+                            },
                         },
                     ]
                 }
@@ -85,6 +115,11 @@ class GenerateAIPublicationsTests(TestCase):
         )
         write_image(
             self.root / "PackA" / "post-2.jpg"
+        )
+
+        # Explicit content must never enter the public auto-post pool.
+        write_image(
+            self.root / "PackA" / "explicit" / "private.jpg"
         )
 
         for pack in ["PackB", "PackC"]:
@@ -216,6 +251,52 @@ class GenerateAIPublicationsTests(TestCase):
         self.assertLess(
             delay.total_seconds(),
             61 * 60,
+        )
+
+    def test_generated_posts_have_title_and_six_hashtags(self):
+        self.run_generator()
+
+        for publication in ScheduledPublication.objects.all():
+            self.assertTrue(publication.title.strip())
+
+            hashtags = [
+                token
+                for token in publication.content.split()
+                if token.startswith("#")
+            ]
+
+            self.assertEqual(
+                len(hashtags),
+                6,
+            )
+            self.assertIn(
+                "#FANZ",
+                hashtags,
+            )
+
+    def test_explicit_directory_is_never_queued(self):
+        # Run twice so CreatorA consumes both eligible public images.
+        # If explicit filtering regresses, private.jpg could enter the queue.
+        self.run_generator(seed=14)
+        self.run_generator(seed=15)
+
+        sources = set(
+            ScheduledPublication.objects.values_list(
+                "source_path",
+                flat=True,
+            )
+        )
+
+        self.assertNotIn(
+            "PackA/explicit/private.jpg",
+            sources,
+        )
+
+        self.assertFalse(
+            any(
+                "/explicit/" in source.lower()
+                for source in sources
+            )
         )
 
     def test_dry_run_creates_nothing(self):

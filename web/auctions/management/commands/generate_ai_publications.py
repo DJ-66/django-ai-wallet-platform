@@ -32,8 +32,27 @@ IMAGE_EXTENSIONS = {
     ".avif",
 }
 
+EXCLUDED_DIRECTORY_NAMES = {
+    "explicit",
+}
+
+TITLES = [
+    "Today's Mood ✨",
+    "Fresh Look 📸",
+    "A New Favorite 🖤",
+    "Creative Energy ✨",
+    "From the Collection",
+    "Today's Look",
+    "New Drop ✨",
+    "Camera Roll Favorite 📸",
+    "A Little Something New",
+    "Current Mood 🖤",
+    "Latest Favorite",
+    "New From My World ✨",
+]
+
 CAPTIONS = [
-    "A new favorite from the collection. ✨",
+    "A new favorite from the collection.",
     "Fresh from the camera roll. 📸",
     "Adding this one to the collection. 🖤",
     "A little something from today's creative mood.",
@@ -41,6 +60,10 @@ CAPTIONS = [
     "New look, new post, same creative energy.",
     "From the latest collection. 📸",
     "A new addition to my digital world.",
+    "Sharing another favorite today. ✨",
+    "This one deserved a spot on the feed.",
+    "A little glimpse from the latest set.",
+    "Another moment from behind the scenes. 📸",
 ]
 
 RELEASE_INTERVAL = timedelta(hours=24)
@@ -113,9 +136,15 @@ class Command(BaseCommand):
                 if path.suffix.lower() not in IMAGE_EXTENSIONS:
                     continue
 
-                relative = str(
-                    path.relative_to(source_root)
-                )
+                relative_path = path.relative_to(source_root)
+
+                if any(
+                    part.lower() in EXCLUDED_DIRECTORY_NAMES
+                    for part in relative_path.parts[:-1]
+                ):
+                    continue
+
+                relative = str(relative_path)
 
                 if relative == reserved:
                     continue
@@ -217,13 +246,46 @@ class Command(BaseCommand):
                     + RELEASE_INTERVAL,
                 )
 
+            hashtag_pool = creator.get(
+                "post_style",
+                {},
+            ).get(
+                "hashtags",
+                [],
+            )
+
+            if len(hashtag_pool) < 5:
+                raise CommandError(
+                    f"@{account} requires at least 5 "
+                    "post_style hashtags."
+                )
+
+            selected_hashtags = rng.sample(
+                hashtag_pool,
+                5,
+            )
+
+            hashtags = selected_hashtags + ["FANZ"]
+
+            caption = rng.choice(CAPTIONS)
+
+            content = (
+                caption
+                + "\n\n"
+                + " ".join(
+                    f"#{tag}"
+                    for tag in hashtags
+                )
+            )
+
             proposals.append(
                 {
                     "creator": user,
                     "account": account,
                     "source_path": source_path,
                     "scheduled_for": scheduled_for,
-                    "caption": rng.choice(CAPTIONS),
+                    "title": rng.choice(TITLES),
+                    "content": content,
                 }
             )
 
@@ -264,8 +326,8 @@ class Command(BaseCommand):
                         defaults={
                             "creator": proposal["creator"],
                             "source_path": source_path,
-                            "title": "",
-                            "content": proposal["caption"],
+                            "title": proposal["title"],
+                            "content": proposal["content"],
                             "scheduled_for": scheduled_for,
                             "status": (
                                 ScheduledPublication.STATUS_QUEUED
