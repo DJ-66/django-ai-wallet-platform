@@ -1,14 +1,16 @@
-# FANZ Phase 14 → TokenGate Creator Engine Restart Brief
+# FANZ Phase 14 → TokenGate Creator Engine — Restart Brief
 
-## Status
+## Current Checkpoint
 
-FANZ Phase 14 autonomous creator publisher is LIVE and should be left running.
+FANZ Phase 14 autonomous creator publishing is LIVE in production.
 
 Branch:
 
 `phase14-auto-publisher`
 
-Latest checkpoints:
+Last known Git state was clean and 13 commits ahead of origin before this restart brief.
+
+Important commits:
 
 - `35d9a03` — ground vision creator copy in visible details
 - `7307381` — add vision-aware creator post copy
@@ -16,135 +18,232 @@ Latest checkpoints:
 - `42f09d6` — maintain rolling AI publication queue
 - `3f5b78e` — show all managed platform accounts
 - `b18c515` — enable scheduled AI creator publishing
+- `5af84a3` — harden AI creator publishing operations
+- `6688ae6` — creator post styles + public media safeguards
 
-Final test state: **25 Phase 14 tests passing**.
+Final Phase 14 test checkpoint:
 
-## Production State
+`25 tests passing`
 
-46 AI creator identities are active.
+Database backup verified:
 
-Publishing behavior:
+`~/stacks/backups/FANZ-2026-09-23-0110.sql.gz`
 
-- approximately one creator post every ~31 minutes
-- approximately one post per creator per 24 hours
-- randomized creator rotation
-- exactly one pending publication per creator
-- `auction_worker` publishes due rows automatically
-- replenisher runs approximately once per minute
-- published source media is consumed
-- avatar media is reserved/excluded
-- any `explicit/` directory is excluded from public auto-posting
-- normal FANZ FeedPost processing remains authoritative
+PostgreSQL dump/version: 16.15.
 
-Latest health snapshot:
+---
 
-- total ScheduledPublication rows: 54
+## FANZ Autonomous Creator Publisher
+
+There are **46 AI creator identities**.
+
+Production behavior:
+
+- randomized creator order
+- approximately one FANZ creator post every ~31 minutes
+- approximately one post per creator every 24 hours
+- exactly one pending publication maintained per creator
+- `auction_worker` checks due publications about every 10 seconds
+- replenishment runs approximately once per minute
+- publication source is consumed after successful posting
+- generated feed media uses normal FANZ processing/WebP pipeline
+- creator tips/wallets work
+- creator accounts are manageable through `/platform/accounts/`
+
+Safety/media rules:
+
+- creator avatar source is never auto-posted
+- any directory named `explicit` is excluded
+- already scheduled/consumed media is excluded
+- `.zip` files are not part of creator media ingestion
+- failures do not consume source media
+
+Last production health snapshot:
+
+- ScheduledPublication total: 54
 - published: 8
 - queued: 46
 - publishing: 0
 - failed: 0
 - pending: 46
 
-## Vision Copy
+Leave the FANZ publisher running.
 
-Local Ollama is running:
+---
+
+## Vision-Aware Creator Copy
+
+FANZ uses local Ollama:
 
 - model: `gemma3:latest`
 - Gemma 3 4.3B Q4_K_M
-- vision capable
-- GPU: NVIDIA RTX 3060 12 GB
+- completion + vision capable
+- GPU: NVIDIA RTX 3060
+- VRAM: 12 GB
+- `CREATOR_VISION_COPY_ENABLED=True`
 
-Production setting:
+New replenished publications use:
 
-`CREATOR_VISION_COPY_ENABLED=True`
+`safe image → Gemma vision → title + caption + approved hashtags`
 
-New replenished posts use:
+Copy rules:
 
-image → Gemma vision → grounded title/caption → approved hashtags.
-
-Validation/fallback:
-
-- strict JSON
-- title <= 60 chars
-- approved hashtag pool only
-- 4 vision-selected tags
-- deterministic creator identity tag
+- grounded in visible image details
+- no invented sensitive attributes
+- no invented locations/events/backstory
+- prompt discourages invented emotions/preferences
+- title <= 60 characters
+- four vision-selected approved hashtags
+- deterministic creator identity hashtag
 - `#FANZ`
-- invalid/unavailable vision falls back to proven template copy
+- invalid/unavailable AI falls back to proven template copy
 
-Prompt explicitly avoids invented emotions/preferences and favors visible details.
+Examples observed:
 
-Production autonomous vision proof:
+- ExoticInfluencer: `City Dusk Reflections`
+- Lizzy: `Terracotta & Denim`
 
-- Lizzy row 17 published → source consumed
-- Lizzy row 52 automatically replenished for +24h
-- row 52 title: `Terracotta & Denim`
-- row 52 uses vision copy, not template copy
-- Coquette also published and worker logged `copy=vision` while automatically creating her next row
+Lizzy autonomous proof:
 
-Do NOT tune titles/copy immediately. Let the system run for at least a full rotation and review real output first.
+- row 17 published successfully
+- source consumed
+- worker automatically replenished row 52 for +24h
+- row 52 used a new safe source
+- title/caption were vision-generated, not template copy
+- pending invariant returned to 1
+
+Coquette independently proved the full worker path:
+
+`publish → consume source → Gemma vision → copy=vision → create next publication`
+
+Do NOT aggressively tune titles/captions yet.
+Let the system run for at least a full rotation and review real production output first.
+
+---
 
 ## FANZ Product Boundary
 
-Keep this implementation **platform-only on FANZ**.
+The autonomous creator system stays **platform-only on fanz.to**.
 
-No FANZ vending/customer product is required now.
+Do NOT build FANZ vending/customer access for it right now.
 
-FANZ uses the system internally to:
+Purpose of FANZ creator accounts:
 
-- keep the feed active
-- demonstrate FANZ creator capabilities
-- encourage free FANZ signups
-- expose users to tips, auctions, AI chat, sell posts, business updates, etc.
-- eventually manufacture image/video expansion packs internally
+- keep FANZ active
+- demonstrate platform capabilities
+- encourage free FANZ registrations
+- expose users to FANZ features such as:
+  - auctions
+  - tips
+  - AI chat
+  - sell/premium posts
+  - creator profiles
+  - digital businesses
+  - daily business updates
+  - other FANZ capabilities
 
-FANZ may later use ComfyUI/SDXL internally for media manufacturing.
+FANZ may later create custom image/video expansion packs internally.
 
-## Next Phase — TokenGate Creator Engine
+ComfyUI/SDXL/image/video manufacturing on FANZ remains platform-operated.
 
-Do NOT move/remove the working FANZ publisher.
+---
 
-Clone the proven behavior into standalone TokenGate as a generic Dockerized white-label capability.
+## Next Product: TokenGate Creator Engine
 
-Target TG Creator Engine:
+Do NOT move or remove the working FANZ implementation.
 
-- CreatorIdentity
-- MediaPack / MediaAsset
-- safe/private/reserved asset policies
-- vision/LLM copy provider
-- scheduling
-- exactly-one-pending invariant
-- replenishment
-- publisher adapter interface
-- usage metering
-- Docker deployment
-
-FANZ becomes a publisher/white-label integration, not TG's core implementation.
-
-### BYOG
-
-TG white-label customers supply their own GPU/models/storage/electricity.
-
-Optional local-AI stack:
-
-- Ollama / Gemma
-- ComfyUI
-- SDXL image workflows
-- styles / filters
-- TTS
-- optional video workflows
-
-Reference hardware: RTX 3060 **12 GB VRAM**.
-
-Image generation is practical (~seconds per image in current workflows).
-Video generation is much heavier (~minutes for a short clip), so FANZ video remains in-house for now; TG video can be BYOG.
-
-## Tomorrow's First Task
-
-Start in:
+Build a separate TG-native version in:
 
 `~/stacks/tokengate`
 
-First inspect the existing standalone TG repo/service and design the Creator Engine domain/schema + usage metering before copying implementation code.
+TokenGate Creator Engine should reproduce the proven behavior as a generic Dockerized white-label capability.
 
-Keep FANZ running untouched while TG Creator Engine is developed separately.
+Target concepts:
+
+- CreatorIdentity
+- MediaPack
+- MediaAsset
+- reserved/private/explicit media policy
+- vision/text provider abstraction
+- image-aware copy generation
+- deterministic fallback
+- PublicationSchedule
+- PublicationJob
+- exactly-one-pending invariant
+- automatic replenishment
+- PublisherAdapter
+- usage metering
+- Docker/Compose deployment
+
+FANZ becomes a reference implementation / publisher integration.
+Do not simply copy FANZ Django models into TG.
+
+First define the TG-native domain/API boundary.
+
+---
+
+## TG White Label / BYOG Direction
+
+Creator Engine becomes a standard capability for TokenGate white-label customers.
+
+Local AI / Creator Studio is **BYOG — Bring Your Own GPU**.
+
+TG supplies:
+
+- software
+- Docker orchestration
+- creator automation
+- workflows
+- scheduling
+- publisher adapters
+- metering
+
+White-label operator supplies:
+
+- GPU
+- models
+- storage
+- electricity
+
+Optional BYOG stack:
+
+- Ollama
+- Gemma
+- ComfyUI
+- SDXL
+- image styles/filters
+- TTS
+- optional video workflows
+
+Reference hardware:
+
+`NVIDIA RTX 3060 — 12 GB VRAM`
+
+Observed rough local performance:
+
+- SDXL/ComfyUI image workflows: roughly seconds/image (~5 sec observed)
+- short video generation: much heavier (~5 min for ~5 sec observed)
+
+Therefore:
+
+- image generation is a strong BYOG fit
+- video can remain FANZ in-house initially
+- TG video support can be BYOG rather than hosted by FANZ
+
+Do not price the TG feature yet.
+Build and meter real usage first; later decide whether pricing should be per-use, day/week/month, credits, or a hybrid.
+
+---
+
+## First Task In New Chat
+
+1. Read this brief.
+2. Confirm FANZ should remain untouched/running.
+3. Move to `~/stacks/tokengate`.
+4. Inspect the existing standalone TG repository/container architecture.
+5. Design the smallest TG-native Creator Engine domain + usage-metering boundary.
+6. Only then begin implementing/porting the proven FANZ behavior.
+
+Goal:
+
+**Preserve FANZ as the live reference system while building a clean Dockerized TokenGate Creator Engine for white-label BYOG deployments.**
