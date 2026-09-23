@@ -4352,10 +4352,16 @@ def platform_accounts_dashboard(request):
             ),
         })
 
+    founder_handles = {
+        founder.handle.lower()
+        for founder in platform_founders
+    }
+
     other_platform_accounts = [
         profile
         for profile in platform_profiles
-        if len(profile.user.username) >= 5
+        if profile.user.username.lower()
+        not in founder_handles
     ]
 
     profile = getattr(
