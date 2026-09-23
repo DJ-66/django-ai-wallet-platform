@@ -32,6 +32,11 @@ do
         # The command is idempotent through SunsetCamCapture.
         python manage.py process_sunsetcam_capture
 
+        # Maintain one pending publication per AI creator.
+        # The generator is idempotent while a creator already has
+        # queued or publishing work.
+        python manage.py generate_ai_publications
+
         PAYMENT_COUNTER=0
     fi
 
