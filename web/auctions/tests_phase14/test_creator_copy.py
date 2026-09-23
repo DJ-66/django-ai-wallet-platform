@@ -6,9 +6,27 @@ from unittest.mock import Mock, patch
 from django.test import SimpleTestCase
 
 from auctions.ai_services.creator_copy import (
+    SYSTEM_PROMPT,
     CreatorCopyError,
     generate_creator_post_copy,
 )
+
+
+class CreatorCopyPromptTests(SimpleTestCase):
+    def test_prompt_forbids_invented_subjective_reactions(self):
+        prompt = SYSTEM_PROMPT.lower()
+
+        for phrase in [
+            "i love",
+            "loving",
+            "my favorite",
+            "obsessed",
+            "feeling",
+            "grateful",
+            "captivated",
+            "dreaming",
+        ]:
+            self.assertIn(phrase, prompt)
 
 
 class CreatorCopyTests(SimpleTestCase):
