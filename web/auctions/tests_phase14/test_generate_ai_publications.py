@@ -184,34 +184,69 @@ class GenerateAIPublicationsTests(TestCase):
             before,
         )
 
-    def test_second_run_extends_each_creator_by_24_hours(self):
-        self.run_generator()
+    def test_published_creator_gets_next_slot_24_hours_later(self):
+        self.run_generator(seed=14)
 
-        first_rows = {
-            row.creator.username: row.scheduled_for
-            for row in ScheduledPublication.objects.all()
-        }
+        creator_a = self.users[0]
+
+        first = (
+            ScheduledPublication.objects
+            .filter(creator=creator_a)
+            .get()
+        )
+
+        first_scheduled_for = first.scheduled_for
+
+        # Make only CreatorA due, then use the real publication
+        # worker so the published-state DB constraint is satisfied.
+        first.scheduled_for = timezone.now() - timedelta(minutes=1)
+        first.save(
+            update_fields=["scheduled_for"]
+        )
+
+        call_command(
+            "process_scheduled_publications",
+            source_root=str(self.root),
+            publication_id=first.id,
+        )
+
+        first.refresh_from_db()
+
+        self.assertEqual(
+            first.status,
+            ScheduledPublication.STATUS_PUBLISHED,
+        )
+        self.assertIsNotNone(first.feed_post_id)
+
+        # Restore the original slot as the scheduling anchor.
+        first.scheduled_for = first_scheduled_for
+        first.save(
+            update_fields=["scheduled_for"]
+        )
 
         self.run_generator(seed=15)
 
-        self.assertEqual(
-            ScheduledPublication.objects.count(),
-            6,
+        rows = list(
+            ScheduledPublication.objects
+            .filter(creator=creator_a)
+            .order_by("scheduled_for")
         )
 
-        for user in self.users:
-            rows = list(
-                ScheduledPublication.objects
-                .filter(creator=user)
-                .order_by("scheduled_for")
-            )
+        self.assertEqual(len(rows), 2)
 
-            self.assertEqual(len(rows), 2)
+        self.assertEqual(
+            rows[1].scheduled_for,
+            first_scheduled_for + timedelta(hours=24),
+        )
 
+        # CreatorB and CreatorC still had pending rows,
+        # so they must not receive another one.
+        for creator in self.users[1:]:
             self.assertEqual(
-                rows[1].scheduled_for,
-                rows[0].scheduled_for
-                + timedelta(hours=24),
+                ScheduledPublication.objects.filter(
+                    creator=creator
+                ).count(),
+                1,
             )
 
     def test_avatar_source_is_never_queued(self):
@@ -298,6 +333,34 @@ class GenerateAIPublicationsTests(TestCase):
                 for source in sources
             )
         )
+
+    def test_generator_keeps_only_one_pending_per_creator(self):
+        self.run_generator(seed=14)
+
+        self.assertEqual(
+            ScheduledPublication.objects.filter(
+                status=ScheduledPublication.STATUS_QUEUED,
+            ).count(),
+            3,
+        )
+
+        # Re-running while all creators have pending work
+        # must not stack additional future rows.
+        self.run_generator(seed=15)
+
+        self.assertEqual(
+            ScheduledPublication.objects.count(),
+            3,
+        )
+
+        for creator in self.users:
+            self.assertEqual(
+                ScheduledPublication.objects.filter(
+                    creator=creator,
+                    status=ScheduledPublication.STATUS_QUEUED,
+                ).count(),
+                1,
+            )
 
     def test_dry_run_creates_nothing(self):
         self.run_generator(dry_run=True)

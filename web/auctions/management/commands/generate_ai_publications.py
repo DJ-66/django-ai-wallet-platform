@@ -203,6 +203,21 @@ class Command(BaseCommand):
                     f"Manifest account does not exist: @{account}"
                 )
 
+            has_pending = (
+                ScheduledPublication.objects
+                .filter(
+                    creator=user,
+                    status__in=[
+                        ScheduledPublication.STATUS_QUEUED,
+                        ScheduledPublication.STATUS_PUBLISHING,
+                    ],
+                )
+                .exists()
+            )
+
+            if has_pending:
+                continue
+
             history = (
                 ScheduledPublication.objects
                 .filter(creator=user)
