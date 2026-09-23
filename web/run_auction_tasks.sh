@@ -7,6 +7,10 @@ while true
 do
     python manage.py process_auctions
 
+    # Publish at most one due AI creator feed post per loop.
+    # ScheduledPublication row locking makes concurrent claims safe.
+    python manage.py process_scheduled_publications
+
     REMINDER_COUNTER=$((REMINDER_COUNTER + 1))
     PAYMENT_COUNTER=$((PAYMENT_COUNTER + 1))
 
