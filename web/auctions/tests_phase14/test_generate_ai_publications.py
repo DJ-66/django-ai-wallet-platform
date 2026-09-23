@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from PIL import Image
 
+from auctions.ai_services.creator_copy import CreatorCopyError
 from auctions.models import ScheduledPublication
 from auctions.management.commands import generate_ai_publications
 
@@ -133,19 +134,135 @@ class GenerateAIPublicationsTests(TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def run_generator(self, **kwargs):
+    def run_generator(
+        self,
+        *,
+        vision_result=None,
+        vision_error=None,
+        **kwargs,
+    ):
         kwargs.setdefault("seed", 14)
 
-        with patch.object(
-            generate_ai_publications,
-            "MANIFEST_PATH",
-            self.manifest,
+        if vision_result is None:
+            vision_result = {
+                "title": "Vision Test Title",
+                "caption": "Vision test caption.",
+                "hashtags": [
+                    "Lifestyle",
+                    "Style",
+                    "DigitalCreator",
+                    "CreatorLife",
+                ],
+            }
+
+        with (
+            patch.object(
+                generate_ai_publications,
+                "MANIFEST_PATH",
+                self.manifest,
+            ),
+            patch.object(
+                generate_ai_publications,
+                "generate_creator_post_copy",
+            ) as generate_copy,
+            patch.object(
+                generate_ai_publications.settings,
+                "CREATOR_VISION_COPY_ENABLED",
+                True,
+            ),
         ):
+            if vision_error is not None:
+                generate_copy.side_effect = vision_error
+            else:
+                generate_copy.return_value = vision_result
+
             call_command(
                 "generate_ai_publications",
                 source_root=str(self.root),
                 **kwargs,
             )
+
+            return generate_copy
+
+    def test_vision_copy_is_used_when_generation_succeeds(self):
+        vision_result = {
+            "title": "Palm Tree Shadows",
+            "caption": "Boardwalk lines beneath the palms.",
+            "hashtags": [
+                "Lifestyle",
+                "Style",
+                "DigitalCreator",
+                "CreatorLife",
+            ],
+        }
+
+        generate_copy = self.run_generator(
+            vision_result=vision_result,
+        )
+
+        self.assertEqual(generate_copy.call_count, 3)
+
+        publication = (
+            ScheduledPublication.objects
+            .filter(creator=self.users[0])
+            .get()
+        )
+
+        self.assertEqual(
+            publication.title,
+            "Palm Tree Shadows",
+        )
+
+        self.assertIn(
+            "Boardwalk lines beneath the palms.",
+            publication.content,
+        )
+
+        hashtags = [
+            token
+            for token in publication.content.split()
+            if token.startswith("#")
+        ]
+
+        self.assertEqual(len(hashtags), 6)
+        self.assertIn("#AIInfluencer", hashtags)
+        self.assertIn("#FANZ", hashtags)
+
+    def test_vision_failure_falls_back_to_template_copy(self):
+        generate_copy = self.run_generator(
+            vision_error=CreatorCopyError(
+                "test vision failure"
+            ),
+        )
+
+        self.assertEqual(generate_copy.call_count, 3)
+
+        publications = ScheduledPublication.objects.all()
+
+        self.assertEqual(publications.count(), 3)
+
+        for publication in publications:
+            self.assertIn(
+                publication.title,
+                generate_ai_publications.TITLES,
+            )
+
+            self.assertTrue(
+                any(
+                    caption in publication.content
+                    for caption
+                    in generate_ai_publications.CAPTIONS
+                )
+            )
+
+            hashtags = [
+                token
+                for token in publication.content.split()
+                if token.startswith("#")
+            ]
+
+            self.assertEqual(len(hashtags), 6)
+            self.assertIn("#FANZ", hashtags)
 
     def test_initial_queue_staggers_creators_over_24_hours(self):
         before = timezone.now()

@@ -192,6 +192,14 @@ OLLAMA_MODEL = os.getenv(
     "gemma3:latest",
 )
 
+CREATOR_VISION_COPY_ENABLED = (
+    os.getenv(
+        "CREATOR_VISION_COPY_ENABLED",
+        "False",
+    ).lower()
+    in {"1", "true", "yes", "on"}
+)
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", default="")
 OPENAI_COMPANION_MODEL = os.getenv(
     "OPENAI_COMPANION_MODEL",

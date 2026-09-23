@@ -10,6 +10,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
+from auctions.ai_services.creator_copy import (
+    CreatorCopyError,
+    generate_creator_post_copy,
+)
 from auctions.models import ScheduledPublication
 
 
@@ -275,14 +279,63 @@ class Command(BaseCommand):
                     "post_style hashtags."
                 )
 
-            selected_hashtags = rng.sample(
-                hashtag_pool,
-                5,
+            identity_tag = next(
+                (
+                    tag
+                    for preferred in [
+                        "AIInfluencer",
+                        "DigitalCreator",
+                    ]
+                    for tag in hashtag_pool
+                    if tag.lower() == preferred.lower()
+                ),
+                hashtag_pool[0],
             )
 
-            hashtags = selected_hashtags + ["FANZ"]
+            vision_pool = [
+                tag
+                for tag in hashtag_pool
+                if tag.lower() != identity_tag.lower()
+            ]
 
-            caption = rng.choice(CAPTIONS)
+            title = None
+            caption = None
+            selected_hashtags = None
+            copy_source = "template"
+
+            # Vision copy is attempted only after the pending-row
+            # guard and safe-media selection have succeeded.
+            if settings.CREATOR_VISION_COPY_ENABLED:
+                try:
+                    generated = generate_creator_post_copy(
+                        image_path=source_root / source_path,
+                        account=account,
+                        bio=creator.get("bio", ""),
+                        approved_hashtags=vision_pool,
+                    )
+
+                    title = generated["title"]
+                    caption = generated["caption"]
+                    selected_hashtags = (
+                        generated["hashtags"]
+                        + [identity_tag]
+                    )
+                    copy_source = "vision"
+
+                except CreatorCopyError as exc:
+                    self.stderr.write(
+                        f"@{account} vision copy fallback: {exc}"
+                    )
+
+            if selected_hashtags is None:
+                selected_hashtags = rng.sample(
+                    hashtag_pool,
+                    5,
+                )
+                title = rng.choice(TITLES)
+                caption = rng.choice(CAPTIONS)
+
+            hashtags = selected_hashtags + ["FANZ"]
 
             content = (
                 caption
@@ -299,8 +352,9 @@ class Command(BaseCommand):
                     "account": account,
                     "source_path": source_path,
                     "scheduled_for": scheduled_for,
-                    "title": rng.choice(TITLES),
+                    "title": title,
                     "content": content,
+                    "copy_source": copy_source,
                 }
             )
 
@@ -328,6 +382,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"{scheduled_for.isoformat()} "
                 f"| @{account:<20} "
+                f"| copy={proposal['copy_source']:<8} "
                 f"| {source_path}"
             )
 
