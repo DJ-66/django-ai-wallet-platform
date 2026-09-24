@@ -3298,3 +3298,54 @@ class ScheduledPublication(models.Model):
             f"{self.scheduled_for.isoformat()} "
             f"[{self.status}]"
         )
+
+
+class CreatorEdgePublicationReceipt(models.Model):
+    """
+    Durable idempotency receipt for a publication requested by a
+    creator-operated TG Edge.
+
+    Authentication challenges are intentionally one-time. The
+    publication key is the durable business idempotency key across
+    authenticated retries.
+
+    This model stores public publication identity only. Creator
+    signing credentials never enter FANZ.
+    """
+
+    edge = models.ForeignKey(
+        CreatorEdgeRegistration,
+        on_delete=models.PROTECT,
+        related_name="publication_receipts",
+    )
+
+    publication_key = models.CharField(
+        max_length=160,
+        unique=True,
+    )
+
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="creator_edge_publication_receipts",
+    )
+
+    feed_post = models.OneToOneField(
+        FeedPost,
+        on_delete=models.PROTECT,
+        related_name="creator_edge_publication_receipt",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return (
+            f"TG Edge publication "
+            f"{self.publication_key} "
+            f"-> FeedPost #{self.feed_post_id}"
+        )
