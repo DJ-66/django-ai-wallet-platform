@@ -23,6 +23,11 @@ urlpatterns = [
         views_tg_edge.tg_edge_claim_execution,
         name="tg_edge_claim_execution",
     ),
+    path(
+        "tg-edge/publications/",
+        views_tg_edge.tg_edge_publish_feed_post,
+        name="tg_edge_publish_feed_post",
+    ),
 
     path(
         "sunsetcam/status/",

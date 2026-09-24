@@ -8,7 +8,13 @@ from django.views.decorators.http import require_POST
 from .creator_edge_auth_services import (
     CreatorEdgeAuthError,
     authenticate_and_claim_creator_execution,
+    authenticate_creator_edge_challenge,
     create_creator_edge_auth_challenge,
+)
+
+from .creator_edge_publication_services import (
+    CreatorEdgePublicationError,
+    publish_creator_edge_feed_post,
 )
 
 
@@ -172,4 +178,133 @@ def tg_edge_claim_execution(
             "amount_base_units":
                 str(delivery.amount_base_units),
         }
+    )
+
+
+@csrf_exempt
+@require_POST
+def tg_edge_publish_feed_post(request):
+    try:
+        edge_id = _edge_uuid(
+            request.POST.get("edge_id")
+        )
+
+        challenge_id = int(
+            request.POST.get("challenge_id")
+        )
+
+        if challenge_id <= 0:
+            raise ValueError(
+                "Invalid challenge_id"
+            )
+
+        signature = str(
+            request.POST.get("signature") or ""
+        ).strip()
+
+        if not signature:
+            raise ValueError(
+                "signature is required"
+            )
+
+        publication_key = str(
+            request.POST.get(
+                "publication_key"
+            ) or ""
+        ).strip()
+
+        if not publication_key:
+            raise ValueError(
+                "publication_key is required"
+            )
+
+        title = str(
+            request.POST.get("title") or ""
+        ).strip()
+
+        content = str(
+            request.POST.get("content") or ""
+        ).strip()
+
+        if not content:
+            raise ValueError(
+                "content is required"
+            )
+
+        uploaded_media = (
+            request.FILES.get("media")
+        )
+
+        if uploaded_media is None:
+            raise ValueError(
+                "media is required"
+            )
+
+    except (
+        ValueError,
+        TypeError,
+    ) as exc:
+        message = (
+            str(exc)
+            if str(exc)
+            else "Invalid request"
+        )
+
+        return JsonResponse(
+            {"error": message},
+            status=400,
+        )
+
+    try:
+        challenge = (
+            authenticate_creator_edge_challenge(
+                challenge_id=challenge_id,
+                edge_id=edge_id,
+                signature=signature,
+            )
+        )
+
+    except CreatorEdgeAuthError as exc:
+        return JsonResponse(
+            {"error": str(exc)},
+            status=403,
+        )
+
+    try:
+        post, created = (
+            publish_creator_edge_feed_post(
+                edge_id=
+                    challenge.edge.edge_id,
+                publication_key=
+                    publication_key,
+                title=title,
+                content=content,
+                uploaded_media=
+                    uploaded_media,
+                is_public=True,
+                is_paid=False,
+                unlock_price=0,
+            )
+        )
+
+    except CreatorEdgePublicationError as exc:
+        return JsonResponse(
+            {"error": str(exc)},
+            status=400,
+        )
+
+    return JsonResponse(
+        {
+            "feed_post_id":
+                post.pk,
+            "publication_key":
+                publication_key,
+            "created":
+                created,
+        },
+        status=(
+            201
+            if created
+            else 200
+        ),
     )
