@@ -1095,6 +1095,33 @@
 
             let sunsetcamHls = null;
 
+            function scheduleSunsetCamReload(reason) {
+                if (
+                    sessionStorage.getItem(
+                        "sunsetcam-reload-pending"
+                    )
+                ) {
+                    return;
+                }
+
+                sessionStorage.setItem(
+                    "sunsetcam-reload-pending",
+                    "1"
+                );
+
+                console.warn(
+                    "[SunsetCam] reloading stalled stream:",
+                    reason
+                );
+
+                window.setTimeout(
+                    function () {
+                        window.location.reload();
+                    },
+                    250
+                );
+            }
+
             function startSunsetCamPlayback() {
                 if (sunsetcamHls) {
                     sunsetcamHls.destroy();
@@ -1133,9 +1160,8 @@
                                 return;
                             }
 
-                            setTimeout(
-                                startSunsetCamPlayback,
-                                2000
+                            scheduleSunsetCamReload(
+                                "fatal hls error"
                             );
                         }
                     );
@@ -1144,6 +1170,33 @@
                     sunsetcamHls.attachMedia(video);
                 }
             }
+
+            video.addEventListener(
+                "play",
+                function () {
+                    sessionStorage.removeItem(
+                        "sunsetcam-reload-pending"
+                    );
+                }
+            );
+
+            video.addEventListener(
+                "stalled",
+                function () {
+                    scheduleSunsetCamReload(
+                        "video stalled"
+                    );
+                }
+            );
+
+            video.addEventListener(
+                "error",
+                function () {
+                    scheduleSunsetCamReload(
+                        "video error"
+                    );
+                }
+            );
 
             startSunsetCamPlayback();
 

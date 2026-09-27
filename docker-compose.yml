@@ -57,6 +57,9 @@ services:
     image: bluenviron/mediamtx:1
     environment:
       MTX_HLSALWAYSREMUX: "yes"
+      MTX_HLSVARIANT: "mpegts"
+      MTX_HLSSEGMENTCOUNT: "30"
+      MTX_HLSSEGMENTDURATION: "1s"
     ports:
       - "1935:1935"
     networks:
