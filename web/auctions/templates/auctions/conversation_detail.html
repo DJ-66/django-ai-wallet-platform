@@ -51,6 +51,12 @@
             {{ form.body }}
 
             <div class="dm-form-actions">
+                {% if is_ai_conversation %}
+                    <span class="dm-reply-price">
+                        1 credit per reply
+                    </span>
+                {% endif %}
+
                 <button type="submit" class="dm-send-btn">
                     📩 {% trans "Send" %}
                 </button>

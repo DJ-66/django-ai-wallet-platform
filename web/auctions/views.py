@@ -60,6 +60,9 @@ from .utils import get_system_wallet
 from businesses.models import BusinessUpdate
 from businesses.services import get_discovery_businesses
 from .ai_memory import touch_ai_creator_memory
+from .ai_services.ai_wallet import (
+    charge_wallet_for_ai_creator_dm,
+)
 from datetime import timedelta
 from .forms import (
     DirectMessageForm,
@@ -799,10 +802,19 @@ def feed_home(request):
     else:
         form = FeedPostForm()
 
+    community_cutoff = (
+        timezone.now()
+        - timedelta(days=4)
+    )
+
     posts = (
         FeedPost.objects
         .filter(
-            Q(is_public=True, is_paid=False)
+            Q(
+                is_public=True,
+                is_paid=False,
+                created_at__gte=community_cutoff,
+            )
             |
             Q(
                 is_pinned=True,
@@ -5896,6 +5908,25 @@ def inbox(request):
     })
 
 
+def configure_dm_form_for_recipient(
+    form,
+    recipient,
+):
+    if (
+        recipient
+        and getattr(
+            getattr(recipient, "profile", None),
+            "is_ai_influencer",
+            False,
+        )
+    ):
+        form.fields["body"].widget.attrs[
+            "placeholder"
+        ] = "Write a message..."
+
+    return form
+
+
 def extract_ai_memory_notes(fan, influencer, conversation, fan_message):
     ai_log(
         "MEMORY_EXTRACTION_START",
@@ -6357,7 +6388,7 @@ If verified memories answer the question, answer briefly and naturally.
 If verified memories do not answer the specific question, say:
 "{memory_unknown_text}"
 
-Stay in character as Lya.
+Stay in character as {influencer.username}.
 """
 
     
@@ -6388,6 +6419,39 @@ Your personality:
 • natural
 • occasionally flirty
 • concise
+
+FICTIONAL CHARACTER:
+You are a fictional AI Influencer and entertainment character.
+Stay fully in character as {influencer.username}.
+
+You may freely invent harmless fictional details about YOUR OWN life,
+including experiences, memories, preferences, opinions, plans, travel,
+restaurants, outfits, hobbies, dates, funny situations, and everyday
+backstory when it makes the conversation more natural and entertaining.
+
+You may say things like:
+"I just got back from Paris."
+"That might be my favorite restaurant."
+"I've wanted to wear that all week."
+"My date last night was a disaster 😂"
+
+Treat those as part of your fictional character and story.
+
+Keep your fictional life reasonably consistent with your personality
+and with things you have already said in the current conversation.
+Prefer believable everyday stories over extravagant claims.
+
+Do NOT invent facts, memories, preferences, locations, relationships,
+or experiences ABOUT THE FAN.
+Facts about the fan must follow the Saved Long-Term Memory rules below.
+
+Do NOT invent consequential claims involving identifiable real people
+or organizations, real endorsements or sponsorships, real financial
+transactions, or medical, legal, or financial facts.
+
+Do not merely remind the fan that you are fictional or an AI.
+The FANZ profile already identifies you as an AI Influencer.
+Stay in character and have fun with the conversation.
 
 Do NOT greet the fan as if meeting them for the first time unless this is their very first conversation.
 
@@ -6573,6 +6637,45 @@ def conversation_detail(request, conversation_id):
 
 
             if recipient and getattr(recipient.profile, "is_ai_influencer", False):
+                try:
+                    wallet, ai_charge_tx = (
+                        charge_wallet_for_ai_creator_dm(
+                            user=request.user,
+                            conversation=conversation,
+                        )
+                    )
+
+                    ai_log(
+                        "AI_DM_CHARGED",
+                        fan=f"@{request.user.username}",
+                        conversation=conversation.id,
+                        transaction=ai_charge_tx.id,
+                        credits_remaining=wallet.credits,
+                    )
+                except ValidationError:
+                    ai_log(
+                        "AI_DM_INSUFFICIENT_CREDITS",
+                        fan=f"@{request.user.username}",
+                        conversation=conversation.id,
+                    )
+
+                    messages.error(
+                        request,
+                        "You need 1 credit for an AI creator reply.",
+                    )
+
+                    conversation_url = reverse(
+                        "conversation_detail",
+                        kwargs={
+                            "conversation_id":
+                                conversation.id,
+                        },
+                    )
+
+                    return redirect(
+                        f"{conversation_url}?lang={language}"
+                    )
+
                 ai_log(
                     "AI_GENERATION_START",
                     conversation=conversation.id,
@@ -6669,6 +6772,26 @@ def conversation_detail(request, conversation_id):
     else:
         form = DirectMessageForm()
 
+    dm_recipient = (
+        conversation.participants
+        .exclude(id=request.user.id)
+        .first()
+    )
+
+    form = configure_dm_form_for_recipient(
+        form,
+        dm_recipient,
+    )
+
+    is_ai_conversation = bool(
+        dm_recipient
+        and getattr(
+            getattr(dm_recipient, "profile", None),
+            "is_ai_influencer",
+            False,
+        )
+    )
+
     direct_messages = list(
         conversation.messages
         .select_related("sender")
@@ -6688,6 +6811,7 @@ def conversation_detail(request, conversation_id):
         "direct_messages": direct_messages,
         "form": form,
         "language": language,
+        "is_ai_conversation": is_ai_conversation,
     })
 
 @login_required
@@ -6720,12 +6844,34 @@ def start_conversation(request, username):
         conversation = Conversation.objects.create()
         conversation.participants.add(request.user, other_user)
 
-    initial_message = request.GET.get(
-        "message",
-        "Hi 👋 I found your FANZ profile and wanted to connect."
+    is_ai_recipient = getattr(
+        getattr(
+            other_user,
+            "profile",
+            None,
+        ),
+        "is_ai_influencer",
+        False,
     )
 
-    form = DirectMessageForm(initial={"body": initial_message})
+    initial_message = request.GET.get(
+        "message",
+        (
+            ""
+            if is_ai_recipient
+            else
+            "Hi 👋 I found your FANZ profile and wanted to connect."
+        ),
+    )
+
+    form = DirectMessageForm(
+        initial={"body": initial_message}
+    )
+
+    form = configure_dm_form_for_recipient(
+        form,
+        other_user,
+    )
 
     direct_messages = list(
         conversation.messages
@@ -6746,6 +6892,7 @@ def start_conversation(request, username):
         "direct_messages": direct_messages,
         "form": form,
         "language": language,
+        "is_ai_conversation": is_ai_recipient,
     })
 
 

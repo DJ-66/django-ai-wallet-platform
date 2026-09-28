@@ -49,3 +49,50 @@ def refund_wallet_for_ai_message(user, companion):
     )
 
     return wallet
+
+
+@transaction.atomic
+def charge_wallet_for_ai_creator_dm(user, conversation=None):
+    wallet = (
+        BidWallet.objects
+        .select_for_update()
+        .get(user=user)
+    )
+
+    cost = 1
+
+    if wallet.credits < cost:
+        raise ValidationError(
+            "Insufficient credits."
+        )
+
+    platform_wallet = get_system_wallet()
+
+    wallet.credits -= cost
+    platform_wallet.credits += cost
+
+    wallet.save(
+        update_fields=["credits"]
+    )
+    platform_wallet.save(
+        update_fields=["credits"]
+    )
+
+    tx = WalletTransaction.objects.create(
+        sender=wallet,
+        receiver=platform_wallet,
+        transaction_type="ai_message",
+        amount=cost,
+        reference=(
+            "creator_dm:"
+            + str(
+                getattr(
+                    conversation,
+                    "id",
+                    "",
+                )
+            )
+        ),
+    )
+
+    return wallet, tx
