@@ -98,6 +98,7 @@ from .models import (
     Fan,
     FavoriteAuction,
     FeedPost,
+    ScheduledPublication,
     FeedPostTranslation,
     FeedPostMedia,
     NodeProfile,
@@ -5696,10 +5697,26 @@ def toggle_pin_post(request, post_id):
 @login_required
 @require_POST
 def delete_feed_post(request, post_id):
-    post = get_object_or_404(FeedPost, id=post_id, user=request.user)
-    post.delete()
+    with transaction.atomic():
+        post = get_object_or_404(
+            FeedPost,
+            id=post_id,
+            user=request.user,
+        )
 
-    return redirect(request.META.get("HTTP_REFERER", "feed_home"))
+        ScheduledPublication.objects.filter(
+            feed_post=post,
+            creator=request.user,
+        ).delete()
+
+        post.delete()
+
+    return redirect(
+        request.META.get(
+            "HTTP_REFERER",
+            "feed_home",
+        )
+    )
 
 
 @login_required

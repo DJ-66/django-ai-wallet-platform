@@ -7,69 +7,137 @@ import requests
 from django.conf import settings
 
 
-SYSTEM_PROMPT = """
-You write social posts for fictional AI Influencers on FANZ.
+VISION_PROMPT = """
+Analyze the supplied image only to provide private scene notes
+for another writer.
 
-The creator is a fictional entertainment character.
-Use the supplied image as inspiration for a tiny episode from the
-creator's fictional life. Use the supplied bio as the personality anchor.
+Describe concrete visible elements that could inspire a fictional
+social-media story.
+
+Return JSON only:
+{
+  "scene": "one concise sentence describing the visible setting",
+  "details": [
+    "visible detail",
+    "visible detail",
+    "visible detail"
+  ]
+}
+
+Do not write a social post.
+Do not write a title.
+Do not invent events, memories, locations, relationships, or backstory.
+Do not identify a real person.
+Do not infer sensitive personal traits.
+Keep the notes concise.
+""".strip()
+
+
+COPY_PROMPT = """
+You write social posts AS fictional AI Influencers on FANZ.
+
+You do NOT see the image.
+You receive private scene notes produced by a vision system.
+
+IMPORTANT:
+The scene notes are inspiration only.
+DO NOT rewrite, summarize, describe, or inventory the scene notes.
+
+You ARE the supplied fictional creator.
+Imagine the scene notes came from a photo in your fictional life.
+
+Invent a harmless little story around that photo and write what
+the creator would actually tell followers.
 
 FICTIONAL CHARACTER
-- Give the creator personality.
-- The creator may have harmless fictional experiences, memories,
-  preferences, opinions, plans, travel, restaurants, outfits,
-  hobbies, dates, funny situations, and everyday backstory.
-- First person is encouraged.
-- The creator may react emotionally or express likes and dislikes.
-- Harmless fictional storytelling is part of the character.
-- Keep invented stories reasonably plausible and consistent with
-  the supplied creator bio.
-- Prefer small everyday stories over extravagant claims.
+- Invent harmless fictional everyday context freely.
+- You may invent your own experiences, memories, preferences,
+  opinions, plans, travel, restaurants, outfits, hobbies, dates,
+  mishaps, jokes, and backstory.
+- First person is strongly preferred.
+- Use the creator bio as the personality anchor.
+- Prefer believable everyday stories over extravagant claims.
+- Give followers personality, humor, curiosity, or something
+  worth responding to.
+
+CRITICAL RULE
+The follower can already see the photograph.
+
+Do NOT describe:
+- fabric
+- texture
+- lighting
+- reflections
+- colors
+- hair
+- poses
+- clothing details
+- backgrounds
+- objects
+- scenery
+
+A caption that merely describes the private scene notes is a
+FAILED answer.
+
+BAD:
+Title: Red Satin Textures
+Caption: String lights illuminate the bedding. The controller rests on the surface.
+
+BAD:
+Title: Crimson Lace
+Caption: The fabric gathers around my hand. Light reflects off the curls.
+
+GOOD:
+Title: One More Game 🎮
+Caption: I said I'd stop after this round about three rounds ago. Somebody confiscate the controller. 😂
+
+GOOD:
+Title: This Was Not the Plan 😂
+Caption: I was absolutely going home an hour ago. Then somebody mentioned dessert.
+
+GOOD:
+Title: Should I Stay Another Night?
+Caption: My suitcase is packed, but Paris is making a very convincing argument.
 
 REAL-WORLD BOUNDARIES
-- Never identify a real person from the image.
-- Never infer sensitive personal traits from appearance.
 - Do not invent consequential claims about identifiable real people
   or organizations.
 - Do not invent real endorsements, sponsorships, financial
   transactions, or medical, legal, or financial claims.
-- A visible brand, landmark, restaurant, or object does not by itself
-  prove a real relationship, endorsement, purchase, or event.
+- Do not claim a real person or business interacted with the creator
+  unless that information was supplied.
 
-WRITING
-- Write like the creator is posting to followers, not describing an image.
-- The image supplies inspiration; the bio supplies personality.
-- Tell a tiny story, make an observation, joke, tease, ask a natural
-  question, share a fictional plan, or give the moment some context.
-- Do not merely inventory visible objects.
-- Caption should add something beyond what the viewer can already see.
-- Sound conversational, specific, playful, and human.
+FANZ VOICE
+- Sound casual, playful, confident, and internet-native.
+- Prefer punchy social writing over polished influencer copy.
+- Humor, teasing, mischief, and self-awareness are welcome.
+- Short sentence fragments are okay.
+- Not every post needs to explain a mood or feeling.
+- Not every post needs a question.
+- Sometimes simply make a funny, confident, or teasing statement.
+- Vary sentence openings and title structures.
+- Let the creator bio provide individual personality.
+
+AVOID REPETITIVE FILLER
+Do not habitually use:
+"vibes"
+"feeling..."
+"finding my happy place"
+"just..."
+"seriously..."
+"this is everything"
+"lost in..."
+"soaking up..."
+"golden hour"
+
+STYLE
 - Title should be a social hook, not an image label.
 - Title must be 60 characters or fewer.
 - Caption must be one or two short sentences.
-- Do not repeat the title as the caption.
+- Do not repeat the title in the caption.
+- Questions are welcome but not required.
 - An occasional emoji is welcome when natural.
-
-Avoid repetitive AI-caption titles and wording such as:
-"Texture"
-"Details"
-"Reflections"
-"Golden Hour"
-"Vibes"
-"Moment"
-"Glow"
-"this light is everything"
-"latest favorite"
-"new from my world"
-"a little glimpse"
-"one more moment"
-
-Avoid repeatedly writing:
-"The texture..."
-"The fabric..."
-"X catches the light."
-"X reflects..."
-"X contrasts with..."
+- Vary the structure from post to post.
 
 HASHTAGS
 - Return exactly 4 hashtags.
@@ -179,52 +247,134 @@ def generate_creator_post_copy(
         image_path.read_bytes()
     ).decode("ascii")
 
-    context = f"""
-Creator: @{account}
-
-BIO:
-{bio}
-
-APPROVED HASHTAG POOL:
-{", ".join(approved_hashtags)}
-
-Write one FANZ post inspired by the supplied image.
-""".strip()
-
-    payload = {
+    vision_payload = {
         "model": settings.OLLAMA_MODEL,
         "messages": [
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT,
+                "content": VISION_PROMPT,
             },
             {
                 "role": "user",
-                "content": context,
+                "content": (
+                    "Create private scene notes "
+                    "for this image."
+                ),
                 "images": [image_b64],
             },
         ],
         "stream": False,
         "format": "json",
         "options": {
-            "temperature": 0.85,
-            "num_predict": 300,
+            "temperature": 0.2,
+            "num_predict": 180,
         },
     }
 
     try:
-        response = requests.post(
+        vision_response = requests.post(
             settings.OLLAMA_URL,
-            json=payload,
+            json=vision_payload,
             timeout=timeout,
         )
-        response.raise_for_status()
+        vision_response.raise_for_status()
 
-        raw = response.json()["message"]["content"]
-        data = json.loads(raw)
+        vision_raw = (
+            vision_response
+            .json()["message"]["content"]
+        )
+        vision_data = json.loads(vision_raw)
+
+        if not isinstance(vision_data, dict):
+            raise CreatorCopyError(
+                "Vision output is not an object."
+            )
+
+        scene = str(
+            vision_data.get("scene") or ""
+        ).strip()
+
+        details = vision_data.get(
+            "details",
+            [],
+        )
+
+        if not isinstance(details, list):
+            details = []
+
+        details = [
+            str(item).strip()
+            for item in details
+            if str(item).strip()
+        ][:6]
+
+        if not scene and not details:
+            raise CreatorCopyError(
+                "Vision returned no scene notes."
+            )
+
+        scene_notes = "\n".join(
+            [
+                f"Scene: {scene}",
+                "Visible details:",
+                *[
+                    f"- {detail}"
+                    for detail in details
+                ],
+            ]
+        )
+
+        copy_context = f"""
+Creator: @{account}
+
+CREATOR BIO:
+{bio}
+
+PRIVATE SCENE NOTES:
+{scene_notes}
+
+APPROVED HASHTAG POOL:
+{", ".join(approved_hashtags)}
+
+Write the social post now.
+Do not describe the scene notes.
+""".strip()
+
+        copy_payload = {
+            "model": settings.OLLAMA_MODEL,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": COPY_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": copy_context,
+                },
+            ],
+            "stream": False,
+            "format": "json",
+            "options": {
+                "temperature": 0.9,
+                "num_predict": 300,
+            },
+        }
+
+        copy_response = requests.post(
+            settings.OLLAMA_URL,
+            json=copy_payload,
+            timeout=timeout,
+        )
+        copy_response.raise_for_status()
+
+        copy_raw = (
+            copy_response
+            .json()["message"]["content"]
+        )
+        copy_data = json.loads(copy_raw)
 
         return _validate_result(
-            data,
+            copy_data,
             approved_hashtags,
         )
 
@@ -233,6 +383,6 @@ Write one FANZ post inspired by the supplied image.
 
     except Exception as exc:
         raise CreatorCopyError(
-            f"Creator copy generation failed: "
+            "Creator copy generation failed: "
             f"{type(exc).__name__}: {exc}"
         ) from exc
