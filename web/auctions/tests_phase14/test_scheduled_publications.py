@@ -37,6 +37,26 @@ def write_jpeg(path):
     path.write_bytes(output.getvalue())
 
 
+def write_webp(path):
+    output = BytesIO()
+
+    Image.new(
+        "RGB",
+        (640, 800),
+        (120, 140, 160),
+    ).save(
+        output,
+        format="WEBP",
+        quality=90,
+    )
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    path.write_bytes(output.getvalue())
+
+
 class ScheduledPublicationCommandTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -88,6 +108,45 @@ class ScheduledPublicationCommandTests(TestCase):
         self.assertEqual(post.content, "Worker content")
 
         media = post.media.get()
+
+        self.assertTrue(media.file.name.endswith(".webp"))
+        self.assertTrue(
+            media.file.storage.exists(media.file.name)
+        )
+
+        self.assertFalse(source.exists())
+
+    def test_webp_source_publishes(self):
+        relative_path = "Worker Pack/image.webp"
+        source = self.source_root / relative_path
+        write_webp(source)
+
+        publication = ScheduledPublication.objects.create(
+            publication_key="worker-webp-1",
+            creator=self.user,
+            source_path=relative_path,
+            title="WebP title",
+            content="WebP content",
+            scheduled_for=timezone.now(),
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        call_command(
+            "process_scheduled_publications",
+            source_root=str(self.source_root),
+        )
+
+        publication.refresh_from_db()
+
+        self.assertEqual(
+            publication.status,
+            ScheduledPublication.STATUS_PUBLISHED,
+        )
+        self.assertEqual(publication.attempt_count, 1)
+        self.assertIsNotNone(publication.feed_post_id)
+        self.assertEqual(publication.last_error, "")
+
+        media = publication.feed_post.media.get()
 
         self.assertTrue(media.file.name.endswith(".webp"))
         self.assertTrue(

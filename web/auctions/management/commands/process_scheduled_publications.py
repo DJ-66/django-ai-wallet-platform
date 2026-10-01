@@ -194,8 +194,17 @@ class Command(BaseCommand):
             raise CommandError(message)
 
         try:
+            image_content_types = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".webp": "image/webp",
+                ".avif": "image/avif",
+            }
+
             content_type = (
-                mimetypes.guess_type(source.name)[0]
+                image_content_types.get(source.suffix.lower())
+                or mimetypes.guess_type(source.name)[0]
                 or "application/octet-stream"
             )
 

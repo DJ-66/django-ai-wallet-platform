@@ -116,6 +116,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "auctions.context_processors.wallet_context",
                 "auctions.context_processors.notifications",
+                "auctions.context_processors.google_oauth",
             ],
         },
     },
