@@ -53,53 +53,96 @@ def _link_text(text):
     """
     Link FANZ @mentions and #hashtags in one plain-text node.
 
-    This runs only after Markdown and Bleach sanitization.
+    Link candidates are detected in the original plain text.
+    All non-link text is escaped while assembling the result,
+    so HTML entities introduced by escaping cannot become
+    synthetic hashtags or mentions.
     """
-    escaped = escape(text)
+    matches = []
 
-    def mention_repl(match):
-        username = match.group(1)
-
-        href = reverse(
-            "public_profile_root",
-            kwargs={
-                "username": username,
-            },
+    for match in MENTION_RE.finditer(text):
+        matches.append(
+            (
+                match.start(),
+                match.end(),
+                "mention",
+                match,
+            )
         )
 
-        return (
-            f'<a href="{href}" '
-            f'class="fanz-mention">'
-            f'@{username}</a>'
+    for match in HASHTAG_RE.finditer(text):
+        matches.append(
+            (
+                match.start(),
+                match.end(),
+                "hashtag",
+                match,
+            )
         )
 
-    def hashtag_repl(match):
-        raw_tag = match.group(1)
-
-        href = reverse(
-            "hashtag_feed",
-            kwargs={
-                "tag_name": raw_tag.lower(),
-            },
+    matches.sort(
+        key=lambda item: (
+            item[0],
+            item[1],
         )
-
-        return (
-            f'<a href="{href}" '
-            f'class="hashtag-link">'
-            f'#{raw_tag}</a>'
-        )
-
-    escaped = MENTION_RE.sub(
-        mention_repl,
-        escaped,
     )
 
-    escaped = HASHTAG_RE.sub(
-        hashtag_repl,
-        escaped,
+    parts = []
+    cursor = 0
+
+    for start, end, kind, match in matches:
+        if start < cursor:
+            continue
+
+        parts.append(
+            str(
+                escape(
+                    text[cursor:start]
+                )
+            )
+        )
+
+        value = match.group(1)
+
+        if kind == "mention":
+            href = reverse(
+                "public_profile_root",
+                kwargs={
+                    "username": value,
+                },
+            )
+
+            parts.append(
+                f'<a href="{href}" '
+                f'class="fanz-mention">'
+                f'@{escape(value)}</a>'
+            )
+        else:
+            href = reverse(
+                "hashtag_feed",
+                kwargs={
+                    "tag_name":
+                        value.lower(),
+                },
+            )
+
+            parts.append(
+                f'<a href="{href}" '
+                f'class="hashtag-link">'
+                f'#{escape(value)}</a>'
+            )
+
+        cursor = end
+
+    parts.append(
+        str(
+            escape(
+                text[cursor:]
+            )
+        )
     )
 
-    return escaped
+    return "".join(parts)
 
 
 class _FanzTextLinkifier(HTMLParser):

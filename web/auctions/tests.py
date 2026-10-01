@@ -9906,6 +9906,46 @@ class FeedPostContentRendererTests(SimpleTestCase):
         )
         self.assertIn("#FANZCredits", rendered)
 
+    def test_apostrophe_does_not_create_html_entity_hashtag(self):
+        rendered = self.render(
+            "TokenGate's Creator Engine"
+        )
+
+        self.assertIn(
+            "TokenGate&#x27;s Creator Engine",
+            rendered,
+        )
+        self.assertNotIn(
+            "/auctions/tag/x27/",
+            rendered,
+        )
+        self.assertNotIn(
+            'class="hashtag-link">#x27</a>',
+            rendered,
+        )
+
+    def test_apostrophe_and_real_hashtag_render_correctly(self):
+        rendered = self.render(
+            "TokenGate's Creator Engine #FANZ"
+        )
+
+        self.assertIn(
+            "TokenGate&#x27;s Creator Engine",
+            rendered,
+        )
+        self.assertIn(
+            'href="/auctions/tag/fanz/"',
+            rendered,
+        )
+        self.assertIn(
+            'class="hashtag-link">#FANZ</a>',
+            rendered,
+        )
+        self.assertNotIn(
+            "/auctions/tag/x27/",
+            rendered,
+        )
+
     def test_mention_links_to_fanz_profile(self):
         rendered = self.render("Visit @BuyCredits")
         self.assertIn(
