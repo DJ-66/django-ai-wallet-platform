@@ -27,6 +27,12 @@ services:
       python manage.py collectstatic --noinput &&
       gunicorn core.wsgi:application --workers 4 --bind 0.0.0.0:8000 --timeout=300 --graceful-timeout 300
       "
+    healthcheck:
+      test: ["CMD-SHELL", "python manage.py migrate --check"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 5s
     volumes:
       - ./web:/app
       - ./sui/prepared-publications:/app/sui/prepared-publications:ro
@@ -73,6 +79,8 @@ services:
       - .env
     depends_on:
       db:
+        condition: service_healthy
+      web:
         condition: service_healthy
     command: /app/run_auction_tasks.sh
     volumes:
