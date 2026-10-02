@@ -1094,29 +1094,23 @@
             if (!hlsUrl) return;
 
             let sunsetcamHls = null;
+            let sunsetcamRecoveryPending = false;
 
-            function scheduleSunsetCamReload(reason) {
-                if (
-                    sessionStorage.getItem(
-                        "sunsetcam-reload-pending"
-                    )
-                ) {
+            function scheduleSunsetCamRecovery(reason) {
+                if (sunsetcamRecoveryPending) {
                     return;
                 }
 
-                sessionStorage.setItem(
-                    "sunsetcam-reload-pending",
-                    "1"
-                );
+                sunsetcamRecoveryPending = true;
 
                 console.warn(
-                    "[SunsetCam] reloading stalled stream:",
+                    "[SunsetCam] restarting stalled stream:",
                     reason
                 );
 
                 window.setTimeout(
                     function () {
-                        window.location.reload();
+                        startSunsetCamPlayback();
                     },
                     250
                 );
@@ -1160,7 +1154,7 @@
                                 return;
                             }
 
-                            scheduleSunsetCamReload(
+                            scheduleSunsetCamRecovery(
                                 "fatal hls error"
                             );
                         }
@@ -1174,16 +1168,14 @@
             video.addEventListener(
                 "play",
                 function () {
-                    sessionStorage.removeItem(
-                        "sunsetcam-reload-pending"
-                    );
+                    sunsetcamRecoveryPending = false;
                 }
             );
 
             video.addEventListener(
                 "stalled",
                 function () {
-                    scheduleSunsetCamReload(
+                    scheduleSunsetCamRecovery(
                         "video stalled"
                     );
                 }
@@ -1192,7 +1184,7 @@
             video.addEventListener(
                 "error",
                 function () {
-                    scheduleSunsetCamReload(
+                    scheduleSunsetCamRecovery(
                         "video error"
                     );
                 }

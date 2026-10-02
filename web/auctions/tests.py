@@ -15990,3 +15990,40 @@ class FanzSearchTokenMatchingTests(TestCase):
             token_candidate,
             0,
         )
+
+
+class SunsetCamRecoveryTemplateTests(SimpleTestCase):
+    def test_stream_failure_restarts_player_without_page_reload(self):
+        from pathlib import Path
+
+        template = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "auctions"
+            / "public_profile.html"
+        ).read_text()
+
+        self.assertIn(
+            "function scheduleSunsetCamRecovery(reason)",
+            template,
+        )
+        self.assertRegex(
+            template,
+            (
+                r"(?s)scheduleSunsetCamRecovery\(reason\).*"
+                r"window\.setTimeout\(.*"
+                r"startSunsetCamPlayback\(\);.*250"
+            ),
+        )
+        self.assertIn(
+            "sunsetcamRecoveryPending = false;",
+            template,
+        )
+        self.assertNotIn(
+            "window.location.reload()",
+            template,
+        )
+        self.assertNotIn(
+            "sunsetcam-reload-pending",
+            template,
+        )
