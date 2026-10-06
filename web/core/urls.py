@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.http import HttpResponse
 from core.views import current_page_qr
 from django.urls import path, include
+from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from auctions.views import activate_view
 from auctions import views as auction_views
@@ -169,6 +170,17 @@ urlpatterns = [
 
     path("admin/", admin.site.urls),
     path("b/", include("businesses.urls")),
+
+    # FANZ owns the canonical public signup workflow. Keep allauth
+    # login/social routes, but do not allow its generic signup view
+    # to bypass FANZ username reservation and activation rules.
+    path(
+        "accounts/signup/",
+        RedirectView.as_view(
+            pattern_name="signup",
+            permanent=False,
+        ),
+    ),
     path("accounts/", include("allauth.urls")),
     path("auctions/", include("auctions.urls")),
     path("u/<str:username>/", legacy_user_profile_redirect, name="legacy_public_profile"),

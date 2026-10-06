@@ -26,7 +26,7 @@ class OptionalGoogleOAuthTests(TestCase):
             ).exists()
         )
 
-        for url_name in ("account_login", "account_signup"):
+        for url_name in ("account_login", "signup"):
             with self.subTest(url_name=url_name):
                 response = self.client.get(reverse(url_name))
 
@@ -39,7 +39,7 @@ class OptionalGoogleOAuthTests(TestCase):
     def test_auth_pages_show_google_when_configured(self):
         self._configure_google()
 
-        for url_name in ("account_login", "account_signup"):
+        for url_name in ("account_login", "signup"):
             with self.subTest(url_name=url_name):
                 response = self.client.get(reverse(url_name))
 
