@@ -3511,7 +3511,7 @@ def verify_founder_coin_rebrand(request):
 
 @login_required
 def founder_tienda(request):
-    fixed_listings = (
+    fixed_inventory = (
         FounderListing.objects
         .filter(
             listing_source=FounderListing.SOURCE_TIENDA,
@@ -3522,10 +3522,37 @@ def founder_tienda(request):
             "founder_account",
             "seller_root",
         )
+    )
+
+    # Premium is a curated storefront, not the complete Fixed
+    # inventory. Keep five regular Founder properties and five
+    # premium-short properties visible while every active Fixed
+    # listing remains searchable and directly purchasable.
+    fixed_regular = list(
+        fixed_inventory
+        .filter(founder_account__handle_length__gte=3)
         .order_by(
-            "founder_account__handle_length",
+            "fixed_price_credits",
             "founder_account__handle",
-        )
+        )[:5]
+    )
+
+    fixed_short = list(
+        fixed_inventory
+        .filter(founder_account__handle_length__lte=2)
+        .order_by(
+            "fixed_price_credits",
+            "founder_account__handle",
+        )[:5]
+    )
+
+    fixed_listings = sorted(
+        fixed_regular + fixed_short,
+        key=lambda listing: (
+            listing.fixed_price_credits,
+            listing.founder_account.handle_length,
+            listing.founder_account.handle,
+        ),
     )
 
     blind_listings = (
