@@ -19,6 +19,28 @@ from .utils import get_system_wallet
 FOUNDER_MIN_TRANSFER_CREDITS = 200
 FOUNDER_PLATFORM_FEE_RATE = Decimal("0.15")
 
+PROTECTED_FOUNDER_HANDLES = frozenset({
+    "dj",
+})
+
+
+def is_protected_founder(founder_account):
+    return (
+        (founder_account.handle or "")
+        .strip()
+        .casefold()
+        in PROTECTED_FOUNDER_HANDLES
+    )
+
+
+def _reject_protected_founder_sale(founder_account):
+    if is_protected_founder(founder_account):
+        raise ValidationError(
+            f"@{founder_account.handle} is a protected "
+            "FANZ administrative Founder identity and "
+            "cannot be listed, sold, or transferred."
+        )
+
 
 @transaction.atomic
 def transfer_founder_ownership(
@@ -56,6 +78,10 @@ def transfer_founder_ownership(
         FounderAccount.objects
         .select_for_update()
         .get(pk=founder_account.pk)
+    )
+
+    _reject_protected_founder_sale(
+        locked_asset
     )
 
     if locked_asset.owner_root is None:
@@ -512,6 +538,10 @@ def purchase_tienda_fixed_listing(
         FounderAccount.objects
         .select_for_update()
         .get(pk=locked_listing.founder_account_id)
+    )
+
+    _reject_protected_founder_sale(
+        locked_asset
     )
 
     system_wallet = get_system_wallet()
@@ -1327,6 +1357,10 @@ def create_founder_listing(
     )
 
     seller_root = get_authoritative_root(seller)
+
+    _reject_protected_founder_sale(
+        locked_asset
+    )
 
     if locked_asset.owner_root_id is None:
         raise ValidationError(
