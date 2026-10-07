@@ -41,3 +41,17 @@ def notifications(request):
         "unread_notification_count": unread_count,
         "unread_dm_count": unread_dm_count,
     }
+
+
+def google_oauth(request):
+    from allauth.socialaccount.models import SocialApp
+    from django.conf import settings
+
+    enabled = SocialApp.objects.filter(
+        provider="google",
+        sites__id=settings.SITE_ID,
+    ).exists()
+
+    return {
+        "google_oauth_enabled": enabled,
+    }

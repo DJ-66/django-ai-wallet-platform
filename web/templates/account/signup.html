@@ -18,11 +18,13 @@
 
         </p>
         
-        <a href="{% provider_login_url 'google' %}" class="google-login-btn">
+        {% if google_oauth_enabled %}
+    <a href="{% provider_login_url 'google' %}" class="google-login-btn">
             <span class="google-icon">G</span>
              {% trans "Continue with Google" %}
 
         </a>
+    {% endif %}
         <br>
 
         <form method="post" class="auth-form">

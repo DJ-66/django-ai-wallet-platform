@@ -14,10 +14,12 @@
 
     </p>
 
+    {% if google_oauth_enabled %}
     <a href="{% provider_login_url 'google' %}" class="google-login-btn">
       <span class="google-icon">G</span>
           {% trans "Continue with Google" %}
     </a>
+    {% endif %}
 
     <div class="auth-divider"><span>or</span></div>
 
