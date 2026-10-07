@@ -235,21 +235,47 @@ def _development_stats(
         1.0,
     )
 
+    # Development activity belongs to the operating account,
+    # independently of when the Founder property was acquired.
+    # Ownership age still controls liquidity and the minimum
+    # holding period for Active Development qualification.
     posts = (
         FeedPost.objects
         .filter(
             user=operator,
             is_public=True,
-            created_at__gte=acquired_at,
             created_at__lte=as_of,
         )
     )
 
     public_posts = posts.count()
 
+    first_public_post = (
+        posts
+        .order_by("created_at")
+        .values_list(
+            "created_at",
+            flat=True,
+        )
+        .first()
+    )
+
+    if first_public_post is None:
+        activity_weeks = 1.0
+    else:
+        activity_days = max(
+            0,
+            (as_of - first_public_post).days,
+        )
+
+        activity_weeks = max(
+            activity_days / 7.0,
+            1.0,
+        )
+
     posts_per_week = (
         public_posts
-        / ownership_weeks
+        / activity_weeks
     )
 
     weekly_rows = (
@@ -290,6 +316,10 @@ def _development_stats(
         "ownership_days": ownership_days,
         "ownership_weeks": round(
             ownership_weeks,
+            2,
+        ),
+        "activity_weeks": round(
+            activity_weeks,
             2,
         ),
         "public_posts": public_posts,
