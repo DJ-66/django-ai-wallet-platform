@@ -225,6 +225,16 @@ def create_founder_vending_reservation(
         wanted_handle
     )
 
+    # Dynamic budget vending owns only the 3-4 character
+    # Founder namespace. 1-2 character Founder properties
+    # are reserved Premium / Fixed Tienda inventory.
+    if len(identity.handle) < 3:
+        raise FounderCartError(
+            "1-2 character Founder names are Premium "
+            "Fixed Price properties. Find them through "
+            "Founder search or the Premium listings."
+        )
+
     quote = founder_budget_quote(
         budget_credits
     )

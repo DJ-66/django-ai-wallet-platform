@@ -4137,6 +4137,7 @@ class FounderVendingTiendaViewTests(TestCase):
     def _quote(
         self,
         *,
+        handle="q7xz",
         budget=50_000,
         purchase_mode="self",
         sui_address="",
@@ -4149,7 +4150,7 @@ class FounderVendingTiendaViewTests(TestCase):
         return self.client.post(
             reverse("quote_founder_vending"),
             {
-                "wanted_handle": "q7xz",
+                "wanted_handle": handle,
                 "budget_credits": str(budget),
                 "purchase_mode": purchase_mode,
                 "sui_recipient_address": sui_address,
@@ -4157,6 +4158,78 @@ class FounderVendingTiendaViewTests(TestCase):
                 "gift_recipient_email": gift_email,
                 "gift_message": gift_message,
             },
+        )
+
+    def test_short_handle_cannot_enter_dynamic_vending(self):
+        from auctions.models import (
+            BidWallet,
+            FounderCartItem,
+            FounderPriceMemory,
+            FounderVendingHold,
+        )
+
+        response = self._quote(
+            handle="tv",
+            budget=250,
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertFalse(
+            FounderCartItem.objects.filter(
+                cart__purchaser=self.buyer,
+                wanted_handle="tv",
+            ).exists()
+        )
+
+        self.assertFalse(
+            FounderVendingHold.objects.filter(
+                cart_item__cart__purchaser=self.buyer,
+                cart_item__wanted_handle="tv",
+            ).exists()
+        )
+
+        self.assertFalse(
+            FounderPriceMemory.objects.filter(
+                buyer_root=self.buyer,
+                wanted_handle="tv",
+            ).exists()
+        )
+
+        wallet = BidWallet.objects.get(user=self.buyer)
+        self.assertEqual(wallet.credits, 100_000)
+
+    def test_three_character_handle_still_enters_dynamic_vending(self):
+        from auctions.models import (
+            FounderCartItem,
+            FounderVendingHold,
+        )
+
+        response = self._quote(
+            handle="mia",
+            budget=250,
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        item = FounderCartItem.objects.get(
+            cart__purchaser=self.buyer,
+            wanted_handle="mia",
+        )
+
+        hold = FounderVendingHold.objects.get(
+            cart_item=item,
+        )
+
+        self.assertEqual(
+            item.status,
+            FounderCartItem.STATUS_QUOTED,
+        )
+        self.assertEqual(item.list_price_credits, 233)
+        self.assertEqual(hold.amount_credits, 250)
+        self.assertEqual(
+            hold.status,
+            FounderVendingHold.STATUS_HELD,
         )
 
     def test_quote_creates_funded_reservation_and_redirects_to_item(self):
