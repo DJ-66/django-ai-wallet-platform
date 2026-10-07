@@ -336,28 +336,14 @@ def get_founder_valuation(
         founder_account
     )
     # -----------------------------------------------------
-    # Trusted FANZ primary-market evidence
+    # Market asking prices are not FANZ valuation evidence.
     #
-    # A current fixed-price Founder Tienda listing is a
-    # FANZ Treasury valuation signal.
-    #
-    # P2P asking prices and blind minimums are NOT valuation
-    # evidence and must never raise the FANZ estimate.
+    # FANZ estimates intrinsic/property value independently.
+    # Owners set asking prices and buyers decide whether to
+    # transact at those prices.
     # -----------------------------------------------------
 
     treasury_offering_value = None
-
-    if (
-        active_listing
-        and active_listing.listing_source
-        == FounderListing.SOURCE_TIENDA
-        and active_listing.sale_type
-        == FounderListing.SALE_FIXED
-        and active_listing.fixed_price_credits
-    ):
-        treasury_offering_value = int(
-            active_listing.fixed_price_credits
-        )
 
 
     last_market_sale = _get_last_market_sale(
@@ -439,12 +425,6 @@ def get_founder_valuation(
 
     recognized_current_value = passive_value
 
-    if treasury_offering_value is not None:
-        recognized_current_value = max(
-            recognized_current_value,
-            treasury_offering_value,
-        )
-
     if development["active_development"]:
         development_multiplier = _growth_multiplier(
             ownership_years
@@ -477,10 +457,7 @@ def get_founder_valuation(
             projection_age
         )
 
-        projection_base = max(
-            intrinsic_value,
-            treasury_offering_value or 0,
-        )
+        projection_base = intrinsic_value
 
         projected = (
             projection_base

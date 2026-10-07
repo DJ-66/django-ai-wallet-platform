@@ -370,15 +370,6 @@
   {{ valuation.estimated_value.intrinsic }} cr
 </p>
 
-{% if valuation.basis.treasury_offering_value_credits %}
-  <p>
-    {% trans "Treasury Offering Value" %}:
-    <strong>
-      {{ valuation.basis.treasury_offering_value_credits }} cr
-    </strong>
-  </p>
-{% endif %}
-
 <p>
   <strong>{% trans "Current FANZ Estimate" %}:</strong>
   {{ valuation.estimated_value.current }} cr
