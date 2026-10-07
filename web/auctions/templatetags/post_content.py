@@ -419,3 +419,63 @@ def render_post_content(value):
     return mark_safe(
         clean
     )
+
+
+TRAILING_HASHTAG_LINE_RE = re.compile(
+    r"^\s*(?:#[\w]{2,50}\s*)+$"
+)
+
+
+def _split_trailing_hashtag_block(value):
+    """
+    Split a trailing hashtag-only block from post content.
+
+    Storage remains unchanged. This is presentation-only so media
+    can render between the post body and its trailing hashtag row.
+    Hashtags used naturally inside ordinary prose remain in the body.
+    """
+    source = str(value or "")
+
+    if not source:
+        return "", ""
+
+    lines = source.splitlines()
+    hashtag_lines = []
+
+    while lines:
+        candidate = lines[-1]
+
+        if not candidate.strip():
+            if hashtag_lines:
+                lines.pop()
+                continue
+            break
+
+        if not TRAILING_HASHTAG_LINE_RE.fullmatch(candidate):
+            break
+
+        hashtag_lines.insert(
+            0,
+            lines.pop(),
+        )
+
+    body = "\n".join(lines).rstrip()
+    hashtags = "\n".join(hashtag_lines).strip()
+
+    return body, hashtags
+
+
+@register.filter
+def post_body(value):
+    body, _hashtags = _split_trailing_hashtag_block(
+        value
+    )
+    return body
+
+
+@register.filter
+def post_trailing_hashtags(value):
+    _body, hashtags = _split_trailing_hashtag_block(
+        value
+    )
+    return hashtags

@@ -138,7 +138,18 @@
 {% endif %}
 <div class="feed-content">
 
-{{ post.display_content|render_post_content }}
+{{ post.display_content|post_body|render_post_content }}
+
+{% include "auctions/includes/_post_media.html" with post=post %}
+
+{% with trailing_tags=post.display_content|post_trailing_hashtags %}
+    {% if trailing_tags %}
+        <div class="feed-inline-tags">
+            {{ trailing_tags|render_post_content }}
+        </div>
+    {% endif %}
+{% endwith %}
+
 {% if post.hashtags.all %}
     <div class="post-tags">
         {% for tag in post.hashtags.all %}
@@ -157,8 +168,6 @@
 {% endif %}
 
 </div>
-
-    {% include "auctions/includes/_post_media.html" with post=post %}
 
     {% endif %}
                                

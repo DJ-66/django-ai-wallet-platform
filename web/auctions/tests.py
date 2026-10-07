@@ -9891,6 +9891,52 @@ class FounderTiendaBlindExpiryTests(TestCase):
         )
 
 
+class FeedPostLayoutSplitTests(SimpleTestCase):
+    def test_trailing_hashtag_block_is_split_from_body(self):
+        from auctions.templatetags.post_content import (
+            post_body,
+            post_trailing_hashtags,
+        )
+
+        content = (
+            "Affiliate #marketing inside prose stays here.\n\n"
+            "Visit https://example.com/demo\n\n"
+            "#FANZ #LayoutTest #AffiliateTest"
+        )
+
+        self.assertEqual(
+            post_body(content),
+            (
+                "Affiliate #marketing inside prose stays here.\n\n"
+                "Visit https://example.com/demo"
+            ),
+        )
+
+        self.assertEqual(
+            post_trailing_hashtags(content),
+            "#FANZ #LayoutTest #AffiliateTest",
+        )
+
+    def test_post_without_trailing_hashtag_block_is_unchanged(self):
+        from auctions.templatetags.post_content import (
+            post_body,
+            post_trailing_hashtags,
+        )
+
+        content = (
+            "It's a FANZ post with #FANZ inside normal prose."
+        )
+
+        self.assertEqual(
+            post_body(content),
+            content,
+        )
+        self.assertEqual(
+            post_trailing_hashtags(content),
+            "",
+        )
+
+
 class FeedPostContentRendererTests(SimpleTestCase):
     def render(self, content):
         from auctions.templatetags.post_content import (
