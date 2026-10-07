@@ -57,8 +57,16 @@
 <style>
     .profile-translate-wrap {
         max-width: 760px;
-        margin: 0 auto;
-        padding: 24px;
+        margin: 48px auto;
+        padding: 32px;
+        box-sizing: border-box;
+
+        background: rgba(248, 247, 252, 0.94);
+        border: 1px solid rgba(91, 67, 138, 0.18);
+        border-radius: 20px;
+
+        box-shadow:
+            0 14px 38px rgba(38, 24, 68, 0.10);
     }
 
     .language-tabs {
@@ -85,13 +93,76 @@
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+
+        background: #ffffff;
+        color: #17131f;
+        border: 1px solid #b9b3c5;
+        border-radius: 10px;
+        padding: 11px 12px;
+
+        font: inherit;
+    }
+
+    .profile-translate-form textarea {
+        min-height: 150px;
+        resize: vertical;
+    }
+
+    .profile-translate-form input:focus,
+    .profile-translate-form textarea:focus {
+        outline: 2px solid rgba(124, 58, 237, 0.22);
+        border-color: #7c3aed;
+    }
+
+    .profile-translate-form label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 700;
+    }
+
+    .profile-translate-form p {
+        margin: 0 0 18px;
     }
 
     .profile-translate-actions {
         display: flex;
         flex-wrap: wrap;
+        align-items: center;
         gap: 12px;
-        margin-top: 20px;
+        margin-top: 24px;
+    }
+
+    .profile-translate-actions button {
+        appearance: none;
+        border: 0;
+        border-radius: 10px;
+        padding: 11px 18px;
+
+        background: #7c3aed;
+        color: #ffffff;
+
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .profile-translate-actions a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 14px;
+
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    @media (max-width: 640px) {
+        .profile-translate-wrap {
+            margin: 24px 12px;
+            padding: 22px 18px;
+            border-radius: 16px;
+        }
     }
 </style>
 

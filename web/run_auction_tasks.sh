@@ -2,6 +2,7 @@
 
 REMINDER_COUNTER=0
 PAYMENT_COUNTER=0
+LOCALIZATION_COUNTER=0
 
 while true
 do
@@ -13,6 +14,7 @@ do
 
     REMINDER_COUNTER=$((REMINDER_COUNTER + 1))
     PAYMENT_COUNTER=$((PAYMENT_COUNTER + 1))
+    LOCALIZATION_COUNTER=$((LOCALIZATION_COUNTER + 1))
 
     # Fulfill settled payments approximately once per minute.
     if [ "$PAYMENT_COUNTER" -ge 6 ]; then
@@ -40,10 +42,20 @@ do
         PAYMENT_COUNTER=0
     fi
 
-    # Run reminders every 10 minutes if loop sleeps 10 seconds
+    # Run reminders every 10 minutes if loop sleeps 10 seconds.
     if [ "$REMINDER_COUNTER" -ge 60 ]; then
         python manage.py send_auction_reminders
         REMINDER_COUNTER=0
+    fi
+
+    # Audit at most 10 public posts approximately every 30 minutes.
+    # Complete EN/ES/PT posts make no localization AI call; stale
+    # source-copy rows are repaired conservatively.
+    # Newest posts are processed first so fresh content does not
+    # wait behind the historical localization backlog.
+    if [ "$LOCALIZATION_COUNTER" -ge 180 ]; then
+        python manage.py localize_feed_posts --limit 10
+        LOCALIZATION_COUNTER=0
     fi
 
     sleep 10

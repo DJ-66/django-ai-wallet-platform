@@ -2963,3 +2963,7 @@ msgstr "Voltar para o login"
 
 #~ msgid "Hash"
 #~ msgstr "Hash"
+
+#: templates/base.html
+msgid "List My Biz"
+msgstr "Publicar meu negócio"

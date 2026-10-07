@@ -11,7 +11,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=388">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=389">
   {% block extra_css %}{% endblock %}
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
@@ -148,32 +148,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const nextInput = languageForm.querySelector('input[name="next"]');
 
-    languageForm.addEventListener("submit", function (event) {
-        const submitter = event.submitter;
+    if (!nextInput) {
+        return;
+    }
 
-        if (!submitter || !nextInput) {
-            return;
+    languageForm.querySelectorAll('button[name="language"]').forEach(
+        function (button) {
+            button.addEventListener("click", function () {
+                const language = button.value;
+
+                if (!language) {
+                    return;
+                }
+
+                const url = new URL(
+                    window.location.href
+                );
+
+                url.searchParams.set(
+                    "lang",
+                    language
+                );
+
+                nextInput.value =
+                    url.pathname +
+                    url.search +
+                    url.hash;
+            });
         }
-
-        const language = submitter.value;
-
-        if (!language) {
-            return;
-        }
-
-        const url = new URL(
-            nextInput.value,
-            window.location.origin
-        );
-
-        url.searchParams.set("lang", language);
-
-        nextInput.value =
-            url.pathname +
-            url.search +
-            url.hash;
-        });
-    });
+    );
+});
 </script>
 <div class="nav-search-row">
   <form
@@ -277,48 +281,120 @@ document.addEventListener("DOMContentLoaded", function () {
   
 </main>
 
-<footer class="site-footer">
-{% if user.is_authenticated %}
-  <a href="{% url 'public_profile_root' request.user.username %}" class="nav-link">
-    👤 {% trans "Profile" %}
-</a>
+<footer class="site-footer" id="site-footer">
+  <div class="footer-primary-row">
+    <div class="footer-primary-links">
+      {% if user.is_authenticated %}
+        <a
+          href="{% url 'public_profile_root' request.user.username %}"
+          class="nav-link"
+        >
+          👤 {% trans "Profile" %}
+        </a>
 
-<a href="{% url 'event_list' %}" class="nav-link">
-    📅 {% trans "Events" %}
-</a> 
- {% else %}
+        <a
+          href="/b/create/"
+          class="footer-biz-btn"
+        >
+          {% trans "List My Biz" %}
+        </a>
 
+        <a
+          href="{% url 'event_list' %}"
+          class="nav-link"
+        >
+          📅 {% trans "Events" %}
+        </a>
+      {% else %}
+        <a href="{% url 'signup' %}" class="nav-signup">
+          {% trans "Sign up" %}
+        </a>
+      {% endif %}
+    </div>
 
-    <a href="{% url 'signup' %}" class="nav-signup">
-    {% trans "Sign up" %}
-  </a>
-{% endif %}
-  <div class="footer-left">
+    <div class="footer-right">
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="footer-logout"
+            aria-label="{% trans 'Logout' %}"
+          >
+            -->❌
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'account_login' %}" class="footer-login">
+          🔐 {% trans "Login" %}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="footer-secondary-row" aria-hidden="true">
     © {% now "Y" %} Fanz.to
   </div>
-
-  <div class="footer-right">
-
-    {% if user.is_authenticated %}
-
-      <form method="post" action="{% url 'account_logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="footer-logout">
-          -->❌
-        </button>
-      </form>
-
-    {% else %}
-
-      <a href="{% url 'account_login' %}" class="footer-login">
-        🔐 {% trans "Login" %}
-      </a>
-
-    {% endif %}
-
-  </div>
-
 </footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const footer = document.getElementById("site-footer");
+
+    if (!footer) {
+        return;
+    }
+
+    const mobileQuery = window.matchMedia(
+        "(max-width: 640px)"
+    );
+
+    let footerScrollTimer = null;
+
+    function showFooterMetaDuringScroll() {
+        if (!mobileQuery.matches) {
+            footer.classList.remove(
+                "site-footer--scroll-active"
+            );
+            return;
+        }
+
+        footer.classList.add(
+            "site-footer--scroll-active"
+        );
+
+        window.clearTimeout(
+            footerScrollTimer
+        );
+
+        footerScrollTimer = window.setTimeout(
+            function () {
+                footer.classList.remove(
+                    "site-footer--scroll-active"
+                );
+            },
+            900
+        );
+    }
+
+    window.addEventListener(
+        "scroll",
+        showFooterMetaDuringScroll,
+        { passive: true }
+    );
+
+    mobileQuery.addEventListener(
+        "change",
+        function () {
+            if (!mobileQuery.matches) {
+                footer.classList.remove(
+                    "site-footer--scroll-active"
+                );
+            }
+        }
+    );
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 

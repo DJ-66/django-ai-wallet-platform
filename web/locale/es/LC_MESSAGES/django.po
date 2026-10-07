@@ -2981,3 +2981,7 @@ msgstr "Volver a iniciar sesión"
 
 #~ msgid "Hash"
 #~ msgstr "Hash"
+
+#: templates/base.html
+msgid "List My Biz"
+msgstr "Publicar mi negocio"

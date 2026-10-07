@@ -201,6 +201,12 @@ CREATOR_VISION_COPY_ENABLED = (
     in {"1", "true", "yes", "on"}
 )
 
+FANZ_LOCALIZATION_MODEL = os.getenv(
+    "FANZ_LOCALIZATION_MODEL",
+    OLLAMA_MODEL,
+)
+
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", default="")
 OPENAI_COMPANION_MODEL = os.getenv(
     "OPENAI_COMPANION_MODEL",
