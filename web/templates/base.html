@@ -11,7 +11,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=389">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=391">
   {% block extra_css %}{% endblock %}
   <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤩</text>
@@ -287,7 +287,7 @@ document.addEventListener("DOMContentLoaded", function () {
       {% if user.is_authenticated %}
         <a
           href="{% url 'public_profile_root' request.user.username %}"
-          class="nav-link"
+          class="nav-link  footer-biz-btn"
         >
           👤 {% trans "Profile" %}
         </a>
@@ -301,12 +301,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         <a
           href="{% url 'event_list' %}"
-          class="nav-link"
+          class="nav-link  footer-biz-btn"
         >
           📅 {% trans "Events" %}
         </a>
       {% else %}
-        <a href="{% url 'signup' %}" class="nav-signup">
+        <a href="{% url 'signup' %}" class="nav-signup footer-biz-btn">
           {% trans "Sign up" %}
         </a>
       {% endif %}
@@ -318,14 +318,14 @@ document.addEventListener("DOMContentLoaded", function () {
           {% csrf_token %}
           <button
             type="submit"
-            class="footer-logout"
+            class="footer-logout footer-biz-btn"
             aria-label="{% trans 'Logout' %}"
           >
             -->❌
           </button>
         </form>
       {% else %}
-        <a href="{% url 'account_login' %}" class="footer-login">
+        <a href="{% url 'account_login' %}" class="footer-login footer-biz-btn">
           🔐 {% trans "Login" %}
         </a>
       {% endif %}
@@ -333,7 +333,8 @@ document.addEventListener("DOMContentLoaded", function () {
   </div>
 
   <div class="footer-secondary-row" aria-hidden="true">
-    © {% now "Y" %} Fanz.to
+    © {% now "Y" %} Fanz.to ~ 🤩 ~ Encarnacion, PY
+
   </div>
 </footer>
 
