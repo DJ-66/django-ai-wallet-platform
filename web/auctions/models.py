@@ -1188,6 +1188,16 @@ class FeedPostTranslation(models.Model):
         default="",
     )
 
+    image = models.ImageField(
+        upload_to="feed/translations/",
+        blank=True,
+        null=True,
+        help_text=(
+            "Optional cover image for this language. "
+            "Falls back to the original post image."
+        ),
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
     )

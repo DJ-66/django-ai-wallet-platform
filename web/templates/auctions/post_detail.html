@@ -83,14 +83,14 @@
     {% if media.is_active %}
         {% if media.media_type == "image" %}
         <a
-        href="{{ media.file.url }}"
+        href="{{ post.localized_cover_url|default:media.file.url }}"
         class="feed-image-link"
         data-fanz-lightbox
         data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
         data-fanz-lightbox-group="post-{{ post.id }}"
         >
         <img
-            src="{{ media.file.url }}"
+            src="{{ post.localized_cover_url|default:media.file.url }}"
             alt="{{ media.caption|default:post.title }}"
             class="feed-image"
             loading="lazy"
@@ -125,14 +125,14 @@
 {% endfor %}
 {% if not post.media.exists and post.image %}
     <a
-        href="{{ post.image.url }}"
+        href="{{ post.localized_cover_url|default:post.image.url }}"
         class="feed-image-link"
         data-fanz-lightbox
         data-fanz-lightbox-caption="{{ post.display_title }}"
         data-fanz-lightbox-group="post-{{ post.id }}"
     >
         <img
-            src="{{ post.image.url }}"
+            src="{{ post.localized_cover_url|default:post.image.url }}"
             alt="{{ post.display_title }}"
             class="feed-image"
             loading="lazy"

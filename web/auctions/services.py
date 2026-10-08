@@ -771,13 +771,17 @@ def prepare_feed_posts(posts, language=None):
         if language not in ("en", "es", "pt"):
             language = "en"
 
-        posts = posts.prefetch_related("translations")
+        posts = posts.prefetch_related(
+            "translations",
+            "media",
+        )
 
     prepared_posts = list(posts)
 
     for post in prepared_posts:
         post.display_title = post.title
         post.display_content = post.content
+        post.localized_cover_url = None
 
         if language:
             translation = next(
@@ -795,6 +799,33 @@ def prepare_feed_posts(posts, language=None):
 
                 if translation.content:
                     post.display_content = translation.content
+
+                if (
+                    not post.is_paid
+                    and post.is_public
+                    and translation.image
+                ):
+                    active_media = [
+                        media
+                        for media in post.media.all()
+                        if media.is_active
+                    ]
+
+                    single_image = (
+                        len(active_media) == 1
+                        and active_media[0].media_type == "image"
+                    )
+
+                    legacy_image = (
+                        not active_media
+                        and not post.media.exists()
+                        and bool(post.image)
+                    )
+
+                    if single_image or legacy_image:
+                        post.localized_cover_url = (
+                            translation.image.url
+                        )
 
     return prepared_posts
 

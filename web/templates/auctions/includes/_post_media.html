@@ -4,23 +4,25 @@
         {% if media.is_active %}
 
             {% if media.media_type == "image" %}
+                {% with cover_url=post.localized_cover_url|default:media.file.url %}
                 <a
-                    href="{{ media.file.url }}"
+                    href="{{ cover_url }}"
                     class="feed-image-link{% if not forloop.first %} feed-lightbox-only{% endif %}"
                     data-fanz-lightbox
                     data-fanz-lightbox-type="image"
-                    data-fanz-lightbox-src="{{ media.file.url }}"
+                    data-fanz-lightbox-src="{{ cover_url }}"
                     data-fanz-lightbox-caption="{{ media.caption|default:post.title }}"
                     data-fanz-lightbox-group="post-{{ post.id }}"
                     {% if not forloop.first %}aria-hidden="true"{% endif %}
                 >
                     <img
-                        src="{{ media.file.url }}"
+                        src="{{ cover_url }}"
                         alt="{{ media.caption|default:post.title }}"
                         class="feed-image"
                         loading="lazy"
                     >
                 </a>
+                {% endwith %}
 
             {% elif media.media_type == "video" %}
                 <button
@@ -74,18 +76,20 @@
 
 
 {% if not post.media.exists and post.image %}
+    {% with cover_url=post.localized_cover_url|default:post.image.url %}
     <a
-        href="{{ post.image.url }}"
+        href="{{ cover_url }}"
         class="feed-image-link"
         data-fanz-lightbox
         data-fanz-lightbox-caption="{{ post.title }}"
         data-fanz-lightbox-group="post-{{ post.id }}"
     >
         <img
-            src="{{ post.image.url }}"
+            src="{{ cover_url }}"
             alt="{{ post.title }}"
             class="feed-image"
             loading="lazy"
         >
     </a>
+    {% endwith %}
 {% endif %}

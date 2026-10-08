@@ -5441,6 +5441,7 @@ def translate_post(request, post_id):
     if request.method == "POST":
         form = FeedPostTranslationForm(
             request.POST,
+            request.FILES,
             instance=translation,
         )
 

@@ -612,3 +612,591 @@ class FeedPostLanguagePresentationTests(TestCase):
                 response,
                 expected,
             )
+
+
+class FeedPostLocalizedImageTests(TestCase):
+    """Localized image selection without modifying original media."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from auctions.models import FeedPost, FeedPostTranslation
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="localized_image_tester"
+        )
+
+        self.post = FeedPost.objects.create(
+            user=self.user,
+            title="About FANZ",
+            content="Welcome to FANZ",
+            is_public=True,
+            is_paid=False,
+            image="feed/original.webp",
+        )
+
+        for lang in ("en", "es", "pt"):
+            FeedPostTranslation.objects.create(
+                post=self.post,
+                language=lang,
+                title=f"Title {lang}",
+                content=f"Content {lang}",
+                image=f"feed/translations/{lang}.webp",
+            )
+
+    def prepared(self, lang):
+        from auctions.services import prepare_feed_posts
+
+        return prepare_feed_posts(
+            FeedPost.objects.filter(pk=self.post.pk),
+            language=lang,
+        )[0]
+
+    def test_each_language_selects_its_image(self):
+        for lang in ("en", "es", "pt"):
+            with self.subTest(language=lang):
+                post = self.prepared(lang)
+
+                self.assertIn(
+                    f"{lang}.webp",
+                    post.localized_cover_url,
+                )
+
+                self.assertEqual(
+                    post.display_title,
+                    f"Title {lang}",
+                )
+
+    def test_missing_translation_image_falls_back(self):
+        from auctions.models import FeedPostTranslation
+
+        translation = FeedPostTranslation.objects.get(
+            post=self.post,
+            language="es",
+        )
+
+        translation.image = None
+        translation.save(update_fields=["image"])
+
+        post = self.prepared("es")
+
+        self.assertIsNone(post.localized_cover_url)
+
+    def test_paid_post_does_not_expose_localized_image(self):
+        self.post.is_paid = True
+        self.post.save(update_fields=["is_paid"])
+
+        post = self.prepared("es")
+
+        self.assertIsNone(post.localized_cover_url)
+
+    def test_nonpublic_post_does_not_use_localized_image(self):
+        self.post.is_public = False
+        self.post.save(update_fields=["is_public"])
+
+        post = self.prepared("pt")
+
+        self.assertIsNone(post.localized_cover_url)
+
+    def test_multiple_media_items_preserve_original_gallery(self):
+        from auctions.models import FeedPostMedia
+
+        self.post.image = None
+        self.post.save(update_fields=["image"])
+
+        for number in (1, 2):
+            FeedPostMedia.objects.create(
+                post=self.post,
+                file=f"feed/media/image-{number}.webp",
+                media_type="image",
+                is_active=True,
+                display_order=number,
+            )
+
+        post = self.prepared("es")
+
+        self.assertIsNone(post.localized_cover_url)
+
+    def test_single_media_image_can_be_localized(self):
+        from auctions.models import FeedPostMedia
+
+        self.post.image = None
+        self.post.save(update_fields=["image"])
+
+        FeedPostMedia.objects.create(
+            post=self.post,
+            file="feed/media/original.webp",
+            media_type="image",
+            is_active=True,
+        )
+
+        post = self.prepared("pt")
+
+        self.assertIn(
+            "pt.webp",
+            post.localized_cover_url,
+        )
+
+
+class FeedPostLocalizedImageRenderingTests(TestCase):
+    """Verify localized cover and lightbox URLs in rendered HTML."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from auctions.models import (
+            FeedPost,
+            FeedPostMedia,
+            FeedPostTranslation,
+        )
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="localized_render_tester"
+        )
+
+        self.post = FeedPost.objects.create(
+            user=self.user,
+            title="About FANZ",
+            content="Welcome to FANZ",
+            is_public=True,
+            is_paid=False,
+        )
+
+        FeedPostMedia.objects.create(
+            post=self.post,
+            file="feed/media/original.webp",
+            media_type="image",
+            is_active=True,
+        )
+
+        for lang in ("en", "es", "pt"):
+            FeedPostTranslation.objects.create(
+                post=self.post,
+                language=lang,
+                title=f"Title {lang}",
+                content=f"Content {lang}",
+                image=f"feed/translations/{lang}.webp",
+            )
+
+    def test_direct_post_renders_localized_cover_and_lightbox(self):
+        from django.urls import reverse
+
+        url = reverse(
+            "post_detail",
+            args=[self.post.pk],
+        )
+
+        for lang in ("en", "es", "pt"):
+            with self.subTest(language=lang):
+                response = self.client.get(
+                    url,
+                    {"lang": lang},
+                )
+
+                self.assertEqual(response.status_code, 200)
+
+                expected = f"/media/feed/translations/{lang}.webp"
+
+                self.assertContains(
+                    response,
+                    f'href="{expected}"',
+                )
+                self.assertContains(
+                    response,
+                    f'src="{expected}"',
+                )
+
+    def test_profile_renders_localized_cover(self):
+        from django.urls import reverse
+
+        url = reverse(
+            "public_profile_root",
+            kwargs={"username": self.user.username},
+        )
+
+        for lang in ("en", "es", "pt"):
+            with self.subTest(language=lang):
+                response = self.client.get(
+                    url,
+                    {"lang": lang},
+                )
+
+                self.assertEqual(response.status_code, 200)
+
+                expected = f"/media/feed/translations/{lang}.webp"
+
+                self.assertContains(
+                    response,
+                    f'href="{expected}"',
+                )
+                self.assertContains(
+                    response,
+                    f'src="{expected}"',
+                )
+
+    def test_missing_image_uses_original_cover(self):
+        from django.urls import reverse
+        from auctions.models import FeedPostTranslation
+
+        translation = FeedPostTranslation.objects.get(
+            post=self.post,
+            language="es",
+        )
+
+        translation.image = None
+        translation.save(update_fields=["image"])
+
+        response = self.client.get(
+            reverse("post_detail", args=[self.post.pk]),
+            {"lang": "es"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'src="/media/feed/media/original.webp"',
+        )
+        self.assertNotContains(
+            response,
+            "/media/feed/translations/es.webp",
+        )
+
+
+class FeedPostLocalizedImageUploadTests(TestCase):
+    """Exercise localized image uploads through the translation view."""
+
+    def setUp(self):
+        import tempfile
+
+        from django.contrib.auth import get_user_model
+        from django.test import override_settings
+        from django.urls import reverse
+        from auctions.models import (
+            FeedPost,
+            FeedPostTranslation,
+        )
+
+        self.temp_media = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_media.cleanup)
+
+        media_override = override_settings(
+            MEDIA_ROOT=self.temp_media.name
+        )
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="localized_upload_tester",
+            password="test-password",
+        )
+
+        self.post = FeedPost.objects.create(
+            user=self.user,
+            title="About FANZ",
+            content="Original content",
+            image="feed/original.webp",
+            is_public=True,
+            is_paid=False,
+        )
+
+        self.translation = FeedPostTranslation.objects.create(
+            post=self.post,
+            language="es",
+            title="Acerca de FANZ",
+            content="Contenido en español",
+        )
+
+        self.url = reverse(
+            "translate_post",
+            args=[self.post.pk],
+        ) + "?lang=es"
+
+        self.client.force_login(self.user)
+
+    def make_image(self, color="blue"):
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        buffer = BytesIO()
+
+        Image.new(
+            "RGB",
+            (120, 120),
+            color,
+        ).save(buffer, format="PNG")
+
+        return SimpleUploadedFile(
+            "localized.png",
+            buffer.getvalue(),
+            content_type="image/png",
+        )
+
+    def test_upload_localized_image(self):
+        response = self.client.post(
+            self.url,
+            {
+                "title": "Acerca de FANZ",
+                "content": "Contenido en español",
+                "image": self.make_image(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.translation.refresh_from_db()
+
+        self.assertTrue(self.translation.image)
+        self.assertTrue(
+            self.translation.image.name.startswith(
+                "feed/translations/"
+            )
+        )
+
+        self.assertEqual(
+            self.translation.content,
+            "Contenido en español",
+        )
+
+    def test_replace_localized_image(self):
+        self.client.post(
+            self.url,
+            {
+                "title": "Acerca de FANZ",
+                "content": "Contenido en español",
+                "image": self.make_image("blue"),
+            },
+        )
+
+        self.translation.refresh_from_db()
+        original_name = self.translation.image.name
+
+        response = self.client.post(
+            self.url,
+            {
+                "title": "Acerca de FANZ",
+                "content": "Contenido en español",
+                "image": self.make_image("red"),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.translation.refresh_from_db()
+
+        self.assertNotEqual(
+            self.translation.image.name,
+            original_name,
+        )
+
+    def test_invalid_image_is_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        response = self.client.post(
+            self.url,
+            {
+                "title": "Acerca de FANZ",
+                "content": "Contenido en español",
+                "image": SimpleUploadedFile(
+                    "invalid.png",
+                    b"not-an-image",
+                    content_type="image/png",
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.translation.refresh_from_db()
+
+        self.assertFalse(self.translation.image)
+
+    def test_text_only_update_preserves_image(self):
+        self.client.post(
+            self.url,
+            {
+                "title": "Acerca de FANZ",
+                "content": "Contenido en español",
+                "image": self.make_image(),
+            },
+        )
+
+        self.translation.refresh_from_db()
+        image_name = self.translation.image.name
+
+        response = self.client.post(
+            self.url,
+            {
+                "title": "Nuevo título",
+                "content": "Texto actualizado",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.translation.refresh_from_db()
+
+        self.assertEqual(
+            self.translation.image.name,
+            image_name,
+        )
+
+        self.assertEqual(
+            self.translation.content,
+            "Texto actualizado",
+        )
+
+
+class FeedPostLocalizedDiscoveryTests(TestCase):
+    """Localized covers must preserve Community and hashtag behavior."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from auctions.models import (
+            FeedPost,
+            FeedPostMedia,
+            FeedPostTranslation,
+            Hashtag,
+        )
+
+        User = get_user_model()
+
+        self.user = User.objects.create_user(
+            username="localized_discovery_tester"
+        )
+
+        self.tag = Hashtag.objects.create(
+            name="localizedcovercheck"
+        )
+
+        self.post = FeedPost.objects.create(
+            user=self.user,
+            title="About FANZ",
+            content="Welcome to FANZ",
+            is_public=True,
+            is_paid=False,
+        )
+
+        self.post.hashtags.add(self.tag)
+
+        FeedPostMedia.objects.create(
+            post=self.post,
+            file="feed/media/original.webp",
+            media_type="image",
+            is_active=True,
+        )
+
+        for lang in ("en", "es", "pt"):
+            FeedPostTranslation.objects.create(
+                post=self.post,
+                language=lang,
+                title=f"Title {lang}",
+                content=f"Content {lang}",
+                image=f"feed/translations/{lang}.webp",
+            )
+
+    def test_community_feed_localized_images(self):
+        from django.urls import reverse
+
+        url = reverse("feed_home")
+
+        for lang in ("en", "es", "pt"):
+            with self.subTest(language=lang):
+                response = self.client.get(
+                    url,
+                    {"lang": lang},
+                )
+
+                self.assertEqual(response.status_code, 200)
+
+                self.assertContains(
+                    response,
+                    f"/media/feed/translations/{lang}.webp",
+                )
+
+    def test_hashtag_feed_localized_images(self):
+        from django.urls import reverse
+
+        url = reverse(
+            "hashtag_feed",
+            args=[self.tag.name],
+        )
+
+        for lang in ("en", "es", "pt"):
+            with self.subTest(language=lang):
+                response = self.client.get(
+                    url,
+                    {"lang": lang},
+                )
+
+                self.assertEqual(response.status_code, 200)
+
+                self.assertContains(
+                    response,
+                    f"/media/feed/translations/{lang}.webp",
+                )
+
+    def test_hashtag_discovery_remains_based_on_original_media(self):
+        from auctions.services import (
+            get_public_hashtag_posts,
+            get_public_hashtag_post_count,
+        )
+
+        post_ids = list(
+            get_public_hashtag_posts(self.tag)
+            .values_list("id", flat=True)
+        )
+
+        self.assertIn(self.post.pk, post_ids)
+
+        self.assertEqual(
+            get_public_hashtag_post_count(self.tag),
+            1,
+        )
+
+    def test_paid_post_does_not_enter_public_discovery(self):
+        from auctions.services import get_public_hashtag_posts
+
+        self.post.is_paid = True
+        self.post.save(update_fields=["is_paid"])
+
+        self.assertFalse(
+            get_public_hashtag_posts(self.tag)
+            .filter(pk=self.post.pk)
+            .exists()
+        )
+
+    def test_old_post_remains_on_hashtag_but_not_community(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.urls import reverse
+        from auctions.services import get_public_hashtag_posts
+
+        FeedPost = type(self.post)
+
+        FeedPost.objects.filter(
+            pk=self.post.pk
+        ).update(
+            created_at=timezone.now() - timedelta(days=5)
+        )
+
+        community = self.client.get(
+            reverse("feed_home"),
+            {"lang": "es"},
+        )
+
+        self.assertEqual(community.status_code, 200)
+
+        self.assertNotContains(
+            community,
+            "Content es",
+        )
+
+        self.assertTrue(
+            get_public_hashtag_posts(self.tag)
+            .filter(pk=self.post.pk)
+            .exists()
+        )

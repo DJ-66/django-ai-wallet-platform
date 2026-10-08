@@ -441,11 +441,13 @@ class FeedPostTranslationForm(forms.ModelForm):
         fields = [
             "title",
             "content",
+            "image",
         ]
 
         labels = {
             "title": _("Title"),
             "content": _("Content"),
+            "image": _("Localized cover image"),
         }
 
         widgets = {
@@ -460,7 +462,59 @@ class FeedPostTranslationForm(forms.ModelForm):
                     "placeholder": _("Localized post content..."),
                 }
             ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
         }
+
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+
+        if not image:
+            return image
+
+        # Existing stored images are already validated.
+        if not hasattr(image, "size"):
+            return image
+
+        max_size = 10 * 1024 * 1024
+        max_pixels = 25_000_000
+
+        if image.size > max_size:
+            raise forms.ValidationError(
+                _("Localized images must be 10 MB or smaller.")
+            )
+
+        try:
+            image.seek(0)
+
+            with Image.open(image) as img:
+                image_format = img.format
+                width, height = img.size
+                img.verify()
+
+            image.seek(0)
+
+        except (UnidentifiedImageError, OSError, ValueError):
+            raise forms.ValidationError(
+                _("Upload a valid localized image.")
+            )
+
+        if image_format not in ("JPEG", "PNG", "WEBP"):
+            raise forms.ValidationError(
+                _("Supported formats are JPEG, PNG, and WebP.")
+            )
+
+        if width * height > max_pixels:
+            raise forms.ValidationError(
+                _("Localized images must be 25 megapixels or smaller.")
+            )
+
+        return image
+
 
 class SignUpForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)

@@ -36,10 +36,34 @@
         </a>
     </div>
 
-    <form method="post" class="profile-translate-form">
+    <form method="post" enctype="multipart/form-data" class="profile-translate-form">
         {% csrf_token %}
 
         {{ form.as_p }}
+
+        <p class="localized-cover-help">
+            {% trans "Localized cover images replace the original image for visitors using this language. Supported formats: JPEG, PNG, WebP. Maximum size: 10 MB." %}
+        </p>
+
+        <p class="localized-cover-help">
+            {% trans "Available for public, free posts with one image. Multi-image galleries, videos, audio, PDFs, and premium posts retain their original media." %}
+        </p>
+
+        {% if translation.image %}
+            <div class="localized-image-preview">
+                <p>
+                    <strong>
+                        {% trans "Current localized image" %}
+                    </strong>
+                </p>
+                <img
+                    src="{{ translation.image.url }}"
+                    alt="{% trans 'Localized post cover' %}"
+                    style="max-width:100%;max-height:320px;object-fit:contain;"
+                    loading="lazy"
+                >
+            </div>
+        {% endif %}
 
         <div class="profile-translate-actions">
             <button type="submit">
