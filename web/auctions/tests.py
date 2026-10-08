@@ -16109,3 +16109,175 @@ class FanzSearchTokenMatchingTests(TestCase):
             token_candidate,
             0,
         )
+
+
+class OfficialPlatformProfileTests(TestCase):
+    """Regression tests for FANZ official profile presentation."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+        from .models import UserProfile
+
+        User = get_user_model()
+        self.accounts = {}
+
+        for username in (
+            "TOS",
+            "PrivacyPolicy",
+            "FAQ",
+            "About",
+            "Fanz",
+            "BuyCredits",
+        ):
+            user = User.objects.create_user(username=username)
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.is_platform_account = True
+            profile.bio = f"Public biography for {username}"
+            profile.save(update_fields=["is_platform_account", "bio"])
+            self.accounts[username] = user
+
+        self.viewer = User.objects.create_user(
+            username="profile_viewer",
+            password="test-password",
+        )
+        UserProfile.objects.get_or_create(user=self.viewer)
+
+        self.creator = User.objects.create_user(username="creator")
+        UserProfile.objects.get_or_create(user=self.creator)
+
+        self.reverse = reverse
+
+    def profile_response(self, username):
+        return self.client.get(
+            self.reverse(
+                "public_profile_root",
+                kwargs={"username": username},
+            )
+        )
+
+    def test_informational_profiles_hide_creator_actions(self):
+        self.client.force_login(self.viewer)
+
+        for username in ("TOS", "PrivacyPolicy", "FAQ", "About"):
+            with self.subTest(username=username):
+                response = self.profile_response(username)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    response.context["official_profile_role"],
+                    "informational",
+                )
+                self.assertFalse(response.context["show_profile_fan"])
+                self.assertFalse(response.context["show_profile_message"])
+                self.assertFalse(response.context["show_profile_credits"])
+
+                self.assertNotContains(
+                    response,
+                    'class="auth-primary-btn profile-tip-btn profile-fan-btn"',
+                )
+                self.assertNotContains(
+                    response,
+                    'class="auth-primary-btn profile-message-btn"',
+                )
+                self.assertNotContains(
+                    response,
+                    'class="feed-tip-group"',
+                )
+
+    def test_fanz_retains_fundraising_actions(self):
+        self.client.force_login(self.viewer)
+        response = self.profile_response("Fanz")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["official_profile_role"],
+            "fundraising",
+        )
+        self.assertFalse(response.context["show_profile_fan"])
+        self.assertTrue(response.context["show_profile_message"])
+        self.assertTrue(response.context["show_profile_credits"])
+        self.assertContains(
+            response,
+            'class="auth-primary-btn profile-message-btn"',
+        )
+
+    def test_buycredits_preserves_storefront_role(self):
+        response = self.profile_response("BuyCredits")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["official_profile_role"],
+            "storefront",
+        )
+        self.assertTrue(response.context["is_credit_storefront"])
+        self.assertFalse(response.context["show_profile_message"])
+        self.assertFalse(response.context["show_profile_credits"])
+
+    def test_standard_creator_retains_actions(self):
+        self.client.force_login(self.viewer)
+        response = self.profile_response("creator")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["official_profile_role"], "")
+        self.assertTrue(response.context["show_profile_fan"])
+        self.assertTrue(response.context["show_profile_message"])
+        self.assertTrue(response.context["show_profile_credits"])
+        self.assertContains(
+            response,
+            'class="auth-primary-btn profile-message-btn"',
+        )
+
+    def test_anonymous_visitor_sees_public_biography(self):
+        for username in ("TOS", "PrivacyPolicy", "FAQ", "About"):
+            with self.subTest(username=username):
+                response = self.profile_response(username)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(
+                    response,
+                    f"Public biography for {username}",
+                    count=1,
+                )
+
+    def test_username_alone_does_not_grant_platform_role(self):
+        profile = self.accounts["TOS"].profile
+        profile.is_platform_account = False
+        profile.save(update_fields=["is_platform_account"])
+
+        response = self.profile_response("TOS")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["official_profile_role"], "")
+
+    def test_post_level_tipping_respects_profile_role(self):
+        from .models import FeedPost, BidWallet
+
+        self.client.force_login(self.viewer)
+
+        for username in ("TOS", "Fanz", "creator"):
+            user = (
+                self.accounts.get(username)
+                if username in self.accounts
+                else self.creator
+            )
+
+            BidWallet.objects.get_or_create(user=user)
+
+            FeedPost.objects.create(
+                user=user,
+                title="Test Post",
+                content="Testing profile post actions.",
+                is_public=True,
+                is_paid=False,
+            )
+
+            response = self.profile_response(username)
+
+            self.assertEqual(response.status_code, 200)
+
+            expected = username != "TOS"
+
+            self.assertEqual(
+                'class="feed-tip-group"' in response.content.decode(),
+                expected,
+                f"Unexpected tipping visibility for @{username}",
+            )

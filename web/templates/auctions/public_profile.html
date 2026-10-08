@@ -114,7 +114,6 @@
             </div>
         {% endif %}
 
-        {% if request.user == profile_user %}
             {% if display_bio or profile.location or profile.website %}
                 <div class="profile-about-block">
                     {% if display_bio %}
@@ -143,9 +142,9 @@
                     {% endif %}
                 </div>
             {% endif %}
-        {% endif %}
 
         {% if request.user.is_authenticated and request.user != profile_user %}
+            {% if show_profile_fan %}
             <a href="{% url 'toggle_fan' profile_user.username %}"
                class="auth-primary-btn profile-tip-btn profile-fan-btn">
                 {% if is_fan %}
@@ -155,56 +154,27 @@
                 {% endif %}
 
             </a>
+            {% endif %}
 
             <div
                 class="profile-action-gap"
                 aria-hidden="true"
             ></div>
 
-         {% if request.user.is_authenticated %}
+         {% if show_profile_message %}
          <a href="{% url 'start_conversation' profile_user.username %}"
          class="auth-primary-btn profile-message-btn">
         💌 {% trans "Message" %} {{ profile_user.username }}
         </a>
         {% endif %}
-             {% if profile_user.bidwallet.wallet_code %}
+             {% if show_profile_credits and profile_user.bidwallet.wallet_code %}
             <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
                class="auth-primary-btn profile-tip-btn">
                 💰 {% trans "Send Credits" %}
             </a>
             {% endif %}
             
-            {% if display_bio or profile.location or profile.website %}
-                <div class="profile-about-block">
-                    {% if display_bio %}
-                        <p class="profile-bio">
-                            {{ display_bio|linebreaksbr }}
-                        </p>
-                    {% endif %}
-
-                   {% if profile.location %}
-                   <div class="profile-location">
-                   <a href="https://www.google.com/maps/search/?api=1&query={{ profile.location|urlencode }}"
-                   target="_blank"
-                   rel="noopener"
-                   title="View on map">
-                   📍 {{ profile.location }}
-                   </a>
-                   </div>
-                  {% endif %}
-
-                    {% if profile.website %}
-                        <p class="profile-meta">
-                            🔗 <a href="{{ profile.website }}" target="_blank" rel="noopener">
-                                {{ profile.website|cut:"https://"|cut:"http://"|cut:"www." }}
-                            </a>
-                        </p>
-                    {% endif %}
-                </div>
-            {% endif %}
-            {% endif %}
-
-
+        {% endif %}
 
         {% if profile.youtube or profile.instagram or profile.x_url or profile.tiktok or profile.telegram or profile.whatsapp or profile.featured_link_1_url or profile.featured_link_2_url or profile.featured_link_3_url %}
             <div class="profile-social-links">
@@ -1792,7 +1762,7 @@
 
 
 
-    {% if request.user.is_authenticated and request.user != post.user and post.user.bidwallet.wallet_code %}
+    {% if show_profile_credits and request.user.is_authenticated and request.user != post.user and post.user.bidwallet.wallet_code %}
        <div class="feed-tip-group">
 
     <button

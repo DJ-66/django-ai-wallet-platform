@@ -4784,6 +4784,27 @@ def public_profile(request, username):
 
     profile, _ = UserProfile.objects.get_or_create(user=profile_user)
 
+    official_account_roles = {
+        "tos": "informational",
+        "privacypolicy": "informational",
+        "faq": "informational",
+        "about": "informational",
+        "fanz": "fundraising",
+        "buycredits": "storefront",
+    }
+
+    official_profile_role = (
+        official_account_roles.get(
+            profile_user.username.lower(), ""
+        )
+        if profile.is_platform_account
+        else ""
+    )
+
+    show_profile_fan = not bool(official_profile_role)
+    show_profile_message = official_profile_role in ("", "fundraising")
+    show_profile_credits = official_profile_role in ("", "fundraising")
+
     language = request.GET.get(
         "lang",
         getattr(request, "LANGUAGE_CODE", "en"),
@@ -5282,6 +5303,10 @@ def public_profile(request, username):
         "auctions/public_profile.html",
         {
             "profile_user": profile_user,
+            "official_profile_role": official_profile_role,
+            "show_profile_fan": show_profile_fan,
+            "show_profile_message": show_profile_message,
+            "show_profile_credits": show_profile_credits,
             "profile": profile,
             "support_product": support_product,
             "support_total": support_total,
