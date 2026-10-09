@@ -46,7 +46,7 @@
         </p>
 
         <p class="localized-cover-help">
-            {% trans "Available for public, free posts with one image. Multi-image galleries, videos, audio, PDFs, and premium posts retain their original media." %}
+            {% trans "Available for free posts with one image, including posts excluded from public discovery. Multi-image galleries, videos, audio, PDFs, and premium posts retain their original media." %}
         </p>
 
         {% if translation.image %}
@@ -188,6 +188,18 @@
             border-radius: 16px;
         }
     }
+
+    /* Localized cover upload control */
+    .profile-translate-form input[type="file"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100%;
+        height: auto;
+        margin: 8px 0 12px;
+        cursor: pointer;
+    }
+
 </style>
 
 {% endblock %}

@@ -802,7 +802,6 @@ def prepare_feed_posts(posts, language=None):
 
                 if (
                     not post.is_paid
-                    and post.is_public
                     and translation.image
                 ):
                     active_media = [

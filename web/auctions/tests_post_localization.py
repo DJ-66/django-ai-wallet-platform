@@ -691,13 +691,13 @@ class FeedPostLocalizedImageTests(TestCase):
 
         self.assertIsNone(post.localized_cover_url)
 
-    def test_nonpublic_post_does_not_use_localized_image(self):
+    def test_nonpublic_post_uses_localized_image(self):
         self.post.is_public = False
         self.post.save(update_fields=["is_public"])
 
         post = self.prepared("pt")
 
-        self.assertIsNone(post.localized_cover_url)
+        self.assertIn("pt.webp", post.localized_cover_url)
 
     def test_multiple_media_items_preserve_original_gallery(self):
         from auctions.models import FeedPostMedia
