@@ -47,16 +47,16 @@
 
   <nav>
      <a href="{% url 'feed_home' %}" class="nav-link nav-icon-link"><span class="nav-emoji">🗨️🤔</span> {% trans "Feed" %}</a>
-     
+
      <a href="/auctions/" class="nav-link nav-icon-link"><span class="nav-emoji">🎁</span> {% trans "Auctions" %}</a>
-     <a href="/ai/" class="nav-link nav-icon-link"><span class="nav-emoji">🤖</span> {% trans "AI" %}</a>    
+     <a href="/AI/" class="nav-link nav-icon-link"><span class="nav-emoji">🤖</span> {% trans "AI" %}</a>
      {% if user.is_authenticated %}
-    
+
     <a href="{% url 'wallet' %}" id="walletCredits" class="nav-link nav-icon-link"><span class="nav-emoji">💰
     </span> {{ wallet.credits|compact_number }}</a>
     {% endif %}
 
-    {% if user.is_authenticated %} 
+    {% if user.is_authenticated %}
 
 <a href="{% url 'inbox' %}" class="nav-link nav-icon-link dm-nav-link">
     <span class="nav-emoji dm-icon-wrap">
@@ -70,7 +70,7 @@
 
 
     {% endif %}
-    
+
      <a href="{% url 'notifications' %}?next={{ request.get_full_path|urlencode }}" class="nav-link nav-icon-link">
      <span class="nav-emoji">🔔</span> {{ unread_notification_count }}
     </a>
@@ -260,7 +260,7 @@ document.addEventListener("DOMContentLoaded", function () {
   </section>
 </div>
 <main class="container">
-  
+
 <br>
   {% if messages %}
     <div class="messages-container">
@@ -269,16 +269,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 {{ message }}
             </div>
         {% endfor %}
-        
-        
+
+
 </div>
 {% endif %}
     </div>
- 
+
   {% block content %}
 
   {% endblock %}
-  
+
 </main>
 
 <footer class="site-footer" id="site-footer">
@@ -491,11 +491,11 @@ function guessNotificationSoundTypeFromText(text) {
 
 document.addEventListener("DOMContentLoaded", function () {
   updateSoundButton();
-    
+
 document.querySelectorAll(".app-message").forEach(function (item) {
     const soundType = guessNotificationSoundTypeFromText(item.innerText);
     playNotificationSound(soundType);
-  
+
   });
   document.getElementById("enable-notification-sounds")?.addEventListener("click", function () {
     notificationSoundsEnabled = true;
