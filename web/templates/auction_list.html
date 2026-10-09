@@ -3,7 +3,38 @@
 
 {% block content %}
 
-<div class="page-header">
+<style>
+/* FANZ Auctions introduction card */
+.auctions-intro-card {
+    max-width: 1100px;
+    margin: 20px auto 28px;
+    padding: 26px 30px;
+    background: #ffffff;
+    color: #17213a;
+    border: 1px solid #e4e6ef;
+    border-radius: 18px;
+    box-shadow: 0 5px 20px rgba(20, 30, 60, .07);
+}
+
+.auctions-intro-card h1 {
+    color: #17213a;
+    margin-top: 0;
+}
+
+.auctions-intro-card p {
+    color: #48536a;
+    margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .auctions-intro-card {
+        margin: 12px 10px 22px;
+        padding: 18px;
+    }
+}
+</style>
+
+<div class="page-header auctions-intro-card">
   <h1>{% trans "Live Auctions" %}</h1>
   <p>{% trans "Bid with credits. Auctions ending soon extend 15s with new bid" %}</p>
 </div>

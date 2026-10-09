@@ -207,6 +207,18 @@ urlpatterns = [
     ),
 
     path(
+        "platform/accounts/<int:user_id>/media/<int:asset_id>/toggle/",
+        views.platform_media_toggle,
+        name="platform_media_toggle",
+    ),
+
+    path(
+        "platform/accounts/<int:user_id>/media/",
+        views.platform_account_media,
+        name="platform_account_media",
+    ),
+
+    path(
         "platform/accounts/<int:user_id>/login-as/",
         views.login_as_platform_account,
         name="login_as_platform_account",

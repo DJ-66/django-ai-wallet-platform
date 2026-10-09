@@ -208,6 +208,12 @@
                                     {% trans "View Profile" %}
                                 </a>
 
+                                <a
+                                    class="auth-primary-btn"
+                                    href="{% url 'platform_account_media' row.profile.user.id %}">
+                                    📁 {% trans "Manage Media" %}
+                                </a>
+
 
                                 <form
                                     method="post"
@@ -402,6 +408,12 @@
                                 class="auth-primary-btn"
                                 href="{% url 'public_profile_root' profile.user.username %}">
                                 {% trans "View Profile" %}
+                            </a>
+
+                            <a
+                                class="auth-primary-btn"
+                                href="{% url 'platform_account_media' profile.user.id %}">
+                                📁 {% trans "Manage Media" %}
                             </a>
 
 

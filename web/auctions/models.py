@@ -19,6 +19,74 @@ from .validators import (
     validate_founder_handle,
 )
 
+
+def platform_media_upload_path(instance, filename):
+    """
+    Store reusable media under the owning account.
+
+    Generated UUID filenames prevent user-controlled paths
+    and accidental filename collisions.
+    """
+    return (
+        f"platform_media/{instance.account_id}/"
+        f"{uuid.uuid4().hex}.webp"
+    )
+
+
+class PlatformMediaAsset(models.Model):
+    """
+    Reusable account-owned image inventory.
+
+    Images are never consumed by publishing.
+    Deactivation only affects future selection.
+    """
+
+    account = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="platform_media_assets",
+    )
+
+    image = models.ImageField(
+        upload_to=platform_media_upload_path,
+        max_length=255,
+    )
+
+    sha256 = models.CharField(
+        max_length=64,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=0,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "pk",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account", "sha256"],
+                name="unique_platform_media_account_hash",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"@{self.account.username} "
+            f"media #{self.pk}"
+        )
+
 class NotificationSound(models.Model):
     SOUND_TYPES = [
         ("cash", "Cash / Ka-ching"),

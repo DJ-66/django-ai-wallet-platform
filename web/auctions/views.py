@@ -4288,6 +4288,107 @@ def send_buy_now_email(auction, user, buy_now_price):
     email.send()
 
 
+from .platform_media_forms import PlatformMediaUploadForm
+from .platform_media_services import save_platform_media
+from .models import PlatformMediaAsset
+
+
+@login_required
+@require_POST
+def platform_media_toggle(request, user_id, asset_id):
+    """Activate or deactivate an account media asset."""
+    if request.user.username.lower() != "dj":
+        raise Http404("Not found")
+
+    target_user = get_object_or_404(
+        User,
+        pk=user_id,
+        is_active=True,
+        profile__is_platform_account=True,
+    )
+
+    with transaction.atomic():
+        asset = get_object_or_404(
+            PlatformMediaAsset.objects.select_for_update(),
+            pk=asset_id,
+            account=target_user,
+        )
+
+        asset.is_active = not asset.is_active
+        asset.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        (
+            f"Image #{asset.pk} "
+            f"{'activated' if asset.is_active else 'deactivated'}."
+        ),
+    )
+
+    return redirect(
+        "platform_account_media",
+        user_id=target_user.pk,
+    )
+
+
+@login_required
+def platform_account_media(request, user_id):
+    """DJ-only reusable media library for platform accounts."""
+    if request.user.username.lower() != "dj":
+        raise Http404("Not found")
+
+    target_user = get_object_or_404(
+        User.objects.select_related("profile"),
+        pk=user_id,
+        is_active=True,
+        profile__is_platform_account=True,
+    )
+
+    if request.method == "POST":
+        form = PlatformMediaUploadForm(
+            request.POST,
+            request.FILES,
+        )
+
+        if form.is_valid():
+            created, duplicates = save_platform_media(
+                target_user,
+                form.cleaned_data["images"],
+            )
+
+            messages.success(
+                request,
+                (
+                    f"{created} images uploaded. "
+                    f"{duplicates} duplicates skipped."
+                ),
+            )
+
+            return redirect(
+                "platform_account_media",
+                user_id=target_user.pk,
+            )
+    else:
+        form = PlatformMediaUploadForm()
+
+    assets = PlatformMediaAsset.objects.filter(
+        account=target_user,
+    )
+
+    return render(
+        request,
+        "auctions/platform_account_media.html",
+        {
+            "target_account": target_user,
+            "form": form,
+            "assets": assets,
+            "total_images": assets.count(),
+            "active_images": assets.filter(
+                is_active=True
+            ).count(),
+        },
+    )
+
 @login_required
 def platform_accounts_dashboard(request):
     if request.user.username.lower() != "dj":

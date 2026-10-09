@@ -231,7 +231,9 @@ class Command(BaseCommand):
             ),
         )
 
-    def _due_capture_type(self, now_local):
+    def _due_capture_types(self, now_local):
+        due = []
+
         minute_of_day = (
             now_local.hour * 60
             + now_local.minute
@@ -259,7 +261,7 @@ class Command(BaseCommand):
                 <= minute_of_day
                 <= target_minute + 4
             ):
-                return capture_type
+                due.append(capture_type)
 
         # Morning follows the seasons instead of using a
         # fixed 06:00 slot. Five minutes after sunrise gives
@@ -283,9 +285,8 @@ class Command(BaseCommand):
                 <= morning_target
                 + timedelta(minutes=4)
             ):
-                return (
-                    SunsetCamCapture.
-                    CAPTURE_MORNING
+                due.append(
+                    SunsetCamCapture.CAPTURE_MORNING
                 )
 
         # Final evening frame follows astronomical sunset.
@@ -296,18 +297,27 @@ class Command(BaseCommand):
                 )
             )
 
+            sunset_target = (
+                sunset - timedelta(minutes=5)
+            )
+
             if (
-                sunset
+                sunset_target
                 <= now_local
-                <= sunset
+                <= sunset_target
                 + timedelta(minutes=4)
             ):
-                return (
-                    SunsetCamCapture.
-                    CAPTURE_SUNSET_4
+                due.append(
+                    SunsetCamCapture.CAPTURE_SUNSET_4
                 )
 
-        return None
+        return due
+
+
+    def _due_capture_type(self, now_local):
+        """Backward-compatible first due capture."""
+        due = self._due_capture_types(now_local)
+        return due[0] if due else None
 
     def _capture_frame(self):
         rtsp_url = os.environ.get(
@@ -507,9 +517,28 @@ class Command(BaseCommand):
         tz = self._get_timezone()
         now_local = datetime.now(tz)
 
-        capture_type = (
-            options.get("force")
-            or self._due_capture_type(now_local)
+        forced_type = options.get("force")
+
+        due_types = (
+            [forced_type]
+            if forced_type
+            else self._due_capture_types(now_local)
+        )
+
+        completed_types = set(
+            SunsetCamCapture.objects.filter(
+                local_date=now_local.date(),
+                capture_type__in=due_types,
+            ).values_list("capture_type", flat=True)
+        )
+
+        capture_type = next(
+            (
+                item
+                for item in due_types
+                if item not in completed_types
+            ),
+            None,
         )
 
         self.stdout.write(
