@@ -1200,3 +1200,618 @@ class FeedPostLocalizedDiscoveryTests(TestCase):
             .filter(pk=self.post.pk)
             .exists()
         )
+
+
+class FeedPostLocalizationQueueTests(TestCase):
+    """Verify incomplete posts are selected before completed posts."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="queue_test_user"
+        )
+
+    def create_post(self, title, complete=False):
+        post = FeedPost.objects.create(
+            user=self.user,
+            title=title,
+            content="FANZ community localization test.",
+            is_public=True,
+        )
+
+        if complete:
+            for language in ("en", "es", "pt"):
+                FeedPostTranslation.objects.create(
+                    post=post,
+                    language=language,
+                    title=f"{title} {language}",
+                    content=f"Localized content {language}",
+                )
+
+        return post
+
+    def test_completed_newer_posts_do_not_starve_backlog(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+
+        old_pending = self.create_post(
+            "Old incomplete post"
+        )
+
+        for number in range(12):
+            self.create_post(
+                f"New completed post {number}",
+                complete=True,
+            )
+
+        processed = []
+
+        def fake_localize(post, dry_run=False):
+            processed.append(post.pk)
+            return {
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            }
+
+        output = StringIO()
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=10,
+                stdout=output,
+            )
+
+        self.assertEqual(processed, [old_pending.pk])
+        self.assertIn("scanned: 1", output.getvalue())
+
+    def test_stale_source_copies_remain_repair_candidates(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+
+        post = self.create_post(
+            "Stale translation candidate"
+        )
+
+        for language in ("en", "es", "pt"):
+            FeedPostTranslation.objects.create(
+                post=post,
+                language=language,
+                title=post.title,
+                content=post.content,
+            )
+
+        processed = []
+
+        def fake_localize(post, dry_run=False):
+            processed.append(post.pk)
+            return {
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["es", "pt"],
+            }
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=10,
+                stdout=StringIO(),
+            )
+
+        self.assertIn(
+            post.pk,
+            processed,
+            "Stale source-copy translations must remain eligible.",
+        )
+
+    def test_newest_oldest_selection_and_no_duplicates(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+
+        posts = [
+            self.create_post(f"Queue candidate {number}")
+            for number in range(12)
+        ]
+
+        processed = []
+
+        def fake_localize(post, dry_run=False):
+            processed.append(post.pk)
+            return {
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            }
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=6,
+                stdout=StringIO(),
+            )
+
+        expected = [
+            posts[11].pk,
+            posts[10].pk,
+            posts[9].pk,
+            posts[0].pk,
+            posts[1].pk,
+            posts[8].pk,
+        ]
+
+        self.assertEqual(processed, expected)
+        self.assertEqual(len(processed), len(set(processed)))
+
+    def test_failure_creates_retry_cooldown(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Retry failure test")
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=RuntimeError("Temporary provider failure"),
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+                stderr=StringIO(),
+            )
+
+        state = FeedPostLocalizationState.objects.get(post=post)
+
+        self.assertEqual(state.attempt_count, 1)
+        self.assertIn("Temporary provider failure", state.last_error)
+        self.assertIsNotNone(state.next_retry_at)
+
+    def test_cooldown_skips_failed_post(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from django.utils import timezone
+        from datetime import timedelta
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Cooldown test")
+
+        FeedPostLocalizationState.objects.create(
+            post=post,
+            attempt_count=1,
+            next_retry_at=timezone.now() + timedelta(hours=1),
+        )
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post"
+        ) as localizer:
+            call_command(
+                "localize_feed_posts",
+                limit=10,
+                stdout=StringIO(),
+            )
+
+        localizer.assert_not_called()
+
+    def test_dry_run_does_not_write_retry_state(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Dry run failure test")
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=RuntimeError("Dry run provider failure"),
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                dry_run=True,
+                stdout=StringIO(),
+                stderr=StringIO(),
+            )
+
+        self.assertFalse(
+            FeedPostLocalizationState.objects.filter(
+                post=post
+            ).exists()
+        )
+
+    def test_success_clears_previous_failure(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from django.utils import timezone
+        from datetime import timedelta
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Recovery test")
+
+        state = FeedPostLocalizationState.objects.create(
+            post=post,
+            attempt_count=2,
+            last_error="Previous failure",
+            next_retry_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            return_value={
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            },
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+            )
+
+        state.refresh_from_db()
+
+        self.assertEqual(state.attempt_count, 0)
+        self.assertEqual(state.last_error, "")
+        self.assertIsNone(state.next_retry_at)
+
+    def test_status_is_read_only(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Status test post")
+
+        state = FeedPostLocalizationState.objects.create(
+            post=post,
+            attempt_count=2,
+            last_error="Previous failure",
+        )
+
+        before = {
+            "count": FeedPostLocalizationState.objects.count(),
+            "attempts": state.attempt_count,
+            "error": state.last_error,
+        }
+
+        output = StringIO()
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post"
+        ) as localizer:
+            call_command(
+                "localize_feed_posts",
+                status=True,
+                stdout=output,
+            )
+
+        localizer.assert_not_called()
+
+        state.refresh_from_db()
+
+        self.assertEqual(
+            FeedPostLocalizationState.objects.count(),
+            before["count"],
+        )
+        self.assertEqual(
+            state.attempt_count,
+            before["attempts"],
+        )
+        self.assertEqual(
+            state.last_error,
+            before["error"],
+        )
+
+        self.assertIn(
+            "mode: STATUS ONLY",
+            output.getvalue(),
+        )
+        self.assertIn(
+            "incomplete:",
+            output.getvalue(),
+        )
+
+    def test_repeated_failures_increase_cooldown(self):
+        from datetime import timedelta
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from django.utils import timezone
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Repeated failure test")
+
+        for expected_attempts, expected_minutes in (
+            (1, 30),
+            (2, 60),
+            (3, 120),
+        ):
+            with patch(
+                "auctions.management.commands.localize_feed_posts.localize_feed_post",
+                side_effect=RuntimeError("Provider unavailable"),
+            ):
+                call_command(
+                    "localize_feed_posts",
+                    post_id=post.pk,
+                    limit=1,
+                    stdout=StringIO(),
+                    stderr=StringIO(),
+                )
+
+            state = FeedPostLocalizationState.objects.get(
+                post=post
+            )
+
+            self.assertEqual(
+                state.attempt_count,
+                expected_attempts,
+            )
+
+            actual_delay = (
+                state.next_retry_at - state.last_attempt_at
+            )
+
+            self.assertEqual(
+                actual_delay,
+                timedelta(minutes=expected_minutes),
+            )
+
+    def test_audited_post_skipped_until_text_changes(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+        from auctions.localization_fingerprint import localization_fingerprint
+
+        post = self.create_post("Audited post")
+
+        for language in ("en", "es", "pt"):
+            FeedPostTranslation.objects.create(
+                post=post,
+                language=language,
+                title=post.title,
+                content=post.content,
+            )
+
+        FeedPostLocalizationState.objects.create(
+            post=post,
+            audited_fingerprint=localization_fingerprint(post),
+        )
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post"
+        ) as localizer:
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+            )
+            localizer.assert_not_called()
+
+        post.title = "Audited post updated"
+        post.save(update_fields=["title"])
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            return_value={
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "complete",
+                "created": [],
+            },
+        ) as localizer:
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+            )
+            localizer.assert_called_once()
+
+    def test_audited_candidate_does_not_consume_batch_slot(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+        from auctions.localization_fingerprint import localization_fingerprint
+
+        pending = self.create_post("Pending candidate")
+        audited = self.create_post("Already audited candidate")
+
+        for language in ("en", "es", "pt"):
+            FeedPostTranslation.objects.create(
+                post=audited,
+                language=language,
+                title=audited.title,
+                content=audited.content,
+            )
+
+        FeedPostLocalizationState.objects.create(
+            post=audited,
+            audited_fingerprint=localization_fingerprint(audited),
+        )
+
+        processed = []
+
+        def fake_localize(post, dry_run=False):
+            processed.append(post.pk)
+            return {
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            }
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+            )
+
+        self.assertEqual(processed, [pending.pk])
+
+    def test_dry_run_preserves_existing_fingerprint(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Fingerprint dry run")
+
+        state = FeedPostLocalizationState.objects.create(
+            post=post,
+            audited_fingerprint="a" * 64,
+        )
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            return_value={
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            },
+        ):
+            call_command(
+                "localize_feed_posts",
+                dry_run=True,
+                limit=1,
+                stdout=StringIO(),
+            )
+
+        state.refresh_from_db()
+        self.assertEqual(state.audited_fingerprint, "a" * 64)
+
+    def test_unattempted_posts_take_priority_over_retries(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        failed_post = self.create_post("Previously failed")
+
+        FeedPostLocalizationState.objects.create(
+            post=failed_post,
+            attempt_count=2,
+            last_error="Previous provider failure",
+            next_retry_at=None,
+        )
+
+        fresh_post = self.create_post("Never attempted")
+        processed = []
+
+        def fake_localize(post, dry_run=False):
+            processed.append(post.pk)
+            return {
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            }
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+            )
+
+        self.assertEqual(processed, [fresh_post.pk])
+
+        # With no competing fresh candidate, the retry is eligible.
+        fresh_post.is_public = False
+        fresh_post.save(update_fields=["is_public"])
+
+        processed.clear()
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=1,
+                stdout=StringIO(),
+            )
+
+        self.assertEqual(processed, [failed_post.pk])
+
+    def test_retry_receives_reserved_slot_under_load(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        retry_post = self.create_post("Eligible retry")
+
+        FeedPostLocalizationState.objects.create(
+            post=retry_post,
+            attempt_count=2,
+            last_error="Previous failure",
+            next_retry_at=None,
+        )
+
+        fresh_posts = [
+            self.create_post(f"Fresh candidate {number}")
+            for number in range(10)
+        ]
+
+        processed = []
+
+        def fake_localize(post, dry_run=False):
+            processed.append(post.pk)
+            return {
+                "post_id": post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["en", "es", "pt"],
+            }
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=fake_localize,
+        ):
+            call_command(
+                "localize_feed_posts",
+                limit=6,
+                stdout=StringIO(),
+            )
+
+        self.assertEqual(len(processed), 6)
+        self.assertEqual(len(processed), len(set(processed)))
+
+        self.assertIn(retry_post.pk, processed)
+        self.assertEqual(processed[-1], retry_post.pk)
+
+        self.assertEqual(
+            len(set(processed) & {p.pk for p in fresh_posts}),
+            5,
+        )

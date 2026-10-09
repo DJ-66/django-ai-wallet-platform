@@ -3359,3 +3359,58 @@ class CreatorEdgePublicationReceipt(models.Model):
             f"{self.publication_key} "
             f"-> FeedPost #{self.feed_post_id}"
         )
+
+
+class FeedPostLocalizationState(models.Model):
+    """
+    Persistent retry state for automatic feed post localization.
+
+    A missing state row means the post has no recorded failures.
+    """
+
+    post = models.OneToOneField(
+        FeedPost,
+        on_delete=models.CASCADE,
+        related_name="localization_state",
+    )
+
+    attempt_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    last_attempt_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    audited_fingerprint = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text=(
+            "SHA-256 fingerprint of post and translation text "
+            "after a successful localization audit."
+        ),
+    )
+
+
+    next_retry_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return (
+            f"Localization state for post {self.post_id} "
+            f"(failures={self.attempt_count})"
+        )
