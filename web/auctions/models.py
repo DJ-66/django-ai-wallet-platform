@@ -3282,7 +3282,30 @@ class ScheduledPublication(models.Model):
         related_name="scheduled_publications",
     )
 
-    source_path = models.TextField()
+    source_path = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    media_asset = models.ForeignKey(
+        "PlatformMediaAsset",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="scheduled_publications",
+    )
+
+    campaign_key = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+    )
+
+    referral_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+    )
 
     title = models.CharField(
         max_length=120,

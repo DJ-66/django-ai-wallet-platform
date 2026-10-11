@@ -1,3 +1,4 @@
+import os
 import json
 import mimetypes
 from pathlib import Path
@@ -9,6 +10,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from auctions.feed_publishing import publish_feed_post
+from auctions.promotional_publishing import (
+    publish_promotional_publication,
+)
 from auctions.models import ScheduledPublication
 
 
@@ -86,6 +90,19 @@ class Command(BaseCommand):
                     scheduled_for__lte=now,
                 )
 
+                promo_enabled = (
+                    os.environ.get(
+                        "FANZ_PROMOTIONAL_PUBLISHING_ENABLED",
+                        "false",
+                    ).strip().lower()
+                    in ("1", "true", "yes", "on")
+                )
+
+                if not promo_enabled:
+                    queryset = queryset.filter(
+                        media_asset__isnull=True,
+                    )
+
             publication = (
                 queryset
                 .order_by(
@@ -142,6 +159,101 @@ class Command(BaseCommand):
             .get(pk=publication_id)
         )
 
+        # Reusable platform media follows its own publishing
+        # path. The original library image is never consumed.
+        if publication.media_asset_id is not None:
+            promo_enabled = (
+                os.environ.get(
+                    "FANZ_PROMOTIONAL_PUBLISHING_ENABLED",
+                    "false",
+                ).strip().lower()
+                in ("1", "true", "yes", "on")
+            )
+
+            if not promo_enabled:
+                ScheduledPublication.objects.filter(
+                    pk=publication.id,
+                    status=ScheduledPublication.STATUS_PUBLISHING,
+                ).update(
+                    status=ScheduledPublication.STATUS_QUEUED,
+                    attempt_count=max(
+                        publication.attempt_count - 1,
+                        0,
+                    ),
+                    updated_at=timezone.now(),
+                )
+
+                self.stdout.write(
+                    "scheduled_publication_promo=disabled"
+                )
+                return
+
+            if dry_run:
+                ScheduledPublication.objects.filter(
+                    pk=publication.id,
+                    status=ScheduledPublication.STATUS_PUBLISHING,
+                ).update(
+                    status=ScheduledPublication.STATUS_QUEUED,
+                    attempt_count=max(
+                        publication.attempt_count - 1,
+                        0,
+                    ),
+                    updated_at=timezone.now(),
+                )
+
+                self.stdout.write(
+                    "scheduled_publication_action=would_publish_promo"
+                )
+                return
+
+            try:
+                post = publish_promotional_publication(
+                    publication.id
+                )
+            except Exception as exc:
+                self._mark_failed(
+                    publication.id,
+                    f"{type(exc).__name__}: {exc}",
+                )
+                raise
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"scheduled_publication_post={post.pk}"
+                )
+            )
+            self.stdout.write(
+                "scheduled_publication_source_consumed=false"
+            )
+            return
+
+        # Legacy AI publications require a working-copy path.
+        # Promotional publications were handled above.
+        if not publication.source_path.strip():
+            message = (
+                "Scheduled publication has no source image."
+            )
+
+            if dry_run:
+                ScheduledPublication.objects.filter(
+                    pk=publication.id,
+                    status=ScheduledPublication.STATUS_PUBLISHING,
+                ).update(
+                    status=ScheduledPublication.STATUS_QUEUED,
+                    attempt_count=max(
+                        publication.attempt_count - 1,
+                        0,
+                    ),
+                    updated_at=timezone.now(),
+                )
+            else:
+                self._mark_failed(
+                    publication.id,
+                    message,
+                )
+
+            raise CommandError(message)
+
         source = self._resolve_source(
             source_root,
             publication.source_path,
@@ -194,8 +306,17 @@ class Command(BaseCommand):
             raise CommandError(message)
 
         try:
+            image_content_types = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".webp": "image/webp",
+                ".avif": "image/avif",
+            }
+
             content_type = (
-                mimetypes.guess_type(source.name)[0]
+                image_content_types.get(source.suffix.lower())
+                or mimetypes.guess_type(source.name)[0]
                 or "application/octet-stream"
             )
 

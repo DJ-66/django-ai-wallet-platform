@@ -34,6 +34,14 @@ do
         # The command is idempotent through SunsetCamCapture.
         python manage.py process_sunsetcam_capture
 
+        # Queue eligible SunsetCam promotions after successful
+        # camera captures. Scheduling is disabled by default.
+        # A temporary scheduling failure must not stop the
+        # remaining worker tasks.
+        if ! python manage.py process_sunsetcam_promotions; then
+            echo "sunsetcam_promotions_scheduler_failed" >&2
+        fi
+
         # Maintain one pending publication per AI creator.
         # The generator is idempotent while a creator already has
         # queued or publishing work.

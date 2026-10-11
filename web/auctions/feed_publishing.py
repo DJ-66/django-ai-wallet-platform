@@ -15,6 +15,7 @@ def publish_feed_post(
     is_public=True,
     is_paid=False,
     unlock_price=0,
+    on_media_saved=None,
 ):
     """
     Publish a FANZ feed post through the same validation and media
@@ -62,7 +63,7 @@ def publish_feed_post(
         media_items = form.cleaned_data.get("images", [])
 
         for display_order, media_item in enumerate(media_items):
-            FeedPostMedia.objects.create(
+            media = FeedPostMedia(
                 post=post,
                 file=media_item["file"],
                 media_type=media_item["media_type"],
@@ -70,6 +71,22 @@ def publish_feed_post(
                 display_order=display_order,
                 is_active=True,
             )
+
+            # Optional per-call tracking for rollback cleanup.
+            # The default publishing behavior is unchanged.
+            if on_media_saved is not None:
+                media.file.save(
+                    media_item["file"].name,
+                    media_item["file"],
+                    save=False,
+                )
+                on_media_saved(
+                    media.file.storage,
+                    media.file.name,
+                )
+                media.save()
+            else:
+                media.save()
 
         sync_post_hashtags(post)
 
