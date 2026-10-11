@@ -193,6 +193,14 @@ OLLAMA_MODEL = os.getenv(
     "gemma3:latest",
 )
 
+CREATOR_VISION_NUM_PREDICT = int(
+    os.getenv("CREATOR_VISION_NUM_PREDICT", "2048")
+)
+
+CREATOR_COPY_NUM_PREDICT = int(
+    os.getenv("CREATOR_COPY_NUM_PREDICT", "2048")
+)
+
 CREATOR_VISION_COPY_ENABLED = (
     os.getenv(
         "CREATOR_VISION_COPY_ENABLED",

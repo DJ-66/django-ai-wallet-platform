@@ -324,8 +324,9 @@ class Command(BaseCommand):
 
                 except CreatorCopyError as exc:
                     self.stderr.write(
-                        f"@{account} vision copy fallback: {exc}"
+                        f"@{account} vision copy deferred: {exc}"
                     )
+                    continue
 
             if selected_hashtags is None:
                 selected_hashtags = rng.sample(

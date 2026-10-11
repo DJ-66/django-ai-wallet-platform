@@ -267,7 +267,7 @@ def generate_creator_post_copy(
         "format": "json",
         "options": {
             "temperature": 0.2,
-            "num_predict": 180,
+            "num_predict": settings.CREATOR_VISION_NUM_PREDICT,
         },
     }
 
@@ -342,6 +342,7 @@ Do not describe the scene notes.
 
         copy_payload = {
             "model": settings.OLLAMA_MODEL,
+            "think": False,
             "messages": [
                 {
                     "role": "system",
@@ -356,7 +357,7 @@ Do not describe the scene notes.
             "format": "json",
             "options": {
                 "temperature": 0.9,
-                "num_predict": 300,
+                "num_predict": settings.CREATOR_COPY_NUM_PREDICT,
             },
         }
 

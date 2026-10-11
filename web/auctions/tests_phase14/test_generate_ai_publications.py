@@ -228,7 +228,7 @@ class GenerateAIPublicationsTests(TestCase):
         self.assertIn("#AIInfluencer", hashtags)
         self.assertIn("#FANZ", hashtags)
 
-    def test_vision_failure_falls_back_to_template_copy(self):
+    def test_vision_failure_defers_publication(self):
         generate_copy = self.run_generator(
             vision_error=CreatorCopyError(
                 "test vision failure"
@@ -237,32 +237,71 @@ class GenerateAIPublicationsTests(TestCase):
 
         self.assertEqual(generate_copy.call_count, 3)
 
-        publications = ScheduledPublication.objects.all()
+        self.assertFalse(
+            ScheduledPublication.objects.exists()
+        )
 
-        self.assertEqual(publications.count(), 3)
-
-        for publication in publications:
-            self.assertIn(
-                publication.title,
-                generate_ai_publications.TITLES,
-            )
-
-            self.assertTrue(
-                any(
-                    caption in publication.content
-                    for caption
-                    in generate_ai_publications.CAPTIONS
+    def test_vision_failure_does_not_block_other_creators(self):
+        def generate_result(*, account, **kwargs):
+            if account == "CreatorB":
+                raise CreatorCopyError(
+                    "temporary vision failure"
                 )
+
+            return {
+                "title": f"{account} has a story",
+                "caption": "A creator-specific moment.",
+                "hashtags": [
+                    "Lifestyle",
+                    "DigitalCreator",
+                    "CreatorLife",
+                    "Style",
+                ],
+            }
+
+        with (
+            patch.object(
+                generate_ai_publications,
+                "MANIFEST_PATH",
+                self.manifest,
+            ),
+            patch.object(
+                generate_ai_publications,
+                "generate_creator_post_copy",
+                side_effect=generate_result,
+            ),
+            patch.object(
+                generate_ai_publications.settings,
+                "CREATOR_VISION_COPY_ENABLED",
+                True,
+            ),
+        ):
+            call_command(
+                "generate_ai_publications",
+                source_root=str(self.root),
+                seed=14,
             )
 
-            hashtags = [
-                token
-                for token in publication.content.split()
-                if token.startswith("#")
-            ]
+        self.assertEqual(
+            ScheduledPublication.objects.count(),
+            2,
+        )
 
-            self.assertEqual(len(hashtags), 6)
-            self.assertIn("#FANZ", hashtags)
+        self.assertFalse(
+            ScheduledPublication.objects.filter(
+                creator=self.users[1],
+            ).exists()
+        )
+
+        for user in (
+            self.users[0],
+            self.users[2],
+        ):
+            self.assertTrue(
+                ScheduledPublication.objects.filter(
+                    creator=user,
+                ).exists()
+            )
 
     def test_initial_queue_staggers_creators_over_24_hours(self):
         before = timezone.now()
