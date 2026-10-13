@@ -480,6 +480,10 @@ STRICT RULES:
 - Preserve meaning, tone, formatting, emoji and paragraph breaks.
 - Preserve every @mention exactly.
 - Preserve every hashtag token exactly. Do not translate hashtags.
+- Tokens like FANZPROTECTEDTOKEN0END are machine-generated placeholders.
+- Copy every FANZPROTECTEDTOKEN<number>END exactly as received.
+- Never translate, split, remove, reorder, or change these placeholders.
+- Keep the original capitalization and digits unchanged.
 - Preserve every URL exactly, including paths, query parameters,
   affiliate/referral codes and fragments.
 - For Markdown links [visible text](URL), translate visible text

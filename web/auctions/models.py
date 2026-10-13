@@ -3452,6 +3452,109 @@ class CreatorEdgePublicationReceipt(models.Model):
         )
 
 
+class CreatorCaptionRecoveryState(models.Model):
+    """
+    Persistent state for historical AI creator caption recovery.
+
+    A completed record must not be processed again.
+    Original text is retained for explicit rollback.
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_PROCESSING = "processing"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_PROCESSING, "Processing"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    publication = models.OneToOneField(
+        "ScheduledPublication",
+        on_delete=models.PROTECT,
+        related_name="caption_recovery",
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+
+    attempt_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    next_retry_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    claimed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    lease_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    claim_token = models.UUIDField(
+        null=True,
+        blank=True,
+    )
+
+    original_snapshot = models.JSONField(
+        null=True,
+        blank=True,
+    )
+
+    recovered_translations = models.JSONField(
+        null=True,
+        blank=True,
+    )
+
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["status", "next_retry_at"],
+                name="caption_recovery_retry_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Caption recovery for publication "
+            f"{self.publication_id}: {self.status}"
+        )
+
+
 class FeedPostLocalizationState(models.Model):
     """
     Persistent retry state for automatic feed post localization.
