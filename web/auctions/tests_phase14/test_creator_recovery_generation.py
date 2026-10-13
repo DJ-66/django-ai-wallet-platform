@@ -294,3 +294,51 @@ class CreatorRecoveryHashtagRetryTests(CreatorRecoveryGenerationTests):
 
         self.assertEqual(vision.call_count, 3)
         translate.assert_not_called()
+
+
+class CreatorRecoveryFormattingTests(SimpleTestCase):
+    def test_normalizes_safe_paragraph_variations(self):
+        tags = HASHTAGS
+        hashtag_line = " ".join(f"#{tag}" for tag in tags)
+        expected = "Una tarde tranquila.\n\n" + hashtag_line
+
+        for content in (
+            expected,
+            "Una tarde tranquila.\n" + hashtag_line,
+            "Una tarde tranquila.\n\n\n" + hashtag_line,
+            "Una tarde tranquila.\r\n\r\n" + hashtag_line,
+        ):
+            with self.subTest(content=repr(content)):
+                result = generation.normalize_recovery_format(
+                    {"title": "Prueba", "content": content},
+                    tags,
+                )
+                self.assertEqual(result["content"], expected)
+
+    def test_does_not_repair_unapproved_hashtag(self):
+        from auctions.management.commands.repair_creator_captions import (
+            validate_recovery_translations,
+        )
+
+        tags = HASHTAGS
+        content = (
+            "Una tarde tranquila.\n\n"
+            "#Travel #Lifestyle #Style #Confidence #AIInfluencer #FANZ"
+        )
+
+        result = generation.normalize_recovery_format(
+            {"title": "Prueba", "content": content},
+            tags,
+        )
+
+        self.assertEqual(result["content"], content)
+
+        with self.assertRaises(CommandError):
+            validate_recovery_translations(
+                {
+                    "en": translated("English", "A quiet afternoon."),
+                    "es": result,
+                    "pt": translated("Português", "Uma tarde tranquila."),
+                },
+                tags,
+            )

@@ -20,6 +20,41 @@ from auctions.post_localization import (
 )
 
 
+
+def normalize_recovery_format(candidate, hashtags):
+    """Repair only the separator before an intact final hashtag line."""
+    import re
+
+    content = candidate["content"]
+    expected = " ".join(f"#{tag}" for tag in hashtags)
+
+    normalized = content.replace("\r\n", "\n").replace("\r", "\n")
+
+    # Require the exact approved hashtag line at the end.
+    match = re.fullmatch(
+        r"(?s)(.*?)(?:\n[ \t]*)*(?:\n|^)" + re.escape(expected) + r"[ \t]*",
+        normalized,
+    )
+
+    if match is None:
+        # Also permit the final hashtag line directly after caption text.
+        marker = "\n" + expected
+        if normalized.endswith(marker):
+            caption = normalized[:-len(marker)].rstrip()
+        else:
+            return candidate
+    else:
+        caption = match.group(1).rstrip()
+
+    if not caption:
+        return candidate
+
+    return {
+        **candidate,
+        "content": caption + "\n\n" + expected,
+    }
+
+
 def generate_recovery_translations(
     *,
     image_path,
@@ -101,6 +136,11 @@ def generate_recovery_translations(
                     target_language=language,
                     provider=provider,
                     attempts=1,
+                )
+
+                candidate = normalize_recovery_format(
+                    candidate,
+                    hashtags,
                 )
 
                 validate_recovery_translations(
