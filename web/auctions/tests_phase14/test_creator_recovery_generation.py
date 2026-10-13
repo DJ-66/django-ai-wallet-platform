@@ -233,3 +233,64 @@ class CreatorRecoveryGenerationTests(SimpleTestCase):
                     image_path=Path("/tmp/test.jpg"),
                     creator=self.creator,
                 )
+
+
+class CreatorRecoveryHashtagRetryTests(CreatorRecoveryGenerationTests):
+    def test_retries_unapproved_hashtag_then_succeeds(self):
+        from auctions.ai_services.creator_copy import CreatorCopyError
+
+        with (
+            patch.object(
+                generation,
+                "generate_creator_post_copy",
+                side_effect=[
+                    CreatorCopyError("Unapproved generated hashtag: Travel"),
+                    self.generated,
+                ],
+            ) as vision,
+            patch.object(
+                generation,
+                "_translate_target",
+                side_effect=[
+                    translated("Café y caos", "Tres cafés."),
+                    translated("Café e caos", "Três cafés."),
+                ],
+            ) as translate,
+        ):
+            translations, hashtags = generation.generate_recovery_translations(
+                image_path=Path("/tmp/test.jpg"),
+                creator=self.creator,
+            )
+
+        self.assertEqual(vision.call_count, 2)
+        self.assertEqual(translate.call_count, 2)
+        self.assertEqual(set(translations), {"en", "es", "pt"})
+        self.assertEqual(hashtags, HASHTAGS)
+
+    def test_exhausts_unapproved_hashtag_retries(self):
+        from auctions.ai_services.creator_copy import CreatorCopyError
+
+        with (
+            patch.object(
+                generation,
+                "generate_creator_post_copy",
+                side_effect=CreatorCopyError(
+                    "Unapproved generated hashtag: Travel"
+                ),
+            ) as vision,
+            patch.object(
+                generation,
+                "_translate_target",
+            ) as translate,
+        ):
+            with self.assertRaisesRegex(
+                CreatorCopyError,
+                "Unapproved generated hashtag: Travel",
+            ):
+                generation.generate_recovery_translations(
+                    image_path=Path("/tmp/test.jpg"),
+                    creator=self.creator,
+                )
+
+        self.assertEqual(vision.call_count, 3)
+        translate.assert_not_called()

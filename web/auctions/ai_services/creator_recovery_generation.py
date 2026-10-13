@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from django.core.management.base import CommandError
 
 from auctions.ai_services.creator_copy import (
+    CreatorCopyError,
     generate_creator_post_copy,
 )
 from auctions.post_localization import (
@@ -42,12 +43,24 @@ def generate_recovery_translations(
         if tag.lower() != identity_tag.lower()
     ]
 
-    generated = generate_creator_post_copy(
-        image_path=image_path,
-        account=creator["account"],
-        bio=creator.get("bio", ""),
-        approved_hashtags=approved,
-    )
+    generated = None
+    for attempt in range(1, 4):
+        try:
+            generated = generate_creator_post_copy(
+                image_path=image_path,
+                account=creator["account"],
+                bio=creator.get("bio", ""),
+                approved_hashtags=approved,
+            )
+            break
+        except CreatorCopyError as exc:
+            if (
+                "Unapproved generated hashtag:" not in str(exc)
+                or attempt == 3
+            ):
+                raise
+
+    assert generated is not None
 
     if len(generated["hashtags"]) != 4:
         raise CommandError(
