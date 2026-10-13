@@ -187,4 +187,7 @@ class Command(BaseCommand):
                 token,
                 str(exc),
             )
+            self.stderr.write(
+                f"creator_caption_recovery_failed={publication_id}"
+            )
             raise

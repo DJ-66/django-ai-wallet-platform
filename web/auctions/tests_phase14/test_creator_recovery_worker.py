@@ -61,7 +61,7 @@ class CreatorRecoveryWorkerTests(TestCase):
             status=ScheduledPublication.STATUS_QUEUED,
         )
 
-    def run_worker(self):
+    def run_worker(self, *, stderr=None):
         with (
             patch(
                 "auctions.management.commands."
@@ -73,6 +73,7 @@ class CreatorRecoveryWorkerTests(TestCase):
             call_command(
                 "process_creator_caption_recovery",
                 source_root=str(self.root),
+                **({"stderr": stderr} if stderr is not None else {}),
             )
 
     def test_successful_recovery(self):
@@ -352,19 +353,26 @@ class CreatorRecoveryWorkerTests(TestCase):
         )
 
     def test_generation_failure_records_retry(self):
+        from io import StringIO
+        stderr = StringIO()
+
         with patch.object(
             worker,
             "generate_recovery_translations",
             side_effect=RuntimeError("Mock AI unavailable"),
         ):
             with self.assertRaises(RuntimeError):
-                self.run_worker()
+                self.run_worker(stderr=stderr)
 
         state = CreatorCaptionRecoveryState.objects.get(
             publication=self.publication,
         )
 
         self.assertEqual(state.status, "failed")
+        self.assertIn(
+            f"creator_caption_recovery_failed={self.publication.pk}",
+            stderr.getvalue(),
+        )
         self.assertEqual(state.attempt_count, 1)
         self.assertIsNotNone(state.next_retry_at)
 
