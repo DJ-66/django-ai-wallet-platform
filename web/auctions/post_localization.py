@@ -77,7 +77,7 @@ URL_RE = re.compile(
 )
 
 MENTION_RE = re.compile(
-    r"(?<![\w@])@[A-Za-z0-9_.+-]+"
+    r"(?<![\w@])@[A-Za-z0-9_+-]+(?:\.[A-Za-z0-9_+-]+)*"
 )
 
 HASHTAG_RE = re.compile(
@@ -195,7 +195,7 @@ def _translation_is_stale_source_copy(
 
 PROTECTED_TOKEN_RE = re.compile(
     r"https?://[^\s<>\])]+"
-    r"|(?<![\w@])@[A-Za-z0-9_.+-]+"
+    r"|(?<![\w@])@[A-Za-z0-9_+-]+(?:\.[A-Za-z0-9_+-]+)*"
     r"|(?<![\w#])#[A-Za-z0-9_]+"
     r"|(?<!\w)(?=[A-Za-z0-9_]*\d)[A-Za-z][A-Za-z0-9_]*(?!\w)"
 )
