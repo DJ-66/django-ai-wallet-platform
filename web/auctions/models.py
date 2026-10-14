@@ -444,6 +444,7 @@ class WalletTransaction(models.Model):
         ("bonus", "Bonus"),
         ("game", "Game"),
         ("ai_message", "AI Message"),
+        ("autopost_subscription", "AutoPost Subscription"),
 ]
 
     sender = models.ForeignKey(
@@ -465,7 +466,7 @@ class WalletTransaction(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     transaction_type = models.CharField(
-        max_length=20,
+        max_length=32,
         choices=TRANSACTION_TYPES
     )
 
