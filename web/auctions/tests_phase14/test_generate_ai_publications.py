@@ -303,7 +303,7 @@ class GenerateAIPublicationsTests(TestCase):
                 ).exists()
             )
 
-    def test_initial_queue_staggers_creators_over_36_hours(self):
+    def test_initial_queue_staggers_creators_over_24_hours(self):
         before = timezone.now()
 
         self.run_generator()
@@ -326,12 +326,12 @@ class GenerateAIPublicationsTests(TestCase):
 
         self.assertAlmostEqual(
             spacing_one.total_seconds(),
-            12 * 3600,
+            8 * 3600,
             delta=2,
         )
         self.assertAlmostEqual(
             spacing_two.total_seconds(),
-            12 * 3600,
+            8 * 3600,
             delta=2,
         )
 
@@ -340,7 +340,7 @@ class GenerateAIPublicationsTests(TestCase):
             before,
         )
 
-    def test_published_creator_gets_next_slot_36_hours_later(self):
+    def test_published_creator_gets_next_slot_24_hours_later(self):
         self.run_generator(seed=14)
 
         creator_a = self.users[0]
@@ -392,7 +392,7 @@ class GenerateAIPublicationsTests(TestCase):
 
         self.assertEqual(
             rows[1].scheduled_for,
-            first_scheduled_for + timedelta(hours=36),
+            first_scheduled_for + timedelta(hours=24),
         )
 
         # CreatorB and CreatorC still had pending rows,

@@ -70,7 +70,7 @@ CAPTIONS = [
     "Another moment from behind the scenes. 📸",
 ]
 
-RELEASE_INTERVAL = timedelta(hours=36)
+RELEASE_INTERVAL = timedelta(hours=24)
 
 
 def publication_key(account, source_path):
@@ -190,7 +190,7 @@ class Command(BaseCommand):
         rng = random.Random(seed)
 
         # Stable initial slot spacing:
-        # 36 hours / number of active publishing identities.
+        # 24 hours / number of active publishing identities.
         slot_spacing = RELEASE_INTERVAL / len(creators)
 
         proposals = []
