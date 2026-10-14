@@ -1,5 +1,8 @@
 """AutoPost reservation-to-ready integration tests."""
 
+from auctions.tests_phase14.autopost_entitlement_helpers import grant_autopost_pilot
+
+
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 
@@ -36,6 +39,8 @@ class AutoPostRunnerTests(TestCase):
         user = get_user_model().objects.create_user(
             username="autopost_runner_creator",
         )
+        grant_autopost_pilot(user)
+
         config = AutoPostConfiguration.objects.create(
             account=user,
             enabled=True,

@@ -1,5 +1,8 @@
 """Transactional reservation tests for FANZ AutoPost."""
 
+from auctions.tests_phase14.autopost_entitlement_helpers import grant_autopost_pilot
+
+
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 from pathlib import Path
@@ -25,6 +28,10 @@ class AutoPostReservationTests(TestCase):
         self.account = get_user_model().objects.create_user(
             username="autopost_reserve_creator",
         )
+
+
+        grant_autopost_pilot(self.account)
+
         self.config = AutoPostConfiguration.objects.create(
             account=self.account,
             enabled=True,
@@ -267,6 +274,8 @@ class AutoPostConcurrencyTests(TransactionTestCase):
         self.account = get_user_model().objects.create_user(
             username="autopost_concurrent_creator",
         )
+        grant_autopost_pilot(self.account)
+
         self.config = AutoPostConfiguration.objects.create(
             account=self.account,
             enabled=True,
@@ -361,3 +370,21 @@ class AutoPostConcurrencyTests(TransactionTestCase):
 
         reservation.refresh_from_db()
         self.assertEqual(reservation.reserved_hashtags, original)
+
+    def test_concurrency_denies_expired_pilot(self):
+        from auctions.models import AutoPostEntitlement
+
+        AutoPostEntitlement.objects.filter(
+            account=self.account
+        ).update(
+            expires_at=timezone.now() - timedelta(seconds=1)
+        )
+
+        with self.assertRaises(ValidationError):
+            reserve_autopost(
+                account_id=self.account.pk,
+                request_key="expired-pilot",
+                scheduled_for=self.when,
+            )
+
+        self.assertFalse(AutoPostPublication.objects.exists())

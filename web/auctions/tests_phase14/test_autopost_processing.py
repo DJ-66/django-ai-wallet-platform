@@ -1,5 +1,8 @@
 """AutoPost processing claim regression tests."""
 
+from auctions.tests_phase14.autopost_entitlement_helpers import grant_autopost_pilot
+
+
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 
@@ -33,6 +36,8 @@ class AutoPostProcessingTests(TestCase):
         self.account = get_user_model().objects.create_user(
             username="autopost_processing_creator",
         )
+
+        grant_autopost_pilot(self.account)
 
         self.config = AutoPostConfiguration.objects.create(
             account=self.account,

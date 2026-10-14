@@ -3821,3 +3821,89 @@ class AutoPostPublication(models.Model):
             f"@{self.configuration.account.username} "
             f"AutoPost #{self.sequence_number} [{self.status}]"
         )
+
+
+class AutoPostEntitlement(models.Model):
+    """Time-limited authorization for AutoPost Pro."""
+
+    SOURCE_PAID = "paid"
+    SOURCE_PILOT = "pilot"
+
+    SOURCE_CHOICES = [
+        (SOURCE_PAID, "Paid subscription"),
+        (SOURCE_PILOT, "Authorized pilot"),
+    ]
+
+    account = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="autopost_entitlements",
+    )
+    source = models.CharField(
+        max_length=12,
+        choices=SOURCE_CHOICES,
+    )
+    reference = models.CharField(
+        max_length=160,
+        unique=True,
+    )
+    starts_at = models.DateTimeField()
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    payment_transaction = models.OneToOneField(
+        "WalletTransaction",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="autopost_entitlement",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("starts_at")),
+                name="autopost_entitlement_valid_period",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(source="pilot", payment_transaction__isnull=True)
+                    | models.Q(source="paid", payment_transaction__isnull=False)
+                ),
+                name="autopost_entitlement_valid_source",
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        if self.expires_at <= self.starts_at:
+            errors["expires_at"] = (
+                "Expiration must follow the start date."
+            )
+
+        if self.source == self.SOURCE_PAID:
+            if self.payment_transaction_id is None:
+                errors["payment_transaction"] = (
+                    "Paid entitlement requires a payment."
+                )
+
+        if self.source == self.SOURCE_PILOT:
+            if self.payment_transaction_id is not None:
+                errors["payment_transaction"] = (
+                    "Pilot entitlement cannot charge credits."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return (
+            f"@{self.account.username} "
+            f"AutoPost {self.source} until {self.expires_at}"
+        )

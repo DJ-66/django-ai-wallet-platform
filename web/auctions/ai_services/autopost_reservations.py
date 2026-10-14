@@ -50,6 +50,15 @@ def reserve_autopost(*, account_id, request_key, scheduled_for):
     if not config.enabled:
         raise ValidationError("AutoPost is disabled for this account.")
 
+    from auctions.ai_services.autopost_entitlements import (
+        has_active_autopost_entitlement,
+    )
+
+    if not has_active_autopost_entitlement(account_id=account_id):
+        raise ValidationError(
+            "Active AutoPost entitlement required."
+        )
+
     config.full_clean()
 
     if scheduled_for < timezone.now() + timedelta(hours=24):
