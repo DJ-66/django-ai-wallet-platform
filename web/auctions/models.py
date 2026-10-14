@@ -3769,6 +3769,11 @@ class AutoPostPublication(models.Model):
         on_delete=models.PROTECT,
         related_name="autopost_reservation",
     )
+    claim_token = models.UUIDField(null=True, blank=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True)
+    attempt_count = models.PositiveIntegerField(default=0)
+    next_retry_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
