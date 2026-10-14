@@ -57,11 +57,16 @@
               <span>
                 {% trans "I accept the FANZ" %}
                 <a
-                  href="{% url 'terms' %}"
+                  href="https://fanz.to/tos/"
                   target="_blank"
-                  rel="noopener"
+                  rel="noopener noreferrer"
                 >
                   {% trans "Terms of Service" %}
+                </a>.
+                <a href="https://fanz.to/PrivacyPolicy/"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                  {% trans "Privacy Policy" %}
                 </a>.
               </span>
             </label>
