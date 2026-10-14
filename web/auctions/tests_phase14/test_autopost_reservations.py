@@ -31,6 +31,10 @@ class AutoPostReservationTests(TestCase):
             personality="snarky",
             cta_every=3,
             enabled_campaigns=["founder", "credits", "autopost"],
+            approved_hashtags=[
+                "FANZ", "Creator", "Photo",
+                "Life", "Art", "Explore",
+            ],
         )
 
         self.assets = []
@@ -269,6 +273,10 @@ class AutoPostConcurrencyTests(TransactionTestCase):
             personality="snarky",
             cta_every=3,
             enabled_campaigns=["founder"],
+            approved_hashtags=[
+                "FANZ", "Creator", "Photo",
+                "Life", "Art", "Explore",
+            ],
         )
 
         asset = PlatformMediaAsset(
@@ -334,3 +342,22 @@ class AutoPostConcurrencyTests(TransactionTestCase):
         self.config.refresh_from_db()
         self.assertEqual(self.config.next_sequence, 2)
         self.assertEqual(self.config.next_media_index, 1)
+
+    def test_concurrent_reservation_has_frozen_hashtags(self):
+        reservation = AutoPostPublication.objects.get(
+            pk=reserve_autopost(
+                account_id=self.account.pk,
+                request_key="frozen-concurrent",
+                scheduled_for=self.when,
+            ).pk
+        )
+
+        original = list(reservation.reserved_hashtags)
+
+        self.config.approved_hashtags = [
+            "FANZ", "Different", "New", "Tags", "Stay", "Valid",
+        ]
+        self.config.save(update_fields=["approved_hashtags"])
+
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.reserved_hashtags, original)

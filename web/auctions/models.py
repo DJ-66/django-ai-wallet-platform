@@ -3636,6 +3636,10 @@ class AutoPostConfiguration(models.Model):
         default=list,
         blank=True,
     )
+    approved_hashtags = models.JSONField(
+        default=list,
+        blank=True,
+    )
     interval_hours = models.PositiveSmallIntegerField(default=36)
     custom_cta_title = models.CharField(
         max_length=200,
@@ -3664,6 +3668,24 @@ class AutoPostConfiguration(models.Model):
 
         if not 1 <= self.cta_every <= 10:
             errors["cta_every"] = "Must be between 1 and 10."
+
+        import re
+
+        tags = self.approved_hashtags
+        if not isinstance(tags, list):
+            errors["approved_hashtags"] = "Expected a hashtag list."
+        elif tags and (
+            len(tags) != 6
+            or any(
+                not isinstance(tag, str)
+                or re.fullmatch(r"[A-Za-z0-9_]+", tag) is None
+                for tag in tags
+            )
+            or len(set(tags)) != 6
+        ):
+            errors["approved_hashtags"] = (
+                "Provide six unique hashtags without #."
+            )
 
         if self.interval_hours not in (24, 36, 48, 72):
             errors["interval_hours"] = "Invalid posting interval."
@@ -3702,7 +3724,7 @@ class AutoPostConfiguration(models.Model):
             except ValidationError:
                 errors["custom_cta_url"] = "Invalid HTTPS URL."
 
-        if "custom" in self.enabled_campaigns and not (title and url):
+        if isinstance(self.enabled_campaigns, list) and "custom" in self.enabled_campaigns and not (title and url):
             errors["enabled_campaigns"] = (
                 "Custom campaign requires title and URL."
             )
@@ -3753,6 +3775,10 @@ class AutoPostPublication(models.Model):
     destination_url = models.URLField(max_length=500, blank=True, default="")
     suffix_translations = models.JSONField(
         null=True,
+        blank=True,
+    )
+    reserved_hashtags = models.JSONField(
+        default=list,
         blank=True,
     )
     translations = models.JSONField(null=True, blank=True)

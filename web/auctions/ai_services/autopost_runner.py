@@ -14,7 +14,6 @@ from auctions.models import AutoPostPublication
 
 def process_next_autopost(
     *,
-    hashtags,
     vision_provider=None,
     localization_provider=None,
 ):
@@ -36,13 +35,27 @@ def process_next_autopost(
         if not verify_autopost_claim(publication_id, token):
             return {"status": "stale", "publication_id": publication_id}
 
+        # Use only the frozen reservation snapshot.
+        selected_tags = publication.reserved_hashtags
+
+        import re
+        if (
+            any(
+                not isinstance(tag, str)
+                or re.fullmatch(r"[A-Za-z0-9_]+", tag) is None
+                for tag in selected_tags
+            )
+            or len(set(selected_tags)) != 6
+        ):
+            raise ValueError("Invalid AutoPost hashtags.")
+
         with publication.media_asset.image.open("rb") as image:
             image_bytes = image.read()
 
         translations = generate_autopost_draft(
             reservation=publication,
             image_bytes=image_bytes,
-            hashtags=hashtags,
+            hashtags=selected_tags,
             vision_provider=vision_provider,
             localization_provider=localization_provider,
         )
@@ -51,7 +64,7 @@ def process_next_autopost(
             publication_id,
             token,
             translations,
-            hashtags,
+            selected_tags,
         )
 
         return {

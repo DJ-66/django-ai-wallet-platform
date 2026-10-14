@@ -106,6 +106,16 @@ def reserve_autopost(*, account_id, request_key, scheduled_for):
     if not asset.image.storage.exists(asset.image.name):
         raise ValidationError("Selected AutoPost image is missing.")
 
+    tags = config.approved_hashtags
+    if (
+        not isinstance(tags, list)
+        or len(tags) != 6
+        or len(set(tags)) != 6
+    ):
+        raise ValidationError(
+            "Six approved hashtags are required for reservation."
+        )
+
     sequence = config.next_sequence
 
     suffix = compose_autopost_suffix(
@@ -141,6 +151,7 @@ def reserve_autopost(*, account_id, request_key, scheduled_for):
         variant_index=suffix.variant_index,
         destination_url=destination_url,
         suffix_translations=dict(suffix.translations),
+        reserved_hashtags=list(tags),
     )
 
     config.next_sequence = sequence + 1

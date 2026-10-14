@@ -63,11 +63,11 @@ class AutoPostRunnerTests(TestCase):
                 "es": "Sigue explorando.",
                 "pt": "Continue explorando.",
             },
+            reserved_hashtags=list(HASHTAGS),
         )
 
     def test_reservation_becomes_ready_without_publishing(self):
         result = process_next_autopost(
-            hashtags=HASHTAGS,
             vision_provider=FakeVision(),
             localization_provider=FakeLocalization(),
         )
@@ -84,15 +84,13 @@ class AutoPostRunnerTests(TestCase):
     def test_second_run_does_not_duplicate(self):
         self.assertEqual(
             process_next_autopost(
-                hashtags=HASHTAGS,
-                vision_provider=FakeVision(),
+                    vision_provider=FakeVision(),
                 localization_provider=FakeLocalization(),
             )["status"],
             "ready",
         )
 
         result = process_next_autopost(
-            hashtags=HASHTAGS,
             vision_provider=FakeVision(),
             localization_provider=FakeLocalization(),
         )
@@ -127,8 +125,7 @@ class AutoPostRunnerTests(TestCase):
             side_effect=expire_during_inference,
         ):
             result = process_next_autopost(
-                hashtags=HASHTAGS,
-                vision_provider=FakeVision(),
+                    vision_provider=FakeVision(),
                 localization_provider=FakeLocalization(),
             )
 
@@ -142,3 +139,42 @@ class AutoPostRunnerTests(TestCase):
 
         self.assertEqual(FeedPost.objects.count(), 0)
         self.assertEqual(ScheduledPublication.objects.count(), 0)
+
+    def test_runner_uses_configured_account_hashtags(self):
+        from auctions.tests_phase14.test_autopost_pipeline import HASHTAGS
+
+        config = self.publication.configuration
+        config.approved_hashtags = list(HASHTAGS)
+        config.save(update_fields=["approved_hashtags"])
+
+        result = process_next_autopost(
+            vision_provider=FakeVision(),
+            localization_provider=FakeLocalization(),
+        )
+
+        self.assertEqual(result["status"], "ready")
+
+        self.publication.refresh_from_db()
+        self.assertIn(
+            "#FANZ",
+            self.publication.translations["en"]["content"],
+        )
+
+    def test_missing_reserved_hashtags_rejected_before_vision(self):
+        from unittest.mock import Mock
+
+        self.publication.reserved_hashtags = []
+        self.publication.save(update_fields=["reserved_hashtags"])
+
+        vision = Mock()
+
+        result = process_next_autopost(
+            vision_provider=vision,
+            localization_provider=FakeLocalization(),
+        )
+
+        self.assertEqual(result["status"], "failed")
+        vision.generate.assert_not_called()
+
+        self.publication.refresh_from_db()
+        self.assertEqual(self.publication.status, "failed")
