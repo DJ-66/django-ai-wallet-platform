@@ -3751,6 +3751,10 @@ class AutoPostPublication(models.Model):
     campaign = models.CharField(max_length=32, blank=True, default="")
     variant_index = models.PositiveSmallIntegerField(default=0)
     destination_url = models.URLField(max_length=500, blank=True, default="")
+    suffix_translations = models.JSONField(
+        null=True,
+        blank=True,
+    )
     translations = models.JSONField(null=True, blank=True)
     status = models.CharField(
         max_length=16,

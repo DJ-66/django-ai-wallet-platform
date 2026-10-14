@@ -31,6 +31,7 @@ def compose_autopost_suffix(
     cta_every: int,
     personality: str,
     enabled_campaigns: tuple[str, ...],
+    custom_title: str = "",
 ) -> AutoPostSuffix:
     """Choose a suffix and its aligned EN/ES/PT variants."""
     if not publication_key:
@@ -54,11 +55,16 @@ def compose_autopost_suffix(
 
     kind = "cta" if is_cta else "personality"
 
-    count = get_variant_count(
-        kind=kind,
-        personality=personality,
-        campaign=campaign,
-    )
+    if campaign == "custom":
+        if not isinstance(custom_title, str) or not custom_title.strip():
+            raise ValueError("Custom CTA title is required")
+        count = 1
+    else:
+        count = get_variant_count(
+            kind=kind,
+            personality=personality,
+            campaign=campaign,
+        )
 
     selected = select_suffix(
         publication_key=publication_key,
@@ -69,16 +75,22 @@ def compose_autopost_suffix(
         variant_count=count,
     )
 
-    translations = {
-        language: get_approved_suffix(
+    if selected.campaign == "custom":
+        translations = {
+            language: custom_title.strip()
+            for language in LANGUAGES
+        }
+    else:
+        translations = {
+            language: get_approved_suffix(
             kind=selected.kind,
             personality=selected.personality,
             campaign=selected.campaign,
             language=language,
             variant_index=selected.variant_index,
         )
-        for language in LANGUAGES
-    }
+            for language in LANGUAGES
+        }
 
     return AutoPostSuffix(
         kind=selected.kind,
