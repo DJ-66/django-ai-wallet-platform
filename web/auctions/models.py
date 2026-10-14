@@ -3788,6 +3788,13 @@ class AutoPostPublication(models.Model):
         default=STATUS_RESERVED,
         db_index=True,
     )
+    feed_post = models.OneToOneField(
+        "FeedPost",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="autopost_publication",
+    )
     scheduled_publication = models.OneToOneField(
         "ScheduledPublication",
         null=True,
