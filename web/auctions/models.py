@@ -3712,3 +3712,77 @@ class AutoPostConfiguration(models.Model):
 
     def __str__(self):
         return f"@{self.account.username} AutoPost"
+
+
+class AutoPostPublication(models.Model):
+    """Frozen AutoPost reservation; never directly claimed by legacy workers."""
+
+    STATUS_RESERVED = "reserved"
+    STATUS_PROCESSING = "processing"
+    STATUS_READY = "ready"
+    STATUS_PUBLISHED = "published"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_RESERVED, "Reserved"),
+        (STATUS_PROCESSING, "Processing"),
+        (STATUS_READY, "Ready"),
+        (STATUS_PUBLISHED, "Published"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    configuration = models.ForeignKey(
+        "AutoPostConfiguration",
+        on_delete=models.PROTECT,
+        related_name="publications",
+    )
+    publication_key = models.CharField(
+        max_length=160,
+        unique=True,
+    )
+    sequence_number = models.PositiveIntegerField()
+    media_asset = models.ForeignKey(
+        "PlatformMediaAsset",
+        on_delete=models.PROTECT,
+        related_name="autopost_publications",
+    )
+    scheduled_for = models.DateTimeField(db_index=True)
+    personality = models.CharField(max_length=20)
+    campaign = models.CharField(max_length=32, blank=True, default="")
+    variant_index = models.PositiveSmallIntegerField(default=0)
+    destination_url = models.URLField(max_length=500, blank=True, default="")
+    translations = models.JSONField(null=True, blank=True)
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_RESERVED,
+        db_index=True,
+    )
+    scheduled_publication = models.OneToOneField(
+        "ScheduledPublication",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="autopost_reservation",
+    )
+    last_error = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["configuration", "sequence_number"],
+                name="unique_autopost_account_sequence",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(sequence_number__gte=1),
+                name="autopost_positive_sequence",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"@{self.configuration.account.username} "
+            f"AutoPost #{self.sequence_number} [{self.status}]"
+        )
