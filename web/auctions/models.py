@@ -3608,3 +3608,107 @@ class FeedPostLocalizationState(models.Model):
             f"Localization state for post {self.post_id} "
             f"(failures={self.attempt_count})"
         )
+
+
+class AutoPostConfiguration(models.Model):
+    """Account-specific AutoPost settings; inert until enabled."""
+
+    PERSONALITY_CHOICES = [
+        ("flirty", "Flirty"),
+        ("snarky", "Snarky"),
+        ("savage", "Savage"),
+        ("dominatrix", "Dominatrix"),
+    ]
+
+    account = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="autopost_configuration",
+    )
+    enabled = models.BooleanField(default=False)
+    personality = models.CharField(
+        max_length=20,
+        choices=PERSONALITY_CHOICES,
+        default="snarky",
+    )
+    cta_every = models.PositiveSmallIntegerField(default=3)
+    enabled_campaigns = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    interval_hours = models.PositiveSmallIntegerField(default=36)
+    custom_cta_title = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+    )
+    custom_cta_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+    )
+    next_sequence = models.PositiveIntegerField(default=1)
+    next_media_index = models.PositiveIntegerField(default=0)
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from django.core.validators import URLValidator
+        from auctions.ai_services.autopost_suffixes import (
+            CAMPAIGN_ORDER,
+        )
+
+        errors = {}
+
+        if self.personality not in dict(self.PERSONALITY_CHOICES):
+            errors["personality"] = "Unknown personality."
+
+        if not 1 <= self.cta_every <= 10:
+            errors["cta_every"] = "Must be between 1 and 10."
+
+        if self.interval_hours not in (24, 36, 48, 72):
+            errors["interval_hours"] = "Invalid posting interval."
+
+        if self.next_sequence < 1:
+            errors["next_sequence"] = "Must be positive."
+
+        if not isinstance(self.enabled_campaigns, list):
+            errors["enabled_campaigns"] = "Expected a campaign list."
+        elif (
+            any(
+                not isinstance(item, str)
+                or item not in CAMPAIGN_ORDER
+                for item in self.enabled_campaigns
+            )
+            or len(self.enabled_campaigns) != len(
+                dict.fromkeys(
+                    item
+                    for item in self.enabled_campaigns
+                    if isinstance(item, str)
+                )
+            )
+        ):
+            errors["enabled_campaigns"] = "Invalid campaigns."
+
+        title = self.custom_cta_title.strip()
+        url = self.custom_cta_url.strip()
+
+        if bool(title) != bool(url):
+            errors["custom_cta_url"] = (
+                "Custom CTA requires both title and URL."
+            )
+        elif url:
+            try:
+                URLValidator(schemes=["https"])(url)
+            except ValidationError:
+                errors["custom_cta_url"] = "Invalid HTTPS URL."
+
+        if "custom" in self.enabled_campaigns and not (title and url):
+            errors["enabled_campaigns"] = (
+                "Custom campaign requires title and URL."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"@{self.account.username} AutoPost"
