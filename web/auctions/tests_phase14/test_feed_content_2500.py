@@ -1,4 +1,4 @@
-"""Regression coverage for the 2400-character FANZ feed limit."""
+"""Regression coverage for the 2500-character FANZ feed limit."""
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
@@ -21,17 +21,17 @@ class FixedProvider:
 
 
 class FeedContentLimitTests(SimpleTestCase):
-    def test_model_limits_are_2400(self):
+    def test_model_limits_are_2500(self):
         self.assertEqual(
             FeedPost._meta.get_field("content").max_length,
-            2400,
+            2500,
         )
         self.assertEqual(
             FeedPostTranslation._meta.get_field("content").max_length,
-            2400,
+            2500,
         )
 
-    def test_2400_character_translation_accepted(self):
+    def test_2500_character_translation_accepted(self):
         post = FeedPost(
             title="Test title",
             content="A" * 200,
@@ -41,12 +41,12 @@ class FeedContentLimitTests(SimpleTestCase):
             post,
             source_language="en",
             target_language="es",
-            provider=FixedProvider(2400),
+            provider=FixedProvider(2500),
         )
 
-        self.assertEqual(len(result["content"]), 2400)
+        self.assertEqual(len(result["content"]), 2500)
 
-    def test_2401_character_translation_rejected(self):
+    def test_2501_character_translation_rejected(self):
         post = FeedPost(
             title="Test title",
             content="A" * 200,
@@ -54,19 +54,19 @@ class FeedContentLimitTests(SimpleTestCase):
 
         with self.assertRaisesRegex(
             PostLocalizationError,
-            "2400 characters",
+            "2500 characters",
         ):
             _translate_target_once(
                 post,
                 source_language="en",
                 target_language="es",
-                provider=FixedProvider(2401),
+                provider=FixedProvider(2501),
             )
 
-    def test_model_validation_rejects_2401(self):
+    def test_model_validation_rejects_2501(self):
         post = FeedPost(
             title="Test title",
-            content="A" * 2401,
+            content="A" * 2501,
         )
 
         with self.assertRaises(ValidationError):

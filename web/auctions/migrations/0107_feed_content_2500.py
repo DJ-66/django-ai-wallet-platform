@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="feedpost",
             name="content",
-            field=models.TextField(max_length=2400),
+            field=models.TextField(max_length=2500),
         ),
         migrations.AlterField(
             model_name="feedposttranslation",
             name="content",
-            field=models.TextField(blank=True, default="", max_length=2400),
+            field=models.TextField(blank=True, default="", max_length=2500),
         ),
     ]

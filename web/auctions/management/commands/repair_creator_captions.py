@@ -86,7 +86,7 @@ def validate_recovery_translations(translations, hashtags):
         if (
             not isinstance(content, str)
             or not content.strip()
-            or len(content) > 2400
+            or len(content) > 2500
         ):
             raise CommandError(
                 f"Invalid {language} content."

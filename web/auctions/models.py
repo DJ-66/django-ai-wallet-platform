@@ -1192,7 +1192,7 @@ class FeedPost(models.Model):
         default=""
     )
 
-    content = models.TextField(max_length=2400)
+    content = models.TextField(max_length=2500)
 
     hashtags = models.ManyToManyField(
         "Hashtag",
@@ -1251,7 +1251,7 @@ class FeedPostTranslation(models.Model):
     )
 
     content = models.TextField(
-        max_length=2400,
+        max_length=2500,
         blank=True,
         default="",
     )
