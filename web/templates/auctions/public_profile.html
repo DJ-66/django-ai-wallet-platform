@@ -283,10 +283,21 @@
             🔗 {% trans "Share Profile" %}
         </button>
 
-        {% if request.user == profile_user %}
+        {% if request.user.is_authenticated and request.user == profile_user %}
             <a href="{% url 'edit_profile' %}" class="auth-primary-btn profile-edit-btn">
                 {% trans "Edit Profile" %}
             </a>
+
+            <div class="profile-owner-links" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px;">
+                <a href="/auctions/platform/accounts/"
+                   class="auth-primary-btn profile-edit-btn">
+                    🏷️ @4char Properties
+                </a>
+                <a href="/b/my/businesses/"
+                   class="auth-primary-btn profile-edit-btn">
+                    🏢 Biz(s) Listed
+                </a>
+            </div>
         {% endif %}
 
     </div>
