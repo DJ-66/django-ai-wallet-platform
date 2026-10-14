@@ -536,9 +536,9 @@ CONTENT:
             f"{target_language} title exceeds 120 characters."
         )
 
-    if len(content) > 2000:
+    if len(content) > 2400:
         raise PostLocalizationError(
-            f"{target_language} content exceeds 2000 characters."
+            f"{target_language} content exceeds 2400 characters (got {len(content)})."
         )
 
     _validate_preserved_tokens(
