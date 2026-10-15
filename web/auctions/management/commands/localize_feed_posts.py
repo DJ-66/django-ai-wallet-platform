@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from datetime import timedelta
 
 from django.db.models import Count, F, Q
@@ -36,6 +36,11 @@ class Command(BaseCommand):
         parser.add_argument(
             "--post-id",
             type=int,
+        )
+        parser.add_argument(
+            "--include-private",
+            action="store_true",
+            help="Allow one explicitly targeted @PrivacyPolicy private post.",
         )
 
     def show_status(self):
@@ -119,18 +124,34 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         limit = max(1, options["limit"])
 
+        post_id = options.get("post_id")
+        include_private = options["include_private"]
+
+        if include_private and (not post_id or options["status"]):
+            raise CommandError(
+                "--include-private requires --post-id and cannot use --status."
+            )
+
         if options["status"]:
             self.show_status()
             return
-        post_id = options.get("post_id")
 
         now = timezone.now()
 
-        posts = (
-            FeedPost.objects
-            .filter(is_public=True)
-            .prefetch_related("translations")
-        )
+        posts = FeedPost.objects.prefetch_related("translations")
+
+        if include_private:
+            posts = posts.filter(
+                pk=post_id,
+                user__username__iexact="PrivacyPolicy",
+                is_public=False,
+            )
+            if not posts.exists():
+                raise CommandError(
+                    "Private localization is restricted to @PrivacyPolicy posts."
+                )
+        else:
+            posts = posts.filter(is_public=True)
 
         if not dry_run and not post_id:
             posts = posts.filter(
