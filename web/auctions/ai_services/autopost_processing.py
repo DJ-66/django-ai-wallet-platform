@@ -1,13 +1,15 @@
 """Short-transaction processing claims for AutoPost."""
 
 from datetime import timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, F, OuterRef, Q
 from django.utils import timezone
 
 from auctions.models import AutoPostEntitlement, AutoPostPublication
+from auctions.utils import SYSTEM_WALLET_USERNAME
 
 
 def claim_autopost(*, lease_minutes=30):
@@ -17,13 +19,24 @@ def claim_autopost(*, lease_minutes=30):
 
     now = timezone.now()
 
-    active_pilot = AutoPostEntitlement.objects.filter(
+    active_entitlement = AutoPostEntitlement.objects.filter(
         account_id=OuterRef("configuration__account_id"),
-        source=AutoPostEntitlement.SOURCE_PILOT,
-        payment_transaction__isnull=True,
         revoked_at__isnull=True,
         starts_at__lte=now,
         expires_at__gt=now,
+    ).filter(
+        Q(
+            source=AutoPostEntitlement.SOURCE_PILOT,
+            payment_transaction__isnull=True,
+        )
+        | Q(
+            source=AutoPostEntitlement.SOURCE_PAID,
+            payment_transaction__isnull=False,
+            payment_transaction__transaction_type="autopost_subscription",
+            payment_transaction__amount=Decimal("150.00"),
+            payment_transaction__sender__user_id=F("account_id"),
+            payment_transaction__receiver__user__username=SYSTEM_WALLET_USERNAME,
+        )
     )
 
     with transaction.atomic():
@@ -46,7 +59,7 @@ def claim_autopost(*, lease_minutes=30):
                 configuration__account__is_active=True,
                 scheduled_for__lte=now + timedelta(hours=24),
             )
-            .alias(has_entitlement=Exists(active_pilot))
+            .alias(has_entitlement=Exists(active_entitlement))
             .filter(has_entitlement=True)
             .order_by("scheduled_for", "pk")
             .first()

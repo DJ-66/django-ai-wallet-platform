@@ -2035,6 +2035,9 @@ msgstr[0] ""
 msgstr[1] ""
 "\n"
 "%(count)s hashtags en FANZ"
+msgstr[2] ""
+"\n"
+"%(count)s hashtags en FANZ"
 
 #: templates/auctions/hashtag_feed.html:39
 msgid "No trending hashtags yet."
@@ -2985,3 +2988,20 @@ msgstr "Volver a iniciar sesión"
 #: templates/base.html
 msgid "List My Biz"
 msgstr "Publicar mi negocio"
+
+
+# FANZ additional business industries
+msgid "Digital Business"
+msgstr "Negocio digital"
+
+msgid "Consultant"
+msgstr "Consultoría"
+
+msgid "Transportation"
+msgstr "Transporte"
+
+msgid "Retail"
+msgstr "Comercio minorista"
+
+msgid "Services"
+msgstr "Servicios"

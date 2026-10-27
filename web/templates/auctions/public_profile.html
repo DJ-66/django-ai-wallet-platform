@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load l10n %}
 {% load static %}
 {% load i18n %}
 {% load hashtag_tags %}
@@ -76,7 +77,7 @@
 
         <div class="profile-stats">
             <div class="profile-stat">
-                📝 {{ profile_posts.count }}
+                📝 {{ profile_posts|length }}
             </div>
 
             <div class="profile-stat">
@@ -144,7 +145,7 @@
             {% endif %}
 
         {% if request.user.is_authenticated and request.user != profile_user %}
-            {% if show_profile_fan %}
+            {% if show_profile_fan or profile_user.username|lower == "fanz" %}
             <a href="{% url 'toggle_fan' profile_user.username %}"
                class="auth-primary-btn profile-tip-btn profile-fan-btn">
                 {% if is_fan %}
@@ -161,13 +162,13 @@
                 aria-hidden="true"
             ></div>
 
-         {% if show_profile_message %}
+         {% if show_profile_message and profile_user.username|lower != "sunsetcam" %}
          <a href="{% url 'start_conversation' profile_user.username %}"
          class="auth-primary-btn profile-message-btn">
         💌 {% trans "Message" %} {{ profile_user.username }}
         </a>
         {% endif %}
-             {% if show_profile_credits and profile_user.bidwallet.wallet_code %}
+             {% if show_profile_credits and profile_user.username|lower != "sunsetcam" and profile_user.bidwallet.wallet_code %}
             <a href="{% url 'pay_user' profile_user.bidwallet.wallet_code %}"
                class="auth-primary-btn profile-tip-btn">
                 💰 {% trans "Send Credits" %}
@@ -312,17 +313,45 @@
                 <div class="support-me-header">
                     <div>
                         <span class="support-me-heart">❤️</span>
-                        <strong>{{ support_product.display_name }}</strong>
+                        <strong>
+                            {% if profile_user.username|lower == "fanz" %}
+                                {% if language == "es" %}
+                                    Apoya a @Fanz
+                                {% elif language == "pt" %}
+                                    Apoie @Fanz
+                                {% else %}
+                                    Support @Fanz
+                                {% endif %}
+                            {% else %}
+                                {{ support_product.display_name }}
+                            {% endif %}
+                        </strong>
                     </div>
 
                     <span class="seller-badge">
-                        {% trans "Support" %}
+                        {% if profile_user.username|lower == "fanz" %}
+                            {% if language == "es" %}Apoyar
+                            {% elif language == "pt" %}Apoiar
+                            {% else %}Support{% endif %}
+                        {% else %}
+                            {% trans "Support" %}
+                        {% endif %}
                     </span>
                 </div>
 
                 {% if support_product.description %}
                     <p class="support-me-description">
-                        {{ support_product.description }}
+                        {% if profile_user.username|lower == "fanz" %}
+                            {% if language == "es" %}
+                                Apoya a FANZ directamente. Elige una cantidad o introduce la tuya.
+                            {% elif language == "pt" %}
+                                Apoie a FANZ diretamente. Escolha um valor ou digite o seu.
+                            {% else %}
+                                {{ support_product.description }}
+                            {% endif %}
+                        {% else %}
+                            {{ support_product.description }}
+                        {% endif %}
                     </p>
                 {% endif %}
 
@@ -333,7 +362,13 @@
                         </strong>
                         <span>
                             / ${{ support_goal|floatformat:2 }}
-                            {% trans "this month" %}
+                            {% if profile_user.username|lower == "fanz" %}
+                                {% if language == "es" %}este mes
+                                {% elif language == "pt" %}este mês
+                                {% else %}this month{% endif %}
+                            {% else %}
+                                {% trans "this month" %}
+                            {% endif %}
                         </span>
                     </div>
 
@@ -346,7 +381,7 @@
                     >
                         <div
                             class="support-meter-fill"
-                            style="width: {{ support_bar_percent|floatformat:2 }}%;"
+                            style="width: {% localize off %}{{ support_bar_percent|floatformat:2 }}{% endlocalize %}%;"
                         ></div>
                     </div>
 
@@ -357,7 +392,13 @@
 
                         <span>
                             👥 {{ supporter_count }}
-                            {% trans "supporters" %}
+                            {% if profile_user.username|lower == "fanz" %}
+                                {% if language == "es" %}colaboradores
+                                {% elif language == "pt" %}apoiadores
+                                {% else %}supporters{% endif %}
+                            {% else %}
+                                {% trans "supporters" %}
+                            {% endif %}
                         </span>
                     </div>
                 {% endif %}
@@ -384,7 +425,13 @@
 
                         <div class="support-custom-row">
                             <label for="support-custom-amount">
-                                {% trans "Support amount" %}
+                                {% if profile_user.username|lower == "fanz" %}
+                                    {% if language == "es" %}Cantidad de apoyo
+                                    {% elif language == "pt" %}Valor do apoio
+                                    {% else %}Support amount{% endif %}
+                                {% else %}
+                                    {% trans "Support amount" %}
+                                {% endif %}
                             </label>
 
                             <div class="support-custom-input-wrap">
@@ -469,7 +516,13 @@
                             </h4>
 
                             <p>
-                                <strong>{% trans "Support amount" %}:</strong>
+                                <strong>{% if profile_user.username|lower == "fanz" %}
+                                    {% if language == "es" %}Cantidad de apoyo
+                                    {% elif language == "pt" %}Valor do apoio
+                                    {% else %}Support amount{% endif %}
+                                {% else %}
+                                    {% trans "Support amount" %}
+                                {% endif %}:</strong>
                                 ${{ support_sui_checkout.amount_usd|floatformat:2 }}
                             </p>
 
@@ -654,7 +707,12 @@
                 height: 1.15rem;
                 overflow: hidden;
                 border-radius: 999px;
-                background: rgba(255, 255, 255, .12);
+                background: linear-gradient(
+                    90deg,
+                    rgba(124, 58, 237, .32),
+                    rgba(236, 72, 153, .32),
+                    rgba(250, 204, 21, .32)
+                );
                 border: 1px solid rgba(255, 255, 255, .16);
             }
 
@@ -1075,6 +1133,40 @@
             if (!hlsUrl) return;
 
             let sunsetcamHls = null;
+            let sunsetcamStallTimer = null;
+
+            const SUNSETCAM_STALL_TIMEOUT_MS = 120000;
+
+            function cancelSunsetCamStallReload() {
+                if (sunsetcamStallTimer !== null) {
+                    window.clearTimeout(sunsetcamStallTimer);
+                    sunsetcamStallTimer = null;
+                }
+            }
+
+            function scheduleSunsetCamStallReload() {
+                if (sunsetcamStallTimer !== null) {
+                    return;
+                }
+
+                sunsetcamStallTimer = window.setTimeout(
+                    function () {
+                        sunsetcamStallTimer = null;
+
+                        if (
+                            !video.paused &&
+                            video.readyState >= 3
+                        ) {
+                            return;
+                        }
+
+                        scheduleSunsetCamReload(
+                            "video stalled for 120 seconds"
+                        );
+                    },
+                    SUNSETCAM_STALL_TIMEOUT_MS
+                );
+            }
 
             function scheduleSunsetCamReload(reason) {
                 if (
@@ -1153,8 +1245,10 @@
             }
 
             video.addEventListener(
-                "play",
+                "playing",
                 function () {
+                    cancelSunsetCamStallReload();
+
                     sessionStorage.removeItem(
                         "sunsetcam-reload-pending"
                     );
@@ -1164,9 +1258,7 @@
             video.addEventListener(
                 "stalled",
                 function () {
-                    scheduleSunsetCamReload(
-                        "video stalled"
-                    );
+                    scheduleSunsetCamStallReload();
                 }
             );
 
@@ -1832,9 +1924,9 @@
 
             <div class="post-comment">
 
-                <strong>@{{ comment.user.username }}</strong>
+                <strong><a href="{% url 'public_profile_root' comment.user.username %}">@{{ comment.user.username }}</a></strong>
 
-                <p>{{ comment.content|linebreaksbr }}</p>
+                <p>{{ comment.content|render_fanz_plaintext }}</p>
 
 
                  {% if comment.replies.count %}
@@ -1843,8 +1935,8 @@
 
                  {% for reply in comment.replies.all %}
                  <div class="post-reply">
-                 <strong>@{{ reply.user.username }}</strong>
-                <p>{{ reply.content|linebreaksbr }}</p>
+                 <strong><a href="{% url 'public_profile_root' reply.user.username %}">@{{ reply.user.username }}</a></strong>
+                <p>{{ reply.content|render_fanz_plaintext }}</p>
                </div>
               {% endfor %}
               </details>
@@ -1944,8 +2036,13 @@
     }
 
     .profile-username {
-        margin-top: 0 !important;
-        margin-bottom: .35rem !important;
+        margin-top: .5rem !important;
+        margin-bottom: .5rem !important;
+    }
+
+    .profile-public-card .ai-creator-badge {
+        display: inline-block;
+        margin-bottom: .75rem !important;
     }
 
     .profile-stats {

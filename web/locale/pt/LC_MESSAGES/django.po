@@ -2967,3 +2967,20 @@ msgstr "Voltar para o login"
 #: templates/base.html
 msgid "List My Biz"
 msgstr "Publicar meu negócio"
+
+
+# FANZ additional business industries
+msgid "Digital Business"
+msgstr "Negócio digital"
+
+msgid "Consultant"
+msgstr "Consultoria"
+
+msgid "Transportation"
+msgstr "Transporte"
+
+msgid "Retail"
+msgstr "Comércio varejista"
+
+msgid "Services"
+msgstr "Serviços"
