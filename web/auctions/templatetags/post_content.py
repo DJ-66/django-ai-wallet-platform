@@ -60,7 +60,14 @@ def _link_text(text):
     """
     matches = []
 
+    protected = [m.span() for m in re.finditer(r"https?://[^\s<>\"\x27]+", text, re.I)]
+
+    def inside_url(start, end):
+        return any(start < right and end > left for left, right in protected)
+
     for match in MENTION_RE.finditer(text):
+        if inside_url(*match.span()):
+            continue
         matches.append(
             (
                 match.start(),
@@ -71,6 +78,8 @@ def _link_text(text):
         )
 
     for match in HASHTAG_RE.finditer(text):
+        if inside_url(*match.span()):
+            continue
         matches.append(
             (
                 match.start(),
@@ -106,7 +115,7 @@ def _link_text(text):
 
         if kind == "mention":
             href = reverse(
-                "public_profile_root",
+                "resolve_mention",
                 kwargs={
                     "username": value,
                 },
@@ -479,3 +488,67 @@ def post_trailing_hashtags(value):
         value
     )
     return hashtags
+
+
+@register.filter
+def render_fanz_plaintext(value):
+    """
+    Render FANZ plain text with safe mentions and hashtags.
+
+    Never interpret input as HTML or Markdown.
+    Preserve line breaks and escape non-link text.
+    """
+    if not value:
+        return ""
+
+    from django.template.defaultfilters import linebreaksbr
+
+    linked = _link_text(str(value))
+
+    html = linebreaksbr(
+        mark_safe(linked),
+        autoescape=False,
+    )
+
+    html = bleach.linkifier.Linker(
+        callbacks=[
+            _set_link_policy,
+        ],
+        parse_email=False,
+        skip_tags=[
+            "a",
+            "code",
+            "pre",
+        ],
+    ).linkify(str(html))
+
+    return mark_safe(html)
+
+@register.filter
+def render_fanz_preview(value, limit=90):
+    """
+    Render a shortened Inbox preview without linking partial
+    mentions or hashtags at the truncation boundary.
+    """
+    from django.utils.text import Truncator
+
+    source = str(value or "")
+    limit = int(limit)
+
+    if not source or limit <= 0:
+        return ""
+
+    if len(source) <= limit:
+        return render_fanz_plaintext(source)
+
+    preview = Truncator(source).chars(limit)
+
+    # Remove only a partial mention/hashtag at the boundary.
+    # Preserve the visible preview and its ellipsis.
+    suffix = re.search(r"[@#][A-Za-z0-9_]+…$", preview)
+
+    if suffix:
+        start = suffix.start()
+        preview = preview[:start] + "…"
+
+    return render_fanz_plaintext(preview)

@@ -85,7 +85,7 @@ def add_fanz_brand_banner(img, username):
         stroke_fill=(255, 255, 255, 100),
     )
 
-    return img.convert("RGB")
+    return img
 
 def add_fanz_platform_footer(
     img,
@@ -156,7 +156,7 @@ def add_fanz_platform_footer(
         fill=(234, 255, 0, 255),
     )
 
-    return new_img.convert("RGB")
+    return new_img
 
 def process_fanz_image_upload(
     image,
@@ -168,6 +168,7 @@ def process_fanz_image_upload(
     max_height=2400,
     quality=90,
     output_name=None,
+    max_output_bytes=None,
 ):
     if not image:
         return image
@@ -198,7 +199,18 @@ def process_fanz_image_upload(
             _("Supported image formats are JPG, PNG, WebP, and AVIF.")
         )
 
-    img = img.convert("RGB")
+    # Preserve real transparency for logos, avatars and graphics.
+    # Opaque photographs continue through the existing RGB path.
+    has_alpha = (
+        "A" in img.getbands()
+        or "transparency" in img.info
+    )
+
+    if has_alpha:
+        img = img.convert("RGBA")
+    else:
+        img = img.convert("RGB")
+
     img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
 
     if footer_text:
@@ -211,15 +223,75 @@ def process_fanz_image_upload(
     elif watermark:
         img = add_fanz_brand_banner(img, username)
 
+    if max_output_bytes is not None:
+        if (
+            not isinstance(max_output_bytes, int)
+            or isinstance(max_output_bytes, bool)
+            or max_output_bytes <= 0
+        ):
+            raise ValueError("Invalid WebP output size limit.")
+
     output = BytesIO()
 
-    img.save(
-        output,
-        format="WEBP",
-        quality=quality,
-        method=6,
-        optimize=True,
-    )
+    if max_output_bytes is None:
+        img.save(
+            output,
+            format="WEBP",
+            quality=quality,
+            method=6,
+            optimize=True,
+        )
+    else:
+        candidate = img
+        minimum_dimension = 320
+
+        for scale_attempt in range(8):
+            for candidate_quality in (90, 82, 74, 66, 58, 50):
+                output = BytesIO()
+
+                candidate.save(
+                    output,
+                    format="WEBP",
+                    quality=min(quality, candidate_quality),
+                    method=6,
+                    optimize=True,
+                )
+
+                if output.tell() <= max_output_bytes:
+                    break
+            else:
+                if scale_attempt == 7:
+                    raise forms.ValidationError(
+                        _("Image cannot meet the WebP size limit.")
+                    )
+
+                width, height = candidate.size
+
+                if max(width, height) <= minimum_dimension:
+                    raise forms.ValidationError(
+                        _("Image cannot meet the WebP size limit.")
+                    )
+
+                scale = max(
+                    0.8,
+                    minimum_dimension / max(width, height),
+                )
+
+                new_width = max(1, round(width * scale))
+                new_height = max(1, round(height * scale))
+
+                if (new_width, new_height) == (width, height):
+                    raise forms.ValidationError(
+                        _("Image cannot meet the WebP size limit.")
+                    )
+
+                candidate = candidate.resize(
+                    (new_width, new_height),
+                    Image.Resampling.LANCZOS,
+                )
+                continue
+
+            break
 
     output.seek(0)
 

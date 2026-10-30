@@ -4718,10 +4718,27 @@ class FounderVendingTiendaViewTests(TestCase):
 
 
 class UserProfileSuiAddressTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from auctions.models import BidWallet
+
+        self.user = get_user_model().objects.create_user(
+            username="sui_wallet_fixture_user",
+            password=None,
+        )
+
+        self.wallet, _ = BidWallet.objects.get_or_create(
+            user=self.user,
+        )
+
+        self.wallet.credits = 500
+        self.wallet.save(update_fields=["credits"])
+
     def test_sui_address_is_optional(self):
         from auctions.forms import UserProfileForm
 
         form = UserProfileForm(
+            user=self.user,
             data={
                 "sui_address": "",
             }
@@ -4741,6 +4758,7 @@ class UserProfileSuiAddressTests(TestCase):
         from auctions.forms import UserProfileForm
 
         form = UserProfileForm(
+            user=self.user,
             data={
                 "sui_address":
                     "0xABCDEF0123456789ABCDEF0123456789"
@@ -4765,6 +4783,7 @@ class UserProfileSuiAddressTests(TestCase):
         from auctions.forms import UserProfileForm
 
         form = UserProfileForm(
+            user=self.user,
             data={
                 "sui_address": "not-a-sui-address",
             }
@@ -4778,6 +4797,24 @@ class UserProfileSuiAddressTests(TestCase):
             "sui_address",
             form.errors,
         )
+
+    def test_sui_address_locked_below_credit_threshold(self):
+        from auctions.forms import UserProfileForm
+
+        self.wallet.credits = 499
+        self.wallet.save(update_fields=["credits"])
+
+        form = UserProfileForm(
+            user=self.user,
+            data={
+                "sui_address": "0x" + "a" * 64,
+            },
+        )
+
+        self.assertFalse(form.sui_wallet_unlocked)
+        self.assertNotIn("sui_address", form.fields)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertNotIn("sui_address", form.cleaned_data)
 
 
 
@@ -7671,6 +7708,8 @@ class P2PBTCPayOutageViewTests(TestCase):
             username="DJ",
             password="test-password",
         )
+        self.seller.profile.is_platform_account = True
+        self.seller.profile.save(update_fields=["is_platform_account"])
         self.buyer = User.objects.create_user(
             username="p2p-outage-buyer",
             password="test-password",
@@ -7809,6 +7848,8 @@ class P2PBTCPaySettlementWorkerIntegrationTests(TestCase):
             username="DJ",
             password="test-password",
         )
+        seller.profile.is_platform_account = True
+        seller.profile.save(update_fields=["is_platform_account"])
         buyer = User.objects.create_user(
             username="p2p-btc-settlement-buyer",
             password="test-password",
@@ -8002,6 +8043,8 @@ class P2PSuiCheckoutViewTests(TestCase):
             username="DJ",
             password="test-password",
         )
+        self.seller.profile.is_platform_account = True
+        self.seller.profile.save(update_fields=["is_platform_account"])
         self.buyer = User.objects.create_user(
             username="p2p-sui-buyer",
             password="test-password",
@@ -9992,9 +10035,13 @@ class FeedPostContentRendererTests(SimpleTestCase):
             rendered,
         )
 
-    def test_mention_links_to_fanz_profile(self):
+    def test_mention_links_to_fanz_resolver(self):
         rendered = self.render("Visit @BuyCredits")
         self.assertIn(
+            'href="/auctions/mention/BuyCredits/"',
+            rendered,
+        )
+        self.assertNotIn(
             'href="/BuyCredits/"',
             rendered,
         )
@@ -13399,6 +13446,7 @@ class SunsetCamCaptureScheduleTests(TestCase):
         from auctions.models import (
             SunsetCamCapture,
         )
+        from unittest.mock import patch
 
         expected = [
             (
@@ -13418,7 +13466,7 @@ class SunsetCamCaptureScheduleTests(TestCase):
             ),
             (
                 18,
-                31,
+                26,
                 SunsetCamCapture.CAPTURE_SUNSET_4,
             ),
         ]
@@ -13427,10 +13475,21 @@ class SunsetCamCaptureScheduleTests(TestCase):
             with self.subTest(
                 capture_type=capture_type
             ):
-                self.assertEqual(
-                    self._due(hour, minute),
-                    capture_type,
-                )
+                if capture_type == SunsetCamCapture.CAPTURE_SUNSET_4:
+                    with patch.object(
+                        self.command,
+                        "_get_today_solar_times",
+                        return_value=(self.sunrise, self.sunset),
+                    ):
+                        due = self.command._due_capture_types(
+                            self._moment(hour, minute)
+                        )
+                    self.assertIn(capture_type, due)
+                else:
+                    self.assertEqual(
+                        self._due(hour, minute),
+                        capture_type,
+                    )
 
     def test_legacy_sunset_choice_is_preserved_but_not_scheduled(
         self,

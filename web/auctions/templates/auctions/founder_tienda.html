@@ -1006,7 +1006,7 @@
         {% endif %}
   </header>
 
-  <section class="founder-vending">
+  <section class="founder-vending" id="founder-vending">
     <h2>🧭 {% trans "Find Your @Name" %}</h2>
 
     <p class="founder-vending-intro">
@@ -1029,6 +1029,7 @@
             id="vending-handle"
             name="wanted_handle"
             type="text"
+            value="{{ mention_handle|default:'' }}"
             minlength="3"
             maxlength="4"
             required
@@ -1049,6 +1050,7 @@
             id="vending-budget"
             name="budget_credits"
             type="number"
+            value="{{ mention_budget|default:'' }}"
             min="200"
             step="1"
             required

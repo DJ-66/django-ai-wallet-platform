@@ -42,7 +42,7 @@ def validate_coin_rebrand_request(
     )
 
     if lock_asset:
-        queryset = queryset.select_for_update()
+        queryset = queryset.select_for_update(of=("self",))
 
     asset = queryset.get(pk=asset_id)
 

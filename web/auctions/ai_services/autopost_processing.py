@@ -26,7 +26,10 @@ def claim_autopost(*, lease_minutes=30):
         expires_at__gt=now,
     ).filter(
         Q(
-            source=AutoPostEntitlement.SOURCE_PILOT,
+            source__in=[
+                AutoPostEntitlement.SOURCE_PILOT,
+                AutoPostEntitlement.SOURCE_PLATFORM,
+            ],
             payment_transaction__isnull=True,
         )
         | Q(

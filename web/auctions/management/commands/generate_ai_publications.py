@@ -14,6 +14,25 @@ from auctions.ai_services.creator_copy import (
     CreatorCopyError,
     generate_creator_post_copy,
 )
+from auctions.ai_services.legacy_caption_preparation import (
+    prepare_ai_caption,
+)
+from auctions.ai_services.legacy_suffix_adapter import (
+    suffix_enabled,
+    next_publication_sequence,
+)
+from auctions.ai_services.legacy_gemma_closer import (
+    CreativeCloserError,
+)
+from auctions.ai_services.legacy_publication_reservation import (
+    creator_has_active_ai_publication,
+    claim_existing_ai_preparation,
+    reserve_ai_publication,
+    claim_ai_reservation,
+)
+from auctions.ai_services.legacy_claimed_preparation import (
+    prepare_claimed_ai_publication,
+)
 from auctions.models import ScheduledPublication
 
 
@@ -207,19 +226,56 @@ class Command(BaseCommand):
                     f"Manifest account does not exist: @{account}"
                 )
 
-            has_pending = (
+            # Existing AI preparation drafts must be recovered
+            # before selecting new media or generating vision copy.
+            has_preparation_draft = (
                 ScheduledPublication.objects
                 .filter(
                     creator=user,
-                    status__in=[
-                        ScheduledPublication.STATUS_QUEUED,
-                        ScheduledPublication.STATUS_PUBLISHING,
-                    ],
+                    publication_key__startswith="ai:",
+                    status=ScheduledPublication.STATUS_DRAFT,
+                    campaign_key="ai_preparing",
                 )
                 .exists()
             )
 
-            if has_pending:
+            if has_preparation_draft:
+                if dry_run:
+                    self.stdout.write(
+                        f"@{account} preparation recovery pending"
+                    )
+                    continue
+
+                claim = claim_existing_ai_preparation(
+                    creator=user,
+                )
+
+                if claim is None:
+                    continue
+
+                reservation_id, token = claim
+
+                try:
+                    recovered = prepare_claimed_ai_publication(
+                        reservation_id=reservation_id,
+                        token=token,
+                        bio=creator.get("bio", ""),
+                    )
+                except CreativeCloserError as exc:
+                    self.stderr.write(
+                        f"@{account} recovery deferred: {exc}"
+                    )
+                    continue
+
+                if recovered:
+                    self.stdout.write(
+                        f"@{account} preparation recovered "
+                        f"publication={reservation_id}"
+                    )
+
+                continue
+
+            if creator_has_active_ai_publication(user):
                 continue
 
             history = (
@@ -356,6 +412,7 @@ class Command(BaseCommand):
                     "title": title,
                     "content": content,
                     "copy_source": copy_source,
+                    "bio": creator.get("bio", ""),
                 }
             )
 
@@ -390,6 +447,48 @@ class Command(BaseCommand):
             if dry_run:
                 continue
 
+            if suffix_enabled():
+                reservation = reserve_ai_publication(
+                    creator=proposal["creator"],
+                    publication_key=key,
+                    source_path=source_path,
+                    scheduled_for=scheduled_for,
+                    title=proposal["title"],
+                    content=proposal["content"],
+                )
+
+                if reservation is None:
+                    continue
+
+                claim = claim_ai_reservation(
+                    reservation_id=reservation.pk,
+                )
+
+                if claim is None:
+                    raise CommandError(
+                        "New AI reservation could not be claimed"
+                    )
+
+                reservation_id, token = claim
+
+                try:
+                    finalized = prepare_claimed_ai_publication(
+                        reservation_id=reservation_id,
+                        token=token,
+                        bio=proposal.get("bio", ""),
+                    )
+                except CreativeCloserError as exc:
+                    self.stderr.write(
+                        f"@{account} Gemma preparation deferred: {exc}"
+                    )
+                    continue
+
+                if finalized:
+                    created += 1
+
+                continue
+
+            # Feature-disabled legacy scheduling path.
             with transaction.atomic():
                 _, was_created = (
                     ScheduledPublication.objects.get_or_create(

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load post_content %}
 
 {% block content %}
 <div class="inbox-page">
@@ -13,10 +14,31 @@
 
     {% with last_message=conversation.display_last_message %}
 
-        <div class="inbox-user">
+        <div class="inbox-user inbox-user-with-avatar">
             {% for participant in conversation.participants.all %}
                 {% if participant != request.user %}
-                    @{{ participant.username }}
+                    {% if participant.profile.avatar %}
+                        <img
+                            class="inbox-participant-avatar"
+                            src="{{ participant.profile.avatar.url }}"
+                            alt="@{{ participant.username }}"
+                            loading="lazy"
+                            width="56"
+                            height="56"
+                        >
+                    {% else %}
+                        <span
+                            class="inbox-participant-avatar-fallback"
+                            aria-hidden="true"
+                        >
+                            {{ participant.username|first|upper }}
+                        </span>
+                    {% endif %}
+
+                    <a class="inbox-participant-name"
+                       href="{% url 'public_profile_root' participant.username %}">
+                        @{{ participant.username }}
+                    </a>
                 {% endif %}
             {% endfor %}
         </div>
@@ -26,7 +48,7 @@
                 {% if "Download your item:" in last_message.body %}
                     🎉 {% trans "You're a Winner! — Download link inside." %}
                 {% else %}
-                    {{ last_message.display_body|truncatechars:90 }}
+                    {{ last_message.display_body|render_fanz_preview }}
                 {% endif %}
             </div>
 

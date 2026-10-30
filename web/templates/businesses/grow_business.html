@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 {% block extra_css %}
 <link
     rel="stylesheet"
@@ -20,13 +20,13 @@
     </span>
 
     <span class="growth-download-toast__message">
-        Campaign image downloaded successfully.
+        {% trans "Campaign image downloaded successfully." %}
     </span>
 
     <button
         type="button"
         class="growth-download-toast__close"
-        aria-label="Close notification"
+        aria-label="{% trans "Close notification" %}"
         data-close-growth-download-toast>
         ×
     </button>
@@ -36,13 +36,12 @@
 <section class="grow-business-page">
 
     <div class="grow-business-header">
-        <p class="grow-business-eyebrow">Business Growth Center</p>
+        <p class="grow-business-eyebrow">{% trans "Business Growth Center" %}</p>
 
         <h1>🚀 {{ business.name }}</h1>
 
         <p>
-            Share your business, build your FANZ community,
-            and reach more local customers.
+            {% trans "Share your business, build your FANZ community, and reach more local customers." %}
         </p>
     </div>
 
@@ -52,10 +51,10 @@
 
     <div class="grow-business-feature-heading">
         <div>
-            <h2>Your First Marketing Asset</h2>
+            <h2>{% trans "Your First Marketing Asset" %}</h2>
             <ul>
-                <li><p>You Both Get 50 Free Credits.</p></li>
-                <li><p>Your Business Gains More Fanz (Authority).</p></li>
+                <li><p>{% trans "You Both Get 50 Free Credits." %}</p></li>
+                <li><p>{% trans "Your Business Gains More Fanz (Authority)." %}</p></li>
             </ul>
         </div>
     </div>
@@ -67,45 +66,42 @@
         <article class="grow-business-card">
             <div class="grow-business-card-icon">📱</div>
 
-            <h2>QR & Referral Tools</h2>
+            <h2>{% trans "QR & Referral Tools" %}</h2>
 
             <p>
-                Share your business referral QR code,
-                reward new members, and grow your FANZ community.
+                {% trans "Share your business referral QR code, reward new members, and grow your FANZ community." %}
             </p>
 
             <span class="grow-business-coming-soon">
-                Coming Soon
+                {% trans "Coming Soon" %}
             </span>
         </article>
 
         <article class="grow-business-card">
             <div class="grow-business-card-icon">📈</div>
 
-            <h2>Business Growth</h2>
+            <h2>{% trans "Business Growth" %}</h2>
 
             <p>
-                Track fan growth, referral activity,
-                QR scans, and business engagement.
+                {% trans "Track fan growth, referral activity, QR scans, and business engagement." %}
             </p>
 
             <span class="grow-business-coming-soon">
-                Coming Soon
+                {% trans "Coming Soon" %}
             </span>
         </article>
 
         <article class="grow-business-card">
             <div class="grow-business-card-icon">🎁</div>
 
-            <h2>FANZ Special Offers</h2>
+            <h2>{% trans "FANZ Special Offers" %}</h2>
 
             <p>
-                Discover future offers for printing,
-                photography, promotions, and business services.
+                {% trans "Discover future offers for printing, photography, promotions, and business services." %}
             </p>
 
             <span class="grow-business-coming-soon">
-                Coming Soon
+                {% trans "Coming Soon" %}
             </span>
         </article>
 
@@ -115,7 +111,7 @@
         <a
             class="business-action business-action--my-biz"
             href="{% url 'businesses:my_businesses' %}">
-            ← Back to My Businesses
+            {% trans "← Back to My Businesses" %}
         </a>
     </div>
 
@@ -218,7 +214,7 @@ document.addEventListener("DOMContentLoaded", function () {
             try {
                 await navigator.clipboard.writeText(referralLink);
 
-                copyButton.textContent = "Copied ✓";
+                copyButton.textContent = "{% filter escapejs %}{% trans 'Copied ✓' %}{% endfilter %}";
                 copyButton.classList.add("is-copied");
 
                 window.setTimeout(function () {
@@ -241,10 +237,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 temporaryInput.remove();
 
                 if (copied) {
-                    copyButton.textContent = "Copied ✓";
+                    copyButton.textContent = "{% filter escapejs %}{% trans 'Copied ✓' %}{% endfilter %}";
                     copyButton.classList.add("is-copied");
                 } else {
-                    copyButton.textContent = "Copy failed";
+                    copyButton.textContent = "{% filter escapejs %}{% trans 'Copy failed' %}{% endfilter %}";
                 }
 
                 window.setTimeout(function () {
@@ -266,11 +262,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const originalText = downloadButton.textContent.trim();
 
             downloadButton.disabled = true;
-            downloadButton.textContent = "Creating PNG…";
+            downloadButton.textContent = "{% filter escapejs %}{% trans 'Creating PNG…' %}{% endfilter %}";
 
             if (downloadStatus) {
                 downloadStatus.textContent =
-                    "Preparing your campaign image…";
+                    "{% filter escapejs %}{% trans 'Preparing your campaign image…' %}{% endfilter %}";
             }
 
             try {
@@ -373,13 +369,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (downloadStatus) {
                     downloadStatus.textContent =
-                        "Campaign PNG downloaded.";
+                        "{% filter escapejs %}{% trans 'Campaign PNG downloaded.' %}{% endfilter %}";
                 }
 
-                downloadButton.textContent = "✓ Downloaded";
+                downloadButton.textContent = "{% filter escapejs %}{% trans '✓ Downloaded' %}{% endfilter %}";
 
                 showDownloadToast(
-                    "Success! Your campaign image has been downloaded."
+                    "{% filter escapejs %}{% trans 'Success! Your campaign image has been downloaded.' %}{% endfilter %}"
                 );
 
                 } catch (error) {
@@ -390,12 +386,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (downloadStatus) {
                     downloadStatus.textContent =
-                        "We could not create the PNG. Please try again.";
+                        "{% filter escapejs %}{% trans 'We could not create the PNG. Please try again.' %}{% endfilter %}";
                 }
             } finally {
                 downloadButton.disabled = false;
 
-                if (downloadButton.textContent === "✓ Downloaded") {
+                if (downloadButton.textContent === "{% filter escapejs %}{% trans '✓ Downloaded' %}{% endfilter %}") {
                     window.setTimeout(function () {
                         downloadButton.textContent = originalText;
                     }, 1800);

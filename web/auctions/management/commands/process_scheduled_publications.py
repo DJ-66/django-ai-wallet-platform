@@ -10,8 +10,18 @@ from django.db import transaction
 from django.utils import timezone
 
 from auctions.feed_publishing import publish_feed_post
+from auctions.ai_services.legacy_suffix_adapter import (
+    suffix_context_for_publication,
+)
+from auctions.ai_services.legacy_suffix_assembly import (
+    decorate_creator_caption,
+)
 from auctions.promotional_publishing import (
     publish_promotional_publication,
+)
+from auctions.ai_services.legacy_prepared_validation import (
+    MARKERS,
+    validate_prepared_publication,
 )
 from auctions.models import ScheduledPublication
 
@@ -327,60 +337,129 @@ class Command(BaseCommand):
                     content_type=content_type,
                 )
 
-            post = publish_feed_post(
-                user=publication.creator,
-                title=publication.title,
-                content=publication.content,
-                uploads=[upload],
-                is_public=True,
-                is_paid=False,
-                unlock_price=0,
+            content = publication.content
+
+            if (
+                publication.publication_key.startswith("ai:")
+                and publication.media_asset_id is None
+                and publication.campaign_key.startswith("ai_")
+                and publication.campaign_key not in MARKERS
+                and publication.campaign_key != "ai_legacy_suffix"
+            ):
+                raise ValueError(
+                    "Unknown AI publication preparation marker"
+                )
+
+            is_prepared_ai = (
+                publication.publication_key.startswith("ai:")
+                and publication.media_asset_id is None
+                and publication.campaign_key in MARKERS
             )
 
-            media = post.media.filter(
-                is_active=True,
-            ).first()
+            if is_prepared_ai:
+                context = suffix_context_for_publication(publication)
 
-            if media is None:
-                raise RuntimeError(
-                    "Published post has no active media."
-                )
-
-            if not media.file.storage.exists(media.file.name):
-                raise RuntimeError(
-                    "Published media is missing from storage."
-                )
-
-            with transaction.atomic():
-                locked = (
-                    ScheduledPublication.objects
-                    .select_for_update()
-                    .get(pk=publication.id)
-                )
-
-                if (
-                    locked.status
-                    != ScheduledPublication.STATUS_PUBLISHING
-                ):
-                    raise RuntimeError(
-                        "Publication state changed during publish."
+                if context is None:
+                    raise ValueError(
+                        "Prepared AI publication has no suffix context"
                     )
 
-                locked.feed_post = post
-                locked.status = (
-                    ScheduledPublication.STATUS_PUBLISHED
+                validate_prepared_publication(
+                    username=publication.creator.username,
+                    publication_key=publication.publication_key,
+                    sequence=context["sequence"],
+                    marker=publication.campaign_key,
+                    content=content,
                 )
-                locked.published_at = timezone.now()
-                locked.last_error = ""
-                locked.save(
-                    update_fields=[
-                        "feed_post",
-                        "status",
-                        "published_at",
-                        "last_error",
-                        "updated_at",
-                    ]
+
+            if (
+                not is_prepared_ai
+                and publication.campaign_key == "ai_legacy_suffix"
+            ):
+                suffix_context = suffix_context_for_publication(
+                    publication
                 )
+
+                if suffix_context is not None:
+                    content = decorate_creator_caption(
+                        content=content,
+                        language="en",
+                        suffix=suffix_context["suffix"],
+                        destination=suffix_context["destination"],
+                    )
+
+            saved_media = []
+
+            def track_media(storage, name):
+                saved_media.append((storage, name))
+
+            try:
+                with transaction.atomic():
+                    post = publish_feed_post(
+                        user=publication.creator,
+                        title=publication.title,
+                        content=content,
+                        uploads=[upload],
+                        is_public=True,
+                        is_paid=False,
+                        unlock_price=0,
+                        on_media_saved=track_media,
+                    )
+
+                    media = post.media.filter(
+                        is_active=True,
+                    ).first()
+
+                    if media is None:
+                        raise RuntimeError(
+                            "Published post has no active media."
+                        )
+
+                    if not media.file.storage.exists(media.file.name):
+                        raise RuntimeError(
+                            "Published media is missing from storage."
+                        )
+
+                    locked = (
+                        ScheduledPublication.objects
+                        .select_for_update()
+                        .get(pk=publication.id)
+                    )
+
+                    if (
+                        locked.status
+                        != ScheduledPublication.STATUS_PUBLISHING
+                    ):
+                        raise RuntimeError(
+                            "Publication state changed during publish."
+                        )
+
+                    locked.feed_post = post
+                    locked.status = (
+                        ScheduledPublication.STATUS_PUBLISHED
+                    )
+                    locked.published_at = timezone.now()
+                    locked.last_error = ""
+                    locked.save(
+                        update_fields=[
+                            "feed_post",
+                            "status",
+                            "published_at",
+                            "last_error",
+                            "updated_at",
+                        ]
+                    )
+
+
+            except Exception:
+                for storage, name in reversed(saved_media):
+                    try:
+                        storage.delete(name)
+                    except Exception as cleanup_error:
+                        self.stderr.write(
+                            f'Media cleanup failed: {cleanup_error}'
+                        )
+                raise
 
             # Database publication is committed before consuming the
             # working-copy source asset. Windows remains the master.

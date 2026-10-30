@@ -13,8 +13,11 @@ def has_active_autopost_entitlement(*, account_id, at=None):
     """Accept authorized pilots or verified paid subscriptions."""
     now = at if at is not None else timezone.now()
 
-    valid_pilot = Q(
-        source=AutoPostEntitlement.SOURCE_PILOT,
+    valid_nonpaid = Q(
+        source__in=[
+            AutoPostEntitlement.SOURCE_PILOT,
+            AutoPostEntitlement.SOURCE_PLATFORM,
+        ],
         payment_transaction__isnull=True,
     )
 
@@ -28,7 +31,7 @@ def has_active_autopost_entitlement(*, account_id, at=None):
     )
 
     return AutoPostEntitlement.objects.filter(
-        valid_pilot | valid_paid,
+        valid_nonpaid | valid_paid,
         account_id=account_id,
         revoked_at__isnull=True,
         starts_at__lte=now,

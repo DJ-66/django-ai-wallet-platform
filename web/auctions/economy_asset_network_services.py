@@ -21,7 +21,7 @@ def promote_founder_economy_asset_to_mainnet(asset_id):
 
     asset = (
         EconomyAsset.objects
-        .select_for_update()
+        .select_for_update(of=("self",))
         .select_related("founder_account")
         .get(pk=asset_id)
     )

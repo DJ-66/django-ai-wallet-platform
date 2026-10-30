@@ -641,6 +641,51 @@ def localize_feed_post(
             "created": [],
         }
 
+    # Prepared FANZ AI publications may contain approved CTAs.
+    # Creative Gemma endings use ordinary localization.
+    prepared_plan = None
+
+    try:
+        publication = post.scheduled_publication
+    except post.__class__.scheduled_publication.RelatedObjectDoesNotExist:
+        publication = None
+
+    if (
+        publication is not None
+        and publication.publication_key.startswith("ai:")
+        and publication.campaign_key in {
+            "ai_founder",
+            "ai_credits",
+            "ai_autopost",
+        }
+    ):
+        from auctions.ai_services.legacy_prepared_validation import (
+            validate_prepared_publication,
+        )
+        from auctions.ai_services.legacy_suffix_adapter import (
+            publication_sequence,
+        )
+
+        try:
+            sequence = publication_sequence(publication)
+        except ValueError as exc:
+            raise PostLocalizationError(
+                "Prepared FANZ CTA has invalid publication sequence"
+            ) from exc
+
+        try:
+            prepared_plan = validate_prepared_publication(
+                username=publication.creator.username,
+                publication_key=publication.publication_key,
+                sequence=sequence,
+                marker=publication.campaign_key,
+                content=post.content,
+            )
+        except ValueError as exc:
+            raise PostLocalizationError(
+                "Invalid prepared FANZ CTA"
+            ) from exc
+
     generated = {}
 
     for language in SUPPORTED_LANGUAGES:
@@ -654,14 +699,27 @@ def localize_feed_post(
             }
             continue
 
-        generated[language] = (
-            _translate_target(
-                post,
+        if prepared_plan is not None:
+            from auctions.ai_services.legacy_multilingual_translation import (
+                translate_prepared_ai_post,
+            )
+
+            generated[language] = translate_prepared_ai_post(
+                post=post,
+                plan=prepared_plan,
                 source_language=source_language,
                 target_language=language,
                 provider=provider,
             )
-        )
+        else:
+            generated[language] = (
+                _translate_target(
+                    post,
+                    source_language=source_language,
+                    target_language=language,
+                    provider=provider,
+                )
+            )
 
     if dry_run:
         return {

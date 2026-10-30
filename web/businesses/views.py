@@ -5,12 +5,20 @@ from auctions.qr_utils import make_branded_referral_qr
 from auctions.wallet_setup import provision_user_wallet
 import traceback
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login
+from django.db import transaction
+from auctions.registration_email_lock import (
+    RegistrationEmailConflict,
+    lock_registration_email,
+)
+from django.contrib.auth import get_user_model
 from django.contrib import messages
 from datetime import timedelta
 from django.db.models import Q
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count
+from .forms_onboarding import GuestBusinessAccountForm
 from .forms import (
     BusinessListingForm,
     BusinessMediaForm,
@@ -104,63 +112,167 @@ def business_detail(request, slug):
     )
 
 
-@login_required
+
+
 def business_create(request):
+    """List a business, creating a FANZ account for new visitors."""
+
+    # Preserve referrals through GET -> form POST.
+    if not request.user.is_authenticated:
+        if request.GET.get("ref"):
+            request.session["referral_code"] = request.GET["ref"]
+
+        if request.GET.get("business"):
+            request.session["referral_business_slug"] = (
+                request.GET["business"]
+            )
+
+    authenticated = request.user.is_authenticated
     community_slug = request.GET.get("community", "").strip()
     community_business = None
 
-    if community_slug:
+    # Never permit an anonymous claim of an existing listing.
+    if community_slug and authenticated:
         community_business = get_object_or_404(
             BusinessListing,
             slug=community_slug,
             is_claimed=False,
             is_active=True,
         )
-    
+
     if request.method == "POST":
         form = BusinessListingForm(
             request.POST,
             request.FILES,
             instance=community_business,
-            
+        )
+        account_form = (
+            None
+            if authenticated
+            else GuestBusinessAccountForm(request.POST, prefix="account")
         )
 
-        if form.is_valid():
-            business = form.save(commit=False)
-            business.owner = request.user
-            business.is_claimed = True
-            business.is_active = True
-            business.save()
+        valid_business = form.is_valid()
+        valid_account = (
+            True if account_form is None
+            else account_form.is_valid()
+        )
 
-            if community_business:
-                messages.success(
+        if valid_business and valid_account:
+            try:
+                with transaction.atomic():
+                    if authenticated:
+                        owner = request.user
+                    else:
+                        lock_registration_email(
+                            account_form.cleaned_data["email"]
+                        )
+                        owner = account_form.save(commit=False)
+                        owner.set_password(
+                            account_form.cleaned_data["password"]
+                        )
+                        owner.is_active = True
+                        owner.save()
+
+                        from auctions.models import NodeProfile
+                        from auctions.wallet_setup import (
+                            provision_user_wallet,
+                        )
+
+                        NodeProfile.objects.get_or_create(
+                            user=owner,
+                        )
+                        referral_code = (
+                            request.session.get("referral_code")
+                            or request.GET.get("ref")
+                        )
+
+                        wallet = provision_user_wallet(
+                            owner,
+                            referral_code=referral_code,
+                        )
+
+                        referral_business_slug = (
+                            request.session.get(
+                                "referral_business_slug"
+                            )
+                            or request.GET.get("business")
+                        )
+
+                        if (
+                            wallet.referred_by_id
+                            and referral_business_slug
+                        ):
+                            referral_business = (
+                                BusinessListing.objects.filter(
+                                    slug=referral_business_slug,
+                                    owner_id=wallet.referred_by_id,
+                                    is_active=True,
+                                ).first()
+                            )
+
+                            if referral_business:
+                                wallet.pending_referral_business = (
+                                    referral_business
+                                )
+                                wallet.save(
+                                    update_fields=[
+                                        "pending_referral_business",
+                                    ]
+                                )
+
+                    business = form.save(commit=False)
+                    business.owner = owner
+                    business.is_claimed = True
+                    business.is_active = True
+                    business.save()
+
+            except RegistrationEmailConflict:
+                account_form.add_error(
+                    "email",
+                    "An account with this email already exists.",
+                )
+                return render(
                     request,
-                    (
-                        f"🎉 Congratulations! {business.name} is now "
-                        "your FANZ business listing. Next, publish an "
-                        "update, create your first event, and start "
-                        "connecting with your community."
+                    "businesses/business_form.html",
+                    {
+                        "form": form,
+                        "account_form": account_form,
+                        "community_business": community_business,
+                    },
+                    status=200,
+                )
+
+            if not authenticated:
+                login(
+                    request,
+                    owner,
+                    backend=(
+                        "django.contrib.auth.backends.ModelBackend"
                     ),
                 )
-            else:
-                messages.success(
-                    request,
-                    (
-                        f"🎉 Congratulations! {business.name} is now "
-                        "live on FANZ. Next, publish an update, create "
-                        "your first event, and start connecting with "
-                        "your community."
-                    ),
+                request.session.pop("referral_code", None)
+                request.session.pop(
+                    "referral_business_slug", None
                 )
+
+            messages.success(
+                request,
+                f"🎉 {business.name} is now listed on FANZ!",
+            )
 
             return redirect(
-                "businesses:detail",
+                "businesses:grow",
                 slug=business.slug,
             )
     else:
         form = BusinessListingForm(
             instance=community_business,
-            
+        )
+        account_form = (
+            None
+            if authenticated
+            else GuestBusinessAccountForm(prefix="account")
         )
 
     return render(
@@ -168,6 +280,7 @@ def business_create(request):
         "businesses/business_form.html",
         {
             "form": form,
+            "account_form": account_form,
             "community_business": community_business,
         },
     )

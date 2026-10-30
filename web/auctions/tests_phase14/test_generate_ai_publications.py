@@ -161,6 +161,11 @@ class GenerateAIPublicationsTests(TestCase):
                 "MANIFEST_PATH",
                 self.manifest,
             ),
+            patch(
+                "auctions.ai_services.legacy_caption_preparation."
+                "generate_gemma_dm_closer",
+                return_value="Come tell me your best secret in my DMs.",
+            ),
             patch.object(
                 generate_ai_publications,
                 "generate_creator_post_copy",
@@ -242,6 +247,14 @@ class GenerateAIPublicationsTests(TestCase):
         )
 
     def test_vision_failure_does_not_block_other_creators(self):
+        gemma_patcher = patch(
+            "auctions.ai_services.legacy_caption_preparation."
+            "generate_gemma_dm_closer",
+            return_value="Come tell me your story in my DMs.",
+        )
+        gemma_patcher.start()
+        self.addCleanup(gemma_patcher.stop)
+
         def generate_result(*, account, **kwargs):
             if account == "CreatorB":
                 raise CreatorCopyError(
@@ -524,4 +537,205 @@ class GenerateAIPublicationsTests(TestCase):
         self.assertEqual(
             ScheduledPublication.objects.count(),
             0,
+        )
+
+
+class GemmaFailureIsolationTests(GenerateAIPublicationsTests):
+
+    def test_gemma_failure_does_not_block_other_creators(self):
+        from auctions.ai_services.legacy_gemma_closer import (
+            CreativeCloserError,
+        )
+
+        def generate_closer(*, username, **kwargs):
+            if username == "CreatorB":
+                raise CreativeCloserError(
+                    "Simulated Gemma timeout"
+                )
+            return "Tell me your favorite story in my DMs."
+
+        with (
+            patch.object(
+                generate_ai_publications,
+                "MANIFEST_PATH",
+                self.manifest,
+            ),
+            patch.object(
+                generate_ai_publications,
+                "generate_creator_post_copy",
+                return_value={
+                    "title": "Creator story",
+                    "caption": "A little adventure today.",
+                    "hashtags": [
+                        "Lifestyle",
+                        "Style",
+                        "DigitalCreator",
+                        "CreatorLife",
+                    ],
+                },
+            ),
+            patch(
+                "auctions.ai_services.legacy_caption_preparation."
+                "generate_gemma_dm_closer",
+                side_effect=generate_closer,
+            ),
+            patch.object(
+                generate_ai_publications.settings,
+                "CREATOR_VISION_COPY_ENABLED",
+                True,
+            ),
+            patch.dict(
+                "os.environ",
+                {"FANZ_LEGACY_AI_SUFFIX_ENABLED": "true"},
+            ),
+        ):
+            call_command(
+                "generate_ai_publications",
+                source_root=str(self.root),
+            )
+
+        queued = ScheduledPublication.objects.filter(
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        self.assertEqual(queued.count(), 2)
+
+        usernames = set(
+            queued.values_list(
+                "creator__username",
+                flat=True,
+            )
+        )
+
+        self.assertEqual(
+            usernames,
+            {"CreatorA", "CreatorC"},
+        )
+
+        self.assertTrue(
+            all(
+                publication.campaign_key == "ai_gemma4"
+                for publication in queued
+            )
+        )
+
+
+class SchedulerDraftRecoveryTests(GenerateAIPublicationsTests):
+    """Verify recovery reuses the existing publication."""
+
+    def test_existing_draft_recovers_without_new_media(self):
+        from auctions.ai_services.legacy_publication_reservation import (
+            PREPARING_MARKER,
+        )
+
+        creator = self.users[0]
+        original_time = timezone.now() + timedelta(hours=3)
+
+        draft = ScheduledPublication.objects.create(
+            publication_key="ai:creatora:recovery-test",
+            creator=creator,
+            source_path="PackA/post-1.jpg",
+            title="Original recovery title",
+            content="Original caption\n\n#Lifestyle #FANZ",
+            campaign_key=PREPARING_MARKER,
+            scheduled_for=original_time,
+            status=ScheduledPublication.STATUS_DRAFT,
+        )
+
+        with (
+            patch.object(
+                generate_ai_publications,
+                "MANIFEST_PATH",
+                self.manifest,
+            ),
+            patch.object(
+                generate_ai_publications,
+                "generate_creator_post_copy",
+                return_value={
+                    "title": "New vision title",
+                    "caption": "New vision caption",
+                    "hashtags": [
+                        "Lifestyle",
+                        "Style",
+                        "DigitalCreator",
+                        "CreatorLife",
+                    ],
+                },
+            ) as vision,
+            patch(
+                "auctions.ai_services.legacy_claimed_preparation."
+                "prepare_ai_caption",
+            ) as prepare,
+            patch.object(
+                generate_ai_publications.settings,
+                "CREATOR_VISION_COPY_ENABLED",
+                True,
+            ),
+            patch.dict(
+                "os.environ",
+                {"FANZ_LEGACY_AI_SUFFIX_ENABLED": "true"},
+            ),
+        ):
+            from auctions.ai_services.legacy_publication_preparation import (
+                plan_publication_ending,
+            )
+
+            plan = plan_publication_ending(
+                username=creator.username,
+                publication_key=draft.publication_key,
+                sequence=1,
+            )
+
+            prepare.return_value = (
+                "Original caption\n"
+                "Tell me your story in my DMs."
+                "\n\n#Lifestyle #FANZ",
+                plan,
+            )
+
+            call_command(
+                "generate_ai_publications",
+                source_root=str(self.root),
+            )
+
+        draft.refresh_from_db()
+
+        self.assertEqual(
+            draft.status,
+            ScheduledPublication.STATUS_QUEUED,
+        )
+        self.assertEqual(draft.campaign_key, "ai_gemma4")
+        self.assertEqual(draft.source_path, "PackA/post-1.jpg")
+        self.assertEqual(draft.scheduled_for, original_time)
+        self.assertEqual(draft.title, "Original recovery title")
+
+        self.assertEqual(
+            ScheduledPublication.objects.filter(
+                creator=creator,
+                publication_key__startswith="ai:",
+            ).count(),
+            1,
+        )
+
+        # Other creators may still need vision generation.
+        self.assertFalse(
+            any(
+                call.kwargs.get("account") == creator.username
+                for call in vision.call_args_list
+            )
+        )
+        creator_a_calls = [
+            call
+            for call in prepare.call_args_list
+            if call.kwargs.get("username") == creator.username
+        ]
+
+        self.assertEqual(len(creator_a_calls), 1)
+        self.assertEqual(
+            creator_a_calls[0].kwargs["publication_key"],
+            draft.publication_key,
+        )
+        self.assertEqual(
+            creator_a_calls[0].kwargs["content"],
+            "Original caption\n\n#Lifestyle #FANZ",
         )

@@ -242,9 +242,9 @@
 
             <div class="post-comment">
 
-                <strong>@{{ comment.user.username }}</strong>
+                <strong><a href="{% url 'public_profile_root' comment.user.username %}">@{{ comment.user.username }}</a></strong>
 
-                <p>{{ comment.content|linebreaksbr }}</p>
+                <p>{{ comment.content|render_fanz_plaintext }}</p>
 
 
                  {% if comment.replies.count %}
@@ -253,8 +253,8 @@
 
                  {% for reply in comment.replies.all %}
                  <div class="post-reply">
-                 <strong>@{{ reply.user.username }}</strong>
-                <p>{{ reply.content|linebreaksbr }}</p>
+                 <strong><a href="{% url 'public_profile_root' reply.user.username %}">@{{ reply.user.username }}</a></strong>
+                <p>{{ reply.content|render_fanz_plaintext }}</p>
                </div>
               {% endfor %}
               </details>

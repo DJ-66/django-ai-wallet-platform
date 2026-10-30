@@ -21,6 +21,10 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.core.exceptions import ValidationError
+from auctions.registration_email_lock import (
+    RegistrationEmailConflict,
+    lock_registration_email,
+)
 from django.core.paginator import Paginator
 from django.db import models, transaction
 from django.db.models import Case, IntegerField, Q, Sum, Value, When, Count, Exists, OuterRef
@@ -1277,92 +1281,112 @@ def signup_view(request):
                     },
                 )
 
-            user = form.save(commit=False)
-            user.set_password(
-                form.cleaned_data["password"]
-            )
-            user.is_active = False
-            user.save()
-
-            NodeProfile.objects.get_or_create(
-                user=user
-            )
-
-            wallet, _ = BidWallet.objects.get_or_create(
-                user=user
-            )
-
-            ref_code = (
-                request.session.pop(
-                    "referral_code",
-                    None,
-                )
-                or request.GET.get("ref")
-            )
-
-            referral_business_slug = (
-                request.session.pop(
-                    "referral_business_slug",
-                    None,
-                )
-                or request.GET.get("business")
-            )
-
-            if ref_code:
-                referrer_wallet = (
-                    BidWallet.objects
-                    .select_related("user")
-                    .filter(
-                        referral_code=ref_code
+            try:
+                with transaction.atomic():
+                    lock_registration_email(
+                        submitted_email
                     )
-                    .first()
-                )
+                    user = form.save(commit=False)
+                    user.set_password(
+                        form.cleaned_data["password"]
+                    )
+                    user.is_active = False
+                    user.save()
 
-                if (
-                    referrer_wallet
-                    and referrer_wallet.user != user
-                    and wallet.referred_by is None
-                ):
-                    wallet.referred_by = (
-                        referrer_wallet.user
+                    NodeProfile.objects.get_or_create(
+                        user=user
                     )
 
-                    referrer_node = (
-                        NodeProfile.objects.filter(
-                            user=referrer_wallet.user
-                        ).first()
+                    wallet, _ = BidWallet.objects.get_or_create(
+                        user=user
                     )
 
-                    if referrer_node:
-                        wallet.source_node = (
-                            referrer_node
+                    ref_code = (
+                        request.session.get(
+                            "referral_code"
+                        )
+                        or request.GET.get("ref")
+                    )
+
+                    referral_business_slug = (
+                        request.session.get(
+                            "referral_business_slug"
+                        )
+                        or request.GET.get("business")
+                    )
+
+                    if ref_code:
+                        referrer_wallet = (
+                            BidWallet.objects
+                            .select_related("user")
+                            .filter(
+                                referral_code=ref_code
+                            )
+                            .first()
                         )
 
-                    update_fields = [
-                        "referred_by",
-                        "source_node",
-                    ]
-
-                    if referral_business_slug:
-                        referral_business = (
-                            BusinessListing.objects.filter(
-                                slug=referral_business_slug,
-                                owner=referrer_wallet.user,
-                                is_active=True,
-                            ).first()
-                        )
-
-                        if referral_business:
-                            wallet.pending_referral_business = (
-                                referral_business
-                            )
-                            update_fields.append(
-                                "pending_referral_business"
+                        if (
+                            referrer_wallet
+                            and referrer_wallet.user != user
+                            and wallet.referred_by is None
+                        ):
+                            wallet.referred_by = (
+                                referrer_wallet.user
                             )
 
-                    wallet.save(
-                        update_fields=update_fields
-                    )
+                            referrer_node = (
+                                NodeProfile.objects.filter(
+                                    user=referrer_wallet.user
+                                ).first()
+                            )
+
+                            if referrer_node:
+                                wallet.source_node = (
+                                    referrer_node
+                                )
+
+                            update_fields = [
+                                "referred_by",
+                                "source_node",
+                            ]
+
+                            if referral_business_slug:
+                                referral_business = (
+                                    BusinessListing.objects.filter(
+                                        slug=referral_business_slug,
+                                        owner=referrer_wallet.user,
+                                        is_active=True,
+                                    ).first()
+                                )
+
+                                if referral_business:
+                                    wallet.pending_referral_business = (
+                                        referral_business
+                                    )
+                                    update_fields.append(
+                                        "pending_referral_business"
+                                    )
+
+                            wallet.save(
+                                update_fields=update_fields
+                            )
+
+            except RegistrationEmailConflict:
+                form.add_error(
+                    "email",
+                    "An account with this email already exists.",
+                )
+                return render(
+                    request,
+                    "account/signup.html",
+                    {"form": form},
+                )
+
+            request.session.pop("referral_code", None)
+            request.session.pop(
+                "referral_business_slug",
+                None,
+            )
 
             send_activation_email(
                 request,
@@ -1535,9 +1559,10 @@ def activate_view(request, uidb64, token):
         # ---------------------------------------------------
         # WALLET QR
         # ---------------------------------------------------
-        qr_path = (
-            f"media/qr_codes/"
-            f"{wallet.wallet_code}.png"
+        qr_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "qr_codes",
+            f"{wallet.wallet_code}.png",
         )
 
         if not os.path.exists(qr_path):
@@ -1558,9 +1583,10 @@ def activate_view(request, uidb64, token):
         # ---------------------------------------------------
         # REFERRAL QR
         # ---------------------------------------------------
-        ref_qr_path = (
-            "media/qr_codes/"
-            f"ref_{wallet.referral_code}.png"
+        ref_qr_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "qr_codes",
+            f"ref_{wallet.referral_code}.png",
         )
 
         if not os.path.exists(ref_qr_path):
@@ -3511,6 +3537,25 @@ def verify_founder_coin_rebrand(request):
 
 @login_required
 def founder_tienda(request):
+    from auctions.validators import is_valid_founder_handle
+
+    requested_handle = (
+        request.GET.get("handle") or ""
+    ).strip().lstrip("@").lower()
+
+    mention_handle = (
+        requested_handle
+        if (
+            3 <= len(requested_handle) <= 4
+            and is_valid_founder_handle(requested_handle)
+        )
+        else ""
+    )
+
+    mention_budget = (
+        "300" if mention_handle else ""
+    )
+
     fixed_inventory = (
         FounderListing.objects
         .filter(
@@ -3854,6 +3899,8 @@ def founder_tienda(request):
         request,
         "auctions/founder_tienda.html",
         {
+            "mention_handle": mention_handle,
+            "mention_budget": mention_budget,
             "fixed_listings": fixed_listings,
             "blind_listings": blind_listings,
             "wasteland_listings": wasteland_listings,
@@ -3986,7 +4033,7 @@ def buy_founder_p2p_listing(
             freeze_p2p_sui_quote,
         )
 
-        intent, _ = (
+        intent, _created = (
             create_p2p_external_payment_intent(
                 listing=listing,
                 buyer=request.user,
@@ -4034,7 +4081,7 @@ def buy_founder_p2p_listing(
             )
 
         if payment_method == "sui":
-            intent, _ = freeze_p2p_sui_quote(
+            intent, _quote_metadata = freeze_p2p_sui_quote(
                 payment_intent_id=intent.pk,
             )
 
@@ -4523,6 +4570,13 @@ def platform_accounts_dashboard(request):
         {
             "short_account_rows":
                 short_account_rows,
+            "platform_total_count":
+                len(short_account_rows)
+                + len(other_platform_accounts),
+            "platform_short_count":
+                len(short_account_rows),
+            "platform_other_count":
+                len(other_platform_accounts),
             "other_platform_accounts":
                 other_platform_accounts,
             "platform_sui_address":

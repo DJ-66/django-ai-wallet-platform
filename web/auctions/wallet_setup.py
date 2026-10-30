@@ -1,8 +1,11 @@
 import os
+import logging
 import qrcode
 import secrets
 import string
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
 from .qr_utils import make_branded_referral_qr
 from .models import BidWallet, WalletTransaction
 from django.core.mail import EmailMultiAlternatives
@@ -10,6 +13,8 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.utils.translation import gettext as _, override
 
+
+logger = logging.getLogger(__name__)
 
 SIGNUP_BONUS = 50
 REFERRAL_BONUS = 50
@@ -55,13 +60,21 @@ def send_welcome_email(user, language="en"):
 
     email.send(fail_silently=True)
 
+@transaction.atomic
 def provision_user_wallet(
     user,
     referral_code=None,
     language="en",
 ):
 
+    # Ensure the wallet exists before locking it.
     wallet, _ = BidWallet.objects.get_or_create(user=user)
+
+    wallet = (
+        BidWallet.objects
+        .select_for_update()
+        .get(pk=wallet.pk)
+    )
 
     # ---------------------------------------------------
     # WALLET CODE
@@ -96,10 +109,16 @@ def provision_user_wallet(
             reference="Signup bonus",
         )
 
-        send_welcome_email(
-            user,
-            language=language,
-        )
+        def send_welcome_after_commit():
+            try:
+                send_welcome_email(user, language=language)
+            except Exception:
+                logger.exception(
+                    "FANZ welcome email failed for user_id=%s",
+                    user.pk,
+                )
+
+        transaction.on_commit(send_welcome_after_commit)
 
     # ---------------------------------------------------
     # REFERRAL BONUS
@@ -115,9 +134,13 @@ def provision_user_wallet(
         if referrer_wallet and referrer_wallet.user != user:
 
             wallet.referred_by = referrer_wallet.user
+            wallet.referral_bonus_given = True
 
-            referrer_wallet.credits += REFERRAL_BONUS
-            referrer_wallet.save(update_fields=["credits"])
+            BidWallet.objects.filter(
+                pk=referrer_wallet.pk,
+            ).update(
+                credits=F("credits") + REFERRAL_BONUS,
+            )
 
             WalletTransaction.objects.create(
                 receiver=referrer_wallet,
@@ -128,16 +151,42 @@ def provision_user_wallet(
 
     wallet.save()
 
+    wallet_code = str(wallet.wallet_code)
+    pay_code = wallet.pay_code
+    generated_referral_code = wallet.referral_code
+
+    def generate_qr_after_commit():
+        try:
+            _generate_wallet_qr_codes(
+                wallet_code,
+                pay_code,
+                generated_referral_code,
+            )
+        except Exception:
+            logger.exception(
+                "FANZ wallet QR generation failed for user_id=%s",
+                user.pk,
+            )
+
+    transaction.on_commit(generate_qr_after_commit)
+
+    return wallet
+
+
+
+
+
+def _generate_wallet_qr_codes(wallet_code, pay_code, referral_code):
     # ---------------------------------------------------
     # WALLET QR
     # ---------------------------------------------------
-    qr_path = f"media/qr_codes/{wallet.wallet_code}.png"
+    qr_path = os.path.join(settings.MEDIA_ROOT, "qr_codes", f"{wallet_code}.png")
 
     if not os.path.exists(qr_path):
 
         payment_url = (
             f"https://fanz.to/auctions/pay/"
-            f"{wallet.pay_code}/"
+            f"{pay_code}/"
         )
 
         img = qrcode.make(payment_url)
@@ -149,15 +198,13 @@ def provision_user_wallet(
     # ---------------------------------------------------
     # REFERRAL QR
     # ---------------------------------------------------
-    ref_qr_path = (
-        f"media/qr_codes/ref_{wallet.referral_code}.png"
-    )
+    ref_qr_path = os.path.join(settings.MEDIA_ROOT, "qr_codes", f"ref_{referral_code}.png")
 
     if not os.path.exists(ref_qr_path):
 
         referral_url = (
             "https://fanz.to/auctions/signup/"
-            f"?ref={wallet.referral_code}"
+            f"?ref={referral_code}"
         )
 
         img = make_branded_referral_qr(referral_url)
@@ -165,8 +212,4 @@ def provision_user_wallet(
         os.makedirs(os.path.dirname(ref_qr_path), exist_ok=True)
 
         img.save(ref_qr_path)
-
-    return wallet
-
-
 

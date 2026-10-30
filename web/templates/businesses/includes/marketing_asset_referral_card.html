@@ -1,3 +1,4 @@
+{% load i18n %}
 <article class="growth-asset">
     
     <div
@@ -6,15 +7,15 @@
     data-business-slug="{{ business.slug }}">
 
     <p class="campaign-ready-title">
-        📣 READY TO SHARE
+        📣 {% trans "READY TO SHARE" %}
     </p>
 
     <p class="campaign-gift-title">
-        WE GIFT YOU
+        {% trans "WE GIFT YOU" %}
     </p>
 
     <h2 class="growth-asset-credit">
-        50 FREE CREDITS
+        {% trans "50 FREE CREDITS" %}
     </h2>
 
         <div class="growth-asset-qr">
@@ -28,7 +29,7 @@
         </h3>
 
         <h2 class="growth-asset-footer">
-            Join FANZ • Get 50 Credits
+            {% trans "Join FANZ • Get 50 Credits" %}
         </h2>
 
         <p class="growth-asset-domain">
@@ -39,10 +40,10 @@
 
     <div class="growth-asset-details">
 
-        <h2>Referral Campaign</h2>
+        <h2>{% trans "Referral Campaign" %}</h2>
 
         <p>
-            Share this card with customers and invite them into your FANZ community.
+            {% trans "Share this card with customers and invite them into your FANZ community." %}
         </p>
 
         <div class="growth-asset-link">
@@ -50,7 +51,7 @@
                 type="text"
                 value="{{ referral_url }}"
                 readonly
-                aria-label="Business referral link">
+                aria-label="{% trans "Business referral link" %}">
         </div>
 
         <div class="growth-asset-actions">
@@ -59,7 +60,7 @@
         type="button"
         class="growth-asset-action growth-asset-action--copy"
         data-copy-referral-link="{{ referral_url }}">
-        Copy Link
+        {% trans "Copy Link" %}
     </button>
 
     <a
@@ -74,7 +75,7 @@
     type="button"
     id="download-growth-asset"
     class="growth-asset-action">
-    Download PNG
+    {% trans "Download PNG" %}
     </button>
  
     <p
@@ -87,13 +88,13 @@
     type="button"
     class="growth-asset-action growth-asset-action--print"
     data-print-growth-asset>
-    Print
+    {% trans "Print" %}
 </button>
 
 </div>
 
         <p class="growth-asset-note">
-            Sharing and download tools are coming next.
+            {% trans "Sharing and download tools are coming next." %}
         </p>
 
     </div>

@@ -1,3 +1,4 @@
+from auctions import mention_routing
 from . import views
 from django.conf.urls.i18n import i18n_patterns
 from django.urls import path, include
@@ -85,6 +86,11 @@ urlpatterns = [
         "search/",
         views.fanz_search,
         name="fanz_search",
+    ),
+    path(
+        "mention/<str:username>/",
+        mention_routing.resolve_mention,
+        name="resolve_mention",
     ),
     path(
         "founder/tienda/",
