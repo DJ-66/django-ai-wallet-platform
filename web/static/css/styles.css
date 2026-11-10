@@ -7944,3 +7944,18 @@ Allow the content to wrap safely in every language.
         line-height: 1.5;
     }
 }
+
+/* FANZ community feed white text card */
+.feed-post-card .feed-content {
+    background: #ffffff;
+    color: #222222;
+    padding: 16px 20px !important;
+    border-radius: 12px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .feed-post-card .feed-content {
+        padding: 12px 14px !important;
+    }
+}
