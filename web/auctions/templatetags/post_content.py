@@ -492,8 +492,6 @@ def render_fanz_plaintext(value):
     return mark_safe(
         escape(source).replace("\n", "<br>")
     )
-
-
 @register.filter
 def render_fanz_preview(value):
     """Render a short, escaped message preview."""

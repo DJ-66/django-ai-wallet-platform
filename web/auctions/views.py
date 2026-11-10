@@ -1535,9 +1535,10 @@ def activate_view(request, uidb64, token):
         # ---------------------------------------------------
         # WALLET QR
         # ---------------------------------------------------
-        qr_path = (
-            f"media/qr_codes/"
-            f"{wallet.wallet_code}.png"
+        qr_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "qr_codes",
+            f"{wallet.wallet_code}.png",
         )
 
         if not os.path.exists(qr_path):
@@ -1558,9 +1559,10 @@ def activate_view(request, uidb64, token):
         # ---------------------------------------------------
         # REFERRAL QR
         # ---------------------------------------------------
-        ref_qr_path = (
-            "media/qr_codes/"
-            f"ref_{wallet.referral_code}.png"
+        ref_qr_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "qr_codes",
+            f"ref_{wallet.referral_code}.png",
         )
 
         if not os.path.exists(ref_qr_path):
@@ -3986,7 +3988,7 @@ def buy_founder_p2p_listing(
             freeze_p2p_sui_quote,
         )
 
-        intent, _ = (
+        intent, _created = (
             create_p2p_external_payment_intent(
                 listing=listing,
                 buyer=request.user,
@@ -4034,7 +4036,7 @@ def buy_founder_p2p_listing(
             )
 
         if payment_method == "sui":
-            intent, _ = freeze_p2p_sui_quote(
+            intent, _quote_metadata = freeze_p2p_sui_quote(
                 payment_intent_id=intent.pk,
             )
 

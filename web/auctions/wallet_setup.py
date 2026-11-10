@@ -131,7 +131,11 @@ def provision_user_wallet(
     # ---------------------------------------------------
     # WALLET QR
     # ---------------------------------------------------
-    qr_path = f"media/qr_codes/{wallet.wallet_code}.png"
+    qr_path = os.path.join(
+        settings.MEDIA_ROOT,
+        "qr_codes",
+        f"{wallet.wallet_code}.png",
+    )
 
     if not os.path.exists(qr_path):
 
@@ -149,8 +153,10 @@ def provision_user_wallet(
     # ---------------------------------------------------
     # REFERRAL QR
     # ---------------------------------------------------
-    ref_qr_path = (
-        f"media/qr_codes/ref_{wallet.referral_code}.png"
+    ref_qr_path = os.path.join(
+        settings.MEDIA_ROOT,
+        "qr_codes",
+        f"ref_{wallet.referral_code}.png",
     )
 
     if not os.path.exists(ref_qr_path):

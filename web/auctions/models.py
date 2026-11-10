@@ -3836,10 +3836,12 @@ class AutoPostEntitlement(models.Model):
 
     SOURCE_PAID = "paid"
     SOURCE_PILOT = "pilot"
+    SOURCE_PLATFORM = "platform"
 
     SOURCE_CHOICES = [
         (SOURCE_PAID, "Paid subscription"),
         (SOURCE_PILOT, "Authorized pilot"),
+        (SOURCE_PLATFORM, "Platform-managed creator"),
     ]
 
     account = models.ForeignKey(
@@ -3878,8 +3880,14 @@ class AutoPostEntitlement(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(source="pilot", payment_transaction__isnull=True)
-                    | models.Q(source="paid", payment_transaction__isnull=False)
+                    models.Q(
+                        source="paid",
+                        payment_transaction__isnull=False,
+                    )
+                    | models.Q(
+                        source__in=["pilot", "platform"],
+                        payment_transaction__isnull=True,
+                    )
                 ),
                 name="autopost_entitlement_valid_source",
             ),
@@ -3901,10 +3909,10 @@ class AutoPostEntitlement(models.Model):
                     "Paid entitlement requires a payment."
                 )
 
-        if self.source == self.SOURCE_PILOT:
+        if self.source in (self.SOURCE_PILOT, self.SOURCE_PLATFORM):
             if self.payment_transaction_id is not None:
                 errors["payment_transaction"] = (
-                    "Pilot entitlement cannot charge credits."
+                    "Non-paid entitlement cannot charge credits."
                 )
 
         if errors:
