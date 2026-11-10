@@ -329,60 +329,76 @@ class Command(BaseCommand):
                     content_type=content_type,
                 )
 
-            post = publish_feed_post(
-                user=publication.creator,
-                title=publication.title,
-                content=publication.content,
-                uploads=[upload],
-                is_public=True,
-                is_paid=False,
-                unlock_price=0,
-            )
+            saved_files = []
 
-            media = post.media.filter(
-                is_active=True,
-            ).first()
+            def track_file(storage, name):
+                saved_files.append((storage, name))
 
-            if media is None:
-                raise RuntimeError(
-                    "Published post has no active media."
-                )
-
-            if not media.file.storage.exists(media.file.name):
-                raise RuntimeError(
-                    "Published media is missing from storage."
-                )
-
-            with transaction.atomic():
-                locked = (
-                    ScheduledPublication.objects
-                    .select_for_update()
-                    .get(pk=publication.id)
-                )
-
-                if (
-                    locked.status
-                    != ScheduledPublication.STATUS_PUBLISHING
-                ):
-                    raise RuntimeError(
-                        "Publication state changed during publish."
+            try:
+                with transaction.atomic():
+                    locked = (
+                        ScheduledPublication.objects
+                        .select_for_update()
+                        .get(pk=publication.id)
                     )
 
-                locked.feed_post = post
-                locked.status = (
-                    ScheduledPublication.STATUS_PUBLISHED
-                )
-                locked.published_at = timezone.now()
-                locked.last_error = ""
-                locked.save(
-                    update_fields=[
-                        "feed_post",
-                        "status",
-                        "published_at",
-                        "last_error",
-                        "updated_at",
-                    ]
-                )
+                    if (
+                        locked.status
+                        != ScheduledPublication.STATUS_PUBLISHING
+                        or locked.feed_post_id is not None
+                    ):
+                        raise RuntimeError(
+                            "Publication state changed during publish."
+                        )
+
+                    post = publish_feed_post(
+                        user=publication.creator,
+                        title=publication.title,
+                        content=publication.content,
+                        uploads=[upload],
+                        is_public=True,
+                        is_paid=False,
+                        unlock_price=0,
+                        on_media_saved=track_file,
+                    )
+
+                    media = post.media.filter(
+                        is_active=True,
+                    ).first()
+
+                    if media is None:
+                        raise RuntimeError(
+                            "Published post has no active media."
+                        )
+
+                    if not media.file.storage.exists(media.file.name):
+                        raise RuntimeError(
+                            "Published media is missing from storage."
+                        )
+
+                    locked.feed_post = post
+                    locked.status = (
+                        ScheduledPublication.STATUS_PUBLISHED
+                    )
+                    locked.published_at = timezone.now()
+                    locked.last_error = ""
+                    locked.save(
+                        update_fields=[
+                            "feed_post",
+                            "status",
+                            "published_at",
+                            "last_error",
+                            "updated_at",
+                        ]
+                    )
+
+            except Exception:
+                for storage, name in reversed(saved_files):
+                    try:
+                        storage.delete(name)
+                    except Exception:
+                        pass
+                raise
 
             # Database publication is committed before consuming the
             # working-copy source asset. Windows remains the master.

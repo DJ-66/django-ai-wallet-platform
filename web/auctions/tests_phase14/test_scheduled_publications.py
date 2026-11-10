@@ -282,3 +282,66 @@ class ScheduledPublicationCommandTests(TestCase):
         self.assertEqual(publication.attempt_count, 0)
         self.assertIsNone(publication.feed_post_id)
         self.assertTrue(source.exists())
+
+    def test_finalization_failure_rolls_back_post_and_media(self):
+        from unittest.mock import patch
+
+        from django.conf import settings
+        from django.test import override_settings
+
+        relative_path = "Rollback Pack/image.jpg"
+        source = self.source_root / relative_path
+        write_jpeg(source)
+
+        publication = ScheduledPublication.objects.create(
+            publication_key="worker-rollback-1",
+            creator=self.user,
+            source_path=relative_path,
+            title="Rollback title",
+            content="Rollback content",
+            scheduled_for=timezone.now(),
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        media_root = self.source_root / "media"
+        media_root.mkdir()
+
+        original_save = ScheduledPublication.save
+
+        def fail_finalization(instance, *args, **kwargs):
+            if instance.status == ScheduledPublication.STATUS_PUBLISHED:
+                raise RuntimeError("Injected finalization failure")
+            return original_save(instance, *args, **kwargs)
+
+        with override_settings(MEDIA_ROOT=media_root):
+            with patch.object(
+                ScheduledPublication,
+                "save",
+                autospec=True,
+                side_effect=fail_finalization,
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "Injected finalization failure",
+                ):
+                    call_command(
+                        "process_scheduled_publications",
+                        source_root=str(self.source_root),
+                    )
+
+        publication.refresh_from_db()
+
+        self.assertEqual(
+            publication.status,
+            ScheduledPublication.STATUS_FAILED,
+        )
+        self.assertIsNone(publication.feed_post_id)
+        self.assertEqual(
+            FeedPost.objects.filter(user=self.user).count(),
+            0,
+        )
+        self.assertTrue(source.exists())
+        self.assertEqual(
+            list(media_root.rglob("*.webp")),
+            [],
+        )
