@@ -466,6 +466,28 @@ def _split_trailing_hashtag_block(value):
 
 
 @register.filter
+def post_title_text(value):
+    source = str(value or "").strip()
+    words = source.split()
+
+    while words and re.fullmatch(r"#[\w]{2,50}", words[-1]):
+        words.pop()
+
+    return " ".join(words)
+
+
+@register.filter
+def post_title_hashtags(value):
+    words = str(value or "").strip().split()
+    tags = []
+
+    while words and re.fullmatch(r"#[\w]{2,50}", words[-1]):
+        tags.insert(0, words.pop())
+
+    return " ".join(tags)
+
+
+@register.filter
 def post_body(value):
     body, _hashtags = _split_trailing_hashtag_block(
         value

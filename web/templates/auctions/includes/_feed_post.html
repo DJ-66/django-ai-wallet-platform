@@ -38,7 +38,7 @@
 
     {% if post.display_title %}
     <h3 class="feed-post-title">
-        {{ post.display_title }}
+        {{ post.display_title|post_title_text }}
     </h3>
 {% endif %}
 
@@ -133,7 +133,7 @@
 
     {% if post.display_title %}
     <h3 class="feed-post-title">
-        {{ post.display_title }}
+        {{ post.display_title|post_title_text }}
     </h3>
 {% endif %}
 <div class="feed-content">
@@ -145,27 +145,18 @@
 {% with trailing_tags=post.display_content|post_trailing_hashtags %}
     {% if trailing_tags %}
         <div class="feed-inline-tags">
-            {{ trailing_tags|render_post_content }}
+            {{ trailing_tags|link_hashtags }}
+        </div>
+    {% elif post.hashtags.all %}
+        <div class="post-tags">
+            {% for tag in post.hashtags.all %}
+                <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
+                    #{{ tag.name }}
+                </a>
+            {% endfor %}
         </div>
     {% endif %}
 {% endwith %}
-
-{% if post.hashtags.all %}
-    <div class="post-tags">
-        {% for tag in post.hashtags.all %}
-            <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
-                #{{ tag.name }}
-            </a>
-        {% endfor %}
-    </div>
-{% endif %}
-{% if post.hashtags.count == 1 and post.hashtags.first.name == "discover_fanz" %}
-<div class="post-tags">
-    <a href="{% url 'hashtag_feed' 'discover_fanz' %}">
-        #discover_fanz
-    </a>
-</div>
-{% endif %}
 
 </div>
 
