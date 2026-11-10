@@ -7,6 +7,7 @@ from .views import wallet_view
 from . import views_ai
 from . import views_events
 from . import views_tg_edge
+from . import mention_routing
 
 
 urlpatterns = [
@@ -85,6 +86,11 @@ urlpatterns = [
         "search/",
         views.fanz_search,
         name="fanz_search",
+    ),
+    path(
+        "mention/<str:username>/",
+        mention_routing.resolve_mention,
+        name="resolve_mention",
     ),
     path(
         "founder/tienda/",

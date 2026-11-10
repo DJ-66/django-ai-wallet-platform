@@ -1,16 +1,205 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load post_content %}
 
 {% block content %}
-<div class="dm-page">
-    <div class="dm-header">
-        <h1>📩 DMs</h1>
 
-        <div class="dm-subtitle">
-            {% trans "Conversation with" %}
+<style>
+.dm-profile-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.dm-profile-link,
+.dm-sender-profile-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+.dm-profile-link:hover,
+.dm-sender-profile-link:hover {
+    text-decoration: underline;
+}
+
+.dm-profile-avatar,
+.dm-profile-avatar-fallback {
+    width: 72px;
+    height: 72px;
+    flex: 0 0 72px;
+}
+
+.dm-message-avatar,
+.dm-message-avatar-fallback {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+}
+
+.dm-profile-avatar,
+.dm-profile-avatar-fallback,
+.dm-message-avatar,
+.dm-message-avatar-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    border-radius: 50% !important;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.dm-profile-avatar,
+.dm-message-avatar {
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+.dm-profile-avatar-fallback,
+.dm-message-avatar-fallback {
+    background: #e9d5ff;
+    color: #581c87;
+    font-weight: 800;
+}
+
+.dm-sender-with-avatar {
+    display: flex;
+    align-items: center;
+}
+
+.dm-sender-profile-link span:last-child {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+    .dm-profile-avatar,
+    .dm-profile-avatar-fallback {
+        width: 64px;
+        height: 64px;
+        flex-basis: 64px;
+    }
+}
+
+/* FANZ DM conversation header — white card */
+.dm-page .dm-conversation-white-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    max-width: 680px;
+    padding: 20px 24px;
+    margin: 0 auto 20px;
+    background: #ffffff;
+    color: #18213b;
+    border: 1px solid #eee7fb;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(55, 35, 105, 0.10);
+    box-sizing: border-box;
+}
+
+.dm-page .dm-conversation-white-card h1 {
+    margin: 0;
+    color: #18213b;
+    font-size: 1.6rem;
+    line-height: 1.2;
+}
+
+.dm-page .dm-conversation-white-card .dm-subtitle {
+    margin: 0;
+    width: 100%;
+}
+
+.dm-page .dm-conversation-white-card .dm-profile-link {
+    color: #374151;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.dm-page .dm-conversation-white-card .dm-profile-link strong {
+    color: #18213b;
+}
+
+@media (max-width: 480px) {
+    .dm-page .dm-conversation-white-card {
+        padding: 16px;
+        border-radius: 16px;
+    }
+}
+
+
+/* FANZ DM header — avatar left, heading right */
+.dm-page .dm-conversation-white-card .dm-profile-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.dm-page .dm-conversation-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.dm-page .dm-conversation-title {
+    color: #18213b;
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.dm-page .dm-conversation-label {
+    color: #374151;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+
+/* FANZ DM desktop footer clearance */
+@media (min-width: 761px) {
+    .dm-page {
+        height: calc(100dvh - 210px);
+        max-height: calc(100dvh - 210px);
+    }
+}
+
+</style>
+
+<div class="dm-page">
+    <div class="dm-header dm-conversation-white-card">
+        <div class="dm-subtitle dm-profile-header">
             {% for participant in conversation.participants.all %}
                 {% if participant != request.user %}
-                    <strong>@{{ participant.username }}</strong>
+                    <a class="dm-profile-link"
+                       href="{% url 'public_profile_root' participant.username %}">
+                        {% if participant.profile.avatar %}
+                            <img class="dm-profile-avatar"
+                                 src="{{ participant.profile.avatar.url }}"
+                                 alt="@{{ participant.username }}"
+                                 width="72" height="72">
+                        {% else %}
+                            <span class="dm-profile-avatar-fallback">
+                                {{ participant.username|first|upper }}
+                            </span>
+                        {% endif %}
+                        <span class="dm-conversation-heading">
+                            <span class="dm-conversation-title">📩 DMs</span>
+                            <span class="dm-conversation-label">
+                                {% trans "Conversation with" %}
+                                <strong>@{{ participant.username }}</strong>
+                            </span>
+                        </span>
+                    </a>
                 {% endif %}
             {% endfor %}
         </div>
@@ -19,10 +208,26 @@
     <div class="dm-thread">
         {% for message in direct_messages %}
             <div class="dm-card {% if message.sender == request.user %}dm-own{% else %}dm-other{% endif %}">
-                <div class="dm-sender">@{{ message.sender.username }}</div>
+                <div class="dm-sender dm-sender-with-avatar">
+                    <a class="dm-sender-profile-link"
+                       href="{% url 'public_profile_root' message.sender.username %}">
+                        {% if message.sender.profile.avatar %}
+                            <img class="dm-message-avatar"
+                                 src="{{ message.sender.profile.avatar.url }}"
+                                 alt="@{{ message.sender.username }}"
+                                 loading="lazy"
+                                 width="40" height="40">
+                        {% else %}
+                            <span class="dm-message-avatar-fallback">
+                                {{ message.sender.username|first|upper }}
+                            </span>
+                        {% endif %}
+                        <span>@{{ message.sender.username }}</span>
+                    </a>
+                </div>
 
                 <div class="dm-body">
-                    {{ message.display_body|urlize|linebreaksbr }}
+                    {{ message.display_body|render_fanz_plaintext }}
                 </div>
 
                 <div class="dm-time">
