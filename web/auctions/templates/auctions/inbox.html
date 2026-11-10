@@ -3,6 +3,47 @@
 {% load post_content %}
 
 {% block content %}
+
+<style>
+.inbox-user-with-avatar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.inbox-participant-avatar,
+.inbox-participant-avatar-fallback {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.inbox-participant-avatar {
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+.inbox-participant-avatar-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e9d5ff;
+    color: #581c87;
+    font-weight: 800;
+}
+
+.inbox-participant-name {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+</style>
+
 <div class="inbox-page">
     <h1>📩 {% trans "Inbox" %}</h1>
 
