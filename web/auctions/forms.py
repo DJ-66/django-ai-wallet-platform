@@ -176,6 +176,12 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 
 class FeedPostForm(forms.ModelForm):
+    alltags_requested = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_("#allTags — Promote Everywhere (20 CR)"),
+    )
+
     MEDIA_TYPE_CHOICES = (
         (FeedPostMedia.MEDIA_TYPE_IMAGE, _("Images")),
         (FeedPostMedia.MEDIA_TYPE_VIDEO, _("Videos")),

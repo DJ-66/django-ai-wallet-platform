@@ -920,6 +920,55 @@ def process_credit_purchase(*, user, package, external_id, source_node=None):
 
 
 def _get_public_hashtag_post_queryset(hashtag):
+    from django.db.models import Q
+
+    return (
+        _get_public_discovery_eligible_posts()
+        .filter(
+            Q(hashtags=hashtag)
+            | Q(alltags_promotion__isnull=False)
+        )
+        .distinct()
+    )
+
+
+def get_public_hashtag_posts(hashtag, limit=None):
+    """
+    Return public, free hashtag posts eligible for public discovery surfaces.
+
+    This queryset is shared by hashtag feeds, Discovery Hubs, and future
+    search, syndication, API, and AI consumers.
+    """
+    queryset = (
+        _get_public_hashtag_post_queryset(hashtag)
+        .select_related(
+            "user",
+            "user__profile",
+            "user__bidwallet",
+        )
+        .prefetch_related(
+            "media",
+            "hashtags",
+            "likes",
+        )
+        .order_by("-created_at")
+    )
+
+    if limit is not None:
+        queryset = queryset[:limit]
+
+    return queryset
+
+
+def get_public_hashtag_post_count(hashtag):
+    """
+    Return the total number of public, free hashtag posts eligible
+    for public Discovery surfaces.
+    """
+    return _get_public_hashtag_post_queryset(hashtag).count()
+
+
+def _get_public_discovery_eligible_posts():
     """
     Build the shared queryset for public, free hashtag posts eligible
     for public Discovery surfaces.
@@ -934,7 +983,6 @@ def _get_public_hashtag_post_queryset(hashtag):
     return (
         FeedPost.objects
         .filter(
-            hashtags=hashtag,
             is_public=True,
             is_paid=False,
         )
@@ -973,39 +1021,3 @@ def _get_public_hashtag_post_queryset(hashtag):
             )
         )
     )
-
-
-def get_public_hashtag_posts(hashtag, limit=None):
-    """
-    Return public, free hashtag posts eligible for public discovery surfaces.
-
-    This queryset is shared by hashtag feeds, Discovery Hubs, and future
-    search, syndication, API, and AI consumers.
-    """
-    queryset = (
-        _get_public_hashtag_post_queryset(hashtag)
-        .select_related(
-            "user",
-            "user__profile",
-            "user__bidwallet",
-        )
-        .prefetch_related(
-            "media",
-            "hashtags",
-            "likes",
-        )
-        .order_by("-created_at")
-    )
-
-    if limit is not None:
-        queryset = queryset[:limit]
-
-    return queryset
-
-
-def get_public_hashtag_post_count(hashtag):
-    """
-    Return the total number of public, free hashtag posts eligible
-    for public Discovery surfaces.
-    """
-    return _get_public_hashtag_post_queryset(hashtag).count()

@@ -745,6 +745,15 @@ def ensure_api_key(node):
 
 
 def feed_home(request):
+    from .event_visibility import public_event_visibility_q
+    from .feed_submission_fingerprint import fingerprint_feed_submission
+    from .feed_submission_services import (
+        FeedSubmissionRejected,
+        find_completed_submission,
+        publish_once,
+        validate_submission_identity,
+    )
+
     language = request.GET.get(
         "lang",
         getattr(request, "LANGUAGE_CODE", "en"),
@@ -754,50 +763,115 @@ def feed_home(request):
         if not request.user.is_authenticated:
             return redirect("login")
 
+        submission_token = request.POST.get(
+            "submission_token", ""
+        )
+
+        submission_fingerprint = None
+        submission_error = None
+
+        try:
+            submission_fingerprint = fingerprint_feed_submission(
+                request.POST,
+                request.FILES,
+            )
+
+            validate_submission_identity(
+                token=submission_token,
+                fingerprint=submission_fingerprint,
+            )
+        except FeedSubmissionRejected as exc:
+            submission_error = str(exc.messages[0])
+        except (OSError, ValueError):
+            submission_error = (
+                "Unable to verify this submission. Please try again."
+            )
+
+        if submission_error is None:
+            from django import forms as django_forms
+
+            promotion_requested = django_forms.BooleanField(
+                required=False,
+            ).clean(
+                request.POST.get("alltags_requested")
+            )
+
+            if (
+                promotion_requested
+                and request.POST.get("alltags_confirmed") != "yes"
+            ):
+                submission_error = (
+                    "Confirm the 20 FANZ Credit promotion "
+                    "before publishing."
+                )
+
+        if submission_error is None:
+            try:
+                existing_result = find_completed_submission(
+                    token=submission_token,
+                    fingerprint=submission_fingerprint,
+                    creator=request.user,
+                )
+            except FeedSubmissionRejected as exc:
+                submission_error = str(exc.messages[0])
+            else:
+                if existing_result is not None:
+                    post, outcome = existing_result
+
+                    if outcome:
+                        if outcome.startswith("Promotion Successful"):
+                            messages.success(request, outcome)
+                        else:
+                            messages.warning(request, outcome)
+
+                    return redirect("feed_home")
+
         form = FeedPostForm(
             request.POST,
             request.FILES,
             current_username=request.user.username,
         )
 
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.user = request.user
-            post.title = post.title.strip()
-            post.content = post.content.strip()
+        if submission_error:
+            form.add_error(None, submission_error)
 
-            if post.is_paid:
-                post.is_public = False
-
-                if post.unlock_price < 1:
-                    post.unlock_price = 1
-            else:
-                post.unlock_price = 0
-
-            post.save()
-
-            media_items = form.cleaned_data.get("images", [])
-
-            for display_order, media_item in enumerate(media_items):
-                FeedPostMedia.objects.create(
-                    post=post,
-                    file=media_item["file"],
-                    media_type=media_item["media_type"],
-                    caption="",
-                    display_order=display_order,
-                    is_active=True,
-                )
-
-            sync_post_hashtags(post)
-
-            return redirect("feed_home")
-
-        else:
-            print(
-                "FEED POST FORM ERRORS:",
-                form.errors,
-                flush=True,
+        if (
+            form.is_valid()
+            and form.cleaned_data.get("alltags_requested")
+            and request.POST.get("alltags_confirmed") != "yes"
+        ):
+            form.add_error(
+                "alltags_requested",
+                "Confirm the 20 FANZ Credit promotion before publishing.",
             )
+
+        if form.is_valid():
+            requested = bool(
+                form.cleaned_data.get("alltags_requested")
+            )
+
+            try:
+                post, outcome = publish_once(
+                    token=submission_token,
+                    fingerprint=submission_fingerprint,
+                    creator=request.user,
+                    form=form,
+                    alltags=requested,
+                )
+            except Exception:
+                form.add_error(
+                    None,
+                    "Publishing failed. Please try again.",
+                )
+            else:
+                if outcome:
+                    if outcome.startswith("Promotion Successful"):
+                        messages.success(request, outcome)
+                    else:
+                        messages.warning(request, outcome)
+
+                return redirect("feed_home")
+
 
             
     else:
@@ -854,6 +928,7 @@ def feed_home(request):
         )
         .filter(
             is_published=True,
+            scheduled_for__gte=community_cutoff,
             scheduled_for__lte=timezone.now(),
         )
     )
@@ -868,13 +943,7 @@ def feed_home(request):
             "business",
         )
         .filter(
-            is_published=True,
-            is_cancelled=False,
-        )
-        .filter(
-            Q(end_at__gte=now)
-            |
-            Q(end_at__isnull=True, start_at__gte=now)
+            public_event_visibility_q(now)
         )
     )
 
@@ -926,7 +995,15 @@ def feed_home(request):
     )
 
 
+    import uuid
+
+    if request.method == "POST":
+        submission_token = request.POST.get("submission_token", "")
+    else:
+        submission_token = str(uuid.uuid4())
+
     return render(request, "auctions/feed_home.html", {
+        "submission_token": submission_token,
         "form": form,
         "posts": posts,
         "feed_items": feed_items,

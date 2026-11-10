@@ -19,6 +19,11 @@
              >            
            
             {% csrf_token %}
+            <input
+                type="hidden"
+                name="submission_token"
+                value="{{ submission_token }}"
+            >
 
            {% if form.errors %}
     <div class="feed-form-error-banner">
@@ -112,6 +117,25 @@
 </div>
 
 <div class="feed-access-options">
+    <label class="feed-access-option feed-alltags-option">
+        {{ form.alltags_requested }}
+
+        <span class="feed-access-option-content">
+            <span class="feed-access-option-icon">🤩</span>
+            <span>
+                <strong>
+                    <span class="alltags-responsive-label">
+    <strong>#allTags</strong>
+    <span class="alltags-promotion-text">— {% trans "Promote Everywhere (20 CR)" %}</span>
+</span>
+                </strong>
+                <small>
+                    {% trans "Permanent syndication to all hashtag feeds, Max 1 per 24hrs, Free image posts only." %}
+                </small>
+            </span>
+        </span>
+    </label>
+
     <label class="feed-access-option feed-public-option">
         {{ form.is_public }}
 
@@ -124,12 +148,6 @@
             </span>
         </span>
     </label>
-
-    <div class="feed-privacy-link">
-        <a href="https://fanz.to/PrivacyPolicy/" target="_blank" rel="noopener noreferrer">
-            {% trans "Privacy Policy" %}
-        </a>
-    </div>
 
     <label class="feed-access-option feed-premium-option">
         {{ form.is_paid }}
@@ -171,6 +189,12 @@
         <span class="feed-submit-icon">🚀</span>
         <span>{% trans "Publish Post" %}</span>
     </button>
+<div class="feed-privacy-link" style="text-align:center; margin-top:12px;">
+    <a href="https://fanz.to/PrivacyPolicy/"
+       target="_blank" rel="noopener noreferrer">
+        {% trans "Privacy Policy" %}
+    </a>
+</div>
 </div>
 </form>
     </div>
@@ -635,5 +659,164 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById(
+        "community-feed-compose-form"
+    );
+
+    if (!form) return;
+
+    const checkbox = form.querySelector(
+        'input[name="alltags_requested"]'
+    );
+
+    if (!checkbox) return;
+
+    const confirmation = document.createElement("input");
+    confirmation.type = "hidden";
+    confirmation.name = "alltags_confirmed";
+    confirmation.id = "alltags-confirmed";
+    confirmation.value = "";
+    form.appendChild(confirmation);
+
+    checkbox.addEventListener("change", function () {
+        confirmation.value = "";
+    });
+
+    form.addEventListener("input", function (event) {
+        if (event.target !== confirmation) {
+            confirmation.value = "";
+        }
+    });
+
+    form.addEventListener("change", function (event) {
+        if (event.target !== confirmation) {
+            confirmation.value = "";
+        }
+    });
+
+    let submissionStarted = false;
+
+    form.addEventListener("submit", function (event) {
+        if (submissionStarted) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+        }
+
+        if (!checkbox.checked) {
+            confirmation.value = "";
+            submissionStarted = true;
+            return;
+        }
+
+        if (confirmation.value === "yes") {
+            submissionStarted = true;
+            return;
+        }
+
+        const accepted = window.confirm(
+            "Promote this post permanently across eligible " +
+            "FANZ hashtag feeds for 20 FANZ Credits? " +
+            "Maximum one promotion every 24 hours."
+        );
+
+        if (!accepted) {
+            confirmation.value = "";
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+        }
+
+        confirmation.value = "yes";
+        submissionStarted = true;
+    }, true);
+});
+</script>
+
+
+<script id="alltags-checkbox-sync">
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById(
+        "community-feed-compose-form"
+    );
+    if (!form) return;
+
+    const alltags = form.querySelector(
+        'input[name="alltags_requested"]'
+    );
+    const publicPost = form.querySelector(
+        'input[name="is_public"]'
+    );
+    const paidPost = form.querySelector(
+        'input[name="is_paid"]'
+    );
+
+    if (!alltags || !publicPost || !paidPost) return;
+
+    function selectPaid() {
+        if (!paidPost.checked) return;
+        publicPost.checked = false;
+        alltags.checked = false;
+    }
+
+    alltags.addEventListener("change", function () {
+        if (alltags.checked) {
+            paidPost.checked = false;
+            publicPost.checked = true;
+        }
+    });
+
+    publicPost.addEventListener("change", function () {
+        if (publicPost.checked) {
+            paidPost.checked = false;
+        } else {
+            alltags.checked = false;
+        }
+    });
+
+    paidPost.addEventListener("change", selectPaid);
+
+    // Existing media/price handlers may set paidPost.checked
+    // programmatically without dispatching a change event.
+    const unlockPrice = form.querySelector(
+        'input[name="unlock_price"]'
+    );
+    const mediaInputs = form.querySelectorAll(
+        'input[name="media_type"], input[name="images"]'
+    );
+
+    if (unlockPrice) {
+        unlockPrice.addEventListener("input", selectPaid);
+        unlockPrice.addEventListener("change", selectPaid);
+    }
+
+    mediaInputs.forEach(function (input) {
+        input.addEventListener("change", function () {
+            // Run after existing media handlers have updated Paid Post.
+            queueMicrotask(selectPaid);
+        });
+    });
+
+    // Preserve existing form defaults on initial page load.
+    if (paidPost.checked) {
+        selectPaid();
+    }
+});
+</script>
+
+<style>
+.alltags-responsive-label {
+    display: inline;
+}
+@media (max-width: 600px) {
+    .alltags-promotion-text {
+        display: block;
+        white-space: nowrap;
+    }
+}
+</style>
 {% include "auctions/includes/_feed_post_scripts.html" %}
 {% endblock %}
