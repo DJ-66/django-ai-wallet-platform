@@ -61,7 +61,7 @@ def _link_text(text):
         username = match.group(1)
 
         href = reverse(
-            "public_profile_root",
+            "resolve_mention",
             kwargs={
                 "username": username,
             },
@@ -376,3 +376,28 @@ def render_post_content(value):
     return mark_safe(
         clean
     )
+
+
+@register.filter
+def render_fanz_plaintext(value):
+    """Safely render user-controlled comments and replies."""
+    if value is None:
+        return ""
+
+    source = str(value).replace("\r\n", "\n").replace("\r", "\n")
+
+    return mark_safe(
+        escape(source).replace("\n", "<br>")
+    )
+
+
+@register.filter
+def render_fanz_preview(value):
+    """Render a short, escaped message preview."""
+    if value is None:
+        return ""
+
+    source = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    preview = " ".join(source.split())
+
+    return escape(preview)
