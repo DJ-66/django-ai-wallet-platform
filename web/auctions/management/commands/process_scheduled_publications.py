@@ -133,7 +133,8 @@ class Command(BaseCommand):
 
     def _mark_failed(self, publication_id, message):
         ScheduledPublication.objects.filter(
-            pk=publication_id
+            pk=publication_id,
+            status=ScheduledPublication.STATUS_PUBLISHING,
         ).update(
             status=ScheduledPublication.STATUS_FAILED,
             last_error=str(message)[:4000],
@@ -276,7 +277,8 @@ class Command(BaseCommand):
 
         if dry_run:
             ScheduledPublication.objects.filter(
-                pk=publication.id
+                pk=publication.id,
+                status=ScheduledPublication.STATUS_PUBLISHING,
             ).update(
                 status=ScheduledPublication.STATUS_QUEUED,
                 attempt_count=max(
