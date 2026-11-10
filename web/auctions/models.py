@@ -3923,3 +3923,259 @@ class AutoPostEntitlement(models.Model):
             f"@{self.account.username} "
             f"AutoPost {self.source} until {self.expires_at}"
         )
+
+
+class CreatorPublishingAttempt(models.Model):
+    """
+    Durable ownership record for AI creator publishing.
+
+    Separate from caption recovery and promotional publishing.
+    No automatic retries or media deletion are performed here.
+    """
+
+    STATUS_ACTIVE = "active"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+    STATUS_ABANDONED = "abandoned"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ABANDONED, "Abandoned"),
+    ]
+
+    publication = models.ForeignKey(
+        "ScheduledPublication",
+        on_delete=models.PROTECT,
+        related_name="publishing_attempts",
+    )
+
+    token = models.UUIDField(
+        unique=True,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+        db_index=True,
+    )
+
+    claimed_at = models.DateTimeField()
+
+    lease_expires_at = models.DateTimeField(
+        db_index=True,
+    )
+
+    media_namespace = models.CharField(
+        max_length=255,
+        unique=True,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["status", "lease_expires_at"],
+                name="creator_pub_attempt_lease_idx",
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["publication"],
+                condition=models.Q(status="active"),
+                name="unique_active_creator_pub_attempt",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Creator publishing attempt {self.token} "
+            f"for publication {self.publication_id}: {self.status}"
+        )
+
+
+class AllTagsPromotion(models.Model):
+    """
+    Permanent FANZ hashtag distribution entitlement.
+
+    Purchase frequency is limited to one per creator
+    per rolling 24 hours by the billing service.
+    """
+
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="alltags_promotions",
+    )
+
+    post = models.OneToOneField(
+        FeedPost,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="alltags_promotion",
+    )
+
+    wallet_transaction = models.OneToOneField(
+        WalletTransaction,
+        on_delete=models.PROTECT,
+        related_name="alltags_promotion",
+    )
+
+    price_credits = models.PositiveIntegerField(
+        default=20,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(price_credits=20),
+                name="alltags_promotion_price_20",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"#{self.pk} @{self.creator.username} "
+            f"post={self.post_id}"
+        )
+
+
+class FeedPostSubmission(models.Model):
+    """
+    Idempotency record for interactive FANZ feed publishing.
+
+    Each submission token can produce at most one post.
+    """
+
+    token = models.UUIDField(
+        unique=True,
+        editable=False,
+    )
+
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="feed_post_submissions",
+    )
+
+    post = models.OneToOneField(
+        FeedPost,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submission_record",
+    )
+
+    request_fingerprint = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+    )
+
+    promotion_outcome = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"submission={self.token} "
+            f"creator={self.creator_id} "
+            f"post={self.post_id}"
+        )
+
+
+class LegacyAIPublicationLease(models.Model):
+    """
+    Durable preparation lease for FANZ-owned AI publications.
+
+    A lease belongs to one ScheduledPublication draft.
+    Only the current unexpired claim owner may finalize it.
+    """
+
+    publication = models.OneToOneField(
+        "ScheduledPublication",
+        on_delete=models.PROTECT,
+        related_name="ai_preparation_lease",
+    )
+
+    claim_token = models.UUIDField(
+        null=True,
+        blank=True,
+    )
+
+    claimed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    lease_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    next_retry_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    attempt_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    last_error = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return (
+            f"AI preparation lease "
+            f"publication={self.publication_id}"
+        )
