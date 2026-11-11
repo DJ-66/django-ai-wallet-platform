@@ -1,3 +1,4 @@
+from django.utils import translation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -90,53 +91,64 @@ def event_detail(request, event_id):
 
 @login_required
 def create_event(request):
-    if not can_create_events(request.user):
-        messages.error(
-            request,
-            "You need at least 1000 credits to create new events.",
-        )
-        return redirect("wallet")
-
-    if request.method == "POST":
-        form = EventForm(
-            request.POST,
-            request.FILES,
-            user=request.user,
-        )
-
-        if form.is_valid():
-            event = form.save(commit=False)
-            event.creator = request.user
-            event.save()
-
-            messages.success(
-                request,
-                "Your event was created successfully.",
-            )
-            return redirect(
-                "public_profile",
-                username=request.user.username,
-            )
-    else:
-        initial = {}
-
-        business_id = request.GET.get("business")
-
-        if business_id:
-            initial["business"] = business_id
-
-        form = EventForm(
-            user=request.user,
-            initial=initial,
-        )
-
-    return render(
-        request,
-        "auctions/events/event_form.html",
-        {
-            "form": form,
-        },
+    language = request.GET.get(
+        "lang",
+        getattr(request, "LANGUAGE_CODE", "en"),
     )
+    language = str(language).lower().split("-")[0]
+    if language not in ("en", "es", "pt"):
+        language = "en"
+
+    with translation.override(language):
+
+        if not can_create_events(request.user):
+            messages.error(
+                request,
+                "You need at least 1000 credits to create new events.",
+            )
+            return redirect("wallet")
+
+        if request.method == "POST":
+            form = EventForm(
+                request.POST,
+                request.FILES,
+                user=request.user,
+            )
+
+            if form.is_valid():
+                event = form.save(commit=False)
+                event.creator = request.user
+                event.save()
+
+                messages.success(
+                    request,
+                    "Your event was created successfully.",
+                )
+                return redirect(
+                    "public_profile",
+                    username=request.user.username,
+                )
+        else:
+            initial = {}
+
+            business_id = request.GET.get("business")
+
+            if business_id:
+                initial["business"] = business_id
+
+            form = EventForm(
+                user=request.user,
+                initial=initial,
+            )
+
+        return render(
+            request,
+            "auctions/events/event_form.html",
+            {
+                "form": form,
+                "language": language,
+            },
+        )
 
 @login_required
 def edit_event(request, event_id):

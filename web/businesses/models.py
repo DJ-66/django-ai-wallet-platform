@@ -9,11 +9,21 @@ class BusinessListing(models.Model):
     INDUSTRY_REAL_ESTATE = "real_estate"
     INDUSTRY_RESTAURANT = "restaurant"
     INDUSTRY_LAW_FIRM = "law_firm"
+    INDUSTRY_DIGITAL_BUSINESS = "digital_business"
+    INDUSTRY_CONSULTANT = "consultant"
+    INDUSTRY_TRANSPORTATION = "transportation"
+    INDUSTRY_RETAIL = "retail"
+    INDUSTRY_SERVICES = "services"
 
     INDUSTRY_CHOICES = [
         (INDUSTRY_REAL_ESTATE, _("Real Estate")),
         (INDUSTRY_RESTAURANT, _("Restaurant")),
         (INDUSTRY_LAW_FIRM, _("Law Firm")),
+        (INDUSTRY_DIGITAL_BUSINESS, _("Digital Business")),
+        (INDUSTRY_CONSULTANT, _("Consultant")),
+        (INDUSTRY_TRANSPORTATION, _("Transportation")),
+        (INDUSTRY_RETAIL, _("Retail")),
+        (INDUSTRY_SERVICES, _("Services")),
     ]
 
     name = models.CharField(max_length=255)

@@ -8,7 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from datetime import timedelta
 from django.db.models import Q
-from django.utils import timezone
+from django.utils import timezone, translation
+from django.utils.translation import gettext as _
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count
 from .forms import (
@@ -22,6 +23,24 @@ from .models import (
     BusinessMedia,
     BusinessUpdate,
 )
+
+
+def _growth_language(request):
+    requested_language = str(
+        request.GET.get("lang", "")
+    ).strip().lower().split("-")[0]
+
+    if requested_language in {"en", "es", "pt"}:
+        return requested_language
+
+    active_language = str(
+        translation.get_language() or ""
+    ).strip().lower().split("-")[0]
+
+    if active_language in {"en", "es", "pt"}:
+        return active_language
+
+    return "en"
 
 
 def business_detail(request, slug):
@@ -242,6 +261,9 @@ def grow_business(request, slug):
         is_active=True,
     )
 
+    growth_language = _growth_language(request)
+    request.LANGUAGE_CODE = growth_language
+
     wallet = provision_user_wallet(request.user)
 
     referral_query = urlencode(
@@ -296,31 +318,36 @@ def grow_business(request, slug):
         f"?v={referral_qr_version}"
     )
 
-    whatsapp_message = (
-    f"{business.name}\n\n"
-    f"Join our FANZ community Today\n\n"
-    f"And we both get 50 FREE Credits!\n\n"
-    f"Tap link to get started\n\n"
-    f"{referral_url}"
-    )
+    with translation.override(growth_language):
+        whatsapp_message = (
+            f"{business.name}\n\n"
+            f"{_('Join our FANZ community today')}\n\n"
+            f"{_('And we both get 50 FREE Credits!')}\n\n"
+            f"{_('Tap the link to get started')}\n\n"
+            f"{referral_url}"
+        )
 
-    whatsapp_share_url = (
-        "https://wa.me/?text="
-        f"{quote(whatsapp_message)}"
-    )
+        whatsapp_share_url = (
+            "https://wa.me/?text="
+            f"{quote(whatsapp_message)}"
+        )
 
-    return render(
-        request,
-        "businesses/grow_business.html",
-        {
+        context = {
             "business": business,
             "wallet": wallet,
+            "growth_language": growth_language,
+            "LANGUAGE_CODE": growth_language,
             "referral_url": referral_url,
             "referral_qr_url": referral_qr_url,
+            "whatsapp_message": whatsapp_message,
             "whatsapp_share_url": whatsapp_share_url,
+        }
 
-        },
-    )
+        return render(
+            request,
+            "businesses/grow_business.html",
+            context,
+        )
 
 
 @login_required
