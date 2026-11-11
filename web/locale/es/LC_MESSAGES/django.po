@@ -3005,3 +3005,19 @@ msgstr "Comercio minorista"
 
 msgid "Services"
 msgstr "Servicios"
+
+#: auctions/forms.py
+msgid "#allTags — Promote Everywhere (20 CR)"
+msgstr "#allTags — Promocionar en todas partes (20 CR)"
+
+#: templates/auctions/feed_home.html
+msgid "Promote Everywhere (20 CR)"
+msgstr "Promocionar en todas partes (20 CR)"
+
+#: templates/auctions/feed_home.html
+msgid "Permanent syndication to all hashtag feeds, Max 1 per 24hrs, Free image posts only."
+msgstr "Distribución permanente en todos los feeds de hashtags, máximo 1 cada 24 h, solo publicaciones gratuitas con imágenes."
+
+#: templates/auctions/feed_home.html
+msgid "Promote this post permanently across eligible FANZ hashtag feeds for 20 FANZ Credits? Maximum one promotion every 24 hours."
+msgstr "¿Promocionar esta publicación permanentemente en los feeds de hashtags elegibles de FANZ por 20 créditos FANZ? Máximo una promoción cada 24 horas."

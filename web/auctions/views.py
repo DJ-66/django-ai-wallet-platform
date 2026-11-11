@@ -758,6 +758,10 @@ def feed_home(request):
         "lang",
         getattr(request, "LANGUAGE_CODE", "en"),
     )
+    language = str(language or "en").lower().split("-")[0]
+
+    if language not in ("en", "es", "pt"):
+        language = "en"
 
     if request.method == "POST":
         if not request.user.is_authenticated:
@@ -1002,16 +1006,17 @@ def feed_home(request):
     else:
         submission_token = str(uuid.uuid4())
 
-    return render(request, "auctions/feed_home.html", {
-        "submission_token": submission_token,
-        "form": form,
-        "posts": posts,
-        "feed_items": feed_items,
-        "unlocked_post_ids": unlocked_post_ids,
-        "recent_notifications": recent_notifications,
-        "language": language,
+    with override(language):
+        return render(request, "auctions/feed_home.html", {
+            "submission_token": submission_token,
+            "form": form,
+            "posts": posts,
+            "feed_items": feed_items,
+            "unlocked_post_ids": unlocked_post_ids,
+            "recent_notifications": recent_notifications,
+            "language": language,
 
-    })
+        })
 
 @login_required
 def list_founder_p2p_fixed(request, founder_id):

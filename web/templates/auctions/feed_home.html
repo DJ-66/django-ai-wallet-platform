@@ -659,6 +659,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 
+{% trans "Promote this post permanently across eligible FANZ hashtag feeds for 20 FANZ Credits? Maximum one promotion every 24 hours." as alltags_confirmation_message %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById(
@@ -717,9 +718,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const accepted = window.confirm(
-            "Promote this post permanently across eligible " +
-            "FANZ hashtag feeds for 20 FANZ Credits? " +
-            "Maximum one promotion every 24 hours."
+            "{{ alltags_confirmation_message|escapejs }}"
         );
 
         if (!accepted) {
