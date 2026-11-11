@@ -126,11 +126,11 @@
                 <strong>
                     <span class="alltags-responsive-label">
     <strong>#allTags</strong>
-    <span class="alltags-promotion-text">— {% trans "Promote Everywhere (20 CR)" %}</span>
+    <span class="alltags-promotion-text">— {% if language == "es" %}Promocionar en todas partes (20 CR){% elif language == "pt" %}Promover em todos os lugares (20 CR){% else %}Promote Everywhere (20 CR){% endif %}</span>
 </span>
                 </strong>
                 <small>
-                    {% trans "Permanent syndication to all hashtag feeds, Max 1 per 24hrs, Free image posts only." %}
+                    {% if language == "es" %}Distribución permanente en todos los feeds de hashtags, máximo 1 cada 24 h, solo publicaciones gratuitas con imágenes.{% elif language == "pt" %}Distribuição permanente em todos os feeds de hashtags, máximo 1 a cada 24 h, apenas publicações gratuitas com imagens.{% else %}Permanent syndication to all hashtag feeds, Max 1 per 24hrs, Free image posts only.{% endif %}
                 </small>
             </span>
         </span>
@@ -191,7 +191,7 @@
     </button>
 <div class="feed-privacy-link" style="text-align:center; margin-top:12px;">
     <a href="https://fanz.to/PrivacyPolicy/">
-        {% trans "Privacy Policy" %}
+        {% if language == "es" %}Política de privacidad{% elif language == "pt" %}Política de Privacidade{% else %}Privacy Policy{% endif %}
     </a>
 </div>
 </div>
