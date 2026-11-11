@@ -10038,7 +10038,7 @@ class FeedPostContentRendererTests(SimpleTestCase):
     def test_mention_links_to_fanz_profile(self):
         rendered = self.render("Visit @BuyCredits")
         self.assertIn(
-            'href="/BuyCredits/"',
+            'href="/auctions/mention/BuyCredits/"',
             rendered,
         )
         self.assertIn("@BuyCredits", rendered)
