@@ -13,6 +13,16 @@ from auctions.feed_publishing import publish_feed_post
 from auctions.promotional_publishing import (
     publish_promotional_publication,
 )
+from auctions.ai_services.legacy_suffix_adapter import (
+    suffix_context_for_publication,
+)
+from auctions.ai_services.legacy_suffix_assembly import (
+    decorate_creator_caption,
+)
+from auctions.ai_services.legacy_prepared_validation import (
+    MARKERS,
+    validate_prepared_publication,
+)
 from auctions.models import ScheduledPublication
 
 
@@ -351,10 +361,61 @@ class Command(BaseCommand):
                             "Publication state changed during publish."
                         )
 
+                    content = locked.content
+
+                    is_ai = (
+                        locked.publication_key.startswith("ai:")
+                        and locked.media_asset_id is None
+                    )
+
+                    if (
+                        is_ai
+                        and locked.campaign_key.startswith("ai_")
+                        and locked.campaign_key not in MARKERS
+                        and locked.campaign_key != "ai_legacy_suffix"
+                    ):
+                        raise ValueError(
+                            "Unknown AI publication preparation marker"
+                        )
+
+                    if is_ai and locked.campaign_key in MARKERS:
+                        context = suffix_context_for_publication(
+                            locked
+                        )
+
+                        if context is None:
+                            raise ValueError(
+                                "Prepared AI publication has no suffix context"
+                            )
+
+                        validate_prepared_publication(
+                            username=locked.creator.username,
+                            publication_key=locked.publication_key,
+                            sequence=context["sequence"],
+                            marker=locked.campaign_key,
+                            content=content,
+                        )
+
+                    elif (
+                        is_ai
+                        and locked.campaign_key == "ai_legacy_suffix"
+                    ):
+                        context = suffix_context_for_publication(
+                            locked
+                        )
+
+                        if context is not None:
+                            content = decorate_creator_caption(
+                                content=content,
+                                language="en",
+                                suffix=context["suffix"],
+                                destination=context["destination"],
+                            )
+
                     post = publish_feed_post(
                         user=publication.creator,
                         title=publication.title,
-                        content=publication.content,
+                        content=content,
                         uploads=[upload],
                         is_public=True,
                         is_paid=False,
