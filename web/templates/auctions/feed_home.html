@@ -190,7 +190,7 @@
         <span>{% trans "Publish Post" %}</span>
     </button>
 <div class="feed-privacy-link" style="text-align:center; margin-top:12px;">
-    <a href="https://fanz.to/PrivacyPolicy/">
+    <a href="https://fanz.to/PrivacyPolicy/?lang={% if language == 'es' %}es{% elif language == 'pt' %}pt{% else %}en{% endif %}">
         {% trans "Privacy Policy" %}
     </a>
 </div>
