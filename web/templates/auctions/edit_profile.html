@@ -58,7 +58,7 @@
             </a>.
             {% get_current_language as privacy_active_language %}
             <a href="https://fanz.to/PrivacyPolicy/?lang={% if request.GET.lang == 'en' or request.GET.lang == 'es' or request.GET.lang == 'pt' %}{{ request.GET.lang }}{% elif privacy_active_language == 'en' or privacy_active_language == 'es' or privacy_active_language == 'pt' %}{{ privacy_active_language }}{% else %}en{% endif %}">
-                {% trans "Privacy Policy" %}
+                {% if request.GET.lang == 'es' %}Política de privacidad{% elif request.GET.lang == 'pt' %}Política de Privacidade{% elif request.GET.lang == 'en' %}Privacy Policy{% elif privacy_active_language == 'es' %}Política de privacidad{% elif privacy_active_language == 'pt' %}Política de Privacidade{% else %}Privacy Policy{% endif %}
             </a>.
 
         </label>
