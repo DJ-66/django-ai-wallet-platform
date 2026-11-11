@@ -3,10 +3,10 @@
 {% block content %}
 <section class="event-form-page">
   <div class="event-form-card">
-    <h1>Create Event</h1>
+    <h1>{% if language == "es" %}Crear evento{% elif language == "pt" %}Criar evento{% else %}Create Event{% endif %}</h1>
 
     <p>
-      Publish an event for your community or associate it with one of your businesses.
+      {% if language == "es" %}Publica un evento para tu comunidad o asócialo con uno de tus negocios.{% elif language == "pt" %}Publique um evento para sua comunidade ou associe-o a uma de suas empresas.{% else %}Publish an event for your community or associate it with one of your businesses.{% endif %}
     </p>
 
     <form method="post" enctype="multipart/form-data">
@@ -17,7 +17,17 @@
       {% for field in form %}
         <div class="event-form-field">
           {{ field.label_tag }}
-          {{ field }}
+          {% if field.name == "image" %}
+          <div class="event-upload">
+            <label class="event-upload-button" for="{{ field.id_for_label }}">
+              {% if language == "es" %}Seleccionar archivo{% elif language == "pt" %}Escolher arquivo{% else %}Choose File{% endif %}
+            </label>
+            <span id="event-upload-filename" aria-live="polite">{% if language == "es" %}Ningún archivo seleccionado{% elif language == "pt" %}Nenhum arquivo selecionado{% else %}No file chosen{% endif %}</span>
+            <div class="event-upload-native">{{ field }}</div>
+          </div>
+          {% else %}
+            {{ field }}
+          {% endif %}
 
           {% if field.help_text %}
             <p class="event-form-help">{{ field.help_text }}</p>
@@ -30,9 +40,53 @@
       {% endfor %}
 
       <button type="submit" class="event-form-submit">
-        Create Event
+        {% if language == "es" %}Crear evento{% elif language == "pt" %}Criar evento{% else %}Create Event{% endif %}
       </button>
     </form>
   </div>
 </section>
+
+<style>
+.event-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.event-upload-button {
+  display: inline-block;
+  padding: 10px 14px;
+  background: #1746a2;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.event-upload-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.event-upload-native:focus-within + * {
+  outline: 2px solid #7137f5;
+}
+#event-upload-filename {
+  font-size: 14px;
+}
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const input = document.querySelector(".event-upload-native input[type=file]");
+  const filename = document.getElementById("event-upload-filename");
+  if (!input || !filename) return;
+  const emptyText = filename.textContent.trim();
+  input.addEventListener("change", function () {
+    filename.textContent = input.files && input.files.length
+      ? input.files[0].name
+      : emptyText;
+  });
+});
+</script>
 {% endblock %}

@@ -44,6 +44,86 @@ class EventForm(forms.ModelForm):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
+        # Localize the visible event form without changing stored values.
+        from django.utils.translation import get_language
+
+        lang = (get_language() or "en").split("-")[0]
+        translations = {
+            "es": {
+                "Business": "Negocio",
+                "Event type": "Tipo de evento",
+                "Title": "Título",
+                "Description": "Descripción",
+                "Start at": "Fecha y hora de inicio",
+                "End at": "Fecha y hora de finalización",
+                "Location": "Ubicación",
+                "Image": "Imagen",
+                "General": "General",
+                "Promotion": "Promoción",
+                "Live Music": "Música en vivo",
+                "Food": "Gastronomía",
+                "Community": "Comunidad",
+                "Private": "Privado",
+                "Holiday": "Festividad",
+                "Event title...": "Título del evento...",
+                "Describe the event...": "Describe el evento...",
+                "Event location...": "Ubicación del evento...",
+            },
+            "pt": {
+                "Business": "Empresa",
+                "Event type": "Tipo de evento",
+                "Title": "Título",
+                "Description": "Descrição",
+                "Start at": "Data e hora de início",
+                "End at": "Data e hora de término",
+                "Location": "Localização",
+                "Image": "Imagem",
+                "General": "Geral",
+                "Promotion": "Promoção",
+                "Live Music": "Música ao vivo",
+                "Food": "Gastronomia",
+                "Community": "Comunidade",
+                "Private": "Privado",
+                "Holiday": "Feriado",
+                "Event title...": "Título do evento...",
+                "Describe the event...": "Descreva o evento...",
+                "Event location...": "Local do evento...",
+            },
+        }
+        tr = translations.get(lang, {})
+
+        for name, field in self.fields.items():
+            english_label = {
+                "business": "Business",
+                "event_type": "Event type",
+                "title": "Title",
+                "description": "Description",
+                "start_at": "Start at",
+                "end_at": "End at",
+                "location": "Location",
+                "image": "Image",
+            }.get(name)
+            if english_label:
+                field.label = tr.get(english_label, english_label)
+
+        event_type_field = self.fields.get("event_type")
+        if event_type_field:
+            event_type_field.choices = [
+                (value, tr.get(str(label), str(label)))
+                for value, label in event_type_field.choices
+            ]
+
+        for name, english in {
+            "title": "Event title...",
+            "description": "Describe the event...",
+            "location": "Event location...",
+        }.items():
+            if name in self.fields:
+                self.fields[name].widget.attrs["placeholder"] = tr.get(
+                    english, english
+                )
+
+
         business_field = self.fields.get("business")
 
         if business_field is None:

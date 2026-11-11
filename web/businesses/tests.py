@@ -1,10 +1,18 @@
 import csv
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.http import HttpResponse
+from django.template import Context
+from django.template.loader import get_template
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
+from django.utils import translation
+from django.utils.html import escapejs
 
 from .import_services import (
     BusinessImportRecord,
@@ -541,3 +549,334 @@ class BusinessCategoryNormalizerTests(TestCase):
         self.assertIsNone(
             normalize_category("Tienda de tecnología")
         )
+
+
+class GrowBusinessLocalizationTests(SimpleTestCase):
+    REFERRAL_CODE = "REFCODE50"
+
+    TRANSLATIONS = {
+        "en": {
+            "page": "Business Growth Center",
+            "coming_soon": "Coming Soon",
+            "card": "READY TO SHARE",
+            "campaign": "Referral Campaign",
+            "copied": "Copied ✓",
+            "creating": "Creating PNG…",
+            "referral_text": (
+                "READY TO SHARE",
+                "WE GIFT YOU",
+                "50 FREE CREDITS",
+                "Join FANZ • Get 50 Credits",
+                "Referral Campaign",
+                "Share this card with customers and invite them into "
+                "your FANZ community.",
+                "Business referral link",
+                "Copy Link",
+                "Download PNG",
+                "Print",
+                "Sharing and download tools are coming next.",
+            ),
+            "dynamic_text": (
+                "Copied ✓",
+                "Copy failed",
+                "Creating PNG…",
+                "Preparing your campaign image…",
+                "Campaign PNG downloaded.",
+                "✓ Downloaded",
+                "Success! Your campaign image has been downloaded.",
+                "We could not create the PNG. Please try again.",
+            ),
+            "whatsapp": (
+                "Join our FANZ community today",
+                "And we both get 50 FREE Credits!",
+                "Tap the link to get started",
+            ),
+        },
+        "es": {
+            "page": "Centro de Crecimiento Empresarial",
+            "coming_soon": "Próximamente",
+            "card": "LISTO PARA COMPARTIR",
+            "campaign": "Campaña de referidos",
+            "copied": "Copiado ✓",
+            "creating": "Creando PNG…",
+            "referral_text": (
+                "LISTO PARA COMPARTIR",
+                "TE REGALAMOS",
+                "50 CRÉDITOS GRATIS",
+                "Únete a FANZ • Recibe 50 créditos",
+                "Campaña de referidos",
+                "Comparte esta tarjeta con tus clientes e invítalos "
+                "a tu comunidad FANZ.",
+                "Enlace de referido del negocio",
+                "Copiar enlace",
+                "Descargar PNG",
+                "Imprimir",
+                "Próximamente habrá más herramientas para compartir "
+                "y descargar.",
+            ),
+            "dynamic_text": (
+                "Copiado ✓",
+                "Error al copiar",
+                "Creando PNG…",
+                "Preparando la imagen de tu campaña…",
+                "PNG de la campaña descargado.",
+                "✓ Descargado",
+                "¡Listo! La imagen de tu campaña se descargó "
+                "correctamente.",
+                "No pudimos crear el PNG. Inténtalo de nuevo.",
+            ),
+            "whatsapp": (
+                "Únete hoy a nuestra comunidad FANZ",
+                "¡Y ambos recibimos 50 créditos GRATIS!",
+                "Toca el enlace para comenzar",
+            ),
+        },
+        "pt": {
+            "page": "Central de Crescimento Empresarial",
+            "coming_soon": "em breve",
+            "card": "PRONTO PARA COMPARTILHAR",
+            "campaign": "Campanha de indicação",
+            "copied": "Copiado ✓",
+            "creating": "Criando PNG…",
+            "referral_text": (
+                "PRONTO PARA COMPARTILHAR",
+                "VOCÊ GANHA",
+                "50 CRÉDITOS GRÁTIS",
+                "Entre na FANZ • Ganhe 50 créditos",
+                "Campanha de indicação",
+                "Compartilhe este cartão com seus clientes e convide-os "
+                "para a sua comunidade FANZ.",
+                "Link de indicação da empresa",
+                "Copiar link",
+                "Baixar PNG",
+                "Imprimir",
+                "Mais ferramentas de compartilhamento e download "
+                "estarão disponíveis em breve.",
+            ),
+            "dynamic_text": (
+                "Copiado ✓",
+                "Falha ao copiar",
+                "Criando PNG…",
+                "Preparando a imagem da sua campanha…",
+                "PNG da campanha baixado.",
+                "✓ Baixado",
+                "Sucesso! A imagem da sua campanha foi baixada.",
+                "Não foi possível criar o PNG. Tente novamente.",
+            ),
+            "whatsapp": (
+                "Entre hoje para a nossa comunidade FANZ",
+                "E nós dois ganhamos 50 créditos GRÁTIS!",
+                "Toque no link para começar",
+            ),
+        },
+    }
+
+    class FakeQRImage:
+        def save(self, path):
+            Path(path).write_bytes(b"test-qr")
+
+    def setUp(self):
+        self.request_factory = RequestFactory()
+        self.business = SimpleNamespace(
+            name="Café Ñandutí",
+            slug="cafe-nanduti",
+            pk=42,
+        )
+        self.wallet = SimpleNamespace(
+            referral_code=self.REFERRAL_CODE,
+            credits=50,
+        )
+
+    @staticmethod
+    def render_page(request, template_name, context):
+        rendered_context = {
+            **context,
+            "request": request,
+        }
+        html = get_template(template_name).template.render(
+            Context(rendered_context)
+        )
+        response = HttpResponse(html)
+        response.context_data = context
+        return response
+
+    def get_growth_page(self, language, active_language="en"):
+        from .views import grow_business
+
+        url = reverse(
+            "businesses:grow",
+            kwargs={"slug": self.business.slug},
+        )
+        query = {} if language is None else {"lang": language}
+        request = self.request_factory.get(url, query)
+        request.user = SimpleNamespace(
+            is_authenticated=True,
+            username="growth-owner",
+        )
+        request.session = {}
+        request.LANGUAGE_CODE = active_language
+        previous_language = translation.get_language()
+
+        with (
+            translation.override(active_language),
+            tempfile.TemporaryDirectory() as media_root,
+        ):
+            with override_settings(MEDIA_ROOT=media_root):
+                with (
+                    patch(
+                        "businesses.views.get_object_or_404",
+                        return_value=self.business,
+                    ),
+                    patch(
+                        "businesses.views.provision_user_wallet",
+                        return_value=self.wallet,
+                    ),
+                    patch(
+                        "businesses.views.make_branded_referral_qr",
+                        return_value=self.FakeQRImage(),
+                    ),
+                    patch(
+                        "businesses.views.render",
+                        side_effect=self.render_page,
+                    ),
+                ):
+                    response = grow_business(
+                        request,
+                        self.business.slug,
+                    )
+
+        self.assertEqual(translation.get_language(), previous_language)
+        return response
+
+    def assert_localized_growth_page(self, language):
+        expected = self.TRANSLATIONS[language]
+        response = self.get_growth_page(language)
+        context = response.context_data
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(context["growth_language"], language)
+        self.assertEqual(context["LANGUAGE_CODE"], language)
+        self.assertContains(response, f'<html lang="{language}">')
+        self.assertContains(response, expected["page"])
+        self.assertContains(response, expected["coming_soon"])
+        self.assertContains(response, expected["card"])
+        self.assertContains(response, expected["campaign"])
+        self.assertContains(response, expected["copied"])
+        self.assertContains(response, expected["creating"])
+        for text in expected["referral_text"]:
+            self.assertContains(response, text)
+        for text in expected["dynamic_text"]:
+            self.assertContains(response, escapejs(text))
+        self.assertContains(response, "Café Ñandutí")
+        self.assertContains(response, "50")
+        self.assertContains(response, "FANZ")
+        self.assertContains(response, self.REFERRAL_CODE)
+        self.assertContains(response, "business=cafe-nanduti")
+        self.assertContains(response, "/media/qr_codes/business_ref_")
+        for text in expected["whatsapp"]:
+            self.assertIn(text, context["whatsapp_message"])
+        self.assertIn(
+            context["referral_url"],
+            context["whatsapp_message"],
+        )
+
+    def test_growth_page_is_fully_localized_in_english(self):
+        self.assert_localized_growth_page("en")
+
+    def test_growth_page_is_fully_localized_in_spanish(self):
+        self.assert_localized_growth_page("es")
+
+    def test_growth_page_is_fully_localized_in_portuguese(self):
+        self.assert_localized_growth_page("pt")
+
+    def test_download_status_script_targets_live_region(self):
+        response = self.get_growth_page("en")
+
+        self.assertContains(response, 'id="download-status"', count=1)
+        self.assertContains(
+            response,
+            'document.getElementById(\n'
+            '        "download-status"\n'
+            '    )',
+            count=1,
+        )
+        self.assertNotContains(
+            response,
+            'document.getElementById(\n'
+            '        "growth-download-status"\n'
+            '    )',
+        )
+
+    def assert_selected_growth_language(self, response, language):
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context_data["growth_language"],
+            language,
+        )
+        self.assertEqual(
+            response.context_data["LANGUAGE_CODE"],
+            language,
+        )
+        self.assertContains(response, f'<html lang="{language}">')
+        self.assertContains(
+            response,
+            self.TRANSLATIONS[language]["page"],
+        )
+
+        for other_language in {"en", "es", "pt"} - {language}:
+            self.assertNotContains(
+                response,
+                self.TRANSLATIONS[other_language]["page"],
+            )
+
+    def test_missing_query_uses_supported_active_language(self):
+        for active_language in ("es", "pt"):
+            with self.subTest(active_language=active_language):
+                response = self.get_growth_page(
+                    None,
+                    active_language=active_language,
+                )
+                self.assert_selected_growth_language(
+                    response,
+                    active_language,
+                )
+
+    def test_invalid_query_uses_supported_active_language(self):
+        for active_language in ("es", "pt"):
+            with self.subTest(active_language=active_language):
+                response = self.get_growth_page(
+                    "invalid",
+                    active_language=active_language,
+                )
+                self.assert_selected_growth_language(
+                    response,
+                    active_language,
+                )
+
+    def test_unsupported_active_language_falls_back_to_english(self):
+        for request_language in (None, "invalid"):
+            with self.subTest(request_language=request_language):
+                response = self.get_growth_page(
+                    request_language,
+                    active_language="fr",
+                )
+                self.assert_selected_growth_language(response, "en")
+
+    def test_valid_query_overrides_active_language(self):
+        for request_language, active_language in (
+            ("en", "es"),
+            ("es", "pt"),
+            ("pt", "es"),
+        ):
+            with self.subTest(
+                request_language=request_language,
+                active_language=active_language,
+            ):
+                response = self.get_growth_page(
+                    request_language,
+                    active_language=active_language,
+                )
+                self.assert_selected_growth_language(
+                    response,
+                    request_language,
+                )

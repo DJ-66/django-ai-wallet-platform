@@ -1833,6 +1833,9 @@ msgid "Explore"
 msgstr "Explorar"
 
 #: templates/auctions/discovery_hub.html:17
+#: templates/businesses/grow_business.html:78
+#: templates/businesses/grow_business.html:92
+#: templates/businesses/grow_business.html:106
 msgid "Coming Soon"
 msgstr "Próximamente"
 
@@ -3021,3 +3024,165 @@ msgstr "Distribución permanente en todos los feeds de hashtags, máximo 1 cada 
 #: templates/auctions/feed_home.html
 msgid "Promote this post permanently across eligible FANZ hashtag feeds for 20 FANZ Credits? Maximum one promotion every 24 hours."
 msgstr "¿Promocionar esta publicación permanentemente en los feeds de hashtags elegibles de FANZ por 20 créditos FANZ? Máximo una promoción cada 24 horas."
+
+#: businesses/views.py:326
+msgid "Join our FANZ community today"
+msgstr "Únete hoy a nuestra comunidad FANZ"
+
+#: businesses/views.py:327
+msgid "And we both get 50 FREE Credits!"
+msgstr "¡Y ambos recibimos 50 créditos GRATIS!"
+
+#: businesses/views.py:328
+msgid "Tap the link to get started"
+msgstr "Toca el enlace para comenzar"
+
+#: templates/businesses/grow_business.html:8
+#, python-format
+msgid "Grow %(name)s"
+msgstr "Haz crecer %(name)s"
+
+#: templates/businesses/grow_business.html:23
+msgid "Campaign image downloaded successfully."
+msgstr "La imagen de la campaña se descargó correctamente."
+
+#: templates/businesses/grow_business.html:29
+msgid "Close notification"
+msgstr "Cerrar notificación"
+
+#: templates/businesses/grow_business.html:40
+msgid "Business Growth Center"
+msgstr "Centro de Crecimiento Empresarial"
+
+#: templates/businesses/grow_business.html:46
+msgid "Share your business, build your FANZ community, and reach more local customers."
+msgstr "Comparte tu negocio, crea tu comunidad FANZ y llega a más clientes locales."
+
+#: templates/businesses/grow_business.html:56
+msgid "Your First Marketing Asset"
+msgstr "Tu primer recurso de marketing"
+
+#: templates/businesses/grow_business.html:58
+msgid "You Both Get 50 Free Credits."
+msgstr "Ambos reciben 50 créditos gratis."
+
+#: templates/businesses/grow_business.html:59
+msgid "Your Business Gains More FANZ (Authority)."
+msgstr "Tu negocio gana más FANZ (autoridad)."
+
+#: templates/businesses/grow_business.html:71
+msgid "QR & Referral Tools"
+msgstr "Herramientas de QR y referidos"
+
+#: templates/businesses/grow_business.html:74
+msgid "Share your business referral QR code, reward new members, and grow your FANZ community."
+msgstr "Comparte el código QR de referido de tu negocio, recompensa a nuevos miembros y haz crecer tu comunidad FANZ."
+
+#: templates/businesses/grow_business.html:85
+msgid "Business Growth"
+msgstr "Crecimiento del negocio"
+
+#: templates/businesses/grow_business.html:88
+msgid "Track fan growth, referral activity, QR scans, and business engagement."
+msgstr "Consulta el crecimiento de fans, la actividad de referidos, los escaneos de QR y la interacción con tu negocio."
+
+#: templates/businesses/grow_business.html:99
+msgid "FANZ Special Offers"
+msgstr "Ofertas especiales de FANZ"
+
+#: templates/businesses/grow_business.html:102
+msgid "Discover future offers for printing, photography, promotions, and business services."
+msgstr "Descubre próximas ofertas de impresión, fotografía, promociones y servicios empresariales."
+
+#: templates/businesses/grow_business.html:116
+msgid "Back to My Businesses"
+msgstr "Volver a Mis Negocios"
+
+#: templates/businesses/grow_business.html:126
+msgid "Copied ✓"
+msgstr "Copiado ✓"
+
+#: templates/businesses/grow_business.html:127
+msgid "Copy failed"
+msgstr "Error al copiar"
+
+#: templates/businesses/grow_business.html:128
+msgid "Creating PNG…"
+msgstr "Creando PNG…"
+
+#: templates/businesses/grow_business.html:129
+msgid "Preparing your campaign image…"
+msgstr "Preparando la imagen de tu campaña…"
+
+#: templates/businesses/grow_business.html:130
+msgid "Campaign PNG downloaded."
+msgstr "PNG de la campaña descargado."
+
+#: templates/businesses/grow_business.html:131
+msgid "✓ Downloaded"
+msgstr "✓ Descargado"
+
+#: templates/businesses/grow_business.html:132
+msgid "Success! Your campaign image has been downloaded."
+msgstr "¡Listo! La imagen de tu campaña se descargó correctamente."
+
+#: templates/businesses/grow_business.html:133
+msgid "We could not create the PNG. Please try again."
+msgstr "No pudimos crear el PNG. Inténtalo de nuevo."
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:2
+#, python-format
+msgid "Join FANZ through %(name)s"
+msgstr "Únete a FANZ a través de %(name)s"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:13
+msgid "READY TO SHARE"
+msgstr "LISTO PARA COMPARTIR"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:17
+msgid "WE GIFT YOU"
+msgstr "TE REGALAMOS"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:21
+msgid "50 FREE CREDITS"
+msgstr "50 CRÉDITOS GRATIS"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:35
+msgid "Join FANZ • Get 50 Credits"
+msgstr "Únete a FANZ • Recibe 50 créditos"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:39
+msgid "Fanz.to"
+msgstr "Fanz.to"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:46
+msgid "Referral Campaign"
+msgstr "Campaña de referidos"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:49
+msgid "Share this card with customers and invite them into your FANZ community."
+msgstr "Comparte esta tarjeta con tus clientes e invítalos a tu comunidad FANZ."
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:57
+msgid "Business referral link"
+msgstr "Enlace de referido del negocio"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:66
+msgid "Copy Link"
+msgstr "Copiar enlace"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:74
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:81
+msgid "Download PNG"
+msgstr "Descargar PNG"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:94
+msgid "Print"
+msgstr "Imprimir"
+
+#: templates/businesses/includes/marketing_asset_referral_card.html:100
+msgid "Sharing and download tools are coming next."
+msgstr "Próximamente habrá más herramientas para compartir y descargar."
