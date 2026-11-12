@@ -735,3 +735,91 @@ class AIReservationDiscoveryTests(TestCase):
             ).count(),
             1,
         )
+
+
+class ConcurrentDraftFinalizationTests(TransactionTestCase):
+    """Two claimed drafts for one creator cannot both become queued."""
+
+    def test_competing_drafts_finalize_only_one(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+
+        from django.db import close_old_connections
+
+        from auctions.ai_services.legacy_publication_reservation import (
+            claim_ai_reservation,
+            finalize_claimed_ai_reservation,
+        )
+
+        creator = get_user_model().objects.create_user(
+            username="ConcurrentDraftFinalization",
+            password="test-only-password",
+        )
+
+        now = timezone.now()
+        drafts = []
+
+        for number in (1, 2):
+            draft = ScheduledPublication.objects.create(
+                creator=creator,
+                publication_key=f"ai:concurrent-finalize:{number}",
+                source_path=f"creator/image-{number}.jpg",
+                scheduled_for=now,
+                title="Concurrent finalization",
+                content="Original caption\n\n#Fashion #FANZ",
+                campaign_key="ai_preparing",
+                status=ScheduledPublication.STATUS_DRAFT,
+            )
+
+            claim = claim_ai_reservation(
+                reservation_id=draft.pk,
+            )
+
+            self.assertIsNotNone(claim)
+            drafts.append((draft.pk, claim[1]))
+
+        barrier = Barrier(2)
+
+        def finalize(item):
+            close_old_connections()
+            try:
+                publication_id, token = item
+                barrier.wait(timeout=15)
+
+                return finalize_claimed_ai_reservation(
+                    reservation_id=publication_id,
+                    token=token,
+                    content=(
+                        "Original caption\n"
+                        "Tell me your story in my DMs."
+                        "\n\n#Fashion #FANZ"
+                    ),
+                    marker="ai_gemma4",
+                )
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(finalize, drafts))
+
+        self.assertEqual(results.count(True), 1)
+        self.assertEqual(results.count(False), 1)
+
+        publications = ScheduledPublication.objects.filter(
+            creator=creator,
+            publication_key__startswith="ai:",
+        )
+
+        self.assertEqual(
+            publications.filter(
+                status=ScheduledPublication.STATUS_QUEUED,
+            ).count(),
+            1,
+        )
+
+        self.assertEqual(
+            publications.filter(
+                status=ScheduledPublication.STATUS_DRAFT,
+            ).count(),
+            1,
+        )
