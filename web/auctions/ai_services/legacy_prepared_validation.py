@@ -25,6 +25,8 @@ V2_MARKERS = {
     "ai_v2_autopost",
 }
 
+MARKERS.update(V2_MARKERS)
+
 def validate_prepared_publication(
     *,
     username,
