@@ -1,3 +1,4 @@
+import os
 import hashlib
 import json
 import random
@@ -23,6 +24,7 @@ from auctions.ai_services.legacy_publication_reservation import (
 )
 from auctions.ai_services.legacy_claimed_preparation import (
     prepare_claimed_ai_publication,
+    prepare_claimed_v2_ai_publication,
 )
 from auctions.models import ScheduledPublication
 
@@ -225,7 +227,7 @@ class Command(BaseCommand):
                         creator=user,
                         publication_key__startswith="ai:",
                         status=ScheduledPublication.STATUS_DRAFT,
-                        campaign_key="ai_preparing",
+                        campaign_key__in=("ai_preparing", "ai_v2_preparing"),
                     ).exists()
                 )
 
@@ -249,7 +251,7 @@ class Command(BaseCommand):
 
                     recoverable_draft_exists = ai_history.filter(
                         status=ScheduledPublication.STATUS_DRAFT,
-                        campaign_key="ai_preparing",
+                        campaign_key__in=("ai_preparing", "ai_v2_preparing"),
                         media_asset__isnull=True,
                     ).annotate(
                         superseded=Exists(newer_published),
@@ -277,7 +279,17 @@ class Command(BaseCommand):
                     reservation_id, token = claim
 
                     try:
-                        recovered = prepare_claimed_ai_publication(
+                        preparation_marker = (
+                            ScheduledPublication.objects
+                            .values_list("campaign_key", flat=True)
+                            .get(pk=reservation_id)
+                        )
+                        prepare_recovered = (
+                            prepare_claimed_v2_ai_publication
+                            if preparation_marker == "ai_v2_preparing"
+                            else prepare_claimed_ai_publication
+                        )
+                        recovered = prepare_recovered(
                             reservation_id=reservation_id,
                             token=token,
                             bio=creator.get("bio", ""),
@@ -481,7 +493,14 @@ class Command(BaseCommand):
                 continue
 
             if suffix_enabled():
+                use_v2 = (
+                    os.environ.get("FANZ_AUTOPOSTER_V2_ENABLED", "0")
+                    == "1"
+                )
                 reservation = reserve_ai_publication(
+                    preparation_marker=(
+                        "ai_v2_preparing" if use_v2 else "ai_preparing"
+                    ),
                     creator=proposal["creator"],
                     publication_key=key,
                     source_path=source_path,
@@ -505,7 +524,12 @@ class Command(BaseCommand):
                 reservation_id, token = claim
 
                 try:
-                    finalized = prepare_claimed_ai_publication(
+                    prepare_selected = (
+                        prepare_claimed_v2_ai_publication
+                        if use_v2
+                        else prepare_claimed_ai_publication
+                    )
+                    finalized = prepare_selected(
                         reservation_id=reservation_id,
                         token=token,
                         bio=proposal.get("bio", ""),

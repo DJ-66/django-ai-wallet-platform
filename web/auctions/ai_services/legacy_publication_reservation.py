@@ -6,6 +6,8 @@ from auctions.models import ScheduledPublication
 
 
 PREPARING_MARKER = "ai_preparing"
+V2_PREPARING_MARKER = "ai_v2_preparing"
+PREPARING_MARKERS = (PREPARING_MARKER, V2_PREPARING_MARKER)
 
 
 def is_ai_preparation_reservation(publication):
@@ -15,7 +17,7 @@ def is_ai_preparation_reservation(publication):
         and publication.publication_key.startswith("ai:")
         and publication.media_asset_id is None
         and publication.status == ScheduledPublication.STATUS_DRAFT
-        and publication.campaign_key == PREPARING_MARKER
+        and publication.campaign_key in PREPARING_MARKERS
     )
 
 
@@ -36,7 +38,7 @@ def creator_has_active_ai_publication(creator):
 
     drafts = ai_posts.filter(
         status=ScheduledPublication.STATUS_DRAFT,
-        campaign_key=PREPARING_MARKER,
+        campaign_key__in=PREPARING_MARKERS,
     )
 
     for draft in drafts:
@@ -64,11 +66,15 @@ def reserve_ai_publication(
     scheduled_for,
     title,
     content,
+    preparation_marker=PREPARING_MARKER,
 ):
     """Atomically reserve one AI publication per creator."""
 
     from django.db import transaction
     from django.contrib.auth import get_user_model
+
+    if preparation_marker not in PREPARING_MARKERS:
+        raise ValueError("Invalid AI preparation marker")
 
     if not publication_key.startswith("ai:"):
         raise ValueError("Invalid AI publication key")
@@ -98,7 +104,7 @@ def reserve_ai_publication(
             scheduled_for=scheduled_for,
             title=title,
             content=content,
-            campaign_key=PREPARING_MARKER,
+            campaign_key=preparation_marker,
             status=ScheduledPublication.STATUS_DRAFT,
         )
 
@@ -241,7 +247,7 @@ def verify_ai_reservation_claim(reservation_id, token):
     return LegacyAIPublicationLease.objects.filter(
         publication_id=reservation_id,
         publication__status=ScheduledPublication.STATUS_DRAFT,
-        publication__campaign_key=PREPARING_MARKER,
+        publication__campaign_key__in=PREPARING_MARKERS,
         publication__publication_key__startswith="ai:",
         publication__media_asset__isnull=True,
         claim_token=token,
@@ -304,6 +310,13 @@ def finalize_claimed_ai_reservation(
 
         if not is_ai_preparation_reservation(publication):
             return False
+
+        is_v2_draft = publication.campaign_key == V2_PREPARING_MARKER
+        is_v2_marker = marker.startswith("ai_v2_")
+        if is_v2_draft != is_v2_marker:
+            raise ValueError(
+                "Preparation version does not match publication marker"
+            )
 
         # Never finalize an old draft while another AI post
         # for this creator is already queued or publishing.
@@ -472,7 +485,7 @@ def claim_existing_ai_preparation(*, creator, lease_minutes=30):
             creator=creator,
             publication_key__startswith="ai:",
             status=ScheduledPublication.STATUS_DRAFT,
-            campaign_key=PREPARING_MARKER,
+            campaign_key__in=PREPARING_MARKERS,
             media_asset__isnull=True,
         )
         .order_by("scheduled_for", "pk")
