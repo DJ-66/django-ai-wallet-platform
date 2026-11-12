@@ -472,6 +472,52 @@ class ClaimedAIReservationFinalizationTests(TestCase):
             ScheduledPublication.STATUS_QUEUED,
         )
 
+
+    def test_newer_published_post_blocks_claimed_finalization(self):
+        """A claimed draft cannot outlive a newer published AI post."""
+        from auctions.models import FeedPost
+
+        _, token = self.claim()
+
+        feed_post = FeedPost.objects.create(
+            user=self.creator,
+            content="Newer published caption",
+        )
+
+        newer = ScheduledPublication.objects.create(
+            creator=self.creator,
+            publication_key="ai:finalization:newer-published",
+            source_path="creator/newer.jpg",
+            scheduled_for=timezone.now(),
+            title="Newer publication",
+            content="Newer caption\\n\\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+            feed_post=feed_post,
+            published_at=timezone.now(),
+        )
+
+        self.assertGreater(
+            newer.created_at,
+            self.reservation.created_at,
+        )
+
+        self.assertFalse(self.finalize(token))
+
+        self.reservation.refresh_from_db()
+
+        self.assertEqual(
+            self.reservation.status,
+            ScheduledPublication.STATUS_DRAFT,
+        )
+        self.assertEqual(
+            self.reservation.campaign_key,
+            "ai_preparing",
+        )
+        self.assertEqual(
+            newer.status,
+            ScheduledPublication.STATUS_PUBLISHED,
+        )
+
     def test_expired_owner_cannot_finalize(self):
         _, token = self.claim()
         self.expire()
@@ -734,6 +780,126 @@ class AIReservationDiscoveryTests(TestCase):
                 publication_key__startswith="ai:",
             ).count(),
             1,
+        )
+
+
+
+    def test_queued_ai_post_blocks_draft_discovery(self):
+        """Do not claim an obsolete draft while another AI post is queued."""
+        from auctions.models import LegacyAIPublicationLease
+
+        queued = ScheduledPublication.objects.create(
+            creator=self.creator,
+            publication_key="ai:discovery:newer-queued",
+            source_path="creator/newer.jpg",
+            scheduled_for=timezone.now(),
+            title="Newer publication",
+            content="Newer caption\\n\\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        self.assertIsNone(self.discover())
+
+        self.reservation.refresh_from_db()
+        queued.refresh_from_db()
+
+        self.assertEqual(
+            self.reservation.status,
+            ScheduledPublication.STATUS_DRAFT,
+        )
+        self.assertEqual(
+            self.reservation.campaign_key,
+            "ai_preparing",
+        )
+        self.assertEqual(
+            queued.status,
+            ScheduledPublication.STATUS_QUEUED,
+        )
+        self.assertFalse(
+            LegacyAIPublicationLease.objects.filter(
+                publication=self.reservation,
+            ).exists()
+        )
+
+
+
+
+    def test_older_published_ai_post_allows_draft_recovery(self):
+        """Older published history must not block a valid draft."""
+        from datetime import timedelta
+        from auctions.models import FeedPost
+
+        feed_post = FeedPost.objects.create(
+            user=self.creator,
+            content="Earlier published caption",
+        )
+
+        older = ScheduledPublication.objects.create(
+            creator=self.creator,
+            publication_key="ai:discovery:older-published",
+            source_path="creator/older.jpg",
+            scheduled_for=timezone.now() - timedelta(days=2),
+            title="Earlier publication",
+            content="Earlier caption\\n\\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+            feed_post=feed_post,
+            published_at=timezone.now() - timedelta(days=2),
+        )
+
+        # auto_now_add normally uses the insertion time.
+        # Set an earlier creation time explicitly for this test.
+        ScheduledPublication.objects.filter(
+            pk=older.pk,
+        ).update(
+            created_at=self.reservation.created_at
+            - timedelta(days=2),
+        )
+
+        claim = self.discover()
+
+        self.assertIsNotNone(claim)
+        self.assertEqual(claim[0], self.reservation.pk)
+
+    def test_newer_published_ai_post_blocks_old_draft(self):
+        """A superseded draft must not revive after its successor publishes."""
+        from auctions.models import (
+            FeedPost,
+            LegacyAIPublicationLease,
+        )
+
+        feed_post = FeedPost.objects.create(
+            user=self.creator,
+            content="Newer published caption",
+        )
+
+        newer = ScheduledPublication.objects.create(
+            feed_post=feed_post,
+            published_at=timezone.now(),
+            creator=self.creator,
+            publication_key="ai:discovery:newer-published",
+            source_path="creator/newer.jpg",
+            scheduled_for=timezone.now(),
+            title="Newer publication",
+            content="Newer caption\n\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+        )
+
+        self.assertGreater(
+            newer.created_at,
+            self.reservation.created_at,
+        )
+
+        self.assertIsNone(self.discover())
+
+        self.reservation.refresh_from_db()
+        self.assertEqual(
+            self.reservation.status,
+            ScheduledPublication.STATUS_DRAFT,
+        )
+        self.assertFalse(
+            LegacyAIPublicationLease.objects.filter(
+                publication=self.reservation,
+            ).exists()
         )
 
 

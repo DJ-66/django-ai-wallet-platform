@@ -113,13 +113,60 @@ def claim_ai_reservation(*, reservation_id, lease_minutes=30):
         raise ValueError("Lease duration must be positive")
 
     with transaction.atomic():
+        from django.contrib.auth import get_user_model
+
+        creator_id = (
+            ScheduledPublication.objects
+            .values_list("creator_id", flat=True)
+            .get(pk=reservation_id)
+        )
+
+        # Match reservation and finalization lock ordering.
+        get_user_model().objects.select_for_update().get(
+            pk=creator_id,
+        )
+
         publication = (
             ScheduledPublication.objects
             .select_for_update()
             .get(pk=reservation_id)
         )
 
+        if publication.creator_id != creator_id:
+            return None
+
         if not is_ai_preparation_reservation(publication):
+            return None
+
+        # Do not lease a stale draft when another AI post
+        # is already queued or publishing for this creator.
+        competing = ScheduledPublication.objects.filter(
+            creator_id=creator_id,
+            publication_key__startswith="ai:",
+            status__in=[
+                ScheduledPublication.STATUS_QUEUED,
+                ScheduledPublication.STATUS_PUBLISHING,
+            ],
+        ).exclude(pk=publication.pk).exists()
+
+        if competing:
+            return None
+
+        # A newer published AI post supersedes this old draft.
+        # Older published history must not prevent recovery.
+        superseded = ScheduledPublication.objects.filter(
+            creator_id=creator_id,
+            publication_key__startswith="ai:",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+        ).filter(
+            models.Q(created_at__gt=publication.created_at)
+            | models.Q(
+                created_at=publication.created_at,
+                pk__gt=publication.pk,
+            )
+        ).exists()
+
+        if superseded:
             return None
 
         lease, _ = (
@@ -252,6 +299,23 @@ def finalize_claimed_ai_reservation(
         ).exclude(pk=publication.pk).exists()
 
         if competing:
+            return False
+
+        # A newer published AI post supersedes this draft,
+        # even if the draft was claimed before that post went live.
+        superseded = ScheduledPublication.objects.filter(
+            creator_id=publication.creator_id,
+            publication_key__startswith="ai:",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+        ).filter(
+            models.Q(created_at__gt=publication.created_at)
+            | models.Q(
+                created_at=publication.created_at,
+                pk__gt=publication.pk,
+            )
+        ).exists()
+
+        if superseded:
             return False
 
         lease = (
