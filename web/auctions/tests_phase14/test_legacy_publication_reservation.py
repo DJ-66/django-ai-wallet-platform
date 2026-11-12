@@ -440,6 +440,38 @@ class ClaimedAIReservationFinalizationTests(TestCase):
             self.prepared,
         )
 
+    def test_existing_queued_ai_post_blocks_draft_finalization(self):
+        """An old preparation must not create a second queued AI post."""
+        _, token = self.claim()
+
+        newer = ScheduledPublication.objects.create(
+            creator=self.creator,
+            publication_key="ai:competing-queued:test",
+            source_path="creator/newer.jpg",
+            scheduled_for=timezone.now(),
+            title="Newer publication",
+            content="Newer caption\\n\\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        self.assertFalse(self.finalize(token))
+
+        self.reservation.refresh_from_db()
+        newer.refresh_from_db()
+
+        self.assertEqual(
+            self.reservation.status,
+            ScheduledPublication.STATUS_DRAFT,
+        )
+        self.assertEqual(
+            self.reservation.campaign_key,
+            "ai_preparing",
+        )
+        self.assertEqual(
+            newer.status,
+            ScheduledPublication.STATUS_QUEUED,
+        )
+
     def test_expired_owner_cannot_finalize(self):
         _, token = self.claim()
         self.expire()

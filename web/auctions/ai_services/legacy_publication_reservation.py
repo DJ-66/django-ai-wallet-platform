@@ -211,6 +211,20 @@ def finalize_claimed_ai_reservation(
         raise ValueError("Invalid prepared caption")
 
     with transaction.atomic():
+        from django.contrib.auth import get_user_model
+
+        # Read the creator ID before acquiring row locks.
+        creator_id = (
+            ScheduledPublication.objects
+            .values_list("creator_id", flat=True)
+            .get(pk=reservation_id)
+        )
+
+        # Consistent lock order: creator -> publication -> lease.
+        get_user_model().objects.select_for_update().get(
+            pk=creator_id,
+        )
+
         publication = (
             ScheduledPublication.objects
             .select_for_update()
@@ -218,7 +232,26 @@ def finalize_claimed_ai_reservation(
             .get(pk=reservation_id)
         )
 
+        # Recheck after locking: the creator relationship
+        # must not have changed between the two reads.
+        if publication.creator_id != creator_id:
+            return False
+
         if not is_ai_preparation_reservation(publication):
+            return False
+
+        # Never finalize an old draft while another AI post
+        # for this creator is already queued or publishing.
+        competing = ScheduledPublication.objects.filter(
+            creator_id=publication.creator_id,
+            publication_key__startswith="ai:",
+            status__in=[
+                ScheduledPublication.STATUS_QUEUED,
+                ScheduledPublication.STATUS_PUBLISHING,
+            ],
+        ).exclude(pk=publication.pk).exists()
+
+        if competing:
             return False
 
         lease = (
