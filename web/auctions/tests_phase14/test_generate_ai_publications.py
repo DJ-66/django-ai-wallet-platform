@@ -518,6 +518,71 @@ class GenerateAIPublicationsTests(TestCase):
                 1,
             )
 
+
+    def test_superseded_draft_does_not_block_generator(self):
+        """A newer published post allows scheduling past an old draft."""
+        from auctions.models import FeedPost
+
+        creator = self.users[0]
+
+        write_image(self.root / "PackA" / "post-3.jpg")
+
+        old = ScheduledPublication.objects.create(
+            creator=creator,
+            publication_key="ai:generator:obsolete-draft",
+            source_path="PackA/post-1.jpg",
+            scheduled_for=timezone.now() - timedelta(days=2),
+            title="Obsolete draft",
+            content="Old caption\n\n#Fashion #FANZ",
+            campaign_key="ai_preparing",
+            status=ScheduledPublication.STATUS_DRAFT,
+        )
+
+        feed_post = FeedPost.objects.create(
+            user=creator,
+            content="Newer published caption",
+        )
+
+        published = ScheduledPublication.objects.create(
+            creator=creator,
+            publication_key="ai:generator:newer-published",
+            source_path="PackA/post-2.jpg",
+            scheduled_for=timezone.now() - timedelta(days=1),
+            title="Published successor",
+            content="Published caption\n\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+            feed_post=feed_post,
+            published_at=timezone.now() - timedelta(days=1),
+        )
+
+        self.assertGreater(published.created_at, old.created_at)
+
+        with (
+            patch.dict(
+                "os.environ",
+                {"FANZ_LEGACY_AI_SUFFIX_ENABLED": "true"},
+            ),
+            patch(
+                "auctions.ai_services.legacy_caption_preparation."
+                "generate_gemma_dm_closer",
+                return_value="Tell me your story in my DMs.",
+            ),
+        ):
+            self.run_generator(seed=14)
+
+        queued = ScheduledPublication.objects.filter(
+            creator=creator,
+            publication_key__startswith="ai:",
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        self.assertEqual(queued.count(), 1)
+        old.refresh_from_db()
+        self.assertEqual(
+            old.status,
+            ScheduledPublication.STATUS_DRAFT,
+        )
+
     def test_dry_run_creates_nothing(self):
         self.run_generator(dry_run=True)
 

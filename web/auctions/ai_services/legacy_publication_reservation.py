@@ -20,22 +20,40 @@ def is_ai_preparation_reservation(publication):
 
 
 def creator_has_active_ai_publication(creator):
-    """Check queued, publishing, or preparing AI publications."""
-    return ScheduledPublication.objects.filter(
+    """Check queued, publishing, or non-superseded AI drafts."""
+    ai_posts = ScheduledPublication.objects.filter(
         creator=creator,
         publication_key__startswith="ai:",
-    ).filter(
-        models.Q(
-            status__in=[
-                ScheduledPublication.STATUS_QUEUED,
-                ScheduledPublication.STATUS_PUBLISHING,
-            ]
-        )
-        | models.Q(
-            status=ScheduledPublication.STATUS_DRAFT,
-            campaign_key=PREPARING_MARKER,
-        )
-    ).exists()
+    )
+
+    if ai_posts.filter(
+        status__in=[
+            ScheduledPublication.STATUS_QUEUED,
+            ScheduledPublication.STATUS_PUBLISHING,
+        ],
+    ).exists():
+        return True
+
+    drafts = ai_posts.filter(
+        status=ScheduledPublication.STATUS_DRAFT,
+        campaign_key=PREPARING_MARKER,
+    )
+
+    for draft in drafts:
+        newer_published = ai_posts.filter(
+            status=ScheduledPublication.STATUS_PUBLISHED,
+        ).filter(
+            models.Q(created_at__gt=draft.created_at)
+            | models.Q(
+                created_at=draft.created_at,
+                pk__gt=draft.pk,
+            )
+        ).exists()
+
+        if not newer_published:
+            return True
+
+    return False
 
 
 def reserve_ai_publication(

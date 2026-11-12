@@ -230,6 +230,37 @@ class Command(BaseCommand):
                 )
 
                 if has_preparation_draft:
+                    from django.db.models import Exists, OuterRef, Q
+
+                    ai_history = ScheduledPublication.objects.filter(
+                        creator=user,
+                        publication_key__startswith="ai:",
+                    )
+
+                    newer_published = ai_history.filter(
+                        status=ScheduledPublication.STATUS_PUBLISHED,
+                    ).filter(
+                        Q(created_at__gt=OuterRef("created_at"))
+                        | Q(
+                            created_at=OuterRef("created_at"),
+                            pk__gt=OuterRef("pk"),
+                        )
+                    )
+
+                    recoverable_draft_exists = ai_history.filter(
+                        status=ScheduledPublication.STATUS_DRAFT,
+                        campaign_key="ai_preparing",
+                        media_asset__isnull=True,
+                    ).annotate(
+                        superseded=Exists(newer_published),
+                    ).filter(
+                        superseded=False,
+                    ).exists()
+
+                    if not recoverable_draft_exists:
+                        has_preparation_draft = False
+
+                if has_preparation_draft:
                     if dry_run:
                         self.stdout.write(
                             f"@{account} preparation recovery pending"

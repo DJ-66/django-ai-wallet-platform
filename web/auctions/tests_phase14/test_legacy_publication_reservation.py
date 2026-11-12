@@ -903,6 +903,71 @@ class AIReservationDiscoveryTests(TestCase):
         )
 
 
+
+class SupersededDraftReservationTests(TestCase):
+    """Preserve old drafts without blocking future scheduling."""
+
+    def test_superseded_draft_does_not_block_new_reservation(self):
+        from auctions.models import FeedPost
+        from auctions.ai_services.legacy_publication_reservation import (
+            reserve_ai_publication,
+        )
+
+        creator = get_user_model().objects.create_user(
+            username="SupersededReservationTest",
+            password="test-only-password",
+        )
+
+        old = reserve_ai_publication(
+            creator=creator,
+            publication_key="ai:superseded:old",
+            source_path="creator/old.jpg",
+            scheduled_for=timezone.now(),
+            title="Old draft",
+            content="Old caption\\n\\n#Fashion #FANZ",
+        )
+        self.assertIsNotNone(old)
+
+        feed_post = FeedPost.objects.create(
+            user=creator,
+            content="Newer published caption",
+        )
+
+        newer = ScheduledPublication.objects.create(
+            creator=creator,
+            publication_key="ai:superseded:published",
+            source_path="creator/published.jpg",
+            scheduled_for=timezone.now(),
+            title="Published successor",
+            content="Published caption\\n\\n#Fashion #FANZ",
+            status=ScheduledPublication.STATUS_PUBLISHED,
+            feed_post=feed_post,
+            published_at=timezone.now(),
+        )
+
+        self.assertGreater(newer.created_at, old.created_at)
+
+        replacement = reserve_ai_publication(
+            creator=creator,
+            publication_key="ai:superseded:replacement",
+            source_path="creator/replacement.jpg",
+            scheduled_for=timezone.now(),
+            title="Replacement",
+            content="Replacement caption\\n\\n#Fashion #FANZ",
+        )
+
+        self.assertIsNotNone(replacement)
+        self.assertEqual(
+            replacement.status,
+            ScheduledPublication.STATUS_DRAFT,
+        )
+
+        old.refresh_from_db()
+        self.assertEqual(
+            old.campaign_key,
+            "ai_preparing",
+        )
+
 class ConcurrentDraftFinalizationTests(TransactionTestCase):
     """Two claimed drafts for one creator cannot both become queued."""
 
