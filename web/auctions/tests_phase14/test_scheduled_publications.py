@@ -96,6 +96,86 @@ class ScheduledPublicationCommandTests(TestCase):
 
         self.assertFalse(source.exists())
 
+
+    def test_stale_attempt_cannot_finalize_publication(self):
+        from unittest.mock import patch
+
+        from auctions.models import CreatorPublishingAttempt
+
+        relative_path = "Stale Worker/image.jpg"
+        source = self.source_root / relative_path
+        write_jpeg(source)
+
+        publication = ScheduledPublication.objects.create(
+            publication_key="worker-stale-finalization-1",
+            creator=self.user,
+            source_path=relative_path,
+            title="Stale worker title",
+            content="Stale worker caption",
+            scheduled_for=timezone.now(),
+            status=ScheduledPublication.STATUS_QUEUED,
+        )
+
+        command = process_scheduled_publications.Command()
+        original_claim = command._claim_next
+
+        def superseded_claim(*args, **kwargs):
+            claim = original_claim(*args, **kwargs)
+            if claim is None:
+                return None
+
+            publication_id, old_attempt_id, old_token = claim
+
+            CreatorPublishingAttempt.objects.filter(
+                pk=old_attempt_id,
+            ).update(
+                status=CreatorPublishingAttempt.STATUS_ABANDONED,
+            )
+
+            from auctions.ai_services.creator_publishing_attempts import (
+                claim_publishing_attempt,
+            )
+
+            replacement = claim_publishing_attempt(publication_id)
+            self.assertIsNotNone(replacement)
+
+            return publication_id, old_attempt_id, old_token
+
+        with patch.object(
+            process_scheduled_publications.Command,
+            "_claim_next",
+            side_effect=superseded_claim,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "ownership mismatch",
+            ):
+                command.handle(
+                    source_root=str(self.source_root),
+                    dry_run=False,
+                    publication_id=publication.pk,
+                )
+
+        publication.refresh_from_db()
+        self.assertEqual(
+            publication.status,
+            ScheduledPublication.STATUS_PUBLISHING,
+        )
+        self.assertIsNone(publication.feed_post_id)
+        self.assertEqual(
+            FeedPost.objects.filter(user=self.user).count(),
+            0,
+        )
+        self.assertTrue(source.exists())
+
+        self.assertEqual(
+            CreatorPublishingAttempt.objects.filter(
+                publication=publication,
+                status=CreatorPublishingAttempt.STATUS_ACTIVE,
+            ).count(),
+            1,
+        )
+
     def test_missing_source_marks_publication_failed(self):
         publication = ScheduledPublication.objects.create(
             publication_key="worker-missing-1",

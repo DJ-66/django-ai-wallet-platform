@@ -1,3 +1,8 @@
+from auctions.ai_services.creator_publishing_attempts import (
+    create_attempt_for_locked_publication,
+    validate_locked_publishing_attempt,
+)
+from auctions.models import CreatorPublishingAttempt
 import os
 import json
 import mimetypes
@@ -79,7 +84,7 @@ class Command(BaseCommand):
 
         return source
 
-    def _claim_next(self, publication_id=None):
+    def _claim_next(self, publication_id=None, dry_run=False):
         now = timezone.now()
 
         with transaction.atomic():
@@ -139,7 +144,22 @@ class Command(BaseCommand):
                 ]
             )
 
-            return publication.pk
+            # Promotional publishing and dry-runs retain their
+            # existing behavior without creator attempt ownership.
+            if dry_run or publication.media_asset_id is not None:
+                return publication.pk, None, None
+
+            attempt = create_attempt_for_locked_publication(
+                publication,
+            )
+
+            if attempt is None:
+                raise RuntimeError(
+                    "Unable to create creator publishing attempt."
+                )
+
+            attempt_id, token = attempt
+            return publication.pk, attempt_id, token
 
     def _mark_failed(self, publication_id, message):
         ScheduledPublication.objects.filter(
@@ -151,18 +171,86 @@ class Command(BaseCommand):
             updated_at=timezone.now(),
         )
 
+    def _mark_creator_failed(
+        self,
+        publication_id,
+        attempt_id,
+        token,
+        message,
+    ):
+        """
+        Fail only the currently owned creator attempt.
+
+        An expired or superseded attempt cannot modify
+        the publication or another worker's attempt.
+        """
+        with transaction.atomic():
+            publication = (
+                ScheduledPublication.objects
+                .select_for_update()
+                .get(pk=publication_id)
+            )
+
+            attempt = (
+                CreatorPublishingAttempt.objects
+                .select_for_update()
+                .filter(
+                    pk=attempt_id,
+                    publication_id=publication_id,
+                )
+                .first()
+            )
+
+            if (
+                attempt is None
+                or attempt.token != token
+                or attempt.status
+                != CreatorPublishingAttempt.STATUS_ACTIVE
+                or attempt.lease_expires_at <= timezone.now()
+                or publication.status
+                != ScheduledPublication.STATUS_PUBLISHING
+                or publication.media_asset_id is not None
+                or publication.feed_post_id is not None
+            ):
+                return False
+
+            publication.status = ScheduledPublication.STATUS_FAILED
+            publication.last_error = str(message)[:4000]
+            publication.save(
+                update_fields=[
+                    "status",
+                    "last_error",
+                    "updated_at",
+                ]
+            )
+
+            attempt.status = CreatorPublishingAttempt.STATUS_FAILED
+            attempt.last_error = str(message)[:4000]
+            attempt.save(
+                update_fields=[
+                    "status",
+                    "last_error",
+                    "updated_at",
+                ]
+            )
+
+            return True
+
     def handle(self, *args, **options):
         source_root = Path(options["source_root"])
         dry_run = options["dry_run"]
         requested_publication_id = options["publication_id"]
 
-        publication_id = self._claim_next(
+        claim = self._claim_next(
             publication_id=requested_publication_id,
+            dry_run=dry_run,
         )
 
-        if publication_id is None:
+        if claim is None:
             self.stdout.write("scheduled_publication_due=none")
             return
+
+        publication_id, attempt_id, token = claim
 
         publication = (
             ScheduledPublication.objects
@@ -258,8 +346,8 @@ class Command(BaseCommand):
                     updated_at=timezone.now(),
                 )
             else:
-                self._mark_failed(
-                    publication.id,
+                self._mark_creator_failed(
+                    publication.id, attempt_id, token,
                     message,
                 )
 
@@ -309,12 +397,16 @@ class Command(BaseCommand):
             message = (
                 "Scheduled source is reserved as a creator avatar."
             )
-            self._mark_failed(publication.id, message)
+            self._mark_creator_failed(
+                publication.id, attempt_id, token, message
+            )
             raise CommandError(message)
 
         if not source.is_file():
             message = f"Scheduled source file does not exist: {source}"
-            self._mark_failed(publication.id, message)
+            self._mark_creator_failed(
+                publication.id, attempt_id, token, message
+            )
             raise CommandError(message)
 
         try:
@@ -359,6 +451,15 @@ class Command(BaseCommand):
                     ):
                         raise RuntimeError(
                             "Publication state changed during publish."
+                        )
+
+                    if attempt_id is not None:
+                        owned_attempt = validate_locked_publishing_attempt(
+                            locked, attempt_id, token,
+                        )
+                    else:
+                        raise RuntimeError(
+                            'Creator publication has no ownership attempt.'
                         )
 
                     content = locked.content
@@ -453,6 +554,26 @@ class Command(BaseCommand):
                         ]
                     )
 
+                    # Recheck lease before completing ownership.
+                    if (
+                        owned_attempt.lease_expires_at
+                        <= timezone.now()
+                    ):
+                        raise RuntimeError(
+                            "Creator publishing ownership expired."
+                        )
+                    owned_attempt.status = (
+                        CreatorPublishingAttempt.STATUS_COMPLETED
+                    )
+                    owned_attempt.completed_at = timezone.now()
+                    owned_attempt.save(
+                        update_fields=[
+                            "status",
+                            "completed_at",
+                            "updated_at",
+                        ]
+                    )
+
             except Exception:
                 for storage, name in reversed(saved_files):
                     try:
@@ -485,8 +606,8 @@ class Command(BaseCommand):
                 current.status
                 != ScheduledPublication.STATUS_PUBLISHED
             ):
-                self._mark_failed(
-                    publication.id,
+                self._mark_creator_failed(
+                    publication.id, attempt_id, token,
                     f"{type(exc).__name__}: {exc}",
                 )
 
