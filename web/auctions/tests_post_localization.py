@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -268,6 +270,102 @@ class FeedPostLocalizationTests(TestCase):
             self.assertTrue(
                 translation.content.strip()
             )
+
+    def test_translation_write_failure_rolls_back_all_languages(self):
+        """
+        Failure saving PT must roll back the earlier ES write.
+        """
+        provider = self._safe_es_pt_provider()
+
+        original_save = FeedPostTranslation.save
+
+        def fail_portuguese(instance, *args, **kwargs):
+            if instance.language == "pt":
+                raise RuntimeError(
+                    "Simulated Portuguese database failure"
+                )
+
+            return original_save(instance, *args, **kwargs)
+
+        with patch.object(
+            FeedPostTranslation,
+            "save",
+            autospec=True,
+            side_effect=fail_portuguese,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Simulated Portuguese database failure",
+            ):
+                localize_feed_post(
+                    self.post,
+                    provider=provider,
+                )
+
+        self.assertFalse(
+            FeedPostTranslation.objects.filter(
+                post=self.post,
+                language="es",
+            ).exists()
+        )
+
+        self.assertFalse(
+            FeedPostTranslation.objects.filter(
+                post=self.post,
+                language="pt",
+            ).exists()
+        )
+
+        english = FeedPostTranslation.objects.get(
+            post=self.post,
+            language="en",
+        )
+
+        self.assertEqual(english.title, self.post.title)
+        self.assertEqual(english.content, self.post.content)
+
+
+    def test_canonical_edit_during_generation_rejects_stale_translations(self):
+        provider = self._safe_es_pt_provider()
+        original_generate = provider.generate_reply
+        edited = False
+
+        def generate_with_edit(*args, **kwargs):
+            nonlocal edited
+
+            if not edited:
+                edited = True
+                FeedPost.objects.filter(pk=self.post.pk).update(
+                    title="Updated while translating",
+                )
+
+            return original_generate(*args, **kwargs)
+
+        provider.generate_reply = generate_with_edit
+
+        with self.assertRaisesRegex(
+            PostLocalizationError,
+            "Canonical post changed during localization",
+        ):
+            localize_feed_post(
+                self.post,
+                provider=provider,
+            )
+
+        self.assertTrue(edited)
+
+        self.assertFalse(
+            FeedPostTranslation.objects.filter(
+                post=self.post,
+                language__in=("es", "pt"),
+            ).exists()
+        )
+
+        self.post.refresh_from_db()
+        self.assertEqual(
+            self.post.title,
+            "Updated while translating",
+        )
 
     def test_dry_run_writes_nothing(self):
         provider = self._safe_es_pt_provider()
@@ -1256,6 +1354,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             }
 
         output = StringIO()
@@ -1299,6 +1399,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             }
 
         with patch(
@@ -1336,6 +1438,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             }
 
         with patch(
@@ -1462,6 +1566,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             },
         ):
             call_command(
@@ -1578,6 +1684,77 @@ class FeedPostLocalizationQueueTests(TestCase):
                 timedelta(minutes=expected_minutes),
             )
 
+
+    def test_source_change_after_localization_does_not_mark_audited(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from auctions.models import FeedPostLocalizationState
+
+        post = self.create_post("Original audit source")
+        original_title = post.title
+        original_content = post.content
+
+        def localize_then_edit(selected_post, dry_run=False):
+            # Simulate another writer changing the canonical source
+            # after localization but before audit recording.
+            FeedPost.objects.filter(
+                pk=selected_post.pk,
+            ).update(
+                title="Changed after localization",
+            )
+
+            return {
+                "post_id": selected_post.pk,
+                "source_language": "en",
+                "status": "localized",
+                "created": ["es", "pt"],
+                "source_title": original_title,
+                "source_content": original_content,
+            }
+
+        output = StringIO()
+        errors = StringIO()
+
+        with patch(
+            "auctions.management.commands.localize_feed_posts.localize_feed_post",
+            side_effect=localize_then_edit,
+        ):
+            call_command(
+                "localize_feed_posts",
+                post_id=post.pk,
+                limit=1,
+                stdout=output,
+                stderr=errors,
+            )
+
+        state = FeedPostLocalizationState.objects.filter(
+            post=post,
+        ).first()
+
+        self.assertIsNotNone(state)
+        self.assertFalse(
+            state.audited_fingerprint,
+            "Changed canonical source must not be marked audited",
+        )
+        self.assertEqual(state.attempt_count, 1)
+        self.assertIn(
+            "Canonical source changed",
+            state.last_error,
+        )
+        self.assertIsNotNone(state.last_attempt_at)
+        self.assertIsNotNone(state.next_retry_at)
+
+        from datetime import timedelta
+
+        self.assertEqual(
+            state.next_retry_at - state.last_attempt_at,
+            timedelta(minutes=30),
+        )
+        self.assertIn("failed: 1", output.getvalue())
+        self.assertIn("localized: 0", output.getvalue())
+        self.assertIn("FAILED:", errors.getvalue())
+
     def test_audited_post_skipped_until_text_changes(self):
         from io import StringIO
         from unittest.mock import patch
@@ -1620,6 +1797,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "complete",
                 "created": [],
+                "source_title": post.title,
+                "source_content": post.content,
             },
         ) as localizer:
             call_command(
@@ -1661,6 +1840,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             }
 
         with patch(
@@ -1695,6 +1876,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             },
         ):
             call_command(
@@ -1732,6 +1915,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             }
 
         with patch(
@@ -1793,6 +1978,8 @@ class FeedPostLocalizationQueueTests(TestCase):
                 "source_language": "en",
                 "status": "localized",
                 "created": ["en", "es", "pt"],
+                "source_title": post.title,
+                "source_content": post.content,
             }
 
         with patch(

@@ -5,6 +5,7 @@ from django.db.models import Count, F, Q
 from django.utils import timezone
 
 from auctions.localization_fingerprint import localization_fingerprint
+from django.db import transaction
 from auctions.models import FeedPost, FeedPostLocalizationState
 from auctions.post_localization import (
     PostLocalizationError,
@@ -343,33 +344,83 @@ class Command(BaseCommand):
                     post,
                     dry_run=dry_run,
                 )
+
+                if not dry_run:
+                    with transaction.atomic():
+                        current_post = (
+                            FeedPost.objects
+                            .select_for_update()
+                            .get(pk=post.pk)
+                        )
+
+                        if (
+                            result.get("post_id") != current_post.pk
+                            or not isinstance(
+                                result.get("source_title"), str
+                            )
+                            or not isinstance(
+                                result.get("source_content"), str
+                            )
+                            or current_post.title != result["source_title"]
+                            or current_post.content != result["source_content"]
+                        ):
+                            raise PostLocalizationError(
+                                "Canonical source changed or source "
+                                "snapshot missing before audit."
+                            )
+
+                        state, _ = (
+                            FeedPostLocalizationState.objects
+                            .select_for_update()
+                            .get_or_create(post=current_post)
+                        )
+
+                        state.attempt_count = 0
+                        state.last_error = ""
+                        state.last_attempt_at = timezone.now()
+                        state.next_retry_at = None
+
+                        state.audited_fingerprint = (
+                            localization_fingerprint(current_post)
+                        )
+
+                        state.save()
+
             except Exception as exc:
                 failed += 1
 
                 if not dry_run:
-                    state, _ = (
-                        FeedPostLocalizationState.objects
-                        .get_or_create(post=post)
-                    )
+                    with transaction.atomic():
+                        current_post = (
+                            FeedPost.objects
+                            .select_for_update()
+                            .get(pk=post.pk)
+                        )
 
-                    state.attempt_count += 1
+                        state, _ = (
+                            FeedPostLocalizationState.objects
+                            .select_for_update()
+                            .get_or_create(post=current_post)
+                        )
 
-                    delay_minutes = min(
-                        30 * (2 ** min(
-                            state.attempt_count - 1,
-                            10,
-                        )),
-                        1440,
-                    )
+                        state.attempt_count += 1
 
-                    state.last_error = str(exc)[:4000]
-                    state.last_attempt_at = timezone.now()
-                    state.next_retry_at = (
-                        state.last_attempt_at
-                        + timedelta(minutes=delay_minutes)
-                    )
+                        delay_minutes = min(
+                            30 * (2 ** min(
+                                state.attempt_count - 1,
+                                10,
+                            )),
+                            1440,
+                        )
 
-                    state.save()
+                        state.last_error = str(exc)[:4000]
+                        state.last_attempt_at = timezone.now()
+                        state.next_retry_at = (
+                            state.last_attempt_at
+                            + timedelta(minutes=delay_minutes)
+                        )
+
+                        state.save()
 
                 self.stderr.write(
                     self.style.ERROR(
@@ -377,27 +428,6 @@ class Command(BaseCommand):
                     )
                 )
                 continue
-
-            if not dry_run:
-                state, _ = (
-                    FeedPostLocalizationState.objects
-                    .get_or_create(post=post)
-                )
-
-                state.attempt_count = 0
-                state.last_error = ""
-                state.last_attempt_at = timezone.now()
-                state.next_retry_at = None
-
-                # Calculate after localization writes translations.
-                post.refresh_from_db(
-                    fields=["title", "content"]
-                )
-                state.audited_fingerprint = (
-                    localization_fingerprint(post)
-                )
-
-                state.save()
 
             if result["status"] == "complete":
                 complete += 1

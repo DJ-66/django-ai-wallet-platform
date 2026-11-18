@@ -639,6 +639,8 @@ def localize_feed_post(
             "post_id": post.pk,
             "status": "complete",
             "created": [],
+            "source_title": post.title,
+            "source_content": post.content,
         }
 
     # Prepared FANZ AI publications may contain approved CTAs.
@@ -734,36 +736,52 @@ def localize_feed_post(
 
     created_languages = []
 
-    for language, data in generated.items():
-        with transaction.atomic():
+    # Capture the canonical source used during AI inference.
+    expected_title = post.title
+    expected_content = post.content
+
+    # All generated languages commit or roll back together.
+    with transaction.atomic():
+        from auctions.models import FeedPost
+
+        current_post = (
+            FeedPost.objects
+            .select_for_update()
+            .get(pk=post.pk)
+        )
+
+        if (
+            current_post.title != expected_title
+            or current_post.content != expected_content
+        ):
+            raise PostLocalizationError(
+                "Canonical post changed during localization."
+            )
+
+        for language, data in generated.items():
             translation, _created = (
                 FeedPostTranslation.objects
                 .select_for_update()
                 .get_or_create(
-                    post=post,
+                    post=current_post,
                     language=language,
                 )
             )
 
-            # Someone may have manually filled this while AI was
-            # generating. Preserve genuine complete translations, but
-            # allow repair of a stale non-source copy.
+            # Preserve complete translations and repair only
+            # missing or stale source-copy translations.
             if (
-                _translation_is_complete(
-                    translation
-                )
+                _translation_is_complete(translation)
                 and not _translation_is_stale_source_copy(
                     translation,
-                    post=post,
+                    post=current_post,
                     source_language=source_language,
                 )
             ):
                 continue
 
             translation.title = data["title"]
-            translation.content = (
-                data["content"]
-            )
+            translation.content = data["content"]
 
             translation.save(
                 update_fields=[
@@ -773,9 +791,7 @@ def localize_feed_post(
                 ]
             )
 
-        created_languages.append(
-            language
-        )
+            created_languages.append(language)
 
     return {
         "post_id": post.pk,
@@ -783,4 +799,6 @@ def localize_feed_post(
             source_language,
         "status": "localized",
         "created": created_languages,
+        "source_title": expected_title,
+        "source_content": expected_content,
     }
