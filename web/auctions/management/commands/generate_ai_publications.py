@@ -44,8 +44,6 @@ IMAGE_EXTENSIONS = {
     ".jpg",
     ".jpeg",
     ".png",
-    ".webp",
-    ".avif",
 }
 
 EXCLUDED_DIRECTORY_NAMES = {
