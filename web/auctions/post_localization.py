@@ -72,8 +72,17 @@ class LocalizationOllamaProvider:
         )
 
 
+URL_PATTERN = (
+    r"(?<![\w@=/:])"
+    r"(?:"
+    r"https://(?![^\s<>\])\"']*@)[^\s<>\])\"']+"
+    r"|www\.(?![^\s<>\])\"']*@)[^\s<>\])\"']+"
+    r")"
+)
+
 URL_RE = re.compile(
-    r"https?://[^\s<>\])]+"
+    URL_PATTERN,
+    re.IGNORECASE,
 )
 
 MENTION_RE = re.compile(
@@ -194,10 +203,10 @@ def _translation_is_stale_source_copy(
 
 
 PROTECTED_TOKEN_RE = re.compile(
-    r"https?://[^\s<>\])]+"
-    r"|(?<![\w@])@[A-Za-z0-9_+-]+(?:\.[A-Za-z0-9_+-]+)*"
-    r"|(?<![\w#])#[A-Za-z0-9_]+"
-    r"|(?<!\w)(?=[A-Za-z0-9_]*\d)[A-Za-z][A-Za-z0-9_]*(?!\w)"
+    URL_PATTERN
+    + r"|(?<![\w@])@[A-Za-z0-9_+-]+(?:\.[A-Za-z0-9_+-]+)*"
+    + r"|(?<![\w#])#[A-Za-z0-9_]+"
+    + r"|(?<!\w)(?=[A-Za-z0-9_]*\d)[A-Za-z][A-Za-z0-9_]*(?!\w)"
 )
 
 

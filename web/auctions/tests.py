@@ -10059,6 +10059,82 @@ class FeedPostContentRendererTests(SimpleTestCase):
             rendered,
         )
 
+    def test_plaintext_www_link_is_normalized_to_https(self):
+        rendered = self.render(
+            "Visit www.example.com/path"
+        )
+
+        self.assertIn(
+            'href="https://www.example.com/path"',
+            rendered,
+        )
+        self.assertIn('target="_blank"', rendered)
+        self.assertIn(
+            'rel="noopener noreferrer ugc"',
+            rendered,
+        )
+
+    def test_parenthesized_plaintext_www_link_preserves_punctuation(self):
+        rendered = self.render(
+            "Visit (www.example.com/path)."
+        )
+
+        self.assertIn(
+            '(<a href="https://www.example.com/path"',
+            rendered,
+        )
+        self.assertIn("</a>).", rendered)
+
+    def test_multiple_https_and_www_links_are_linked(self):
+        rendered = self.render(
+            "Visit https://example.com/one and "
+            "www.example.com/two then "
+            "https://example.net/three."
+        )
+
+        self.assertEqual(
+            rendered.count('target="_blank"'),
+            3,
+        )
+        self.assertIn(
+            'href="https://www.example.com/two"',
+            rendered,
+        )
+
+    def test_www_links_are_not_created_inside_code_or_pre(self):
+        rendered = self.render(
+            "`www.example.com/code`\n\n"
+            "```\nwww.example.com/pre\n```"
+        )
+
+        self.assertNotIn("href=", rendered)
+        self.assertIn("www.example.com/code", rendered)
+        self.assertIn("www.example.com/pre", rendered)
+
+    def test_deceptive_www_tokens_remain_entirely_non_clickable(self):
+        for token in (
+            "//www.example.com/path",
+            "javascript:www.example.com",
+            "data:www.example.com",
+            "www.example.com@evil.test",
+            "www.example.com:443@evil.test",
+            "user@www.example.com",
+            "http://www.example.com/path",
+            "abcwww.example.com",
+        ):
+            with self.subTest(token=token):
+                rendered = self.render(token)
+
+                self.assertNotIn("<a ", rendered)
+                self.assertIn(token, rendered)
+
+    def test_malformed_plaintext_www_link_is_not_linked(self):
+        rendered = self.render(
+            "Visit www.-example.com/offer"
+        )
+
+        self.assertNotIn("href=", rendered)
+
     def test_internal_link_stays_same_tab(self):
         rendered = self.render(
             "[Buy Credits](/BuyCredits/)"

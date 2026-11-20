@@ -8,6 +8,7 @@ from auctions.models import (
     FeedPostTranslation,
 )
 from auctions.post_localization import (
+    URL_RE,
     PostLocalizationError,
     _mask_protected_tokens,
     _restore_protected_tokens,
@@ -146,6 +147,88 @@ class FeedPostLocalizationTests(TestCase):
             ),
             source,
         )
+
+    def test_mask_restore_round_trip_preserves_plaintext_www_url(self):
+        source = (
+            "Visit www.example.com/product"
+            "?id=42&ref=fanz123 now"
+        )
+
+        masked, tokens = _mask_protected_tokens(
+            source
+        )
+
+        self.assertNotIn(
+            "www.example.com",
+            masked,
+        )
+        self.assertEqual(
+            tokens,
+            [
+                "www.example.com/product"
+                "?id=42&ref=fanz123"
+            ],
+        )
+        self.assertEqual(
+            _restore_protected_tokens(
+                masked,
+                tokens,
+            ),
+            source,
+        )
+
+    def test_url_matcher_rejects_deceptive_www_tokens(self):
+        for token in (
+            "//www.example.com/path",
+            "javascript:www.example.com",
+            "data:www.example.com",
+            "www.example.com@evil.test",
+            "www.example.com:443@evil.test",
+            "user@www.example.com",
+            "http://www.example.com/path",
+            "abcwww.example.com",
+        ):
+            with self.subTest(token=token):
+                self.assertEqual(
+                    URL_RE.findall(token),
+                    [],
+                )
+
+    def test_url_matcher_accepts_standalone_www_boundaries(self):
+        self.assertEqual(
+            URL_RE.findall(
+                "www.example.com/path "
+                "(www.example.net/offer)."
+            ),
+            [
+                "www.example.com/path",
+                "www.example.net/offer",
+            ],
+        )
+
+    def test_url_matcher_accepts_multiple_https_and_www_links(self):
+        self.assertEqual(
+            URL_RE.findall(
+                "https://example.com/one "
+                "www.example.com/two "
+                "https://example.net/three"
+            ),
+            [
+                "https://example.com/one",
+                "www.example.com/two",
+                "https://example.net/three",
+            ],
+        )
+
+    def test_validator_rejects_changed_plaintext_www_url(self):
+        with self.assertRaises(
+            PostLocalizationError
+        ):
+            _validate_preserved_tokens(
+                "Visit www.example.com/offer?ref=fanz",
+                "Visita www.example.com/offer?ref=changed",
+                language="es",
+            )
 
     def test_validator_rejects_invented_mention(self):
         with self.assertRaises(
@@ -417,6 +500,49 @@ class FeedPostLocalizationTests(TestCase):
         self.assertEqual(
             provider.calls,
             0,
+        )
+
+    def test_complete_www_translation_records_are_not_changed(self):
+        rows = []
+
+        for language, title, content in (
+            (
+                "es",
+                "Oferta FANZ",
+                "Visita www.example.com/oferta?ref=manual",
+            ),
+            (
+                "pt",
+                "Oferta FANZ",
+                "Visite www.example.com/oferta?ref=manual",
+            ),
+        ):
+            rows.append(
+                FeedPostTranslation.objects.create(
+                    post=self.post,
+                    language=language,
+                    title=title,
+                    content=content,
+                )
+            )
+
+        provider = QueueProvider([])
+        localize_feed_post(
+            self.post,
+            provider=provider,
+        )
+
+        self.assertEqual(provider.calls, 0)
+
+        for row in rows:
+            row.refresh_from_db()
+
+        self.assertEqual(
+            [row.content for row in rows],
+            [
+                "Visita www.example.com/oferta?ref=manual",
+                "Visite www.example.com/oferta?ref=manual",
+            ],
         )
 
     def test_prepare_feed_posts_selects_requested_language(self):

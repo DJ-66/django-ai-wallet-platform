@@ -24,6 +24,24 @@ HASHTAG_RE = re.compile(
     r"(?<![\w#])#([\w]{2,50})"
 )
 
+WWW_TOKEN_RE = re.compile(
+    r"(?<![\w@=/:])www\."
+    r"(?![^\s<>\"']*@)[^\s<>\"'@]+",
+    re.IGNORECASE,
+)
+
+HTTPS_TOKEN_RE = re.compile(
+    r"(?<![\w@=/:])https://[^\s<>\"']+",
+    re.IGNORECASE,
+)
+
+URL_TRAILING_PUNCTUATION = ".,!?;:"
+URL_CLOSING_PAIRS = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+}
+
 
 ALLOWED_TAGS = [
     "p",
@@ -50,18 +68,61 @@ ALLOWED_ATTRS = {
 }
 
 
-def _link_text(text):
-    """
-    Link FANZ @mentions and #hashtags in one plain-text node.
+def _trim_url_candidate(candidate):
+    url = candidate.rstrip(URL_TRAILING_PUNCTUATION)
 
-    Link candidates are detected in the original plain text.
-    All non-link text is escaped while assembling the result,
-    so HTML entities introduced by escaping cannot become
-    synthetic hashtags or mentions.
-    """
+    while url and url[-1] in URL_CLOSING_PAIRS:
+        closing = url[-1]
+        opening = URL_CLOSING_PAIRS[closing]
+
+        if url.count(closing) <= url.count(opening):
+            break
+
+        url = url[:-1]
+
+    return url
+
+
+def _inside_www_token(text, start, end):
+    token_start = start
+    token_end = end
+
+    while token_start > 0 and not text[token_start - 1].isspace():
+        token_start -= 1
+
+    while token_end < len(text) and not text[token_end].isspace():
+        token_end += 1
+
+    return "www." in text[token_start:token_end].lower()
+
+
+def _link_text(text):
+    """Link safe standalone URLs, FANZ mentions, and hashtags."""
     matches = []
 
+    for match in WWW_TOKEN_RE.finditer(text):
+        candidate = _trim_url_candidate(match.group(0))
+        normalized_href = "https://" + candidate
+
+        if not _is_valid_plaintext_www_url(
+            candidate,
+            normalized_href,
+        ):
+            continue
+
+        matches.append(
+            (
+                match.start(),
+                match.start() + len(candidate),
+                "url",
+                (candidate, normalized_href),
+            )
+        )
+
     for match in MENTION_RE.finditer(text):
+        if _inside_www_token(text, match.start(), match.end()):
+            continue
+
         matches.append(
             (
                 match.start(),
@@ -103,35 +164,43 @@ def _link_text(text):
             )
         )
 
-        value = match.group(1)
-
-        if kind == "mention":
-            href = reverse(
-                "resolve_mention",
-                kwargs={
-                    "username": value,
-                },
-            )
-
+        if kind == "url":
+            value, href = match
+            escaped_href = html_escape(href, quote=True)
             parts.append(
-                f'<a href="{href}" '
-                f'class="fanz-mention">'
-                f'@{escape(value)}</a>'
+                f'<a href="{escaped_href}">'
+                f'{escape(value)}</a>'
             )
         else:
-            href = reverse(
-                "hashtag_feed",
-                kwargs={
-                    "tag_name":
-                        value.lower(),
-                },
-            )
+            value = match.group(1)
 
-            parts.append(
-                f'<a href="{href}" '
-                f'class="hashtag-link">'
-                f'#{escape(value)}</a>'
-            )
+            if kind == "mention":
+                href = reverse(
+                    "resolve_mention",
+                    kwargs={
+                        "username": value,
+                    },
+                )
+
+                parts.append(
+                    f'<a href="{href}" '
+                    f'class="fanz-mention">'
+                    f'@{escape(value)}</a>'
+                )
+            else:
+                href = reverse(
+                    "hashtag_feed",
+                    kwargs={
+                        "tag_name":
+                            value.lower(),
+                    },
+                )
+
+                parts.append(
+                    f'<a href="{href}" '
+                    f'class="hashtag-link">'
+                    f'#{escape(value)}</a>'
+                )
 
         cursor = end
 
@@ -282,6 +351,18 @@ def _link_fanz_text_nodes(html):
     return parser.get_html()
 
 
+def _is_valid_plaintext_www_url(
+    link_text,
+    normalized_href,
+):
+    expected_href = "https://" + link_text
+
+    return (
+        normalized_href == expected_href
+        and _is_valid_https_url(normalized_href)
+    )
+
+
 def _set_link_policy(
     attrs,
     new=False,
@@ -320,6 +401,7 @@ def _set_link_policy(
         parsed.scheme.lower()
         == "https"
         and bool(parsed.netloc)
+        and _is_valid_https_url(href)
     )
 
     if is_internal:
@@ -348,22 +430,7 @@ def _set_link_policy(
 
         return attrs
 
-    attrs.pop(
-        href_key,
-        None,
-    )
-
-    attrs.pop(
-        (None, "target"),
-        None,
-    )
-
-    attrs.pop(
-        (None, "rel"),
-        None,
-    )
-
-    return attrs
+    return None
 
 
 @register.filter
@@ -413,6 +480,7 @@ def render_post_content(value):
             "code",
         ],
         parse_email=False,
+        url_re=HTTPS_TOKEN_RE,
     ).linkify(
         clean
     )
@@ -534,7 +602,7 @@ def _trim_dm_url(candidate):
     return url
 
 
-def _is_valid_dm_https_url(url):
+def _is_valid_https_url(url):
     if any(ord(character) < 32 for character in url):
         return False
 
@@ -605,7 +673,7 @@ def render_dm_plaintext(value):
         candidate = match.group(0)
         url = _trim_dm_url(candidate)
 
-        if not url or not _is_valid_dm_https_url(url):
+        if not url or not _is_valid_https_url(url):
             continue
 
         parts.append(_escape_dm_text(source[cursor:match.start()]))
