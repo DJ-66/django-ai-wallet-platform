@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from html import escape as html_escape
 from html.parser import HTMLParser
@@ -503,6 +504,123 @@ def post_trailing_hashtags(value):
     return hashtags
 
 
+DM_HTTPS_URL_RE = re.compile(
+    r"(?<![\w@=/:\"'])https://[^\s<>\"']+",
+    re.IGNORECASE,
+)
+
+DM_TRAILING_PUNCTUATION = ".,!?;:"
+DM_CLOSING_PAIRS = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+}
+DM_HOST_LABEL_RE = re.compile(r"^[A-Za-z0-9-]{1,63}$")
+DM_INVALID_PERCENT_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+
+
+def _trim_dm_url(candidate):
+    url = candidate.rstrip(DM_TRAILING_PUNCTUATION)
+
+    while url and url[-1] in DM_CLOSING_PAIRS:
+        closing = url[-1]
+        opening = DM_CLOSING_PAIRS[closing]
+
+        if url.count(closing) <= url.count(opening):
+            break
+
+        url = url[:-1]
+
+    return url
+
+
+def _is_valid_dm_https_url(url):
+    if any(ord(character) < 32 for character in url):
+        return False
+
+    if "\\" in url or DM_INVALID_PERCENT_RE.search(url):
+        return False
+
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        return False
+
+    if parsed.scheme.lower() != "https" or not parsed.netloc:
+        return False
+
+    if parsed.username is not None or parsed.password is not None:
+        return False
+
+    hostname = parsed.hostname
+
+    if not hostname or port is not None and not 1 <= port <= 65535:
+        return False
+
+    if ":" in hostname:
+        try:
+            ipaddress.IPv6Address(hostname)
+        except ValueError:
+            return False
+        return True
+
+    if re.fullmatch(r"[0-9.]+", hostname):
+        try:
+            ipaddress.IPv4Address(hostname)
+        except ValueError:
+            return False
+        return True
+
+    try:
+        ascii_hostname = hostname.encode("idna").decode("ascii")
+    except UnicodeError:
+        return False
+
+    labels = ascii_hostname.rstrip(".").split(".")
+
+    return bool(labels) and all(
+        DM_HOST_LABEL_RE.fullmatch(label)
+        and not label.startswith("-")
+        and not label.endswith("-")
+        for label in labels
+    )
+
+
+def _escape_dm_text(value):
+    return str(escape(value)).replace("\n", "<br>")
+
+
+@register.filter
+def render_dm_plaintext(value):
+    """Safely render direct messages with validated HTTPS links."""
+    if value is None:
+        return ""
+
+    source = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    parts = []
+    cursor = 0
+
+    for match in DM_HTTPS_URL_RE.finditer(source):
+        candidate = match.group(0)
+        url = _trim_dm_url(candidate)
+
+        if not url or not _is_valid_dm_https_url(url):
+            continue
+
+        parts.append(_escape_dm_text(source[cursor:match.start()]))
+        escaped_url = html_escape(url, quote=True)
+        parts.append(
+            f'<a href="{escaped_url}" target="_blank" '
+            f'rel="noopener noreferrer ugc">{escaped_url}</a>'
+        )
+        cursor = match.start() + len(url)
+
+    parts.append(_escape_dm_text(source[cursor:]))
+
+    return mark_safe("".join(parts))
+
+
 @register.filter
 def render_fanz_plaintext(value):
     """Safely render user-controlled comments and replies."""
@@ -514,6 +632,8 @@ def render_fanz_plaintext(value):
     return mark_safe(
         escape(source).replace("\n", "<br>")
     )
+
+
 @register.filter
 def render_fanz_preview(value):
     """Render a short, escaped message preview."""

@@ -227,7 +227,7 @@
                 </div>
 
                 <div class="dm-body">
-                    {{ message.display_body|render_fanz_plaintext }}
+                    {{ message.display_body|render_dm_plaintext }}
                 </div>
 
                 <div class="dm-time">
@@ -319,15 +319,6 @@ document.addEventListener("DOMContentLoaded", function () {
     form.addEventListener("submit", function () {
         markSending();
     });
-});
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll(".dm-body a").forEach(function (link) {
-    link.setAttribute("target", "_blank");
-    link.setAttribute("rel", "noopener");
-  });
 });
 </script>
 {% endblock %}
