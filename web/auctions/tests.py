@@ -10059,6 +10059,183 @@ class FeedPostContentRendererTests(SimpleTestCase):
             rendered,
         )
 
+    def test_bare_autoposter_path_becomes_clickable(self):
+        rendered = self.render("Visit /autoPoster/")
+
+        self.assertIn(
+            'href="/autoPoster/"',
+            rendered,
+        )
+        self.assertNotIn('target="_blank"', rendered)
+
+    def test_bare_buycredits_path_becomes_clickable(self):
+        rendered = self.render("Visit /BuyCredits/")
+        self.assertIn('href="/BuyCredits/"', rendered)
+        self.assertNotIn('target="_blank"', rendered)
+
+    def test_bare_path_not_linked_inside_external_url(self):
+        rendered = self.render(
+            "https://example.com/autoPoster/"
+        )
+        self.assertNotIn('href="/autoPoster/"', rendered)
+
+    def test_bare_path_not_linked_inside_longer_path(self):
+        rendered = self.render(
+            "/other/autoPoster/"
+        )
+        self.assertNotIn('href="/autoPoster/"', rendered)
+
+    def test_unapproved_bare_path_stays_plain_text(self):
+        rendered = self.render("/admin/")
+        self.assertNotIn('href="/admin/"', rendered)
+
+    def test_bare_autoposter_query_is_preserved(self):
+        rendered = self.render("/autoPoster/?ref=creator")
+        self.assertIn(
+            'href="/autoPoster/?ref=creator"',
+            rendered,
+        )
+
+    def test_bare_autoposter_fragment_is_preserved(self):
+        rendered = self.render("/autoPoster/#pricing")
+        self.assertIn(
+            'href="/autoPoster/#pricing"',
+            rendered,
+        )
+        self.assertNotIn(
+            'href="/auctions/tag/pricing/"',
+            rendered,
+        )
+
+    def test_bare_path_preserves_multiple_query_parameters(self):
+        rendered = self.render(
+            "/autoPoster/?ref=mia&campaign=summer"
+        )
+        self.assertIn(
+            'href="/autoPoster/?ref=mia&amp;campaign=summer"',
+            rendered,
+        )
+        self.assertEqual(rendered.count("<a "), 1)
+
+    def test_bare_path_preserves_nested_https_query_value(self):
+        rendered = self.render(
+            "/autoPoster/?next=https://example.com"
+        )
+        self.assertIn(
+            'href="/autoPoster/?next=https://example.com"',
+            rendered,
+        )
+        self.assertEqual(rendered.count("<a "), 1)
+
+    def test_encoded_hashtag_does_not_create_link(self):
+        rendered = self.render("&#35;FANZ")
+        self.assertNotIn(
+            'href="/auctions/tag/fanz/"',
+            rendered,
+        )
+
+    def test_encoded_mention_does_not_create_link(self):
+        rendered = self.render("&#64;BuyCredits")
+        self.assertNotIn(
+            'href="/auctions/mention/BuyCredits/"',
+            rendered,
+        )
+
+    def test_malformed_query_does_not_create_partial_link(self):
+        rendered = self.render(
+            "/autoPoster/?next=javascript:alert(1)"
+        )
+        self.assertNotIn(
+            'href="/autoPoster/?next=javascript:alert"',
+            rendered,
+        )
+        self.assertNotIn(
+            '<a href="/autoPoster/',
+            rendered,
+        )
+
+    def test_rejected_url_does_not_link_hashtag_inside(self):
+        rendered = self.render(
+            "/autoPoster/?next=javascript:alert(#FANZ)"
+        )
+        self.assertNotIn(
+            'href="/auctions/tag/fanz/"',
+            rendered,
+        )
+        self.assertNotIn(
+            '<a href="/autoPoster/',
+            rendered,
+        )
+
+    def test_rejected_url_does_not_link_mention_inside(self):
+        rendered = self.render(
+            "/autoPoster/?ref=@BuyCredits"
+        )
+        self.assertNotIn(
+            'href="/auctions/mention/BuyCredits/"',
+            rendered,
+        )
+        self.assertNotIn(
+            '<a href="/autoPoster/',
+            rendered,
+        )
+
+    def test_repeated_query_marker_does_not_create_partial_link(self):
+        rendered = self.render(
+            "/autoPoster/?ref=mia?unexpected=value"
+        )
+        self.assertNotIn('<a href="/autoPoster/', rendered)
+
+    def test_semicolon_query_does_not_create_partial_link(self):
+        rendered = self.render(
+            "/autoPoster/?ref=mia;unexpected=value"
+        )
+        self.assertNotIn('<a href="/autoPoster/', rendered)
+
+    def test_rejected_comma_query_does_not_link_mention(self):
+        rendered = self.render(
+            "/autoPoster/?ref=mia,@BuyCredits"
+        )
+        self.assertNotIn('<a href="/autoPoster/', rendered)
+        self.assertNotIn(
+            'href="/auctions/mention/BuyCredits/"',
+            rendered,
+        )
+
+    def test_backslash_network_path_is_not_clickable(self):
+        rendered = self.render(
+            r"[Test](/\evil.example/path)"
+        )
+        self.assertNotIn(
+            'href="/\\evil.example/path"',
+            rendered,
+        )
+        self.assertNotIn(
+            'href="//evil.example/path"',
+            rendered,
+        )
+
+    def test_encoded_backslash_internal_link_is_rejected(self):
+        rendered = self.render("[Test](/%5Cevil.example/path)")
+        self.assertNotIn(
+            'href="/%5Cevil.example/path"',
+            rendered,
+        )
+
+    def test_encoded_slash_internal_link_is_rejected(self):
+        rendered = self.render("[Test](/%2Fevil.example/path)")
+        self.assertNotIn(
+            'href="/%2Fevil.example/path"',
+            rendered,
+        )
+
+    def test_double_encoded_backslash_internal_link_is_rejected(self):
+        rendered = self.render("[Test](/%255Cevil.example/path)")
+        self.assertNotIn(
+            'href="/%255Cevil.example/path"',
+            rendered,
+        )
+
     def test_internal_link_stays_same_tab(self):
         rendered = self.render(
             "[Buy Credits](/BuyCredits/)"
