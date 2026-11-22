@@ -2,6 +2,7 @@ import os
 import hashlib
 import json
 import random
+import stat
 from datetime import timedelta
 from pathlib import Path
 
@@ -25,6 +26,9 @@ from auctions.ai_services.legacy_publication_reservation import (
 from auctions.ai_services.legacy_claimed_preparation import (
     prepare_claimed_ai_publication,
     prepare_claimed_v2_ai_publication,
+)
+from auctions.ai_services.secure_creator_media import (
+    MAX_SOURCE_BYTES,
 )
 from auctions.models import ScheduledPublication
 
@@ -148,6 +152,23 @@ class Command(BaseCommand):
                     continue
 
                 if path.suffix.lower() not in IMAGE_EXTENSIONS:
+                    continue
+
+                # Reject symlinks, inaccessible files, and oversized
+                # sources before reserving a publication.
+                try:
+                    if path.is_symlink():
+                        continue
+                    source_info = path.stat(
+                        follow_symlinks=False,
+                    )
+                except (OSError, ValueError):
+                    continue
+
+                if not stat.S_ISREG(source_info.st_mode):
+                    continue
+
+                if source_info.st_size > MAX_SOURCE_BYTES:
                     continue
 
                 relative_path = path.relative_to(source_root)

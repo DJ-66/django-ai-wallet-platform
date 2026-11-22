@@ -16513,3 +16513,76 @@ class OfficialPlatformProfileTests(TestCase):
                 expected,
                 f"Unexpected tipping visibility for @{username}",
             )
+
+
+class AutoPosterMediaEligibilityTests(SimpleTestCase):
+    """Test AI source selection without database access."""
+
+    def setUp(self):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        from auctions.management.commands.generate_ai_publications import (
+            Command,
+        )
+
+        self.tempdir = TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+
+        self.root = Path(self.tempdir.name)
+        self.pack = self.root / "creator-pack"
+        self.pack.mkdir()
+
+        self.command = Command()
+        self.creator = {
+            "packs": ["creator-pack"],
+            "avatar_source": None,
+        }
+
+    def eligible(self):
+        return self.command._eligible_files(
+            source_root=self.root,
+            creator=self.creator,
+            already_scheduled=set(),
+        )
+
+    def test_valid_jpg_is_eligible(self):
+        (self.pack / "valid.jpg").write_bytes(b"test")
+        self.assertEqual(
+            self.eligible(),
+            ["creator-pack/valid.jpg"],
+        )
+
+    def test_oversized_jpg_is_excluded(self):
+        from auctions.ai_services.secure_creator_media import (
+            MAX_SOURCE_BYTES,
+        )
+
+        with (self.pack / "large.jpg").open("wb") as file:
+            file.truncate(MAX_SOURCE_BYTES + 1)
+
+        self.assertEqual(self.eligible(), [])
+
+    def test_exact_size_limit_is_eligible(self):
+        from auctions.ai_services.secure_creator_media import (
+            MAX_SOURCE_BYTES,
+        )
+
+        with (self.pack / "limit.jpg").open("wb") as file:
+            file.truncate(MAX_SOURCE_BYTES)
+
+        self.assertEqual(
+            self.eligible(),
+            ["creator-pack/limit.jpg"],
+        )
+
+    def test_symlinked_jpg_is_excluded(self):
+        target = self.pack / "original.jpg"
+        target.write_bytes(b"test")
+
+        (self.pack / "linked.jpg").symlink_to(target)
+
+        self.assertEqual(
+            self.eligible(),
+            ["creator-pack/original.jpg"],
+        )
