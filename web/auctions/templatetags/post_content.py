@@ -2,7 +2,7 @@ import ipaddress
 import re
 from html import escape as html_escape
 from html.parser import HTMLParser
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import bleach
 import markdown
@@ -19,6 +19,11 @@ register = template.Library()
 MENTION_RE = re.compile(
     r"(?<![\w@])@([A-Za-z0-9_]{1,150})"
 )
+
+BARE_FANZ_PATH_RE = re.compile(
+    r"(?<!\S)/(?:autoPoster|BuyCredits)/(?![\w/])(?:\?[A-Za-z0-9_=&%./:-]*)?(?:\#[A-Za-z0-9_.-]*)?"
+)
+
 
 HASHTAG_RE = re.compile(
     r"(?<![\w#])#([\w]{2,50})"
@@ -142,6 +147,16 @@ def _link_text(text):
             )
         )
 
+    for match in BARE_FANZ_PATH_RE.finditer(text):
+        matches.append(
+            (
+                match.start(),
+                match.end(),
+                "internal_path",
+                match,
+            )
+        )
+
     matches.sort(
         key=lambda item: (
             item[0],
@@ -163,6 +178,38 @@ def _link_text(text):
                 )
             )
         )
+
+        if kind == "internal_path":
+            path_value = match.group(0)
+
+            # Never link only a prefix of a larger URL candidate.
+            if (
+                end < len(text)
+                and not text[end].isspace()
+                and (
+                    text[end] not in ".,;!?"
+                    or (
+                        end + 1 < len(text)
+                        and not text[end + 1].isspace()
+                        and text[end + 1] not in ")]}"
+                    )
+                )
+            ):
+                rejected_end = end
+                while (
+                    rejected_end < len(text)
+                    and not text[rejected_end].isspace()
+                ):
+                    rejected_end += 1
+
+                parts.append(str(escape(text[start:rejected_end])))
+                cursor = rejected_end
+                continue
+
+            safe_path = escape(path_value)
+            parts.append(f'<a href="{safe_path}">{safe_path}</a>')
+            cursor = end
+            continue
 
         if kind == "url":
             value, href = match
@@ -240,6 +287,19 @@ class _FanzTextLinkifier(HTMLParser):
 
         self.parts = []
         self.skip_depth = 0
+        self.text_buffer = []
+
+    def _flush_text(self):
+        if not self.text_buffer:
+            return
+
+        text = "".join(self.text_buffer)
+        self.text_buffer.clear()
+
+        if self.skip_depth:
+            self.parts.append(str(escape(text)))
+        else:
+            self.parts.append(_link_text(text))
 
     def _attrs_html(self, attrs):
         rendered = []
@@ -264,6 +324,7 @@ class _FanzTextLinkifier(HTMLParser):
         tag,
         attrs,
     ):
+        self._flush_text()
         if tag in self.SKIP_TAGS:
             self.skip_depth += 1
 
@@ -285,6 +346,7 @@ class _FanzTextLinkifier(HTMLParser):
         tag,
         attrs,
     ):
+        self._flush_text()
         attrs_html = self._attrs_html(
             attrs
         )
@@ -297,6 +359,7 @@ class _FanzTextLinkifier(HTMLParser):
         self,
         tag,
     ):
+        self._flush_text()
         self.parts.append(
             f"</{tag}>"
         )
@@ -311,33 +374,28 @@ class _FanzTextLinkifier(HTMLParser):
         self,
         data,
     ):
-        if self.skip_depth:
-            self.parts.append(
-                escape(data)
-            )
-            return
-
-        self.parts.append(
-            _link_text(data)
-        )
+        self.text_buffer.append(data)
 
     def handle_entityref(
         self,
         name,
     ):
-        self.parts.append(
-            f"&{name};"
-        )
+        if name == "amp":
+            self.text_buffer.append("&")
+            return
+
+        self._flush_text()
+        self.parts.append(f"&{name};")
 
     def handle_charref(
         self,
         name,
     ):
-        self.parts.append(
-            f"&#{name};"
-        )
+        self._flush_text()
+        self.parts.append(f"&#{name};")
 
     def get_html(self):
+        self._flush_text()
         return "".join(
             self.parts
         )
@@ -392,9 +450,25 @@ def _set_link_policy(
         href
     )
 
+    # Reject ambiguous encoded separators in internal paths.
+    decoded_path = urlsplit(href).path
+    for _ in range(5):
+        next_path = unquote(decoded_path)
+        if next_path == decoded_path:
+            break
+        decoded_path = next_path
+
+    has_unsafe_separator = (
+        "\\" in decoded_path
+        or "%2f" in decoded_path.lower()
+        or "%5c" in decoded_path.lower()
+    )
+
     is_internal = (
         href.startswith("/")
         and not href.startswith("//")
+        and not has_unsafe_separator
+        and "//" not in decoded_path
     )
 
     is_external_https = (

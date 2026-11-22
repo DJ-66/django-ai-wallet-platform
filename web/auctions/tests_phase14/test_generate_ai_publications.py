@@ -36,6 +36,58 @@ def write_image(path):
 
 
 class GenerateAIPublicationsTests(TestCase):
+    def test_eligible_files_skips_avif_and_webp(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pack = root / "PackA"
+            pack.mkdir()
+
+            for name in (
+                "photo.png",
+                "photo.jpg",
+                "photo.jpeg",
+                "photo.avif",
+                "photo.webp",
+            ):
+                (pack / name).write_bytes(b"test")
+
+            command = generate_ai_publications.Command()
+            creator = {
+                "packs": ["PackA"],
+                "avatar_source": None,
+            }
+
+            eligible = command._eligible_files(
+                source_root=root,
+                creator=creator,
+                already_scheduled=set(),
+            )
+
+            self.assertEqual(
+                eligible,
+                [
+                    "PackA/photo.jpeg",
+                    "PackA/photo.jpg",
+                    "PackA/photo.png",
+                ],
+            )
+
+            for name in (
+                "photo.png",
+                "photo.jpg",
+                "photo.jpeg",
+            ):
+                (pack / name).unlink()
+
+            self.assertEqual(
+                command._eligible_files(
+                    source_root=root,
+                    creator=creator,
+                    already_scheduled=set(),
+                ),
+                [],
+            )
+
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root = Path(self.tempdir.name)
