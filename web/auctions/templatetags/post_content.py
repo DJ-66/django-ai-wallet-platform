@@ -646,6 +646,65 @@ def post_trailing_hashtags(value):
     return hashtags
 
 
+def _split_post_presentation(post):
+    """Separate authorized marketing content without changing storage."""
+    from auctions.sunsetcam_cta import split_sunsetcam_marketing_suffix
+
+    body = post_body(post.display_content)
+
+    if post.is_paid:
+        return body, ""
+
+    user = post.user
+
+    if user.username.casefold() != "sunsetcam":
+        return body, ""
+
+    profile = getattr(user, "profile", None)
+
+    if not getattr(profile, "is_platform_account", False):
+        return body, ""
+
+    return split_sunsetcam_marketing_suffix(body)
+
+
+@register.filter
+def post_main_caption(post):
+    body, _suffix = _split_post_presentation(post)
+    return body
+
+
+@register.filter
+def post_marketing_suffix(post):
+    _body, suffix = _split_post_presentation(post)
+    return suffix
+
+
+@register.filter
+def post_display_hashtags(post):
+    """Merge associated and trailing hashtags for display only."""
+    tags = []
+    seen = set()
+
+    def add(name):
+        name = str(name)
+        key = name.casefold()
+
+        if name and key not in seen:
+            seen.add(key)
+            tags.append(name)
+
+    for tag in post.hashtags.all():
+        add(tag.name)
+
+    trailing = post_trailing_hashtags(post.display_content)
+
+    for token in trailing.split():
+        add(token[1:])
+
+    return tags
+
+
 DM_HTTPS_URL_RE = re.compile(
     r"(?<![\w@=/:\"'])https://[^\s<>\"']+",
     re.IGNORECASE,

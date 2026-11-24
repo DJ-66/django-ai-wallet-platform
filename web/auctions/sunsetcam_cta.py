@@ -160,3 +160,29 @@ def decorate_sunsetcam_caption(*, content, language, capture_number):
         raise ValueError("Decorated caption exceeds 2500 characters")
 
     return decorated
+
+
+def split_sunsetcam_marketing_suffix(body):
+    """Separate an exact approved marketing suffix for presentation.
+
+    The caller supplies the caption body without trailing hashtags.
+    Unrecognized content is returned unchanged.
+    """
+    source = str(body or "")
+
+    for campaign in CAMPAIGN_ORDER:
+        for variant in COPY[campaign]:
+            for language in LANGUAGES:
+                link = labeled_link(
+                    LABELS[campaign][language],
+                    DESTINATIONS[campaign],
+                )
+                suffix = variant[language] + "\n\n" + link
+                boundary = "\n\n" + suffix
+
+                if source.endswith(boundary):
+                    caption = source[:-len(boundary)]
+                    if caption.strip():
+                        return caption, suffix
+
+    return source, ""

@@ -1,0 +1,12 @@
+{% load post_content %}
+{% with tags=post|post_display_hashtags %}
+    {% if tags %}
+        <div class="post-tags">
+            {% for tag in tags %}
+                <a href="{% url 'hashtag_feed' tag|lower %}?lang={{ language|urlencode }}">
+                    #{{ tag }}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}

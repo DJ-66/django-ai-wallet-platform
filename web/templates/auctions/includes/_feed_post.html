@@ -138,25 +138,13 @@
 {% endif %}
 <div class="feed-content">
 
-{{ post.display_content|post_body|render_post_content }}
+{{ post|post_main_caption|render_post_content }}
 
 {% include "auctions/includes/_post_media.html" with post=post %}
 
-{% with trailing_tags=post.display_content|post_trailing_hashtags %}
-    {% if trailing_tags %}
-        <div class="feed-inline-tags">
-            {{ trailing_tags|link_hashtags }}
-        </div>
-    {% elif post.hashtags.all %}
-        <div class="post-tags">
-            {% for tag in post.hashtags.all %}
-                <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
-                    #{{ tag.name }}
-                </a>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
+{% include "auctions/includes/_post_marketing_suffix.html" with post=post %}
+
+{% include "auctions/includes/_post_hashtags.html" with post=post %}
 
 </div>
 

@@ -30,7 +30,7 @@
 
     {% if post.content %}
         <div class="post-detail-content">
-            {{ post.display_content|post_body|render_post_content }}
+            {{ post|post_main_caption|render_post_content }}
         </div>
     {% endif %}
 
@@ -142,21 +142,9 @@
 
 {% endif %}
 
-{% with trailing_tags=post.display_content|post_trailing_hashtags %}
-    {% if trailing_tags %}
-        <div class="feed-inline-tags">
-            {{ trailing_tags|render_post_content }}
-        </div>
-    {% endif %}
-{% endwith %}
+{% include "auctions/includes/_post_marketing_suffix.html" with post=post %}
 
-<div class="post-detail-tags">
-    {% for tag in post.hashtags.all %}
-        <a href="{% url 'hashtag_feed' tag.name %}?lang={{ language }}">
-            #{{ tag.name }}
-        </a>
-    {% endfor %}
-</div>
+{% include "auctions/includes/_post_hashtags.html" with post=post %}
 
 </div>
 

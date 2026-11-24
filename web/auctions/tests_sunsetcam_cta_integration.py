@@ -237,3 +237,77 @@ class SunsetCamCTAIntegrationTests(TestCase):
             historical.title,
             "Historical SunsetCam capture",
         )
+
+
+class SunsetCamPostLayoutIntegrationTests(SunsetCamCTAIntegrationTests):
+    """Verify WP03.2 against actual database-backed publications."""
+
+    def assert_layout(self, response):
+        self.assertEqual(response.status_code, 200)
+
+        html = response.content.decode()
+
+        media = html.index('class="feed-image"')
+        marketing = html.index('class="post-marketing-suffix"')
+        hashtags = html.index('class="post-tags"', marketing)
+
+        self.assertLess(media, marketing)
+        self.assertLess(marketing, hashtags)
+
+        self.assertEqual(
+            html.count('class="post-marketing-suffix"'), 1
+        )
+        self.assertNotIn('class="feed-inline-tags"', html)
+
+    def test_public_profile_marketing_layout(self):
+        from django.urls import reverse
+
+        post, created = self.publish()
+        self.assertTrue(created)
+
+        original = post.content
+
+        url = reverse(
+            "public_profile_root",
+            kwargs={"username": self.user.username},
+        )
+
+        for language in ("en", "es", "pt"):
+            with self.subTest(language=language):
+                response = self.client.get(
+                    url, {"lang": language}
+                )
+                self.assert_layout(response)
+
+        post.refresh_from_db()
+        self.assertEqual(post.content, original)
+
+    def test_pinned_profile_marketing_layout(self):
+        from django.urls import reverse
+
+        post, created = self.publish()
+        self.assertTrue(created)
+
+        post.is_pinned = True
+        post.save(update_fields=["is_pinned"])
+
+        response = self.client.get(
+            reverse(
+                "public_profile_root",
+                kwargs={"username": self.user.username},
+            )
+        )
+
+        self.assert_layout(response)
+
+    def test_post_detail_marketing_layout(self):
+        from django.urls import reverse
+
+        post, created = self.publish()
+        self.assertTrue(created)
+
+        response = self.client.get(
+            reverse("post_detail", args=[post.pk])
+        )
+
+        self.assert_layout(response)
