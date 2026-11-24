@@ -53,7 +53,7 @@ def creator_dm_link(username):
     )
 
     return labeled_link(
-        "Direct Message Me, Now!",
+        "DM Me Now!",
         url,
     )
 

@@ -140,7 +140,14 @@ def validate_v2_publication(
             or not lines[-3].startswith("↳ 💋❤️😘 ")
             or not lines[-3].endswith(" XOXO 💕")
             or lines[-2].strip()
-            or lines[-1].strip() != creator_dm_link(username)
+            or lines[-1].strip() not in (
+                creator_dm_link(username),
+                creator_dm_link(username).replace(
+                    "[DM Me Now!]",
+                    "[Direct Message Me, Now!]",
+                    1,
+                ),
+            )
         ):
             raise ValueError("Invalid V2 creative ending")
 
