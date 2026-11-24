@@ -14,10 +14,12 @@ from django.db import transaction
 
 from auctions.forms import FeedPostForm
 from auctions.hashtags import sync_post_hashtags
+from auctions.sunsetcam_cta import decorate_sunsetcam_caption
 from auctions.models import (
     FeedPostMedia,
     FeedPostTranslation,
     SunsetCamCapture,
+    UserProfile,
 )
 
 
@@ -473,11 +475,30 @@ class Command(BaseCommand):
 
             capture_number = capture.id
 
+            marketing_enabled = UserProfile.objects.filter(
+                user=user,
+                is_platform_account=True,
+            ).exists()
+
+            def localized_content(content, language):
+                if not marketing_enabled:
+                    return content
+
+                return decorate_sunsetcam_caption(
+                    content=content,
+                    language=language,
+                    capture_number=capture_number,
+                )
+
             post.title = (
                 f"SunsetCam #{capture_number} — "
                 + post.title
             )
-            post.save(update_fields=["title"])
+            post.content = localized_content(
+                CAPTURE_COPY[capture_type]["en"][1],
+                "en",
+            )
+            post.save(update_fields=["title", "content"])
 
             media_items = form.cleaned_data.get(
                 "images",
@@ -505,7 +526,10 @@ class Command(BaseCommand):
                             f"SunsetCam #{capture_number} — "
                             + title
                         ),
-                        "content": content,
+                        "content": localized_content(
+                            content,
+                            language,
+                        ),
                     },
                 )
 
