@@ -30,6 +30,9 @@ from auctions.ai_services.legacy_claimed_preparation import (
 from auctions.ai_services.secure_creator_media import (
     MAX_SOURCE_BYTES,
 )
+from auctions.ai_services.creator_hashtag_selection import (
+    split_creator_hashtag_pool,
+)
 from auctions.models import ScheduledPublication
 
 
@@ -399,24 +402,15 @@ class Command(BaseCommand):
                     "post_style hashtags."
                 )
 
-            identity_tag = next(
-                (
-                    tag
-                    for preferred in [
-                        "AIInfluencer",
-                        "DigitalCreator",
-                    ]
-                    for tag in hashtag_pool
-                    if tag.lower() == preferred.lower()
-                ),
-                hashtag_pool[0],
-            )
-
-            vision_pool = [
-                tag
-                for tag in hashtag_pool
-                if tag.lower() != identity_tag.lower()
-            ]
+            try:
+                identity_tag, vision_pool = split_creator_hashtag_pool(
+                    hashtag_pool,
+                    rng=rng,
+                )
+            except ValueError as exc:
+                raise CommandError(
+                    f"@{account}: {exc}"
+                ) from exc
 
             title = None
             caption = None
@@ -450,7 +444,7 @@ class Command(BaseCommand):
 
             if selected_hashtags is None:
                 selected_hashtags = rng.sample(
-                    hashtag_pool,
+                    [identity_tag] + vision_pool,
                     5,
                 )
                 title = rng.choice(TITLES)

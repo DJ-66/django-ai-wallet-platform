@@ -49,7 +49,27 @@ class CreatorMediaSelectionTests(SimpleTestCase):
 
         self.assertEqual(
             self.select(),
-            ["creator/a.png", "creator/b.webp"],
+            ["creator/a.png", "creator/c.jpg"],
+        )
+
+    def test_only_supported_image_formats_selected(self):
+        for name in (
+            "a.jpg",
+            "b.jpeg",
+            "c.png",
+            "d.webp",
+            "e.avif",
+            "f.gif",
+        ):
+            self.image(name)
+
+        self.assertEqual(
+            self.select(limit=10),
+            [
+                "creator/a.jpg",
+                "creator/b.jpeg",
+                "creator/c.png",
+            ],
         )
 
     def test_excludes_avatar(self):

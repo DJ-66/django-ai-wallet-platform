@@ -29,6 +29,16 @@ def translated(title, caption):
 
 class CreatorRecoveryGenerationTests(SimpleTestCase):
     def setUp(self):
+        super().setUp()
+
+        selector_patch = patch(
+            "auctions.ai_services.creator_hashtag_selection."
+            "random.SystemRandom.choice",
+            return_value=HASHTAGS[4],
+        )
+        selector_patch.start()
+        self.addCleanup(selector_patch.stop)
+
         self.creator = {
             "account": "TestCreator",
             "bio": "A fictional digital creator.",

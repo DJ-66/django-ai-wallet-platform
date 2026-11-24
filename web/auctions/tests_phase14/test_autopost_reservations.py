@@ -67,6 +67,129 @@ class AutoPostReservationTests(TestCase):
             scheduled_for=kwargs.get("scheduled_for", self.when),
         )
 
+    def test_legacy_six_hashtags_preserve_order(self):
+        expected = list(self.config.approved_hashtags)
+        reservation = self.reserve("legacy-six")
+
+        self.assertEqual(
+            reservation.reserved_hashtags, expected
+        )
+
+    def test_expanded_pool_reserves_exactly_six(self):
+        pool = list(self.config.approved_hashtags) + [
+            "Fashion", "Travel", "Beauty",
+            "Wellness", "Style", "Photography",
+        ]
+
+        self.config.approved_hashtags = pool
+        self.config.save(update_fields=["approved_hashtags"])
+
+        reservation = self.reserve("expanded-pool")
+
+        tags = reservation.reserved_hashtags
+
+        self.assertEqual(len(tags), 6)
+        self.assertEqual(
+            len({tag.lower() for tag in tags}), 6
+        )
+        self.assertTrue(set(tags) <= set(pool))
+
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.approved_hashtags, pool)
+
+    def test_expanded_pool_reservation_is_frozen(self):
+        self.config.approved_hashtags += [
+            "Fashion", "Travel", "Beauty",
+            "Wellness", "Style", "Photography",
+        ]
+        self.config.save(update_fields=["approved_hashtags"])
+
+        first = self.reserve("expanded-frozen")
+        original = list(first.reserved_hashtags)
+
+        self.config.approved_hashtags = [
+            "New", "Different", "Fresh",
+            "Ocean", "Sunshine", "Adventure",
+        ]
+        self.config.save(update_fields=["approved_hashtags"])
+
+        again = self.reserve("expanded-frozen")
+        first.refresh_from_db()
+
+        self.assertEqual(first.pk, again.pk)
+        self.assertEqual(first.reserved_hashtags, original)
+        self.assertEqual(again.reserved_hashtags, original)
+        self.assertEqual(
+            AutoPostPublication.objects.count(), 1
+        )
+
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.next_sequence, 2)
+
+    def test_invalid_hashtag_pools_rejected(self):
+        valid = list(self.config.approved_hashtags)
+
+        invalid_pools = [
+            valid[:5],
+            valid + ["fanz"],
+            valid + ["#Invalid"],
+            valid + [None],
+            valid + [f"Extra{i}" for i in range(7)],
+        ]
+
+        for index, pool in enumerate(invalid_pools):
+            with self.subTest(pool=pool):
+                AutoPostConfiguration.objects.filter(
+                    pk=self.config.pk
+                ).update(approved_hashtags=pool)
+
+                with self.assertRaises(ValidationError):
+                    self.reserve(f"invalid-pool-{index}")
+
+                self.config.refresh_from_db()
+                self.assertEqual(self.config.next_sequence, 1)
+                self.assertEqual(self.config.next_media_index, 0)
+                self.assertFalse(
+                    AutoPostPublication.objects.exists()
+                )
+
+    def test_expanded_selection_matches_publication_key(self):
+        from hashlib import sha256
+        from random import Random
+
+        pool = list(self.config.approved_hashtags) + [
+            "Fashion", "Travel", "Beauty",
+            "Wellness", "Style", "Photography",
+        ]
+
+        self.config.approved_hashtags = pool
+        self.config.save(update_fields=["approved_hashtags"])
+
+        request_key = "deterministic-selection"
+
+        reservation = self.reserve(request_key)
+
+        expected_key = "autopost:" + sha256(
+            f"{self.account.pk}:{request_key}".encode("utf-8")
+        ).hexdigest()
+
+        self.assertEqual(
+            reservation.publication_key, expected_key
+        )
+
+        seed = sha256(expected_key.encode("utf-8")).digest()
+        expected = Random(seed).sample(pool, 6)
+
+        self.assertEqual(
+            reservation.reserved_hashtags, expected
+        )
+
+        reservation.refresh_from_db()
+
+        self.assertEqual(
+            reservation.reserved_hashtags, expected
+        )
+
     def test_first_reservation(self):
         item = self.reserve("first")
         self.assertEqual(item.sequence_number, 1)

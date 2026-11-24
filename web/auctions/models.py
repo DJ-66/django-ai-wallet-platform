@@ -3676,16 +3676,16 @@ class AutoPostConfiguration(models.Model):
         if not isinstance(tags, list):
             errors["approved_hashtags"] = "Expected a hashtag list."
         elif tags and (
-            len(tags) != 6
+            not 6 <= len(tags) <= 12
             or any(
                 not isinstance(tag, str)
                 or re.fullmatch(r"[A-Za-z0-9_]+", tag) is None
                 for tag in tags
             )
-            or len(set(tags)) != 6
+            or len({tag.lower() for tag in tags}) != len(tags)
         ):
             errors["approved_hashtags"] = (
-                "Provide six unique hashtags without #."
+                "Provide 6 to 12 unique hashtags without #."
             )
 
         if self.interval_hours not in (24, 36, 48, 72):

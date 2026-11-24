@@ -5,6 +5,9 @@ from types import SimpleNamespace
 
 from django.core.management.base import BaseCommand, CommandError
 
+from auctions.ai_services.creator_hashtag_selection import (
+    split_creator_hashtag_pool,
+)
 from auctions.ai_services.creator_copy import (
     generate_creator_post_copy,
 )
@@ -180,20 +183,12 @@ class Command(BaseCommand):
 
         hashtag_pool = creator["post_style"]["hashtags"]
 
-        identity_tag = next(
-            (
-                tag
-                for preferred in ("AIInfluencer", "DigitalCreator")
-                for tag in hashtag_pool
-                if tag.lower() == preferred.lower()
-            ),
-            hashtag_pool[0],
-        )
-
-        approved = [
-            tag for tag in hashtag_pool
-            if tag.lower() != identity_tag.lower()
-        ]
+        try:
+            identity_tag, approved = split_creator_hashtag_pool(
+                hashtag_pool,
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         if publication.status == "published":
             if (

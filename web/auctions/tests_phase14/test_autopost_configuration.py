@@ -19,6 +19,43 @@ class AutoPostConfigurationTests(TestCase):
         values.update(overrides)
         return AutoPostConfiguration(**values)
 
+    def test_valid_hashtag_pool_sizes(self):
+        for size in (0, 6, 7, 8, 9, 10, 11, 12):
+            with self.subTest(size=size):
+                self.config(
+                    approved_hashtags=[
+                        f"Tag{i}" for i in range(size)
+                    ]
+                ).full_clean()
+
+    def test_invalid_hashtag_pools(self):
+        valid = [f"Tag{i}" for i in range(6)]
+
+        invalid = [
+            valid[:1],
+            valid[:5],
+            [f"Tag{i}" for i in range(13)],
+            valid + ["tag0"],
+            valid + ["Tag0"],
+            valid + ["#Invalid"],
+            valid + ["Two Words"],
+            valid + [None],
+            valid + [123],
+            "not-a-list",
+        ]
+
+        for pool in invalid:
+            with self.subTest(pool=pool):
+                with self.assertRaises(ValidationError) as error:
+                    self.config(
+                        approved_hashtags=pool
+                    ).full_clean()
+
+                self.assertIn(
+                    "approved_hashtags",
+                    error.exception.message_dict,
+                )
+
     def test_defaults_are_inert(self):
         config = self.config()
         config.full_clean()

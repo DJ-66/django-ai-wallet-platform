@@ -115,15 +115,30 @@ def reserve_autopost(*, account_id, request_key, scheduled_for):
     if not asset.image.storage.exists(asset.image.name):
         raise ValidationError("Selected AutoPost image is missing.")
 
+    import hashlib
+    import random
+    import re
+
     tags = config.approved_hashtags
     if (
         not isinstance(tags, list)
-        or len(tags) != 6
-        or len(set(tags)) != 6
+        or not 6 <= len(tags) <= 12
+        or any(
+            not isinstance(tag, str)
+            or re.fullmatch(r"[A-Za-z0-9_]+", tag) is None
+            for tag in tags
+        )
+        or len({tag.lower() for tag in tags}) != len(tags)
     ):
         raise ValidationError(
-            "Six approved hashtags are required for reservation."
+            "Provide 6 to 12 unique approved hashtags for reservation."
         )
+
+    if len(tags) > 6:
+        seed = hashlib.sha256(
+            publication_key.encode("utf-8")
+        ).digest()
+        tags = random.Random(seed).sample(tags, 6)
 
     sequence = config.next_sequence
 

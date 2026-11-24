@@ -226,7 +226,13 @@ class GenerateAIPublicationsTests(TestCase):
             if vision_error is not None:
                 generate_copy.side_effect = vision_error
             else:
-                generate_copy.return_value = vision_result
+                def approved_result(**kwargs):
+                    return {
+                        **vision_result,
+                        "hashtags": kwargs["approved_hashtags"][:4],
+                    }
+
+                generate_copy.side_effect = approved_result
 
             call_command(
                 "generate_ai_publications",
@@ -277,7 +283,29 @@ class GenerateAIPublicationsTests(TestCase):
         ]
 
         self.assertEqual(len(hashtags), 6)
-        self.assertIn("#AIInfluencer", hashtags)
+        self.assertEqual(
+            len({tag.lower() for tag in hashtags}), 6
+        )
+
+        creator_calls = [
+            call for call in generate_copy.call_args_list
+            if call.kwargs["account"] == publication.creator.username
+        ]
+        self.assertEqual(len(creator_calls), 1)
+
+        approved = creator_calls[0].kwargs["approved_hashtags"]
+
+        self.assertEqual(
+            hashtags[:4],
+            [f"#{tag}" for tag in approved[:4]],
+        )
+
+        self.assertNotIn(
+            hashtags[4].lstrip("#").lower(),
+            {tag.lower() for tag in approved},
+        )
+
+        self.assertEqual(hashtags[-1], "#FANZ")
         self.assertIn("#FANZ", hashtags)
 
     def test_vision_failure_defers_publication(self):
@@ -303,12 +331,7 @@ class GenerateAIPublicationsTests(TestCase):
             return {
                 "title": f"{account} has a story",
                 "caption": "A creator-specific moment.",
-                "hashtags": [
-                    "Lifestyle",
-                    "DigitalCreator",
-                    "CreatorLife",
-                    "Style",
-                ],
+                "hashtags": kwargs["approved_hashtags"][:4],
             }
 
         with (

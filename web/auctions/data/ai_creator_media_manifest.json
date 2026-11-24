@@ -20,7 +20,13 @@
           "MelaninBeauty",
           "Lifestyle",
           "Style",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "PortraitPhotography",
+          "Fashion",
+          "Elegance",
+          "Confidence",
+          "Glamour"
         ]
       }
     },
@@ -42,7 +48,13 @@
           "SummerVibes",
           "BeachLife",
           "AIArt",
-          "DigitalCreator"
+          "DigitalCreator",
+          "Ocean",
+          "Beachwear",
+          "TropicalVibes",
+          "ResortWear",
+          "Sunshine",
+          "Vacation"
         ]
       }
     },
@@ -64,7 +76,13 @@
           "Editorial",
           "Style",
           "CreativePortrait",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "PortraitPhotography",
+          "Fashion",
+          "Elegance",
+          "Modeling",
+          "CreativeStyle"
         ]
       }
     },
@@ -87,7 +105,13 @@
           "Selfie",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Ocean",
+          "Travel",
+          "BeachLife",
+          "Vacation",
+          "Sunshine",
+          "Adventure"
         ]
       }
     },
@@ -109,7 +133,13 @@
           "SoftAesthetic",
           "Style",
           "AIInfluencer",
-          "DigitalCreator"
+          "DigitalCreator",
+          "RomanticStyle",
+          "VintageFashion",
+          "PastelStyle",
+          "OutfitInspiration",
+          "Beauty",
+          "Aesthetic"
         ]
       }
     },
@@ -131,7 +161,13 @@
           "Wellness",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Workout",
+          "GymLife",
+          "Strength",
+          "HealthyLiving",
+          "Motivation",
+          "Activewear"
         ]
       }
     },
@@ -153,7 +189,13 @@
           "Lifestyle",
           "Style",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "CoffeeLovers",
+          "Fashion",
+          "PortraitPhotography",
+          "EverydayLife",
+          "Beauty",
+          "CasualStyle"
         ]
       }
     },
@@ -175,7 +217,13 @@
           "Travel",
           "Style",
           "AIInfluencer",
-          "DigitalCreator"
+          "DigitalCreator",
+          "Sunshine",
+          "Adventure",
+          "Vacation",
+          "Photography",
+          "Fashion",
+          "Elegance"
         ]
       }
     },
@@ -197,7 +245,13 @@
           "Lifestyle",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "NaturalHair",
+          "HairInspiration",
+          "Beauty",
+          "PortraitPhotography",
+          "Fashion",
+          "CasualStyle"
         ]
       }
     },
@@ -219,7 +273,13 @@
           "Lifestyle",
           "Portrait",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "Elegance",
+          "Photography",
+          "OutfitInspiration",
+          "Confidence"
         ]
       }
     },
@@ -241,7 +301,13 @@
           "Style",
           "Portrait",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "Photography",
+          "EverydayLife",
+          "CasualStyle",
+          "Confidence"
         ]
       }
     },
@@ -265,7 +331,13 @@
           "SummerVibes",
           "Selfie",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "BeachLife",
+          "Travel",
+          "Photography",
+          "Sunshine",
+          "CasualStyle",
+          "ContentCreation"
         ]
       }
     },
@@ -288,7 +360,13 @@
           "SummerVibes",
           "Selfie",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "BeachLife",
+          "Vacation",
+          "Photography",
+          "EverydayLife",
+          "ContentCreation"
         ]
       }
     },
@@ -311,7 +389,13 @@
           "Selfie",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Travel",
+          "BeachLife",
+          "Sunshine",
+          "Fashion",
+          "Photography",
+          "Adventure"
         ]
       }
     },
@@ -333,7 +417,13 @@
           "Lifestyle",
           "SoftAesthetic",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "KFashion",
+          "Beauty",
+          "MinimalStyle",
+          "StreetStyle",
+          "Photography",
+          "OutfitInspiration"
         ]
       }
     },
@@ -355,7 +445,13 @@
           "Lifestyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "BodyPositivity",
+          "Fashion",
+          "Beauty",
+          "SelfLove",
+          "OutfitInspiration",
+          "Elegance"
         ]
       }
     },
@@ -378,7 +474,13 @@
           "Selfie",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "BeachLife",
+          "Travel",
+          "Sunshine",
+          "Fashion",
+          "Photography",
+          "Vacation"
         ]
       }
     },
@@ -400,7 +502,13 @@
           "Lifestyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "BodyPositivity",
+          "Fashion",
+          "Glamour",
+          "SelfLove",
+          "Beauty",
+          "OutfitInspiration"
         ]
       }
     },
@@ -423,7 +531,13 @@
           "Style",
           "CreativePortrait",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "Photography",
+          "Editorial",
+          "Elegance",
+          "CreativeStyle"
         ]
       }
     },
@@ -445,7 +559,13 @@
           "Lifestyle",
           "Fashion",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Travel",
+          "MediterraneanVibes",
+          "SummerVibes",
+          "Elegance",
+          "ResortWear",
+          "Photography"
         ]
       }
     },
@@ -467,7 +587,13 @@
           "Lifestyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "SelfLove",
+          "Glamour",
+          "OutfitInspiration",
+          "Photography"
         ]
       }
     },
@@ -489,7 +615,13 @@
           "Lifestyle",
           "Fashion",
           "AIInfluencer",
-          "DigitalCreator"
+          "DigitalCreator",
+          "MinimalStyle",
+          "Beauty",
+          "Skincare",
+          "EverydayElegance",
+          "OutfitInspiration",
+          "Aesthetic"
         ]
       }
     },
@@ -512,7 +644,13 @@
           "CleanGirl",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "GamingCommunity",
+          "Esports",
+          "GamingSetup",
+          "GeekCulture",
+          "CasualStyle",
+          "TechLife"
         ]
       }
     },
@@ -534,7 +672,13 @@
           "CurvyStyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "BodyPositivity",
+          "SelfLove",
+          "HairInspiration",
+          "Glamour"
         ]
       }
     },
@@ -556,7 +700,13 @@
           "Confidence",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Workout",
+          "GymLife",
+          "Strength",
+          "Wellness",
+          "Activewear",
+          "Motivation"
         ]
       }
     },
@@ -578,7 +728,13 @@
           "Confidence",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "Elegance",
+          "SelfLove",
+          "Photography",
+          "OutfitInspiration"
         ]
       }
     },
@@ -600,7 +756,13 @@
           "Fashion",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Elegance",
+          "Glamour",
+          "Beauty",
+          "Editorial",
+          "CreativeStyle",
+          "Photography"
         ]
       }
     },
@@ -622,7 +784,13 @@
           "Lifestyle",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Elegance",
+          "Glamour",
+          "LuxuryLifestyle",
+          "DesignerStyle",
+          "Beauty",
+          "OutfitInspiration"
         ]
       }
     },
@@ -644,7 +812,13 @@
           "CreativePortrait",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "AcademicStyle",
+          "BookLovers",
+          "SmartStyle",
+          "Editorial",
+          "Photography",
+          "Elegance"
         ]
       }
     },
@@ -666,7 +840,13 @@
           "Lifestyle",
           "Fashion",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "Glamour",
+          "Elegance",
+          "OutfitInspiration",
+          "Photography",
+          "Editorial"
         ]
       }
     },
@@ -688,7 +868,13 @@
           "Style",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Workout",
+          "GymLife",
+          "Wellness",
+          "Strength",
+          "Activewear",
+          "Motivation"
         ]
       }
     },
@@ -710,7 +896,13 @@
           "Lifestyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Workout",
+          "GymLife",
+          "Wellness",
+          "OutdoorFitness",
+          "Activewear",
+          "HealthyLiving"
         ]
       }
     },
@@ -732,7 +924,13 @@
           "Lifestyle",
           "Fashion",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "HairInspiration",
+          "Elegance",
+          "Photography",
+          "CasualStyle",
+          "OutfitInspiration"
         ]
       }
     },
@@ -754,7 +952,13 @@
           "BlondeStyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Fashion",
+          "Beauty",
+          "BodyPositivity",
+          "SelfLove",
+          "Glamour",
+          "OutfitInspiration"
         ]
       }
     },
@@ -776,7 +980,13 @@
           "Lifestyle",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "PortraitPhotography",
+          "Elegance",
+          "Glamour",
+          "Confidence",
+          "OutfitInspiration"
         ]
       }
     },
@@ -798,7 +1008,13 @@
           "Fashion",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "CreativeStyle",
+          "Editorial",
+          "Beauty",
+          "Photography",
+          "OutfitInspiration",
+          "Elegance"
         ]
       }
     },
@@ -820,7 +1036,13 @@
           "Lifestyle",
           "Confidence",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Workout",
+          "GymLife",
+          "Wellness",
+          "Strength",
+          "Activewear",
+          "HealthyLiving"
         ]
       }
     },
@@ -842,7 +1064,13 @@
           "Fashion",
           "PolishedStyle",
           "AIInfluencer",
-          "DigitalCreator"
+          "DigitalCreator",
+          "Elegance",
+          "MinimalStyle",
+          "LuxuryLifestyle",
+          "Beauty",
+          "DesignerStyle",
+          "OutfitInspiration"
         ]
       }
     },
@@ -864,7 +1092,13 @@
           "Fashion",
           "Lifestyle",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "Glamour",
+          "Confidence",
+          "Photography",
+          "Elegance",
+          "OutfitInspiration"
         ]
       }
     },
@@ -887,7 +1121,13 @@
           "Lifestyle",
           "Style",
           "AIInfluencer",
-          "DigitalCreator"
+          "DigitalCreator",
+          "MinimalStyle",
+          "Beauty",
+          "Skincare",
+          "PastelStyle",
+          "EverydayElegance",
+          "Aesthetic"
         ]
       }
     },
@@ -910,7 +1150,13 @@
           "Fashion",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "Confidence",
+          "PortraitPhotography",
+          "Elegance",
+          "Glamour",
+          "OutfitInspiration"
         ]
       }
     },
@@ -933,7 +1179,13 @@
           "Fashion",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "StreetStyle",
+          "Editorial",
+          "Photography",
+          "Elegance",
+          "OutfitInspiration"
         ]
       }
     },
@@ -956,7 +1208,13 @@
           "Fashion",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Glamour",
+          "Beauty",
+          "Confidence",
+          "MakeupStyle",
+          "OutfitInspiration",
+          "Photography"
         ]
       }
     },
@@ -979,7 +1237,13 @@
           "Fashion",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "HairInspiration",
+          "StreetStyle",
+          "Elegance",
+          "Photography",
+          "OutfitInspiration"
         ]
       }
     },
@@ -1002,7 +1266,13 @@
           "Lifestyle",
           "AIInfluencer",
           "DigitalCreator",
-          "CreatorLife"
+          "CreatorLife",
+          "Beauty",
+          "Editorial",
+          "Glamour",
+          "Elegance",
+          "Photography",
+          "CreativeStyle"
         ]
       }
     },
@@ -1024,7 +1294,13 @@
           "BeachLife",
           "Poolside",
           "AIArt",
-          "DigitalCreator"
+          "DigitalCreator",
+          "Bikini",
+          "Beachwear",
+          "Ocean",
+          "ResortWear",
+          "TropicalVibes",
+          "Vacation"
         ]
       }
     }

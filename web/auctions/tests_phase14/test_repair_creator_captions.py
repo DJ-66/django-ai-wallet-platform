@@ -24,6 +24,16 @@ User = get_user_model()
 
 class CreatorCaptionRecoveryPreviewTests(TestCase):
     def setUp(self):
+        super().setUp()
+
+        selector_patch = patch(
+            "auctions.ai_services.creator_hashtag_selection."
+            "random.SystemRandom.choice",
+            return_value="AIInfluencer",
+        )
+        selector_patch.start()
+        self.addCleanup(selector_patch.stop)
+
         self.tempdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tempdir.cleanup)
 
