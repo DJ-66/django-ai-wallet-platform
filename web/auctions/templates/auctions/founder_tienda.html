@@ -1030,7 +1030,22 @@
             name="wanted_handle"
             type="text"
             minlength="3"
-            maxlength="4"
+            pattern="@?[A-Za-z0-9.+_\-]{3,4}"
+            onbeforeinput="
+              if (event.inputType.startsWith('insert')) {
+                const inserted = event.data ??
+                  event.dataTransfer?.getData('text/plain');
+                if (inserted != null) {
+                  const next =
+                    this.value.slice(0, this.selectionStart) +
+                    inserted +
+                    this.value.slice(this.selectionEnd);
+                  if (!/^@?[A-Za-z0-9.+_\-]{0,4}$/.test(next)) {
+                    event.preventDefault();
+                  }
+                }
+              }
+            "
             required
             placeholder="@mia"
           >
