@@ -681,6 +681,30 @@ def post_marketing_suffix(post):
 
 
 @register.filter
+def post_marketing_flair(value):
+    """Decorate a recognized marketing suffix for display only."""
+    source = str(value or "")
+    message, separator, link = source.rpartition("\n\n")
+
+    if not separator or not message.strip() or not link.strip():
+        return source
+
+    prefix = "↳ 💋❤️😘 "
+    signoff = "XOXO 💕"
+
+    if not message.startswith(prefix):
+        message = prefix + message
+
+    if not message.endswith(signoff):
+        if not message.rstrip().endswith("🔥"):
+            message = message.rstrip() + " 🔥"
+
+        message += " " + signoff
+
+    return message + separator + link
+
+
+@register.filter
 def post_display_hashtags(post):
     """Merge associated and trailing hashtags for display only."""
     tags = []

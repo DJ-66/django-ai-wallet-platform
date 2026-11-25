@@ -328,11 +328,17 @@ def _search_destinations(query, limit):
         },
         {
             "id": "founder_tienda",
-            "title": "Founder Tienda",
+            "title": "FANZ Bakery",
             "aliases": [
                 # FANZ / Founder terminology
                 "tienda",
                 "founder tienda",
+                "fanz bakery",
+                "coin bakery",
+                "bakery",
+                "find your name",
+                "find your @name",
+                "coin rebrands",
                 "founder store",
                 "founder shop",
                 "founder market",

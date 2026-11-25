@@ -255,9 +255,44 @@ class PlatformMediaBrowserTests(PlatformMediaStorageTests):
             args=[self.other.pk],
         )
 
+        from django.conf import settings
+
+        before = list(
+            PlatformMediaAsset.objects.order_by("pk").values()
+        )
+
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, 404)
+        self.assertRedirects(
+            response,
+            "https://fanz.to/auctions/tag/404/",
+            status_code=302,
+            fetch_redirect_response=False,
+        )
+
+        middleware = [
+            entry for entry in settings.MIDDLEWARE
+            if entry != (
+                "core.fanz_404_redirect."
+                "Fanz404RedirectMiddleware"
+            )
+        ]
+
+        with override_settings(MIDDLEWARE=middleware):
+            from django.test import Client
+
+            client = Client()
+            client.force_login(self.admin)
+
+            response = client.get(url)
+            self.assertEqual(response.status_code, 404)
+
+        self.assertEqual(
+            list(
+                PlatformMediaAsset.objects.order_by("pk").values()
+            ),
+            before,
+        )
 
 
 class PlatformMediaToggleTests(PlatformMediaBrowserTests):

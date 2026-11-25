@@ -1363,6 +1363,54 @@ class FeedPostLocalizedDiscoveryTests(TestCase):
                     f"/media/feed/translations/{lang}.webp",
                 )
 
+    def test_discover_fanz_banner_respects_requested_language(self):
+        from django.urls import reverse
+        from auctions.models import Hashtag
+
+        tag, _ = Hashtag.objects.get_or_create(
+            name="discover_fanz"
+        )
+        self.post.hashtags.add(tag)
+
+        url = reverse(
+            "hashtag_feed",
+            args=[tag.name],
+        )
+
+        languages = ("en", "es", "pt")
+
+        for requested in languages:
+            for browser in languages:
+                with self.subTest(
+                    requested=requested,
+                    browser=browser,
+                ):
+                    response = self.client.get(
+                        url,
+                        {"lang": requested},
+                        HTTP_ACCEPT_LANGUAGE=browser,
+                    )
+
+                    self.assertEqual(response.status_code, 200)
+
+                    self.assertContains(
+                        response,
+                        f"auctions/img/{requested.upper()}-50-FREE.webp",
+                        count=1,
+                    )
+
+                    self.assertContains(
+                        response,
+                        f"/media/feed/translations/{requested}.webp",
+                    )
+
+                    for other in languages:
+                        if other != requested:
+                            self.assertNotContains(
+                                response,
+                                f"auctions/img/{other.upper()}-50-FREE.webp",
+                            )
+
     def test_hashtag_discovery_remains_based_on_original_media(self):
         from auctions.services import (
             get_public_hashtag_posts,

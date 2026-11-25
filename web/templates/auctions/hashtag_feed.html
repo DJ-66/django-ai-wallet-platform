@@ -50,7 +50,7 @@
 
         {% if hashtag.name == "discover_fanz" %}
 
-    {% if LANGUAGE_CODE == "es" %}
+    {% if language == "es" %}
         <img
             src="{% static 'auctions/img/ES-50-FREE.webp' %}"
             alt="{% trans '50 free credits on Fanz.to' %}"
@@ -59,7 +59,7 @@
             height="936"
         >
 
-    {% elif LANGUAGE_CODE == "pt" %}
+    {% elif language == "pt" %}
         <img
             src="{% static 'auctions/img/PT-50-FREE.webp' %}"
             alt="{% trans '50 free credits on Fanz.to' %}"
