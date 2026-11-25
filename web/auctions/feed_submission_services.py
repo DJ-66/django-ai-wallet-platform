@@ -44,7 +44,10 @@ def verify_existing_submission(*, submission, creator, fingerprint):
             "Submission token was reused with different content."
         )
 
-    if submission.post_id is None:
+    if (
+        submission.post_id is None
+        or submission.post.deleted_at is not None
+    ):
         raise FeedSubmissionRejected(
             "This submission has already been consumed."
         )

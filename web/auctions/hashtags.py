@@ -122,3 +122,15 @@ def sync_auction_hashtags(auction, hashtag_text=""):
             + tag.auctions.count()
         )
         tag.save(update_fields=["usage_count"])
+
+
+def refresh_hashtag_usage_counts(hashtag_ids):
+    """Refresh stored usage after a post visibility change."""
+    for tag in Hashtag.objects.filter(
+        pk__in=hashtag_ids
+    ).order_by("pk"):
+        tag.usage_count = (
+            tag.posts.count()
+            + tag.auctions.count()
+        )
+        tag.save(update_fields=["usage_count"])

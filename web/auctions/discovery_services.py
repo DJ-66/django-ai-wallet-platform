@@ -141,6 +141,7 @@ def _get_discovery_creator_queryset(hub):
         .filter(
             feedpost__hashtags=hashtag,
             feedpost__is_public=True,
+            feedpost__deleted_at__isnull=True,
         )
         .select_related("profile")
         .annotate(
@@ -149,6 +150,7 @@ def _get_discovery_creator_queryset(hub):
                 filter=Q(
                     feedpost__hashtags=hashtag,
                     feedpost__is_public=True,
+                    feedpost__deleted_at__isnull=True,
                 ),
             ),
         )

@@ -5661,8 +5661,9 @@ def translate_post(request, post_id):
     )
 
 @login_required
+@transaction.atomic
 def toggle_post_like(request, post_id):
-    post = get_object_or_404(FeedPost, id=post_id)
+    post = get_object_or_404(FeedPost.objects.select_for_update(), id=post_id)
 
     like, created = PostLike.objects.get_or_create(
         post=post,
@@ -5702,7 +5703,7 @@ def toggle_post_like(request, post_id):
 @login_required
 @transaction.atomic
 def unlock_feed_post(request, post_id):
-    post = get_object_or_404(FeedPost, id=post_id)
+    post = get_object_or_404(FeedPost.objects.select_for_update(), id=post_id)
 
     if post.user == request.user:
         messages.info(request, "You already own this post.")
@@ -5913,8 +5914,9 @@ def quick_tip_user(request, wallet_code):
     })
 
 @login_required
+@transaction.atomic
 def toggle_pin_post(request, post_id):
-    post = get_object_or_404(FeedPost, id=post_id, user=request.user)
+    post = get_object_or_404(FeedPost.objects.select_for_update(), id=post_id, user=request.user)
 
     if request.method == "POST":
         if post.is_pinned:
@@ -5935,32 +5937,60 @@ def toggle_pin_post(request, post_id):
 @login_required
 @require_POST
 def delete_feed_post(request, post_id):
+    from django.utils import timezone
+
     with transaction.atomic():
         post = get_object_or_404(
-            FeedPost,
+            FeedPost.all_objects.select_for_update(),
             id=post_id,
             user=request.user,
         )
 
-        ScheduledPublication.objects.filter(
-            feed_post=post,
-            creator=request.user,
-        ).delete()
+        if post.deleted_at is None:
+            if post.is_paid or PostUnlock.objects.filter(
+                post=post
+            ).exists():
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": (
+                            "Paid post deletion requires review."
+                        ),
+                    },
+                    status=409,
+                )
 
-        post.delete()
+            from .hashtags import refresh_hashtag_usage_counts
 
-    return redirect(
-        request.META.get(
-            "HTTP_REFERER",
-            "feed_home",
-        )
-    )
+            affected_hashtags = list(
+                post.hashtags.values_list("pk", flat=True)
+            )
 
+            post.deleted_at = timezone.now()
+            post.is_public = False
+            post.is_pinned = False
+
+            post.save(update_fields=[
+                "deleted_at",
+                "is_public",
+                "is_pinned",
+            ])
+
+            post.media.filter(is_active=True).update(
+                is_active=False,
+            )
+
+            refresh_hashtag_usage_counts(
+                affected_hashtags
+            )
+
+    return redirect("feed_home")
 
 @login_required
+@transaction.atomic
 def add_post_comment(request, post_id):
 
-    post = get_object_or_404(FeedPost, id=post_id)
+    post = get_object_or_404(FeedPost.objects.select_for_update(), id=post_id)
 
     if request.method == "POST":
 

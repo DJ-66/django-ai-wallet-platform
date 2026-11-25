@@ -220,6 +220,42 @@ class AllTagsBillingTests(TestCase):
         )
 
 
+    def test_soft_deleted_post_preserves_cooldown(self):
+        from django.test import RequestFactory
+        from auctions.views import delete_feed_post
+
+        post = self.make_post()
+
+        promotion = purchase_alltags_promotion(
+            creator=self.creator,
+            post=post,
+        )
+
+        request = RequestFactory().post("/")
+        request.user = self.creator
+
+        response = delete_feed_post(request, post.pk)
+
+        self.assertEqual(response.status_code, 302)
+
+        promotion.refresh_from_db()
+
+        self.assertEqual(promotion.post_id, post.pk)
+        self.assertIsNotNone(promotion.post.deleted_at)
+
+        with self.assertRaises(ValidationError):
+            purchase_alltags_promotion(
+                creator=self.creator,
+                post=self.make_post(),
+            )
+
+        self.wallet.refresh_from_db()
+
+        self.assertEqual(self.wallet.credits, 80)
+        self.assertEqual(
+            AllTagsPromotion.objects.count(), 1
+        )
+
     def test_outer_transaction_rollback(self):
         post = self.make_post()
 

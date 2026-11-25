@@ -1184,7 +1184,19 @@ class Hashtag(models.Model):
     def __str__(self):
         return f"#{self.name}"
 
+class ActiveFeedPostManager(models.Manager):
+    """Exclude soft-deleted posts from normal application access."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            deleted_at__isnull=True,
+        )
+
+
 class FeedPost(models.Model):
+    objects = ActiveFeedPostManager()
+    all_objects = models.Manager()
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     title = models.CharField(
@@ -1220,8 +1232,16 @@ class FeedPost(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
     class Meta:
         ordering = ["-created_at"]
+        default_manager_name = "objects"
+        base_manager_name = "all_objects"
 
     def __str__(self):
         return f"{self.user.username}: {self.content[:40]}"
