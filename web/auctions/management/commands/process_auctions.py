@@ -1,7 +1,6 @@
 from datetime import timedelta
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -148,11 +147,6 @@ class Command(BaseCommand):
                 listing=listing,
             )
             founder_closed_count += 1
-
-        if founder_closed_count:
-            call_command(
-                "replenish_founder_tienda",
-            )
 
         relist_cutoff = now - timedelta(
             days=settings.AUCTION_RELIST_DAYS

@@ -1,8 +1,19 @@
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
+from auctions.founder_services import PROTECTED_FOUNDER_HANDLES
 
-from auctions.founder_tienda import replenish_founder_tienda
+from auctions.founder_blind_replenishment import (
+    lock_tienda_replenishment,
+    _eligible_asset,
+)
+from auctions.founder_tienda import (
+    TIENDA_FIXED_TARGET,
+    TIENDA_BLIND_TARGET,
+    TIENDA_SWAMP_TARGET,
+    replenish_founder_tienda,
+)
 from auctions.models import FounderAccount, FounderListing
 from auctions.utils import get_system_wallet
 
@@ -92,6 +103,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        lock_tienda_replenishment()
+
         platform_wallet = get_system_wallet()
         platform_user = platform_wallet.user
 
@@ -119,6 +132,9 @@ class Command(BaseCommand):
         existing_assets = 0
 
         for handle in curated:
+            if handle.strip().casefold() in PROTECTED_FOUNDER_HANDLES:
+                continue
+
             # Do not silently seize a username already used by a
             # non-platform Django account.
             existing_user = (
@@ -137,13 +153,17 @@ class Command(BaseCommand):
                 )
                 continue
 
-            asset, created = FounderAccount.objects.get_or_create(
-                handle=handle,
-                defaults={
-                    "owner_root": platform_user,
-                    "status": FounderAccount.STATUS_TREASURY,
-                    "floor_price_credits": 200,
-                },
+            asset, created = (
+                FounderAccount.objects
+                .select_for_update()
+                .get_or_create(
+                    handle=handle,
+                    defaults={
+                        "owner_root": platform_user,
+                        "status": FounderAccount.STATUS_TREASURY,
+                        "floor_price_credits": 200,
+                    },
+                )
             )
 
             if created:
@@ -157,61 +177,35 @@ class Command(BaseCommand):
 
             existing_assets += 1
 
-            # Existing private property must never be pulled back
-            # into Treasury by a replenishment command.
-            if (
-                asset.owner_root_id is not None
-                and asset.owner_root_id != platform_user.pk
-            ):
-                self.stdout.write(
-                    self.style.WARNING(
-                    f"Skipping @{handle}: privately owned by "
-                    f"@{asset.owner_root.username}."
-                )
-            )
-            continue
+            # Existing property state is authoritative.
+            # Provisioning must never reclaim ownership,
+            # reset reservations or alter an existing floor.
 
-            # If the asset already has a live listing, leave its
-            # listing/state untouched.
-            has_active_listing = FounderListing.objects.filter(
-                founder_account=asset,
-                status=FounderListing.STATUS_ACTIVE,
-            ).exists()
-
-            if not has_active_listing:
-                asset.owner_root = platform_user
-                asset.status = FounderAccount.STATUS_TREASURY
-
-                if asset.floor_price_credits < 200:
-                    asset.floor_price_credits = 200
-
-                asset.save(
-                    update_fields=[
-                        "owner_root",
-                        "status",
-                        "floor_price_credits",
-                        "updated_at",
-                    ]
-                )
         def eligible_handles(handles):
-            eligible = set(
+            assets = (
                 FounderAccount.objects
                 .filter(
                     handle__in=handles,
                     owner_root=platform_user,
+                    current_account__isnull=True,
                     status__in=[
                         FounderAccount.STATUS_AVAILABLE,
                         FounderAccount.STATUS_TREASURY,
                     ],
                 )
-                .exclude(
-                    listings__status=FounderListing.STATUS_ACTIVE,
-                )
-                .values_list(
-                    "handle",
-                    flat=True,
-                )
+                .order_by("pk")
+                .select_for_update(skip_locked=True)
             )
+
+            eligible = {
+                asset.handle
+                for asset in assets
+                if _eligible_asset(
+                    asset,
+                    platform_user.pk,
+                    timezone.now(),
+                )
+            }
 
             return [
                 handle
@@ -292,19 +286,18 @@ class Command(BaseCommand):
         )
 
         if (
-            fixed_count != 10
-            or blind_count != 10
-            or wasteland_count != 10
-            or total_count != 30
+            fixed_count < TIENDA_FIXED_TARGET
+            or blind_count < TIENDA_BLIND_TARGET
+            or wasteland_count < TIENDA_SWAMP_TARGET
         ):
             raise CommandError(
                 "Founder Tienda did not reach the expected "
-                "10 / 10 / 10 inventory target."
+                "minimum inventory targets."
             )
 
         self.stdout.write("")
         self.stdout.write(
             self.style.SUCCESS(
-                "FOUNDER TIENDA 10 / 10 / 10: READY"
+                "FOUNDER TIENDA MINIMUM TARGETS: READY"
             )
         )
