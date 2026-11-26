@@ -765,16 +765,42 @@ def prepare_feed_posts(posts, language=None):
     canonical post fields as fallbacks.
     """
 
+    from auctions.legacy_marketing_presentation import (
+        recognize_legacy_founder_marketing,
+    )
+    from auctions.templatetags.post_content import post_body
+
+    from django.db.models import QuerySet, prefetch_related_objects
+
+    relations = (
+        "user",
+        "user__profile",
+        "scheduled_publication",
+    )
+
+    if isinstance(posts, QuerySet):
+        posts = posts.select_related(*relations)
+    else:
+        posts = list(posts)
+        prefetch_related_objects(posts, *relations)
+
     if language:
         language = str(language).lower().split("-")[0]
 
         if language not in ("en", "es", "pt"):
             language = "en"
 
-        posts = posts.prefetch_related(
-            "translations",
-            "media",
-        )
+        if isinstance(posts, QuerySet):
+            posts = posts.prefetch_related(
+                "translations",
+                "media",
+            )
+        else:
+            prefetch_related_objects(
+                posts,
+                "translations",
+                "media",
+            )
 
     prepared_posts = list(posts)
 
@@ -825,6 +851,22 @@ def prepare_feed_posts(posts, language=None):
                         post.localized_cover_url = (
                             translation.image.url
                         )
+
+        post.legacy_marketing_presentation = None
+
+        if post.is_public and not post.is_paid:
+            publication = getattr(
+                post, "scheduled_publication", None
+            )
+
+            if publication is not None:
+                post.legacy_marketing_presentation = (
+                    recognize_legacy_founder_marketing(
+                        post=post,
+                        publication=publication,
+                        body=post_body(post.display_content),
+                    )
+                )
 
     return prepared_posts
 

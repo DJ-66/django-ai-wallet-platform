@@ -101,7 +101,9 @@ def _inside_www_token(text, start, end):
     return "www." in text[token_start:token_end].lower()
 
 
-def _link_text(text, *, link_mentions=True):
+def _link_text(
+    text, *, link_mentions=True, excluded_mentions=(),
+):
     """Link safe standalone URLs, FANZ mentions, and hashtags."""
     matches = []
 
@@ -125,6 +127,9 @@ def _link_text(text, *, link_mentions=True):
         )
 
     for match in (MENTION_RE.finditer(text) if link_mentions else ()):
+        if match.group(1).casefold() in excluded_mentions:
+            continue
+
         if _inside_www_token(text, match.start(), match.end()):
             continue
 
@@ -280,7 +285,9 @@ class _FanzTextLinkifier(HTMLParser):
         "br",
     }
 
-    def __init__(self, *, link_mentions=True):
+    def __init__(
+        self, *, link_mentions=True, excluded_mentions=(),
+    ):
         super().__init__(
             convert_charrefs=False,
         )
@@ -288,6 +295,7 @@ class _FanzTextLinkifier(HTMLParser):
         self.parts = []
         self.skip_depth = 0
         self.link_mentions = link_mentions
+        self.excluded_mentions = excluded_mentions
         self.text_buffer = []
 
     def _flush_text(self):
@@ -301,7 +309,11 @@ class _FanzTextLinkifier(HTMLParser):
             self.parts.append(str(escape(text)))
         else:
             self.parts.append(
-                _link_text(text, link_mentions=self.link_mentions)
+                _link_text(
+                    text,
+                    link_mentions=self.link_mentions,
+                    excluded_mentions=self.excluded_mentions,
+                )
             )
 
     def _attrs_html(self, attrs):
@@ -404,8 +416,13 @@ class _FanzTextLinkifier(HTMLParser):
         )
 
 
-def _link_fanz_text_nodes(html, *, link_mentions=True):
-    parser = _FanzTextLinkifier(link_mentions=link_mentions)
+def _link_fanz_text_nodes(
+    html, *, link_mentions=True, excluded_mentions=(),
+):
+    parser = _FanzTextLinkifier(
+        link_mentions=link_mentions,
+        excluded_mentions=excluded_mentions,
+    )
     parser.feed(html)
     parser.close()
 
@@ -520,7 +537,22 @@ def render_marketing_content(value):
     return _render_post_content(value, link_mentions=False)
 
 
-def _render_post_content(value, *, link_mentions=True):
+def render_legacy_marketing_content(value, promotional_token):
+    """Suppress only an authorized legacy Founder promotional token."""
+    token = str(promotional_token or "").casefold()
+
+    if token not in {"name", "biz"}:
+        return render_post_content(value)
+
+    return _render_post_content(
+        value,
+        excluded_mentions=frozenset({token}),
+    )
+
+
+def _render_post_content(
+    value, *, link_mentions=True, excluded_mentions=(),
+):
     if not value:
         return ""
 
@@ -552,7 +584,9 @@ def _render_post_content(value, *, link_mentions=True):
 
     # 3. Add FANZ-native links only to ordinary text nodes.
     clean = _link_fanz_text_nodes(
-        clean, link_mentions=link_mentions
+        clean,
+        link_mentions=link_mentions,
+        excluded_mentions=excluded_mentions,
     )
 
     # 4. Apply external/internal link behavior and auto-link
@@ -670,6 +704,13 @@ def _split_post_presentation(post):
     user = post.user
 
     if user.username.casefold() != "sunsetcam":
+        legacy = getattr(
+            post, "legacy_marketing_presentation", None
+        )
+
+        if legacy is not None and post.is_public:
+            return legacy.caption, legacy.suffix
+
         return body, ""
 
     profile = getattr(user, "profile", None)
@@ -690,6 +731,33 @@ def post_main_caption(post):
 def post_marketing_suffix(post):
     _body, suffix = _split_post_presentation(post)
     return suffix
+
+
+@register.filter
+def render_post_marketing(post):
+    """Render authorized marketing using its source-specific policy."""
+    suffix = post_marketing_suffix(post)
+
+    if not suffix:
+        return ""
+
+    legacy = getattr(
+        post, "legacy_marketing_presentation", None
+    )
+
+    if (
+        legacy is not None
+        and post.user.username.casefold() != "sunsetcam"
+        and suffix == legacy.suffix
+    ):
+        return render_legacy_marketing_content(
+            suffix,
+            legacy.promotional_token,
+        )
+
+    return render_marketing_content(
+        post_marketing_flair(suffix)
+    )
 
 
 @register.filter
