@@ -11,6 +11,7 @@ from auctions.ai_services.cta_links import labeled_link
 from auctions.templatetags.post_content import (
     post_marketing_flair,
     render_post_content,
+    render_marketing_content,
 )
 
 
@@ -55,7 +56,7 @@ class MarketingFlairTests(SimpleTestCase):
                         )
 
                         rendered = str(
-                            render_post_content(decorated)
+                            render_marketing_content(decorated)
                         )
 
                         self.assertIn(
@@ -63,12 +64,41 @@ class MarketingFlairTests(SimpleTestCase):
                             rendered,
                         )
 
+                        self.assertNotIn("fanz-mention", rendered)
+                        self.assertNotIn("/auctions/mention/", rendered)
+
                         self.assertLess(
                             rendered.index("XOXO 💕"),
                             rendered.index(
                                 f'href="{DESTINATIONS[campaign]}"'
                             ),
                         )
+
+    def test_marketing_mentions_are_plain_text(self):
+        source = "@name @kind @you @it @gone @nombre @nome @tú @você"
+        rendered = str(render_marketing_content(source))
+        self.assertIn(source, rendered)
+        self.assertNotIn("<a ", rendered)
+
+    def test_ordinary_mentions_remain_linked(self):
+        rendered = str(render_post_content("Hello @SunsetCam"))
+        self.assertIn('class="fanz-mention"', rendered)
+        self.assertIn("@SunsetCam</a>", rendered)
+
+    def test_marketing_renderer_retains_link_security(self):
+        source = (
+            "**Hello** @name "
+            "[CTA](/auctions/founder/tienda/) "
+            "[Unsafe](javascript:alert%281%29) "
+            "https://example.com"
+        )
+        rendered = str(render_marketing_content(source))
+        self.assertIn("<strong>Hello</strong>", rendered)
+        self.assertIn('href="/auctions/founder/tienda/"', rendered)
+        self.assertIn('href="https://example.com"', rendered)
+        self.assertIn('rel="noopener noreferrer ugc"', rendered)
+        self.assertNotIn('href="javascript:', rendered)
+        self.assertNotIn("fanz-mention", rendered)
 
     def test_empty_suffix_unchanged(self):
         self.assertEqual(post_marketing_flair(""), "")

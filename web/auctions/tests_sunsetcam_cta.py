@@ -11,6 +11,7 @@ from auctions.sunsetcam_cta import (
     LANGUAGES,
     decorate_sunsetcam_caption,
     select_campaign,
+    split_sunsetcam_marketing_suffix,
 )
 
 
@@ -173,12 +174,46 @@ class SunsetCamCTATests(TestCase):
                 capture_number=1,
             )
 
+    def test_current_and_legacy_suffixes(self):
+        caption = "Original caption"
+        tags = "#SunsetCam"
+
+        for number in range(1, 13):
+            campaign, variant = select_campaign(number)
+            for language in LANGUAGES:
+                with self.subTest(number=number, language=language):
+                    current = decorate_sunsetcam_caption(
+                        content=caption + "\n\n" + tags,
+                        language=language,
+                        capture_number=number,
+                    )
+                    body = current.rsplit("\n\n", 1)[0]
+                    expected = body[len(caption) + 2:]
+
+                    legacy = body.replace(
+                        "(/auctions/founder/tienda/)",
+                        "(/founder/tienda/)",
+                    )
+
+                    for candidate in (body, legacy):
+                        self.assertEqual(
+                            split_sunsetcam_marketing_suffix(candidate),
+                            (caption, expected),
+                        )
+                        for retry_number in (number, number + 1):
+                            with self.assertRaises(ValueError):
+                                decorate_sunsetcam_caption(
+                                    content=candidate + "\n\n" + tags,
+                                    language=language,
+                                    capture_number=retry_number,
+                                )
+
     def test_approved_destinations(self):
         self.assertEqual(
             DESTINATIONS,
             {
                 "business": "/b/create/",
-                "identity": "/founder/tienda/",
-                "real_estate": "/founder/tienda/",
+                "identity": "/auctions/founder/tienda/",
+                "real_estate": "/auctions/founder/tienda/",
             },
         )
