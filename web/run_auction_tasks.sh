@@ -3,10 +3,36 @@
 REMINDER_COUNTER=0
 PAYMENT_COUNTER=0
 LOCALIZATION_COUNTER=0
+BLIND_REPLENISH_INTERVAL=300
+BLIND_REPLENISH_LAST=-300
 
 while true
 do
     python manage.py process_auctions
+
+    # Recover missing Blind Offers independently of
+    # whether any Founder listings have just expired.
+    # Check at startup and every five elapsed minutes.
+    if read -r BLIND_UPTIME BLIND_IDLE < /proc/uptime; then
+        BLIND_NOW=${BLIND_UPTIME%%.*}
+
+        case "$BLIND_NOW" in
+            ''|*[!0-9]*)
+                echo "founder_blind_scheduler_invalid_clock" >&2
+                ;;
+            *)
+                if [ "$((BLIND_NOW - BLIND_REPLENISH_LAST))" -ge "$BLIND_REPLENISH_INTERVAL" ]; then
+                    BLIND_REPLENISH_LAST="$BLIND_NOW"
+
+                    if ! python manage.py replenish_founder_blind_offers; then
+                        echo "founder_blind_replenishment_failed" >&2
+                    fi
+                fi
+                ;;
+        esac
+    else
+        echo "founder_blind_scheduler_clock_unavailable" >&2
+    fi
 
     # Publish at most one due AI creator feed post per loop.
     # ScheduledPublication row locking makes concurrent claims safe.

@@ -61,6 +61,13 @@ def replenish_founder_tienda(
     eligible Treasury inventory.
     """
 
+    from .founder_blind_replenishment import (
+        lock_tienda_replenishment,
+        _eligible_asset,
+    )
+
+    lock_tienda_replenishment()
+
     fixed_handles = [
         str(handle).lower()
         for handle in (fixed_handles or [])
@@ -117,14 +124,37 @@ def replenish_founder_tienda(
             "swamp_created": 0,
         }
 
+    from django.contrib.auth import get_user_model
+    from .utils import SYSTEM_WALLET_USERNAME
+
+    platform = get_user_model().objects.get(
+        username=SYSTEM_WALLET_USERNAME
+    )
+
     eligible = (
         _eligible_tienda_assets()
-        .select_for_update()
+        .filter(
+            owner_root_id=platform.pk,
+            current_account__isnull=True,
+        )
+        .order_by("pk")
+        .select_for_update(skip_locked=True)
     )
 
     eligible_by_handle = {
         asset.handle: asset
-        for asset in eligible
+        for asset in sorted(
+            eligible,
+            key=lambda item: (
+                item.handle_length,
+                item.handle,
+            ),
+        )
+        if _eligible_asset(
+            asset,
+            platform.pk,
+            timezone.now(),
+        )
     }
 
     used_ids = set()
@@ -159,6 +189,12 @@ def replenish_founder_tienda(
                     break
 
                 if asset.pk in used_ids:
+                    continue
+
+                if (
+                    asset.handle in requested_handles
+                    and asset.handle not in handles
+                ):
                     continue
 
                 chosen.append(asset)
