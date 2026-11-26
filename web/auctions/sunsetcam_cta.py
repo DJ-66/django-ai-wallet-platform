@@ -13,9 +13,24 @@ CAMPAIGN_ORDER = (
 
 DESTINATIONS = {
     "business": "/b/create/",
+    "identity": "/auctions/founder/tienda/",
+    "real_estate": "/auctions/founder/tienda/",
+}
+
+LEGACY_DESTINATIONS = {
     "identity": "/founder/tienda/",
     "real_estate": "/founder/tienda/",
 }
+
+
+def _accepted_cta_links(campaign, language):
+    label = LABELS[campaign][language]
+    current = labeled_link(label, DESTINATIONS[campaign])
+    legacy = LEGACY_DESTINATIONS.get(campaign)
+    if legacy:
+        return current, labeled_link(label, legacy)
+    return (current,)
+
 
 LABELS = {
     "business": {
@@ -143,7 +158,13 @@ def decorate_sunsetcam_caption(*, content, language, capture_number):
         DESTINATIONS[campaign],
     )
 
-    if link in caption:
+    if (
+        any(
+            candidate in caption
+            for candidate in _accepted_cta_links(campaign, language)
+        )
+        or split_sunsetcam_marketing_suffix(caption)[1]
+    ):
         raise ValueError("SunsetCam CTA already applied")
 
     decorated = (
@@ -178,11 +199,13 @@ def split_sunsetcam_marketing_suffix(body):
                     DESTINATIONS[campaign],
                 )
                 suffix = variant[language] + "\n\n" + link
-                boundary = "\n\n" + suffix
 
-                if source.endswith(boundary):
-                    caption = source[:-len(boundary)]
-                    if caption.strip():
-                        return caption, suffix
+                for accepted_link in _accepted_cta_links(campaign, language):
+                    boundary = "\n\n" + variant[language] + "\n\n" + accepted_link
+
+                    if source.endswith(boundary):
+                        caption = source[:-len(boundary)]
+                        if caption.strip():
+                            return caption, suffix
 
     return source, ""

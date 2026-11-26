@@ -101,7 +101,7 @@ def _inside_www_token(text, start, end):
     return "www." in text[token_start:token_end].lower()
 
 
-def _link_text(text):
+def _link_text(text, *, link_mentions=True):
     """Link safe standalone URLs, FANZ mentions, and hashtags."""
     matches = []
 
@@ -124,7 +124,7 @@ def _link_text(text):
             )
         )
 
-    for match in MENTION_RE.finditer(text):
+    for match in (MENTION_RE.finditer(text) if link_mentions else ()):
         if _inside_www_token(text, match.start(), match.end()):
             continue
 
@@ -280,13 +280,14 @@ class _FanzTextLinkifier(HTMLParser):
         "br",
     }
 
-    def __init__(self):
+    def __init__(self, *, link_mentions=True):
         super().__init__(
             convert_charrefs=False,
         )
 
         self.parts = []
         self.skip_depth = 0
+        self.link_mentions = link_mentions
         self.text_buffer = []
 
     def _flush_text(self):
@@ -299,7 +300,9 @@ class _FanzTextLinkifier(HTMLParser):
         if self.skip_depth:
             self.parts.append(str(escape(text)))
         else:
-            self.parts.append(_link_text(text))
+            self.parts.append(
+                _link_text(text, link_mentions=self.link_mentions)
+            )
 
     def _attrs_html(self, attrs):
         rendered = []
@@ -401,8 +404,8 @@ class _FanzTextLinkifier(HTMLParser):
         )
 
 
-def _link_fanz_text_nodes(html):
-    parser = _FanzTextLinkifier()
+def _link_fanz_text_nodes(html, *, link_mentions=True):
+    parser = _FanzTextLinkifier(link_mentions=link_mentions)
     parser.feed(html)
     parser.close()
 
@@ -509,6 +512,15 @@ def _set_link_policy(
 
 @register.filter
 def render_post_content(value):
+    return _render_post_content(value)
+
+
+@register.filter
+def render_marketing_content(value):
+    return _render_post_content(value, link_mentions=False)
+
+
+def _render_post_content(value, *, link_mentions=True):
     if not value:
         return ""
 
@@ -540,7 +552,7 @@ def render_post_content(value):
 
     # 3. Add FANZ-native links only to ordinary text nodes.
     clean = _link_fanz_text_nodes(
-        clean
+        clean, link_mentions=link_mentions
     )
 
     # 4. Apply external/internal link behavior and auto-link

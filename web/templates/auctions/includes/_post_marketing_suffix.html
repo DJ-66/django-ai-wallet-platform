@@ -2,7 +2,7 @@
 {% with marketing_suffix=post|post_marketing_suffix %}
     {% if marketing_suffix %}
         <div class="post-marketing-suffix">
-            {{ marketing_suffix|post_marketing_flair|render_post_content }}
+            {{ marketing_suffix|post_marketing_flair|render_marketing_content }}
         </div>
     {% endif %}
 {% endwith %}

@@ -92,6 +92,29 @@ class PostLayoutTests(SimpleTestCase):
 
                     self.assertEqual(post.display_content, content)
 
+    def test_legacy_marketing_suffix_rendering(self):
+        for language in LANGUAGES:
+            for capture in range(1, 13):
+                with self.subTest(language=language, capture=capture):
+                    content = self.decorated(language, capture).replace(
+                        "(/auctions/founder/tienda/)",
+                        "(/founder/tienda/)",
+                    )
+                    post = self.make_post(content)
+                    html = render_to_string(
+                        "auctions/includes/_post_marketing_suffix.html",
+                        {"post": post, "language": language},
+                    )
+                    destination = (
+                        "/b/create/" if (capture - 1) % 3 == 0
+                        else "/auctions/founder/tienda/"
+                    )
+                    self.assertIn(f'href="{destination}"', html)
+                    self.assertNotIn('href="/founder/tienda/"', html)
+                    self.assertNotIn("fanz-mention", html)
+                    self.assertEqual(post_main_caption(post), self.caption)
+                    self.assertEqual(post.display_content, content)
+
     def test_authorization_boundaries(self):
         content = self.decorated()
 
