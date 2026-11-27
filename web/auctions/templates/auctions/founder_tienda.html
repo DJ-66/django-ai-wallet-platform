@@ -135,6 +135,40 @@
     line-height: 1.6;
   }
 
+  /* WP04.5: FANZ Bakery marketing presentation. */
+  .founder-marketing {
+    max-width: 720px;
+    overflow-wrap: anywhere;
+  }
+
+  .founder-hero .founder-marketing-premium {
+    color: #fbbf24;
+    font-size: clamp(1.2rem, 2.6vw, 1.65rem);
+    font-weight: 800;
+  }
+
+  .founder-hero .founder-marketing-properties {
+    color: #f8fafc;
+    font-weight: 600;
+  }
+
+  .founder-hero .founder-marketing-price {
+    color: #fbbf24;
+    font-weight: 800;
+  }
+
+  .founder-hero .founder-marketing-action {
+    margin-top: 12px;
+    color: #4ade80;
+    font-weight: 800;
+  }
+
+  .founder-hero .founder-marketing-deed {
+    margin-top: 4px;
+    color: #cbd5e1;
+    font-weight: 600;
+  }
+
   .founder-wallet {
     display: inline-flex;
     align-items: center;
@@ -993,9 +1027,25 @@
     <h1>FANZ Bakery</h1>
 
 
-    <p>
-  {% trans "Scarce 1–4 character Founder properties. Own a permanent piece of FANZ virtual real estate." %}
-    </p>
+    <div class="founder-marketing">
+      <p class="founder-marketing-premium">
+        {% trans "Premium 1-4 Char @names." %}
+      </p>
+      <p class="founder-marketing-properties">
+        {% trans "Income-Producing Digital Properties..." %}
+      </p>
+      {% if wasteland_listings %}
+        <p class="founder-marketing-price">
+          {% trans "As Low As 200 FANZ Credits." %}
+        </p>
+      {% endif %}
+      <p class="founder-marketing-action">
+        {% trans "Buy It. Promote It. Re-Sell It. $$$!" %}
+      </p>
+      <p class="founder-marketing-deed">
+        {% trans "— Deeded Virtual Assets —" %}
+      </p>
+    </div>
 
     {% if wallet %}
       <div class="founder-wallet">
