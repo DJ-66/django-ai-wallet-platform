@@ -3186,3 +3186,23 @@ msgstr "Imprimir"
 #: templates/businesses/includes/marketing_asset_referral_card.html:100
 msgid "Sharing and download tools are coming next."
 msgstr "Próximamente habrá más herramientas para compartir y descargar."
+
+#: auctions/templates/auctions/founder_tienda.html
+msgid "Premium 1-4 Char @names."
+msgstr "@Nombres Premium de 1 a 4 caracteres."
+
+#: auctions/templates/auctions/founder_tienda.html
+msgid "Income-Producing Digital Properties..."
+msgstr "Propiedades digitales generadoras de ingresos..."
+
+#: auctions/templates/auctions/founder_tienda.html
+msgid "As Low As 200 FANZ Credits."
+msgstr "Desde solo 200 Créditos FANZ."
+
+#: auctions/templates/auctions/founder_tienda.html
+msgid "Buy It. Promote It. Re-Sell It. $$$!"
+msgstr "¡Compra. Promociona. Revende. $$$!"
+
+#: auctions/templates/auctions/founder_tienda.html
+msgid "— Deeded Virtual Assets —"
+msgstr "— Activos Virtuales con Título de Propiedad —"
